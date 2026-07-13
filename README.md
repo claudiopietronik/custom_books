@@ -1,7 +1,7 @@
 # Libro di Statistica — sistema di build
 
 Questo bundle contiene tutti i sorgenti che compongono il file
-`Statistica_MikeXCohen.html` (un unico HTML self-contained e offline).
+`Statistica.html` (un unico HTML self-contained e offline).
 Puoi modificare stile, logica e contenuti e **ricostruire** l'HTML finale.
 
 ## Struttura
@@ -34,11 +34,11 @@ npm install            # installa mathjax-full da package.json
 
 # 2) build in due passi
 python3 build_book.py book.json _tmp.html          # markdown -> HTML con formule "grezze"
-node render_math.js _tmp.html Statistica_MikeXCohen.html   # formule -> SVG, output finale
+node render_math.js _tmp.html Statistica.html   # formule -> SVG, output finale
 rm _tmp.html
 ```
 
-Il file `Statistica_MikeXCohen.html` è il libro completo: un unico file, immagini e
+Il file `Statistica.html` è il libro completo: un unico file, immagini e
 formule incorporate, **nessuna dipendenza esterna** (funziona anche offline).
 
 ## Come modificare
