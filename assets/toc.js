@@ -57,7 +57,7 @@ const TOC = [
     n: 4,
     titolo: "Spazi vettoriali",
     file: "cap04-spazi-vettoriali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Dimensioni e campi" },
       { id: "s4-2", n: "4.2", t: "Spazi vettoriali" },
