@@ -38,7 +38,7 @@ const TOC = [
     n: 3,
     titolo: "Moltiplicazione tra vettori",
     file: "cap03-moltiplicazione-vettori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Prodotto scalare: l'algebra" },
       { id: "s3-2", n: "3.2", t: "Proprietà del prodotto scalare" },
