@@ -74,7 +74,7 @@ const TOC = [
     n: 5,
     titolo: "Matrici",
     file: "cap05-matrici.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Interpretazioni e usi delle matrici" },
       { id: "s5-2", n: "5.2", t: "Termini e notazione" },
