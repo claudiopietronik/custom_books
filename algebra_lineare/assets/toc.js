@@ -156,7 +156,7 @@ const TOC = [
     n: 9,
     titolo: "Numeri complessi",
     file: "cap09-numeri-complessi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "I numeri complessi e ℂ" },
       { id: "s9-2", n: "9.2", t: "Cosa sono davvero i numeri complessi" },
