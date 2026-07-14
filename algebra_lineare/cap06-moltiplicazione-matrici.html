@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Moltiplicazione tra matrici — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Moltiplicazione tra matrici</h1>
+    <p class="standfirst">
+      «Riga per colonna» è la regola più odiata dell'algebra lineare: sembra arbitraria, è scomoda da
+      ricordare, e nessuno spiega da dove salti fuori. Bene: <em>nessuno l'ha inventata</em>. In questo
+      capitolo la faremo <strong>uscire da sola</strong> da una richiesta ragionevolissima, e da lì tutto
+      il resto cadrà come tessere del domino — compresa la frase che ti ho promesso cinque volte e che qui,
+      finalmente, dimostriamo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Nel Capitolo 5 ti avevo detto che quello era il momento delle presentazioni, e che
+      <strong>la moltiplicazione è dove tutto succede davvero</strong>. Eccoci. Da qui in poi le matrici
+      smettono di essere griglie di numeri e diventano <em>macchine</em>: cose che si <strong>applicano</strong>
+      ai vettori e che si <strong>mettono in fila</strong> una dopo l'altra. È la lettura ③ del §5.1, quella
+      che avevo marcato con la stella. Il capitolo è lungo perché è il perno del libro: tutto ciò che viene
+      dopo — rango, spazi, sistemi, inversa, autovalori — è una domanda su un prodotto tra matrici.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>La moltiplicazione “standard”</h2>
+
+  <p class="lead">
+    Non ti darò la regola. Te la farò <em>trovare</em>: partiamo da una richiesta ovvia, sviluppiamo il
+    conto, e alla fine guardiamo cosa è venuto fuori. Quello che verrà fuori sarà «riga per colonna» —
+    e a quel punto non sembrerà più una convenzione, perché <strong>non lo è</strong>.
+  </p>
+
+  <h3>La richiesta: due macchine in fila sono ancora una macchina</h3>
+
+  <p>
+    Ho due matrici. \(\mm{B}\) deforma lo spazio, e poi \(\mm{A}\) deforma il risultato. Metto le due
+    macchine in fila: prendo un vettore \(\vv{x}\), lo do in pasto a \(\mm{B}\), e il vettore che ne esce
+    lo do in pasto ad \(\mm{A}\). In simboli: \(\mm{A}(\mm{B}\vv{x})\).
+  </p>
+
+  <p>
+    Ora, entrambe le macchine sono <em>lineari</em> (§1.1: le rette restano rette, l'origine resta ferma).
+    E due deformazioni lineari fatte una dopo l'altra danno ancora una deformazione lineare — se non pieghi
+    mai, e poi non pieghi di nuovo, non hai piegato. Quindi <strong>deve esistere una matrice sola che fa,
+    in un colpo, il lavoro di tutte e due</strong>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La definizione che non abbiamo scelto</div>
+    <p>
+      Chiamiamo \(\mm{A}\mm{B}\) quella matrice. Non perché sappiamo che numeri ha dentro: solo perché
+      le diamo un nome. È un <strong>posto vuoto</strong>, e l'unica cosa che pretendiamo è questa:
+    </p>
+    \[ \mm{A}(\mm{B}\vv{x}) \;=\; \hD{(\mm{A}\mm{B})}\,\vv{x} \qquad\text{per } \textbf{ogni}\; \vv{x} \]
+    <p style="margin-bottom:0">
+      Leggila come un <em>patto</em>: «applicare \(\mm{B}\) e poi \(\mm{A}\)» dev'essere la stessa cosa di
+      «applicare \(\mm{A}\mm{B}\)». <mark>Tutto il resto della sezione serve soltanto a riempire quel posto
+      vuoto</mark> — e vedrai che si può riempire in un modo solo.
+    </p>
+  </div>
+
+  <h3>Il conto, svolto lentamente</h3>
+
+  <p>
+    Restiamo in \(\R^2\), con \(\mm{A}\) e \(\mm{B}\) di forma \(2\times2\), e seguiamo il viaggio di un
+    vettore \(\vv{x}\). Chiamo \(\vv{y} = \mm{B}\vv{x}\) il vettore «a metà strada», e
+    \(\vv{z} = \mm{A}\vv{y}\) quello finale.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Un attimo: che cosa vuol dire \(\mm{B}\vv{x}\)?</div>
+    <p style="margin-bottom:0">
+      Domanda giusta, e non voglio darla per scontata: fin qui abbiamo <em>disegnato</em> matrici che
+      deformano il piano (§1.1, §5.1), ma non abbiamo mai scritto la regola che dice <em>quali numeri</em>
+      escono. Eccola, ed è l'unica cosa che assumo in questa sezione:
+      <mark>ogni componente di \(\mm{B}\vv{x}\) è il <b>prodotto scalare di una riga di \(\mm{B}\) con
+      \(\vv{x}\)</b></mark> (§3.1) — la prima componente usa la prima riga, la seconda la seconda. È il modo
+      naturale di far incontrare una griglia e una lista, ed è quello che vedrai svolto tra due righe.
+      <br><br>
+      Non è un colpo di mano: nel <b>§6.5</b> smonteremo questa stessa regola e scopriremo che nasconde una
+      lettura molto più profonda — <em>la</em> lettura del libro. Ma per costruire la moltiplicazione tra
+      matrici basta questa, e conviene averla in mano prima di partire.
+    </p>
+  </div>
+
+  <ol class="passi">
+    <li><b>Prima macchina.</b> \(\vv{y} = \mm{B}\vv{x}\), cioè (facendo il conto riga per riga, come nel §3.1):
+      \[ y_1 = b_{11}x_1 + b_{12}x_2 \qquad y_2 = b_{21}x_1 + b_{22}x_2 \]
+    </li>
+    <li><b>Seconda macchina.</b> \(\vv{z} = \mm{A}\vv{y}\), con gli stessi identici gesti:
+      \[ z_1 = a_{11}y_1 + a_{12}y_2 \qquad z_2 = a_{21}y_1 + a_{22}y_2 \]
+    </li>
+    <li><b>Sostituisco</b> \(y_1\) e \(y_2\) dentro \(z_1\). Nient'altro: solo sostituzione.
+      \[ z_1 = a_{11}\left(b_{11}x_1 + b_{12}x_2\right) + a_{12}\left(b_{21}x_1 + b_{22}x_2\right) \]
+    </li>
+    <li><b>Raccolgo</b> \(x_1\) e \(x_2\) — ed è qui che succede tutto:
+      \[ z_1 = \underbrace{\left(\hA{a_{11}b_{11} + a_{12}b_{21}}\right)}_{\text{coefficiente di } x_1} x_1
+             + \underbrace{\left(\hB{a_{11}b_{12} + a_{12}b_{22}}\right)}_{\text{coefficiente di } x_2} x_2 \]
+      Ma \(z_1\) è la prima componente di \((\mm{A}\mm{B})\vv{x}\): quindi quei due coefficienti
+      <em>sono</em> la prima riga di \(\mm{A}\mm{B}\). Le abbiamo trovate, le caselle:
+      \[ (\mm{A}\mm{B})_{11} = \hA{a_{11}b_{11} + a_{12}b_{21}} \qquad
+         (\mm{A}\mm{B})_{12} = \hB{a_{11}b_{12} + a_{12}b_{22}} \]
+    </li>
+    <li><b>Guarda cosa sono.</b> Prendi \((\mm{A}\mm{B})_{11}\): è \(a_{11}b_{11} + a_{12}b_{21}\), cioè la
+      <b>prima riga di \(\mm{A}\)</b> moltiplicata a coppie con la <b>prima colonna di \(\mm{B}\)</b>, e poi
+      sommata. <mark>È un prodotto scalare</mark> (§3.1). Non l'abbiamo deciso noi: è quello che è venuto
+      fuori raccogliendo. \(\blacksquare\)
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Nessuno ha inventato la moltiplicazione tra matrici</div>
+    <p style="margin-bottom:0">
+      Qualcuno ha semplicemente svolto il conto che hai appena svolto tu, ha guardato il risultato, e gli ha
+      dato un nome. <mark>«Riga per colonna» non è una convenzione: è un <em>risultato</em>.</mark> È l'unica
+      regola compatibile con il patto \(\mm{A}(\mm{B}\vv{x}) = (\mm{A}\mm{B})\vv{x}\) — e se qualcuno ne
+      proponesse un'altra (per esempio «moltiplica le caselle corrispondenti», che è quella che tutti si
+      aspettano), quel patto salterebbe: la matrice così ottenuta <em>non</em> farebbe il lavoro delle due
+      macchine in fila. Sarebbe una griglia di numeri senza significato.
+      <br><br>
+      Ecco perché la moltiplicazione tra matrici è «strana»: <strong>non è una moltiplicazione, è una
+      composizione</strong>. Le hanno solo dato il simbolo della moltiplicazione.
+    </p>
+  </div>
+
+  <h3>La regola, in generale</h3>
+
+  <div class="formula">
+    <div class="f-head">Moltiplicazione tra matrici <span class="tag">riga per colonna, ma adesso sai perché</span></div>
+    <div class="f-body">
+      \[
+        \hD{(\mm{A}\mm{B})_{\hA{i}\hB{j}}} \;=\; \sum_{\hC{k}=1}^{\hC{n}} \hA{a_{i\hC{k}}}\,\hB{b_{\hC{k}j}}
+        \;=\; \hA{a_{i1}}\hB{b_{1j}} + \hA{a_{i2}}\hB{b_{2j}} + \cdots + \hA{a_{i\hC{n}}}\hB{b_{\hC{n}j}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{i}\)</dt>
+        <dd>l'indice di <b>riga</b> del risultato. Viene da \(\mm{A}\), e da nessun'altra parte: dice
+            <em>quale riga</em> di \(\mm{A}\) stiamo usando. <b>Sopravvive</b> al conto.</dd>
+        <dt>\(\hB{j}\)</dt>
+        <dd>l'indice di <b>colonna</b> del risultato. Viene da \(\mm{B}\): dice <em>quale colonna</em> di
+            \(\mm{B}\) stiamo usando. <b>Sopravvive</b> anche lui.</dd>
+        <dt>\(\hC{k}\)</dt>
+        <dd>l'indice <b>che viene mangiato</b>, ed è il protagonista nascosto della formula. Compare
+            <em>due volte</em> — una in \(\mm{A}\) (come colonna) e una in \(\mm{B}\) (come riga) — e poi
+            <b>sparisce</b>, divorato dalla sommatoria. <mark>La dimensione che \(\hC{k}\) percorre è
+            esattamente quella che deve combaciare</mark>: \(\mm{A}\) deve avere tante colonne quante sono
+            le righe di \(\mm{B}\), altrimenti \(a_{i\hC{k}}\) e \(b_{\hC{k}j}\) non esistono insieme.</dd>
+        <dt>\(\sum_{\hC{k}=1}^{\hC{n}}\)</dt>
+        <dd><b>moltiplica a coppie, poi somma</b>: è la definizione del <b>prodotto scalare</b> del §3.1,
+            parola per parola. La riga \(i\) di \(\mm{A}\) è un vettore; la colonna \(j\) di \(\mm{B}\) è un
+            vettore; la casella \((i,j)\) del risultato è il loro prodotto scalare.</dd>
+        <dt>il risultato</dt>
+        <dd>una <b>matrice</b>, con una casella per ogni coppia \((i,j)\). Ogni casella costa un prodotto
+            scalare: una matrice \(2\times2\) come risultato significa <em>quattro</em> prodotti scalari.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Come si legge la formula ad alta voce:</strong> «la casella di riga \(i\) e colonna \(j\) del
+      prodotto è la riga \(i\) del primo fattore, per la colonna \(j\) del secondo». <em>Riga del primo,
+      colonna del secondo.</em> Sempre in quest'ordine — e se ti sembra di averlo già fatto mille volte è
+      perché è vero: lo fai dal Capitolo 3.
+    </div>
+  </div>
+
+  <h3>La regola delle forme (quella che ti salverà la vita)</h3>
+
+  <p>
+    Nel §5.3 ti avevo avvertito: <em>«la maggior parte degli errori in algebra lineare non sono errori di
+    aritmetica, sono forme che non combaciano»</em>. Ecco il momento in cui quella frase si incassa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Quando una moltiplicazione è lecita <span class="tag">le interne si toccano e spariscono</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{(m \times \hC{n})}_{\mm{A}}\;\underbrace{(\hC{n} \times p)}_{\mm{B}}
+        \;=\;
+        \underbrace{(m \times p)}_{\mm{A}\mm{B}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>le \(\hC{n}\) <b>interne</b></dt>
+        <dd>sono quelle che <b>si toccano</b>, e <mark>devono essere uguali</mark>. Se non lo sono, il
+            prodotto <em>non esiste</em>: non è «difficile», non è «sbagliato», è <b>indefinito</b>. Sono
+            loro la dimensione che l'indice \(k\) percorre.</dd>
+        <dt>le <b>esterne</b> \(m\) e \(p\)</dt>
+        <dd><b>sopravvivono</b>, e formano la forma del risultato. Non devono soddisfare nessuna condizione:
+            possono essere qualunque cosa.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>L'immagine del domino.</strong> Scrivi le due forme una accanto all'altra e accosta le
+      tessere: <mark>puoi appoggiarle solo se i numeri che si toccano coincidono; quello che resta scritto
+      alle due estremità è la forma del risultato.</mark> Un \((2\times\hC{3})(\hC{3}\times 4)\) si incastra
+      e dà \(2\times4\). Un \((2\times\hC{3})(\hC{2}\times2)\) no: il 3 e il 2 non si toccano, e la tessera
+      resta in mano.
+      <br><br>
+      Ecco anche il pagamento di una cambiale del §2.3: ti avevo detto che la trasposta è
+      <em>«l'adattatore che fa combaciare le forme»</em>, e che l'avresti capito qui. È letteralmente questo:
+      trasporre una matrice ne <em>ribalta</em> la forma (§5.4), e serve proprio quando i pezzi non si
+      incastrano nel verso in cui li hai scritti.
+    </div>
+  </div>
+
+  <figure class="fig wide" id="fig-forme">
+    <svg viewBox="0 0 620 260" role="img" aria-label="La regola delle forme: le dimensioni interne devono combaciare"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 6.1</span> — La regola delle forme, disegnata. In alto: le due dimensioni
+      <b style="color:var(--green)">interne</b> coincidono, le tessere si incastrano, e il risultato prende
+      le due dimensioni <b>esterne</b>. In basso: le interne sono diverse, e il prodotto semplicemente
+      <b style="color:var(--warm)">non esiste</b>. Prima di ogni conto, fai questo disegno: ti costa due
+      secondi e ti evita mezz'ora di aritmetica buttata.
+    </figcaption>
+  </figure>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La somma vuole forme <em>uguali</em>, il prodotto forme <em>complementari</em></div>
+    <p>
+      È l'errore numero uno, e nasce dal fatto che la somma (§5.6) ti ha abituato a una regola diversa:
+    </p>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Operazione</th><th>Richiede</th><th>Forma del risultato</th></tr></thead>
+      <tbody>
+        <tr><td><b>\(\mm{A} + \mm{B}\)</b></td>
+            <td>forme <b>identiche</b>: \((m\times n) + (m\times n)\)</td>
+            <td>\(m \times n\)</td></tr>
+        <tr><td><b>\(\mm{A}\mm{B}\)</b></td>
+            <td>solo le <b>interne</b> uguali: \((m\times \hC{n})(\hC{n}\times p)\)</td>
+            <td>\(m \times p\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      <mark>Sono requisiti diversi, e uno non implica l'altro.</mark> Una \(2\times3\) e una \(3\times2\)
+      <b>si possono moltiplicare</b> (dà una \(2\times2\)) ma <b>non si possono sommare</b>. Due matrici
+      \(2\times3\) <b>si possono sommare</b> ma <b>non si possono moltiplicare</b> (\(3 \neq 2\)).
+      Prima di ogni operazione, chiediti <em>quale</em> delle due regole ti serve.
+    </p>
+  </div>
+
+  <h3>Un conto svolto, senza saltare niente</h3>
+
+  <p>
+    Queste due matrici ci accompagneranno per mezzo capitolo, quindi guardale bene. Nota che le forme
+    combaciano — \((2\times\hC{3})(\hC{3}\times2)\) — e che il risultato sarà una \(2\times2\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Esempio numerico <span class="tag">quattro caselle, quattro prodotti scalari</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; -1 \\ 0 &amp; 3 &amp; 4 \end{bmatrix}_{(2\times \hC{3})}
+        \qquad
+        \mm{B} = \begin{bmatrix} 2 &amp; 0 \\ -1 &amp; 1 \\ 3 &amp; 4 \end{bmatrix}_{(\hC{3}\times 2)}
+      \]
+      \[
+        \begin{aligned}
+          (\mm{A}\mm{B})_{11} &amp;= (1)(2) + (2)(-1) + (-1)(3) = 2 - 2 - 3 &amp;&amp; \small\text{(riga 1 di A · colonna 1 di B)} \\[2pt]
+                              &amp;= \mathbf{-3} \\[6pt]
+          (\mm{A}\mm{B})_{12} &amp;= (1)(0) + (2)(1) + (-1)(4) = 0 + 2 - 4 &amp;&amp; \small\text{(riga 1 di A · colonna 2 di B)} \\[2pt]
+                              &amp;= \mathbf{-2} \\[6pt]
+          (\mm{A}\mm{B})_{21} &amp;= (0)(2) + (3)(-1) + (4)(3) = 0 - 3 + 12 &amp;&amp; \small\text{(riga 2 di A · colonna 1 di B)} \\[2pt]
+                              &amp;= \mathbf{9} \\[6pt]
+          (\mm{A}\mm{B})_{22} &amp;= (0)(0) + (3)(1) + (4)(4) = 0 + 3 + 16 &amp;&amp; \small\text{(riga 2 di A · colonna 2 di B)} \\[2pt]
+                              &amp;= \mathbf{19}
+        \end{aligned}
+      \]
+      \[
+        \mm{A}\mm{B} = \begin{bmatrix} -3 &amp; -2 \\ 9 &amp; 19 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Quattro caselle, quattro prodotti scalari, ognuno lungo <b>tre</b> termini — perché la dimensione
+      interna era 3. <strong>Il conto è tutto qui</strong>: non c'è nessuna difficoltà concettuale, solo
+      contabilità. La difficoltà, semmai, è <em>non perdere il segno</em> e <em>non sbagliare riga</em>: per
+      questo il widget qui sotto ti fa vedere, casella per casella, esattamente da dove arrivano i numeri.
+    </div>
+  </div>
+
+  <div class="widget" id="w-mult">
+    <div class="w-head">
+      <span>Il moltiplicatore: clicca una casella e guarda da dove viene</span>
+      <span class="hint">passa il mouse (o tocca) le caselle di AB</span>
+    </div>
+    <div class="w-controls" id="wm-ctrl" style="margin:0 0 .9rem">
+      <button class="w-btn on" data-m="0">① elemento</button>
+      <button class="w-btn"    data-m="1">② colonne</button>
+      <button class="w-btn"    data-m="2">③ righe</button>
+      <button class="w-btn"    data-m="3">④ strati</button>
+    </div>
+    <div class="w-stage" style="padding:1.2rem; overflow-x:auto">
+      <div id="wm-grid"></div>
+    </div>
+    <div class="w-readout" id="wm-out"></div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> La disposizione «a L» non è un vezzo grafico</div>
+    <p style="margin-bottom:0">
+      Nel widget \(\mm{B}\) sta <b>in alto a destra</b>, \(\mm{A}\) <b>in basso a sinistra</b>, e il
+      risultato <b>all'incrocio</b>. Con questa disposizione <mark>ogni casella di \(\mm{A}\mm{B}\) si trova
+      esattamente dove la sua riga (che arriva da sinistra) incontra la sua colonna (che scende
+      dall'alto)</mark>. Non devi ricordarti niente: la geografia del foglio ti dice già cosa moltiplicare.
+      Fai così anche quando calcoli a mano — è il modo più veloce per non sbagliare mai riga.
+    </p>
+  </div>
+
+  <h3>Quattro modi di guardare lo stesso conto</h3>
+
+  <p>
+    Nel §5.1 ti ho dato quattro <em>letture</em> di una matrice, e ti ho detto che la vera abilità è saltare
+    dall'una all'altra. Adesso ti do quattro letture di un <em>prodotto</em>. Stesso mestiere: sono
+    <strong>lo stesso identico conto, raggruppato in ordine diverso</strong>. Cambia solo la scala a cui lo
+    guardi — dal microscopio al telescopio.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le quattro prospettive sul prodotto \(\mm{A}\mm{B}\)</div>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Lettura</th><th>Dice che…</th><th>Serve per</th></tr></thead>
+      <tbody>
+        <tr><td><b>① Elemento</b></td>
+            <td>\((\mm{A}\mm{B})_{ij}\) = riga \(i\) di \(\mm{A}\) · colonna \(j\) di \(\mm{B}\)</td>
+            <td>fare i conti a mano. È la definizione operativa</td></tr>
+        <tr><td><b>② Colonne</b> <span style="color:var(--green)">★</span></td>
+            <td>la <b>colonna \(j\)</b> di \(\mm{A}\mm{B}\) è \(\mm{A}\) applicata alla colonna \(j\) di
+                \(\mm{B}\) — cioè una <b>combinazione delle colonne di \(\mm{A}\)</b></td>
+            <td>è la lettura che genera il §6.5, lo spazio delle colonne (Cap. 8) e il rango (Cap. 7)</td></tr>
+        <tr><td><b>③ Righe</b></td>
+            <td>la <b>riga \(i\)</b> di \(\mm{A}\mm{B}\) è la riga \(i\) di \(\mm{A}\) applicata a
+                <em>tutta</em> \(\mm{B}\)</td>
+            <td>l'eliminazione di Gauss (Cap. 10): ogni operazione sulle righe <em>è</em> una
+                moltiplicazione a sinistra</td></tr>
+        <tr><td><b>④ Strati</b> <span style="color:var(--green)">★★</span></td>
+            <td>\(\mm{A}\mm{B}\) è la <b>somma di \(n\) prodotti esterni</b> (§3.6), uno per ogni colonna di
+                \(\mm{A}\) accoppiata alla riga corrispondente di \(\mm{B}\)</td>
+            <td>la SVD e la compressione (Cap. 16), le approssimazioni a rango basso, gli
+                «eigenlayer» (§15.10)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Le due stelle non sono decorative: <strong>② e ④ sono i due punti da cui si vede metà del libro</strong>.
+      Provale tutte e quattro nel widget qui sopra, con i pulsanti: sono la stessa matrice, ottenuta
+      raggruppando gli stessi prodotti in quattro ordini diversi.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La lettura ④: il prodotto come pila di strati <span class="tag">il ponte verso la seconda metà del libro</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\mm{B} \;=\; \sum_{\hC{k}=1}^{\hC{n}} \hA{\vv{a}_{\hC{k}}}\,\hB{\vv{b}_{\hC{k}}\T}
+        \;=\; \hA{\vv{a}_1}\hB{\vv{b}_1\T} + \hA{\vv{a}_2}\hB{\vv{b}_2\T} + \cdots + \hA{\vv{a}_{\hC{n}}}\hB{\vv{b}_{\hC{n}}\T}
+      \]
+      \[
+        \underbrace{\begin{bmatrix} 2 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}}_{\text{strato 1}}
+        +
+        \underbrace{\begin{bmatrix} -2 &amp; 2 \\ -3 &amp; 3 \end{bmatrix}}_{\text{strato 2}}
+        +
+        \underbrace{\begin{bmatrix} -3 &amp; -4 \\ 12 &amp; 16 \end{bmatrix}}_{\text{strato 3}}
+        =
+        \begin{bmatrix} -3 &amp; -2 \\ 9 &amp; 19 \end{bmatrix} = \mm{A}\mm{B}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\vv{a}_{\hC{k}}}\)</dt>
+        <dd>la <b>colonna \(k\)</b> di \(\mm{A}\) (un vettore verticale, §5.2).</dd>
+        <dt>\(\hB{\vv{b}_{\hC{k}}\T}\)</dt>
+        <dd>la <b>riga \(k\)</b> di \(\mm{B}\) (un vettore orizzontale). La \(\mathsf{T}\) ti ricorda che è
+            sdraiata.</dd>
+        <dt>\(\hA{\vv{a}_{\hC{k}}}\hB{\vv{b}_{\hC{k}}\T}\)</dt>
+        <dd>colonna per riga: è il <b>prodotto esterno</b> del §3.6, la «tavola pitagorica». Il risultato è
+            una <b>matrice intera</b>, della forma giusta \((m\times1)(1\times p) = m\times p\)  — e ha
+            <span class="termine">rango 1</span>: tutte le sue colonne sono la stessa \(\vv{a}_k\)
+            riscalata.</dd>
+        <dt>\(\hC{n}\)</dt>
+        <dd>il numero di strati è <b>la dimensione interna</b>, quella che spariva. Qui è 3, e infatti gli
+            strati sono tre.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Perché è vera</strong> (una riga, onesta): l'elemento \((i,j)\) dello strato \(k\) è
+      \(a_{ik}b_{kj}\) — è la tavola pitagorica del §3.6. Sommare gli strati significa sommare su \(k\),
+      cioè \(\sum_k a_{ik}b_{kj}\), che è <em>esattamente</em> la formula del prodotto. <mark>Gli strati non
+      sono un'altra regola: sono la stessa somma, raccolta in un ordine diverso</mark> — invece di
+      completare una casella per volta, completiamo un <em>livello</em> per volta.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La pila di lucidi (e perché vale metà del libro)</div>
+    <p>
+      Immagina i vecchi lucidi della lavagna luminosa. Ogni strato è un'immagine <strong>poverissima</strong>
+      — rango 1, una sola direzione, il minimo sindacale (§3.6). Ma <mark>sovrapponendo \(n\) poveri si
+      ottiene un ricco</mark>: il prodotto \(\mm{A}\mm{B}\) è la somma di \(n\) lucidi trasparenti.
+    </p>
+    <p style="margin-bottom:0">
+      E adesso la conseguenza, che è enorme e che ti regalo con tre capitoli di anticipo:
+      <strong>il numero di lucidi è la dimensione interna \(n\)</strong>. Se \(n\) è piccolo, per quanto sia
+      grande la matrice \(\mm{A}\mm{B}\), <em>dentro c'è poco</em>: è la somma di pochissime cose povere.
+      Senza il nome tecnico, hai appena <em>visto</em> che \(\rank(\mm{A}\mm{B}) \le n\) — la ricchezza di un
+      prodotto è limitata dal numero di strati, cioè dalla strozzatura che le due matrici hanno in mezzo.
+      (Nel §7.6 la lima diventerà più fine: \(\rank(\mm{A}\mm{B}) \le \min(\rank\mm{A}, \rank\mm{B})\).
+      Ma l'idea è quella che hai qui sotto gli occhi.)
+      <br><br>
+      La <b>SVD</b> del Cap. 16 fa il percorso inverso: prende una matrice qualunque e la <strong>spacca in
+      strati</strong>, ordinati dal più importante al meno importante. Comprimere un'immagine significa
+      <em>tenere i primi tre lucidi e buttare gli altri novantasette</em>. Quando ci arriveremo, saprai già
+      cos'è: l'hai costruito qui.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Il prodotto scalare era già una moltiplicazione tra matrici</div>
+    <p style="margin-bottom:0">
+      Nel §3.1 ti avevo promesso che <em>«il prodotto scalare è il caso più piccolo possibile della
+      moltiplicazione tra matrici»</em>. Ecco il conto delle forme, che ora sai leggere:
+      \[
+        \underbrace{\vv{a}\T}_{(1\times n)} \underbrace{\vv{b}}_{(n \times 1)} = (1 \times 1) = \text{uno scalare}
+        \qquad\qquad
+        \underbrace{\vv{a}}_{(m\times 1)} \underbrace{\vv{b}\T}_{(1 \times n)} = (m \times n) = \text{una matrice}
+      \]
+      A sinistra il <b>prodotto interno</b> (§3.1): riga per colonna, la sommatoria mangia tutto e resta un
+      numero. A destra il <b>prodotto esterno</b> (§3.6): colonna per riga, la dimensione interna è 1,
+      quindi non c'è niente da sommare e tutta l'informazione resta sparsa su una griglia.
+      <mark>Non c'è nessuna operazione nuova in questo capitolo: c'è la stessa operazione del Capitolo 3,
+      fatta su griglie invece che su liste.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Moltiplicazione ed equazioni</h2>
+
+  <p class="lead">
+    Adesso la brutta notizia, quella che ti ho annunciato tre volte e sempre con un sorrisetto:
+    <mark>\(\mm{A}\mm{B} \neq \mm{B}\mm{A}\)</mark>. La proprietà commutativa, che dai numeri in poi hai
+    dato per scontata tutta la vita, <strong>qui non c'è</strong>. E siccome non c'è, cambia il modo in cui
+    si maneggiano le equazioni.
+  </p>
+
+  <h3>Perché l'ordine conta: la spiegazione geometrica</h3>
+
+  <p>
+    Sappiamo già tutto quello che serve per capirlo, perché il §6.1 ci ha detto cos'è davvero un prodotto:
+    <strong>una composizione</strong>. \(\mm{A}\mm{B}\) significa «applica prima \(\mm{B}\), poi \(\mm{A}\)».
+    Quindi \(\mm{B}\mm{A}\) significa «prima \(\mm{A}\), poi \(\mm{B}\)»: <em>un'altra cosa</em>. Non c'è
+    niente di misterioso: <mark>è la stessa ragione per cui mettere le calze e poi le scarpe non è come
+    mettere le scarpe e poi le calze</mark>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Prima B, poi A» — che sembra al contrario, e non lo è</div>
+    <p>
+      Il primo istinto è protestare: <em>«ma \(\mm{A}\) è scritta prima!»</em>. Guarda meglio dove sta il
+      vettore. In \(\mm{A}\mm{B}\vv{x}\), la \(\vv{x}\) è <b>a destra</b>, e chi le sta appiccicato è
+      \(\mm{B}\): è lui il primo a metterci le mani. Poi passa il risultato ad \(\mm{A}\).
+      <mark>Il vettore entra da destra e viaggia verso sinistra.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Ed è <em>esattamente</em> la regola delle funzioni, che usi da sempre senza lamentarti: in
+      \(f(g(x))\) si esegue prima \(g\). Nessuno ha mai trovato «al contrario» la scrittura \(f(g(x))\).
+      \(\mm{A}\mm{B}\vv{x}\) è \(f(g(x))\) a cui hanno tolto le parentesi.
+      <br><br>
+      <strong>Tieni da parte l'immagine delle calze e delle scarpe</strong>, perché la useremo altre due
+      volte: nel §6.4 (per <em>disfare</em> una composizione bisogna togliere prima le scarpe) e nel
+      Cap. 12 (dove scoprirai che \((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\), per lo stesso identico
+      motivo).
+    </p>
+  </div>
+
+  <p>
+    Vediamolo con due macchine di cui conosciamo l'effetto a occhio. \(\mm{R}\) <b>ruota di 90°</b> in senso
+    antiorario; \(\mm{S}\) <b>allunga solo la direzione \(x\)</b>, raddoppiandola:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Lo stesso paio di macchine, i due ordini <span class="tag">il 2 si sposta di casella</span></div>
+    <div class="f-body">
+      \[
+        \mm{R} = \begin{bmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{bmatrix} \;\text{(ruota 90°)}
+        \qquad
+        \mm{S} = \begin{bmatrix} 2 &amp; 0 \\ 0 &amp; 1 \end{bmatrix} \;\text{(allunga la x)}
+      \]
+      \[
+        \hA{\mm{R}\mm{S}} = \begin{bmatrix} 0 &amp; -1 \\ \hA{2} &amp; 0 \end{bmatrix}
+        \qquad\qquad
+        \hB{\mm{S}\mm{R}} = \begin{bmatrix} 0 &amp; \hB{-2} \\ 1 &amp; 0 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      <strong>\(\hA{\mm{R}\mm{S}}\) = prima allunga, poi ruota:</strong> il quadrato unitario diventa un
+      rettangolo disteso in orizzontale (2 di base, 1 di altezza), e <em>poi</em> lo giri: viene un
+      rettangolo <b>alto</b>.
+      <br>
+      <strong>\(\hB{\mm{S}\mm{R}}\) = prima ruota, poi allunga:</strong> giri il quadrato (che, essendo un
+      quadrato, non se ne accorge nemmeno), e <em>poi</em> allunghi la \(x\): viene un rettangolo
+      <b>largo</b>.
+      <br><br>
+      Ecco il cuore concettuale, e vale la pena rileggerlo due volte:
+      <mark>la rotazione ha ruotato <em>anche la direzione in cui l'allungamento andrà a lavorare</em>.</mark>
+      La seconda trasformazione non agisce sullo spazio di partenza: agisce su <strong>quello che la prima
+      ha già stravolto</strong>. Ogni operazione arriva «dopo», e trova un mondo diverso.
+    </div>
+  </div>
+
+  <div class="widget" id="w-ordine">
+    <div class="w-head">
+      <span>AB ≠ BA: due ordini, due mondi</span>
+      <span class="hint">scegli due trasformazioni e premi «esegui»</span>
+    </div>
+    <div class="w-controls" id="wo-ctrl" style="margin:0 0 .9rem; flex-direction:column; align-items:flex-start; gap:.6rem"></div>
+    <div class="w-stage" style="display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; padding:.8rem">
+      <div style="text-align:center">
+        <div id="wo-lab1" style="font-family:var(--sans); font-size:12.5px; color:var(--ink-soft); margin-bottom:.3rem"></div>
+        <svg id="wo-svg1" viewBox="0 0 290 290" style="max-width:290px" role="img" aria-label="Prima trasformazione 1, poi trasformazione 2"></svg>
+      </div>
+      <div style="text-align:center">
+        <div id="wo-lab2" style="font-family:var(--sans); font-size:12.5px; color:var(--ink-soft); margin-bottom:.3rem"></div>
+        <svg id="wo-svg2" viewBox="0 0 290 290" style="max-width:290px" role="img" aria-label="Prima trasformazione 2, poi trasformazione 1"></svg>
+      </div>
+    </div>
+    <div class="w-readout" id="wo-out"></div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \(\mm{A}\mm{B} \neq \mm{B}\mm{A}\): tre modi di sbagliare, non uno</div>
+    <p>
+      Quando dico che il prodotto non è commutativo, non intendo una cosa sola. L'uguaglianza può fallire a
+      <strong>tre livelli diversi</strong>, e vale la pena conoscerli tutti:
+    </p>
+    <ol style="margin-bottom:.4rem">
+      <li><b>\(\mm{B}\mm{A}\) può non esistere affatto.</b> \((2\times\hC{3})(\hC{3}\times4)\) è lecito;
+          scambiando l'ordine, \((3\times\hC{4})(\hC{2}\times3)\) non lo è. Il prodotto invertito è
+          <em>indefinito</em>.</li>
+      <li><b>Può esistere, ma avere forma diversa.</b> Con la \(\mm{A}\) \((2\times3)\) e la \(\mm{B}\)
+          \((3\times2)\) del §6.1: \(\mm{A}\mm{B}\) è \(2\times2\), ma \(\mm{B}\mm{A}\) è
+          \(\mathbf{3\times3}\). Non sono nemmeno confrontabili.</li>
+      <li><b>Può avere la stessa forma, ma numeri diversi.</b> È il caso più insidioso, perché niente ti
+          avvisa. Con le due matrici del Capitolo 5:
+          \[
+            \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix},\;
+            \mm{B} = \begin{bmatrix} 0 &amp; -1 \\ 5 &amp; 2 \end{bmatrix}
+            \;\Longrightarrow\;
+            \hA{\mm{A}\mm{B}} = \begin{bmatrix} 10 &amp; 3 \\ 20 &amp; 5 \end{bmatrix},\quad
+            \hB{\mm{B}\mm{A}} = \begin{bmatrix} -3 &amp; -4 \\ 11 &amp; 18 \end{bmatrix}
+          \]
+          <b>Non hanno un solo elemento in comune, nemmeno un segno.</b></li>
+    </ol>
+    <p style="margin-bottom:0">
+      Un solo controesempio basta a demolire una regola universale — e te ne ho appena dati tre.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Chi <em>invece</em> commuta (perché «mai» sarebbe falso)</div>
+    <p style="margin-bottom:0">
+      Attenzione a non imparare la lezione sbagliata. Non è vero che due matrici non commutano mai: è vero
+      che <strong>è raro</strong>. Commutano, per esempio:
+    </p>
+    <ul style="margin:.6rem 0 0">
+      <li><b>\(\mm{I}\) con chiunque</b>: \(\mm{A}\mm{I} = \mm{I}\mm{A} = \mm{A}\) (§5.5). Il neutro non ha
+          preferenze.</li>
+      <li><b>\(\lambda\mm{I}\) con chiunque</b>: una pura dilatazione non ha direzioni preferite, quindi
+          \(\lambda\mm{I}\) entra ed esce da qualunque prodotto senza scomporsi — è la stessa libertà di
+          movimento che ha lo scalare \(\lambda\) da solo (vedi la riga «con lo scalare» nella tabella qui
+          sotto).</li>
+      <li><b>Due matrici diagonali</b> fra loro (§6.3): il paradiso.</li>
+      <li><b>Una matrice con sé stessa</b> e con le sue potenze: \(\mm{A}\mm{A}^2 = \mm{A}^2\mm{A}\),
+          ovviamente. E con la sua inversa (Cap. 12).</li>
+      <li><b>Due rotazioni del piano</b>: ruotare di 30° e poi di 50° è come ruotare di 50° e poi di 30°.
+          (Nello spazio a tre dimensioni, invece, <em>no</em> — prova con un libro: ruotalo di 90° attorno a
+          due assi diversi, nei due ordini, e guarda dove finisce la copertina.)</li>
+    </ul>
+    <p style="margin:.7rem 0 0">
+      <mark>La commutatività non è vietata: è una <em>notizia</em>.</mark> Quando due matrici commutano, sta
+      succedendo qualcosa di speciale — e nel §6.7 scoprirai che è esattamente la condizione che rende
+      simmetrico il prodotto di due simmetriche. Da divieto a indizio.
+    </p>
+  </div>
+
+  <h3>Quello che invece <em>rimane</em> vero</h3>
+
+  <p>
+    Perso il pezzo grosso, il resto delle proprietà sopravvive. E sopravvive per un motivo che ormai
+    conosci: dentro ogni casella ci sono soltanto <em>numeri</em>, che continuano a comportarsi bene.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Proprietà</th><th>In formula</th><th>Vale?</th><th>Perché</th></tr></thead>
+    <tbody>
+      <tr><td><b>Commutativa</b></td><td>\(\mm{A}\mm{B} = \mm{B}\mm{A}\)</td>
+          <td><b style="color:var(--warm)">NO</b></td>
+          <td>l'ordine è l'ordine temporale delle operazioni: cambiarlo cambia il risultato</td></tr>
+      <tr><td><b>Associativa</b></td><td>\((\mm{A}\mm{B})\mm{C} = \mm{A}(\mm{B}\mm{C})\)</td>
+          <td><b style="color:var(--green)">SÌ</b></td>
+          <td>i fattori restano nello <em>stesso ordine</em>: cambiano solo le parentesi, cioè in che ordine
+              fai i conti. «Prima C, poi B, poi A» resta tale</td></tr>
+      <tr><td><b>Distributiva</b></td><td>\(\mm{A}(\mm{B}+\mm{C}) = \mm{A}\mm{B} + \mm{A}\mm{C}\)</td>
+          <td><b style="color:var(--green)">SÌ</b></td>
+          <td>ma attento: \(\mm{A}\) resta <em>a sinistra</em> in entrambi i termini. Esiste anche la versione
+              destra: \((\mm{B}+\mm{C})\mm{A} = \mm{B}\mm{A} + \mm{C}\mm{A}\)</td></tr>
+      <tr><td><b>Elemento neutro</b></td><td>\(\mm{A}\mm{I} = \mm{I}\mm{A} = \mm{A}\)</td>
+          <td><b style="color:var(--green)">SÌ</b></td>
+          <td>\(\mm{I}\) è il numero 1 delle matrici (§5.5): la trasformazione che non fa niente</td></tr>
+      <tr><td><b>Con lo scalare</b></td><td>\(\lambda(\mm{A}\mm{B}) = (\lambda\mm{A})\mm{B} = \mm{A}(\lambda\mm{B})\)</td>
+          <td><b style="color:var(--green)">SÌ</b></td>
+          <td>uno scalare si sposta dove vuole: è un numero, e i numeri commutano</td></tr>
+      <tr><td><b>Trasposta di un prodotto</b></td><td>\((\mm{A}\mm{B})\T = \mm{B}\T\mm{A}\T\)</td>
+          <td><b style="color:var(--gold)">SÌ, ma…</b></td>
+          <td>l'ordine <b>si inverte</b>. È il §6.4, e non è un dettaglio</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Nelle equazioni si moltiplica dallo <em>stesso lato</em>, su <em>entrambi</em> i membri</div>
+    <p>
+      Ecco la conseguenza pratica della non-commutatività, ed è quella che ti servirà per tutto il resto del
+      libro. Da un'uguaglianza \(\mm{X} = \mm{Y}\) puoi dedurre:
+      \[
+        \hA{\mm{C}\mm{X} = \mm{C}\mm{Y}} \quad\text{(moltiplicando a }\textbf{sinistra}\text{ entrambi)}
+        \qquad\text{oppure}\qquad
+        \hC{\mm{X}\mm{C} = \mm{Y}\mm{C}} \quad\text{(a }\textbf{destra}\text{ entrambi)}
+      \]
+      Ma <mark>non puoi scrivere \(\mm{C}\mm{X} = \mm{Y}\mm{C}\)</mark>: hai moltiplicato a sinistra da una
+      parte e a destra dall'altra, e sono due operazioni diverse.
+    </p>
+    <p style="margin-bottom:0">
+      È di nuovo la bilancia del §1.1 — «fai la stessa cosa ai due piatti» — ma adesso «la stessa cosa»
+      comprende anche <strong>da che parte</strong> la fai. È una dimensione in più che i numeri non
+      avevano, e che dimenticherai almeno una volta. La conseguenza operativa la vedrai nel Cap. 12:
+      \[
+        \mm{A}\mm{X} = \mm{B} \;\Longrightarrow\; \mm{X} = \mm{A}\inv\mm{B}
+        \qquad\text{ma}\qquad
+        \mm{X}\mm{A} = \mm{B} \;\Longrightarrow\; \mm{X} = \mm{B}\mm{A}\inv
+      \]
+      <b>Le due soluzioni sono diverse.</b> Guarda da che parte sta l'incognita, <em>prima</em> di muoverti.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \(\mm{A}\mm{B} = \mm{0}\) non significa che \(\mm{A}\) o \(\mm{B}\) siano nulle</div>
+    <p>
+      Questa è la trappola più profonda del capitolo, perché distrugge un riflesso che hai dai tempi delle
+      medie: <em>«se un prodotto fa zero, uno dei due fattori è zero»</em>. Con le matrici è <b>falso</b>:
+      \[
+        \mm{P} = \begin{bmatrix} 1 &amp; -1 \\ 1 &amp; -1 \end{bmatrix}, \quad
+        \mm{Q} = \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}
+        \qquad\Longrightarrow\qquad
+        \mm{P}\mm{Q} = \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 0 \end{bmatrix} = \mm{0}
+      \]
+      Nessuna delle due è nulla. (E, per completare il quadro: \(\mm{Q}\mm{P} = \begin{bmatrix} 2 &amp; -2 \\ 2 &amp; -2\end{bmatrix} \neq \mm{0}\).
+      Persino «fare zero» dipende dall'ordine.)
+    </p>
+    <p>
+      <strong>Ma il punto non è il controesempio: è il <em>perché</em>.</strong> Guarda le colonne di
+      \(\mm{Q}\): sono entrambe \(\begin{bmatrix}1\\1\end{bmatrix}\). Quindi \(\mm{Q}\), come macchina,
+      <b>schiaccia tutto lo spazio sulla retta di \(\begin{bmatrix}1\\1\end{bmatrix}\)</b>. E adesso guarda
+      cosa fa \(\mm{P}\) a quel vettore: \(\mm{P}\begin{bmatrix}1\\1\end{bmatrix} = \begin{bmatrix}0\\0\end{bmatrix}\).
+      Lo annienta.
+      <mark>\(\mm{Q}\) spinge tutto esattamente nella direzione che \(\mm{P}\) distrugge.</mark>
+      Il prodotto è nullo per <em>collisione di geometrie</em>, non perché ci sia qualcosa di nullo.
+      (Ritroverai questi due oggetti nel Cap. 8: quella retta è lo <b>spazio nullo</b> di \(\mm{P}\).)
+    </p>
+    <p style="margin-bottom:0">
+      <strong>Corollario, altrettanto scomodo: non si può semplificare.</strong> Da
+      \(\mm{A}\mm{X} = \mm{A}\mm{Y}\) <em>non</em> segue \(\mm{X} = \mm{Y}\). Con le matrici qui sopra:
+      \(\mm{P}\mm{Q} = \mm{P}(2\mm{Q}) = \mm{0}\), eppure \(\mm{Q} \neq 2\mm{Q}\). Con i numeri «si
+      semplifica»; con le matrici <b>no</b> — a meno che \(\mm{A}\) non sia invertibile, e per sapere cosa
+      significa dovrai aspettare il Cap. 12.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \((\mm{A}+\mm{B})^2 \neq \mm{A}^2 + 2\mm{A}\mm{B} + \mm{B}^2\)</div>
+    <p style="margin-bottom:0">
+      Il prodotto notevole del liceo <strong>si rompe</strong>, e si rompe esattamente dove ti aspetti:
+      \[
+        (\mm{A}+\mm{B})^2 = (\mm{A}+\mm{B})(\mm{A}+\mm{B}) = \mm{A}^2 + \hA{\mm{A}\mm{B}} + \hB{\mm{B}\mm{A}} + \mm{B}^2
+      \]
+      I due termini incrociati <mark>non si fondono in \(2\mm{A}\mm{B}\)</mark>, perché
+      \(\hA{\mm{A}\mm{B}} \neq \hB{\mm{B}\mm{A}}\). Sono due matrici diverse, e vanno lasciate lì tutte e
+      due. (Nell'esercizio 6.8 lo verificherai con i numeri, e vedrai di quanto si sbaglia.)
+      <br><br>
+      Nota bene <em>quale</em> proprietà abbiamo usato per arrivarci: solo la <b>distributiva</b>, che vale.
+      La distributiva ci permette di sviluppare; è la commutativa, che non c'è, a impedirci di
+      <em>raccogliere</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Moltiplicazione con matrici diagonali</h2>
+
+  <p class="lead">
+    Nel §5.5 ti avevo detto che le matrici diagonali sono «le più semplici del mondo», e che moltiplicarle
+    è banale. Manteniamo la promessa — e scopriamo, en passant, un principio che regge da solo tre capitoli
+    futuri.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Diagonale a sinistra o a destra <span class="tag">righe o colonne. Cambia tutto.</span></div>
+    <div class="f-body">
+      \[
+        \mm{D} = \begin{bmatrix} \hA{2} &amp; 0 \\ 0 &amp; \hB{-1} \end{bmatrix}
+        \qquad
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix}
+      \]
+      \[
+        \hD{\mm{D}\mm{A}} = \begin{bmatrix} \hA{2} \cdot 1 &amp; \hA{2} \cdot 2 \\ \hB{-1} \cdot 3 &amp; \hB{-1} \cdot 4 \end{bmatrix}
+        = \begin{bmatrix} 2 &amp; 4 \\ -3 &amp; -4 \end{bmatrix}
+        \qquad\quad
+        \hD{\mm{A}\mm{D}} = \begin{bmatrix} \hA{2} \cdot 1 &amp; \hB{-1} \cdot 2 \\ \hA{2} \cdot 3 &amp; \hB{-1} \cdot 4 \end{bmatrix}
+        = \begin{bmatrix} 2 &amp; -2 \\ 6 &amp; -4 \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hD{\mm{D}\mm{A}}\) &nbsp;(D a <b>sinistra</b>)</dt>
+        <dd><mark>riscala le <b>RIGHE</b></mark>: la riga 1 viene moltiplicata per \(\hA{2}\), la riga 2 per
+            \(\hB{-1}\). Ogni elemento diagonale «comanda» una riga intera.</dd>
+        <dt>\(\hD{\mm{A}\mm{D}}\) &nbsp;(D a <b>destra</b>)</dt>
+        <dd><mark>riscala le <b>COLONNE</b></mark>: la colonna 1 per \(\hA{2}\), la colonna 2 per
+            \(\hB{-1}\).</dd>
+        <dt>e infatti</dt>
+        <dd>\(\mm{D}\mm{A} \neq \mm{A}\mm{D}\): eccolo lì, il secondo esempio di non-commutatività — ma
+            questa volta <b>leggibilissimo</b>. Non è un caos di numeri: è la differenza tra «agisci sulle
+            righe» e «agisci sulle colonne».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Perché funziona così</strong> — e la ragione è di una semplicità che fa quasi ridere. Scrivi
+      l'elemento \((i,j)\) di \(\mm{D}\mm{A}\) con la formula del §6.1:
+      \[ (\mm{D}\mm{A})_{ij} = \sum_k d_{ik}\,a_{kj} \]
+      Ma \(\mm{D}\) è diagonale: \(d_{ik}\) vale zero <em>tranne</em> quando \(k = i\). Nella somma
+      <mark>sopravvive un solo termine</mark>, quello con \(k=i\):
+      \[ (\mm{D}\mm{A})_{ij} = d_{ii}\,a_{ij} \]
+      cioè «l'elemento \(a_{ij}\), moltiplicato per il numero diagonale della <em>sua riga</em>».
+      Tutta la sezione è in questa riga di conto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-diag">
+    <div class="w-head">
+      <span>D a sinistra tira le righe, D a destra tira le colonne</span>
+      <span class="hint">muovi i due numeri della diagonale</span>
+    </div>
+    <div class="w-stage" style="padding:1.2rem">
+      <div id="wd-body" style="display:flex; flex-wrap:wrap; gap:1.6rem; justify-content:center; align-items:center"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>d₁</label><input type="range" id="wd-d1" min="-2" max="3" step="0.5" value="2"><output>2.0</output></div>
+      <div class="w-ctrl"><label>d₂</label><input type="range" id="wd-d2" min="-2" max="3" step="0.5" value="-1"><output>-1.0</output></div>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il principio: a sinistra si opera sulle righe, a destra sulle colonne</div>
+    <p>
+      Quello che hai appena visto con le diagonali <strong>non è un fatto sulle diagonali</strong>: è un
+      fatto sulla moltiplicazione. <mark>Moltiplicare a sinistra significa fare qualcosa alle righe;
+      moltiplicare a destra significa fare qualcosa alle colonne.</mark> Ricordi la lettura ③ e la ② del
+      §6.1? Sono esattamente questo.
+    </p>
+    <p style="margin-bottom:0">
+      Ed è un principio che ritroverai tre volte, sempre in posti importanti:
+    </p>
+    <div class="tbl-wrap" style="margin:.6rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Dove</th><th>Cosa succede</th></tr></thead>
+      <tbody>
+        <tr><td><b>Cap. 10</b> — eliminazione di Gauss</td>
+            <td>ogni «operazione elementare sulle righe» (scambia due righe, moltiplica una riga, sommale)
+                <em>è</em> una moltiplicazione <b>a sinistra</b> per una matrice opportuna. Risolvere un
+                sistema è moltiplicare a sinistra finché non resta \(\mm{I}\)</td></tr>
+        <tr><td><b>Cap. 12</b> — inversa</td>
+            <td>l'inversa di una diagonale è banale: \(\diag(d_1,\dots,d_n)\inv = \diag(1/d_1,\dots,1/d_n)\)
+                — basta che nessun \(d_i\) sia zero (§12.2). Ecco perché sulle diagonali «tutto è facile»</td></tr>
+        <tr><td><b>§18.6</b> — da covarianza a correlazione</td>
+            <td>la formula \(\mm{D}\mm{C}\mm{D}\) scala <em>sia</em> la riga \(i\) <em>sia</em> la colonna
+                \(j\): \(c_{ij} \to d_i\,c_{ij}\,d_j\). È letteralmente «dividi per le deviazioni standard»,
+                scritto in una moltiplicazione sola</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il paradiso delle diagonali <span class="tag">qui la commutatività torna</span></div>
+    <div class="f-body">
+      \[
+        \begin{bmatrix} 2 &amp; 0 \\ 0 &amp; -1 \end{bmatrix}
+        \begin{bmatrix} 3 &amp; 0 \\ 0 &amp; 5 \end{bmatrix}
+        =
+        \begin{bmatrix} 6 &amp; 0 \\ 0 &amp; -5 \end{bmatrix}
+        =
+        \begin{bmatrix} 3 &amp; 0 \\ 0 &amp; 5 \end{bmatrix}
+        \begin{bmatrix} 2 &amp; 0 \\ 0 &amp; -1 \end{bmatrix}
+      \]
+      \[
+        \diag(d_1,\dots,d_n)\,\diag(e_1,\dots,e_n) = \diag(d_1e_1,\dots,d_ne_n)
+        \qquad\qquad
+        \mm{D}^k = \diag(d_1^k,\dots,d_n^k)
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Moltiplicare due diagonali = moltiplicare i numeri della diagonale</strong>, uno per uno. Non
+      c'è nessuna somma, perché non c'è niente da mescolare: ogni asse fa gli affari suoi (§5.5).
+      E <mark>due matrici diagonali <em>commutano sempre</em></mark> — è il primo esempio vero di
+      commutatività che incontri, e non è un caso: \(d_ie_i = e_id_i\) è la commutatività dei <em>numeri</em>.
+      <br><br>
+      Elevare a potenza diventa altrettanto stupido: \(\mm{D}^{100}\) costa 100 potenze di numeri, non 100
+      moltiplicazioni di matrici. <strong>Tieni a mente questo fatto</strong>, perché è il motivo per cui
+      esiste metà del libro: nel Cap. 15 scriveremo \(\mm{A} = \mm{V}\mm{\Lambda}\mm{V}\inv\) proprio per
+      poter calcolare \(\mm{A}^{100} = \mm{V}\mm{\Lambda}^{100}\mm{V}\inv\) — cioè per <em>scaricare tutta
+      la fatica su una diagonale</em>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>LIVE EVIL: la trasposta di un prodotto</h2>
+
+  <p class="lead">
+    Domanda innocente: qual è la trasposta di \(\mm{A}\mm{B}\)? La risposta che tutti danno è
+    \(\mm{A}\T\mm{B}\T\), ed è <strong>sbagliata</strong>. Ma prima ancora di essere sbagliata è, il più
+    delle volte, <em>impossibile</em>: quell'oggetto non esiste.
+  </p>
+
+  <h3>L'ordine si inverte, e le forme non ti lasciano scelta</h3>
+
+  <p>
+    Prendi \(\mm{A}\) di forma \(2\times3\) e \(\mm{B}\) di forma \(3\times4\). Il prodotto
+    \(\mm{A}\mm{B}\) è \(2\times4\), quindi la sua trasposta \((\mm{A}\mm{B})\T\) è
+    <b>\(4\times2\)</b> (§5.4: la forma si ribalta). Ora proviamo a costruirla con i pezzi che abbiamo:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il candidato sbagliato non esiste nemmeno <span class="tag">un argomento di sole forme</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\T\mm{B}\T \;:\; \underbrace{(3 \times \hB{2})}_{\mm{A}\T}\;\underbrace{(\hB{4} \times 3)}_{\mm{B}\T}
+        \qquad \hB{2} \neq \hB{4} \qquad \Longrightarrow \qquad \textbf{INDEFINITO}
+      \]
+      \[
+        \mm{B}\T\mm{A}\T \;:\; \underbrace{(4 \times \hC{3})}_{\mm{B}\T}\;\underbrace{(\hC{3} \times 2)}_{\mm{A}\T}
+        \qquad \hC{3} = \hC{3} \qquad \Longrightarrow \qquad (4 \times 2) \;\;\checkmark
+      \]
+    </div>
+    <div class="f-note">
+      Guarda bene cosa è successo: <mark>l'unica forma disponibile è anche l'unica forma giusta</mark>.
+      \(\mm{A}\T\mm{B}\T\) non è «diverso» da \((\mm{A}\mm{B})\T\): è <b>indefinito</b>, non c'è, non si può
+      nemmeno scrivere. E \(\mm{B}\T\mm{A}\T\) ha la forma \(4\times2\), che è esattamente la forma che
+      cercavamo.
+      <br><br>
+      <strong>L'inversione dell'ordine non è una regola in più da ricordare: è l'unico modo in cui i pezzi
+      si incastrano.</strong> Le forme non ti lasciano scelta.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Sulle matrici quadrate l'errore diventa invisibile</div>
+    <p style="margin-bottom:0">
+      Ed è lì che si sbaglia. Se \(\mm{A}\) e \(\mm{B}\) sono entrambe \(n\times n\), allora
+      \(\mm{A}\T\mm{B}\T\) <em>esiste eccome</em> — è solo la matrice sbagliata, e nessuna forma ti avvisa.
+      <mark>Impara la regola sulle rettangolari, dove l'errore è impossibile; poi portala con te sulle
+      quadrate, dove è invisibile.</mark>
+    </p>
+  </div>
+
+  <h3>La dimostrazione (tre righe, e non commutiamo mai nulla)</h3>
+
+  <div class="formula">
+    <div class="f-head">LIVE EVIL <span class="tag">trasporre un prodotto ne rovescia l'ordine</span></div>
+    <div class="f-body">
+      \[ \left(\mm{A}\mm{B}\right)\T = \mm{B}\T\mm{A}\T
+         \qquad\qquad
+         \left(\mm{A}\mm{B}\mm{C}\right)\T = \mm{C}\T\mm{B}\T\mm{A}\T \]
+    </div>
+    <div class="f-note">
+      <strong>La mnemonica</strong> (e stavolta è meritata, perché arriva <em>dopo</em> aver capito):
+      <b>LIVE</b> letto al contrario è <b>EVIL</b>. Trasporre un prodotto lo legge al contrario.
+    </div>
+  </div>
+
+  <ol class="passi">
+    <li>Partiamo dall'elemento \((i,j)\) della trasposta. Per definizione di trasposta (§5.4: gli indici si
+      scambiano):
+      \[ \left((\mm{A}\mm{B})\T\right)_{ij} = (\mm{A}\mm{B})_{ji} \]
+    </li>
+    <li>Applichiamo la definizione di prodotto (§6.1) all'elemento \((j,i)\) — cioè riga \(j\) di \(\mm{A}\),
+      colonna \(i\) di \(\mm{B}\):
+      \[ = \sum_k a_{jk}\,b_{ki} \]
+    </li>
+    <li>Scambiamo i due fattori dentro la somma. Attenzione: \(a_{jk}\) e \(b_{ki}\) sono <b>numeri</b>, e i
+      numeri commutano (§3.2). <em>Non stiamo commutando due matrici</em>:
+      \[ = \sum_k b_{ki}\,a_{jk} \]
+    </li>
+    <li>Rileggiamo i due fattori come elementi delle <em>trasposte</em>, di nuovo con la sola definizione
+      del §5.4 — \(b_{ki} = (\mm{B}\T)_{ik}\) e \(a_{jk} = (\mm{A}\T)_{kj}\):
+      \[ = \sum_k (\mm{B}\T)_{ik}\,(\mm{A}\T)_{kj} \]
+    </li>
+    <li>E adesso guarda quella somma: è «riga \(i\) di \(\mm{B}\T\) per colonna \(j\) di \(\mm{A}\T\)», cioè
+      la definizione di prodotto letta al contrario:
+      \[ = \left(\mm{B}\T\mm{A}\T\right)_{ij} \qquad\blacksquare \]
+      Ogni elemento coincide, quindi le due matrici coincidono. <b>Non abbiamo mai commutato due matrici</b>:
+      abbiamo scambiato due numeri e riletto la stessa somma.
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Spogliarsi: l'ultimo arrivato è il primo a uscire</div>
+    <p>
+      Riprendi l'immagine del §6.2. \(\mm{A}\mm{B}\) è «prima le calze (\(\mm{B}\)), poi le scarpe
+      (\(\mm{A}\))». Adesso <strong>disfa</strong> l'operazione: che cosa togli per primo?
+      <mark>Le scarpe.</mark> L'ultima cosa che hai messo è la prima che togli — ed è per questo che
+      l'ordine si rovescia.
+    </p>
+    <p style="margin-bottom:0">
+      Questa immagine <strong>paga tre volte</strong>, ed è il motivo per cui insisto:
+      <br>• \((\mm{A}\mm{B})\T = \mm{B}\T\mm{A}\T\) — questa sezione;
+      <br>• \((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\) — <b>la stessa regola vale per l'inversa</b>
+      (Cap. 12): per disfare «prima B poi A» devi disfare prima A;
+      <br>• e più avanti, ogni volta che vedrai una catena di matrici da rovesciare (QR nel Cap. 13, SVD nel
+      Cap. 16), saprai già in che verso va riscritta.
+      <br><br>
+      <strong>Impari una regola sola e ne paghi tre.</strong> LIVE EVIL non è una curiosità sulle trasposte:
+      è come funziona il <em>disfare</em> in algebra lineare.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Verifica numerica <span class="tag">con la A e la B del §6.1</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\mm{B} = \begin{bmatrix} -3 &amp; -2 \\ 9 &amp; 19 \end{bmatrix}
+        \qquad\Longrightarrow\qquad
+        \left(\mm{A}\mm{B}\right)\T = \begin{bmatrix} -3 &amp; 9 \\ -2 &amp; 19 \end{bmatrix}
+      \]
+      \[
+        \mm{B}\T\mm{A}\T =
+        \underbrace{\begin{bmatrix} 2 &amp; -1 &amp; 3 \\ 0 &amp; 1 &amp; 4 \end{bmatrix}}_{(2\times \hC{3})}
+        \underbrace{\begin{bmatrix} 1 &amp; 0 \\ 2 &amp; 3 \\ -1 &amp; 4 \end{bmatrix}}_{(\hC{3}\times 2)}
+        = \begin{bmatrix} -3 &amp; 9 \\ -2 &amp; 19 \end{bmatrix} \;\;\checkmark
+      \]
+    </div>
+    <div class="f-note">
+      E l'altro ordine? \(\mm{A}\T\mm{B}\T\) qui <em>esiste</em> — è \((3\times\hC{2})(\hC{2}\times3) = 3\times3\)
+      — ma è una matrice \(3\times3\), mentre \((\mm{A}\mm{B})\T\) è \(2\times2\):
+      <mark>non possono essere uguali nemmeno volendo</mark>. (Per la cronaca, \(\mm{A}\T\mm{B}\T\) è
+      \((\mm{B}\mm{A})\T\): il prodotto <em>nell'altro ordine</em>, trasposto. Tutto torna.)
+      <strong>«Definito» non vuol dire «giusto».</strong>
+    </div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> L'avevi già visto, travestito</div>
+    <p style="margin-bottom:0">
+      Nella Soluzione 3.5 del Capitolo 3 avevi incontrato \(\vv{u}\vv{a}\T = \left(\vv{a}\vv{u}\T\right)\T\),
+      e ti avevo detto che era «un'anticipazione della regola LIVE EVIL del §6.4». Eccola qui, la regola:
+      quel fatto era LIVE EVIL applicato a due vettori, cioè a due matrici molto magre.
+      \(\left(\vv{a}\vv{u}\T\right)\T = \left(\vv{u}\T\right)\T\vv{a}\T = \vv{u}\vv{a}\T\) — dove il secondo
+      passaggio usa l'<em>involutività</em> del §2.3 (trasporre due volte non fa nulla), che ti avevo detto
+      sarebbe servita proprio qui, per non perdersi nelle catene di trasposte.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Moltiplicazione matrice-vettore</h2>
+
+  <p class="lead">
+    Siamo arrivati. Questa è la sezione che il libro ti ha promesso <strong>cinque volte</strong> — nel
+    §1.1, nel §3.5, nel §5.2, nel widget del §5.1 e nel riepilogo del Capitolo 5 — e ogni volta l'ho
+    chiamata allo stesso modo: <mark>la frase più importante del libro</mark>. Adesso la dimostriamo. E la
+    cosa più bella è che, dopo due righe di aritmetica per sistemare un dettaglio, <em>la dimostrazione vera
+    e propria non usa un solo conto</em>: solo la linearità.
+  </p>
+
+  <p>
+    Il prodotto matrice-vettore \(\mm{A}\vv{x}\) non è un caso nuovo: è la moltiplicazione del §6.1 quando
+    il secondo fattore ha <b>una sola colonna</b> — \((m \times \hC{n})(\hC{n} \times 1) = (m \times 1)\).
+    Entra un vettore di \(\R^n\), esce un vettore di \(\R^m\). Fin qui, contabilità. Il punto è
+    <em>che cosa significa</em>.
+  </p>
+
+  <h3>Passo 1: le colonne dicono dove finiscono i vettori base</h3>
+
+  <p>
+    Ricordi \(\vv{e}_1 = \begin{bmatrix}1\\0\end{bmatrix}\) e \(\vv{e}_2 = \begin{bmatrix}0\\1\end{bmatrix}\),
+    i versori della base canonica (§3.9)? Applichiamoci sopra una matrice, con la regola riga per colonna:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il conto più redditizio del libro <span class="tag">due righe, e cambia tutto</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} \hA{2} &amp; \hB{-1} \\ \hA{1} &amp; \hB{4} \end{bmatrix}
+        \qquad
+        \mm{A}\vv{e}_1 =
+        \begin{bmatrix} \hA{2} &amp; \hB{-1} \\ \hA{1} &amp; \hB{4} \end{bmatrix}
+        \begin{bmatrix} 1 \\ 0 \end{bmatrix}
+        = \begin{bmatrix} (\hA{2})(1) + (\hB{-1})(0) \\ (\hA{1})(1) + (\hB{4})(0) \end{bmatrix}
+        = \begin{bmatrix} \hA{2} \\ \hA{1} \end{bmatrix}
+      \]
+      \[
+        \mm{A}\vv{e}_2 =
+        \begin{bmatrix} \hA{2} &amp; \hB{-1} \\ \hA{1} &amp; \hB{4} \end{bmatrix}
+        \begin{bmatrix} 0 \\ 1 \end{bmatrix}
+        = \begin{bmatrix} (\hA{2})(0) + (\hB{-1})(1) \\ (\hA{1})(0) + (\hB{4})(1) \end{bmatrix}
+        = \begin{bmatrix} \hB{-1} \\ \hB{4} \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      L'\(1\) fa passare la sua colonna, gli \(0\) cancellano tutte le altre. Risultato:
+      \[ \mm{A}\vv{e}_1 = \hA{\vv{a}_1} \qquad\qquad \mm{A}\vv{e}_2 = \hB{\vv{a}_2} \]
+      <mark>Le colonne di \(\mm{A}\) <em>sono</em> le immagini dei vettori base.</mark> Non «somigliano a»,
+      non «sono legate a»: <strong>sono</strong>. Nel §1.1, sotto il primo widget del libro, ti avevo scritto
+      che le colonne dicevano dove finivano le frecce e che «non era una coincidenza né un trucco». Non lo
+      era: era questo conto, che ora hai visto per intero.
+    </div>
+  </div>
+
+  <h3>Passo 2: e quindi \(\mm{A}\vv{x}\) è una combinazione delle colonne</h3>
+
+  <p>
+    Adesso il colpo. Prendiamo un vettore \(\vv{x}\) qualunque e chiediamoci dove finisce. L'unica cosa che
+    useremo sono <strong>le due regole della linearità del §1.1</strong> — additività e omogeneità — più il
+    conto che abbiamo appena fatto.
+  </p>
+
+  <ol class="passi">
+    <li>Scrivi \(\vv{x}\) come combinazione dei vettori base. È banale, ma è l'unico passaggio algebrico che
+      serve:
+      \[ \vv{x} = \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} = x_1\vv{e}_1 + x_2\vv{e}_2 \]
+    </li>
+    <li>Applica \(\mm{A}\) e usa l'<b>additività</b> (§1.1: la trasformazione di una somma è la somma delle
+      trasformazioni):
+      \[ \mm{A}\vv{x} = \mm{A}\left(x_1\vv{e}_1 + x_2\vv{e}_2\right) = \mm{A}(x_1\vv{e}_1) + \mm{A}(x_2\vv{e}_2) \]
+    </li>
+    <li>Usa l'<b>omogeneità</b> (§1.1: gli scalari escono):
+      \[ = x_1\,\mm{A}\vv{e}_1 + x_2\,\mm{A}\vv{e}_2 \]
+    </li>
+    <li>E sostituisci quello che hai scoperto un attimo fa — \(\mm{A}\vv{e}_j = \vv{a}_j\):
+      \[ \mm{A}\vv{x} = \hA{x_1\vv{a}_1} + \hB{x_2\vv{a}_2} \qquad\blacksquare \]
+      Rileggi questi quattro passaggi: <strong>non c'è dentro un solo conto</strong>. C'è la linearità, e
+      il fatto — quello sì, calcolato — che le colonne sono le immagini dei vettori base.
+      <mark>La frase più importante del libro è una conseguenza della linearità, e di niente altro.</mark>
+    </li>
+  </ol>
+
+  <div class="formula">
+    <div class="f-head">\(\mm{A}\vv{x}\): la frase più importante del libro <span class="tag">imparala a memoria. Sul serio.</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\vv{x} \;=\;
+        \begin{bmatrix} \Big| &amp; \Big| &amp; &amp; \Big| \\
+                        \hA{\vv{a}_1} &amp; \hB{\vv{a}_2} &amp; \cdots &amp; \hC{\vv{a}_n} \\
+                        \Big| &amp; \Big| &amp; &amp; \Big| \end{bmatrix}
+        \begin{bmatrix} \hA{x_1} \\ \hB{x_2} \\ \vdots \\ \hC{x_n} \end{bmatrix}
+        \;=\;
+        \hA{x_1\vv{a}_1} + \hB{x_2\vv{a}_2} + \cdots + \hC{x_n\vv{a}_n}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{a}_j\)</dt>
+        <dd>le <b>colonne</b> di \(\mm{A}\), viste come vettori (la notazione del §5.2, quella che ti avevo
+            detto «ti cambierà la vita nel Capitolo 6»). Sono gli <b>ingredienti</b>.</dd>
+        <dt>\(x_j\)</dt>
+        <dd>i numeri dentro \(\vv{x}\), che qui non sono coordinate: sono <b>pesi</b>. Dicono <em>quanto</em>
+            prendere di ciascuna colonna.</dd>
+        <dt>il risultato</dt>
+        <dd>una <b>combinazione lineare pesata</b> (§3.5) delle colonne di \(\mm{A}\). Esattamente la formula
+            \(\sum_j \lambda_j \vv{v}_j\) del §3.5, con le colonne al posto dei \(\vv{v}_j\) e gli elementi
+            di \(\vv{x}\) al posto dei pesi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Verifica numerica</strong>, con la \(\mm{A}\) di prima e \(\vv{x} = \begin{bmatrix}3\\2\end{bmatrix}\):
+      \[
+        \underbrace{\begin{bmatrix} (2)(3) + (-1)(2) \\ (1)(3) + (4)(2) \end{bmatrix}
+        = \begin{bmatrix} 4 \\ 11 \end{bmatrix}}_{\text{per righe: due prodotti scalari}}
+        \qquad
+        \underbrace{3\begin{bmatrix} 2 \\ 1 \end{bmatrix} + 2\begin{bmatrix} -1 \\ 4 \end{bmatrix}
+        = \begin{bmatrix} 6 \\ 3 \end{bmatrix} + \begin{bmatrix} -2 \\ 8 \end{bmatrix}
+        = \begin{bmatrix} 4 \\ 11 \end{bmatrix}}_{\text{per colonne: una combinazione lineare}}
+      \]
+      Stesso vettore, ovviamente: è lo stesso conto raggruppato in due modi (§6.1, letture ① e ②).
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le righe misurano, le colonne costruiscono</div>
+    <p>
+      Ecco lo slogan da portarsi via, ed è il modo più compatto che conosca per dire la differenza tra le due
+      letture:
+    </p>
+    <ul style="margin:.6rem 0">
+      <li><b>Per righe</b> (prodotti scalari): ogni componente dell'uscita è una <em>misura di
+          allineamento</em> tra una riga e \(\vv{x}\) (§3.3). Le righe <b>misurano</b>. Usa questa lettura
+          per <strong>calcolare</strong>.</li>
+      <li><b>Per colonne</b> (combinazione lineare): l'uscita è un punto costruito dosando le colonne. Le
+          colonne <b>costruiscono</b>. Usa questa lettura per <strong>capire</strong>.</li>
+    </ul>
+    <p style="margin-bottom:0">
+      E c'è un ribaltamento concettuale che vale la pena di dire ad alta voce:
+      <mark>\(\vv{x}\) non è un punto che la matrice trasforma — \(\vv{x}\) è una <em>ricetta</em>.</mark>
+      I suoi numeri sono dosaggi: «prendi \(x_1\) di prima colonna, \(x_2\) di seconda, mescola». Non è la
+      matrice che agisce sul vettore: è il vettore che <em>ordina</em> alla matrice quanto prendere di
+      ciascuna colonna. Cambiare il soggetto della frase è il salto che rende ovvie le prossime cento pagine.
+    </p>
+  </div>
+
+  <div class="widget" id="w-comb">
+    <div class="w-head">
+      <span>Ax è una combinazione delle colonne</span>
+      <span class="hint">muovi i pesi · trascina le punte delle colonne</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-svg" viewBox="0 0 560 400" role="img" aria-label="Ax come combinazione lineare delle colonne di A"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>x₁</label><input type="range" id="wc-x1" min="-3" max="3" step="0.05" value="1.5"><output>1.50</output></div>
+      <div class="w-ctrl"><label>x₂</label><input type="range" id="wc-x2" min="-3" max="3" step="0.05" value="1"><output>1.00</output></div>
+      <button class="w-btn" id="wc-e1">mostra A e₁</button>
+      <button class="w-btn" id="wc-e2">mostra A e₂</button>
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> E adesso il premio: cos'è lo <em>span</em> delle colonne</div>
+    <p>
+      Una sola domanda, e ti si apre metà del libro. <strong>Se \(\vv{x}\) può essere qualunque cosa,
+      l'insieme di tutti i possibili \(\mm{A}\vv{x}\) che cos'è?</strong>
+    </p>
+    <p>
+      Risposta: sono <em>tutte</em> le combinazioni lineari delle colonne. Cioè — per la definizione letterale
+      del §4.5 — <mark>lo <b>span delle colonne</b> di \(\mm{A}\)</mark>. Non è un'analogia: è la stessa
+      identica definizione, parola per parola.
+    </p>
+    <div class="tbl-wrap" style="margin:.6rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>La domanda che ti fai</th><th>È la stessa domanda di…</th><th>Dove</th></tr></thead>
+      <tbody>
+        <tr><td>«Che cosa può <b>produrre</b> questa matrice?»</td>
+            <td>«Qual è lo <b>span</b> delle sue colonne?»</td>
+            <td>§4.5 → si chiamerà <b>spazio delle colonne</b> \(\Col(\mm{A})\), Cap. 8</td></tr>
+        <tr><td>«Il sistema \(\mm{A}\vv{x} = \vv{b}\) <b>ha soluzione</b>?»</td>
+            <td>«\(\vv{b}\) sta nello span delle colonne di \(\mm{A}\)?»</td>
+            <td>Cap. 10 — ed è lo sblocco promesso nel §5.1</td></tr>
+        <tr><td>«Quante direzioni <b>indipendenti</b> hanno le colonne?»</td>
+            <td>«Quanto vale il <b>rango</b>?»</td>
+            <td>§4.6 → Cap. 7</td></tr>
+        <tr><td>«Quali \(\vv{x}\) vengono <b>annientati</b>, cioè \(\mm{A}\vv{x} = \vv{0}\)?»</td>
+            <td>«Con quali dosi le colonne si <b>annullano a vicenda</b>?»</td>
+            <td>lo <b>spazio nullo</b> \(\Null(\mm{A})\), Cap. 8</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Nel §5.1 ti avevo detto: <em>«quando un problema con le matrici ti sembra impenetrabile, prova a
+      cambiare lettura; nove volte su dieci il muro cade»</em>. Questa tabella <strong>è</strong> quel muro
+      che cade. Ogni riga è lo stesso problema visto da due lati, e il lato destro è sempre quello facile.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Dove l'hai già usata senza saperlo</div>
+    <p style="margin-bottom:0">
+      Uno <strong>strato di una rete neurale</strong> è \(\vv{z} = \mm{W}\vv{x}\) (più una costante e una
+      funzione non lineare, ma il cuore è quello): l'uscita è una <em>combinazione lineare delle colonne di
+      \(\mm{W}\)</em>, pesata dagli ingressi. Addestrare la rete significa cercare le colonne giuste.
+      <br>
+      Una <strong>rotazione in un videogioco</strong> è \(\mm{R}\vv{v}\): la nuova posizione è una
+      combinazione delle colonne di \(\mm{R}\), che sono le immagini degli assi. Comporre due rotazioni è il
+      §6.1.
+      <br><br>
+      Sono le due righe della tabella del §1.1 che ti avevano portato fin qui. Le hai appena pagate entrambe.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Creare matrici simmetriche</h2>
+
+  <p class="lead">
+    Le matrici simmetriche sono «le più gentili che esistano» (§5.5): autovalori reali, autovettori
+    ortogonali, tutto funziona. Peccato che le matrici che la vita ti mette davanti non lo siano quasi mai.
+    Domanda pratica: <strong>si possono <em>fabbricare</em>?</strong> Sì, in due modi.
+  </p>
+
+  <h3>Il metodo additivo: \(\mm{A} + \mm{A}\T\)</h3>
+
+  <p>
+    Lo hai già dimostrato tu, nell'<b>Esercizio 5.8</b> — e ti avevo promesso che l'avremmo usato qui. Il
+    ragionamento era tre righe: \(\left(\mm{A}+\mm{A}\T\right)\T = \mm{A}\T + \left(\mm{A}\T\right)\T
+    = \mm{A}\T + \mm{A} = \mm{A} + \mm{A}\T\). Uguale a sé stessa, quindi simmetrica.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Fabbricare simmetria, per somma <span class="tag">funziona su qualunque matrice quadrata</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; \hA{2} \\ \hB{3} &amp; 4 \end{bmatrix}
+        \qquad
+        \mm{A} + \mm{A}\T
+        = \begin{bmatrix} 1 &amp; \hA{2} \\ \hB{3} &amp; 4 \end{bmatrix}
+        + \begin{bmatrix} 1 &amp; \hB{3} \\ \hA{2} &amp; 4 \end{bmatrix}
+        = \begin{bmatrix} 2 &amp; \hD{5} \\ \hD{5} &amp; 8 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      E si capisce <em>perché</em> funziona, senza bisogno della dimostrazione: l'elemento di posto \((1,2)\)
+      della somma è \(\hA{a_{12}} + \hB{a_{21}} = 2 + 3\); quello di posto \((2,1)\) è
+      \(\hB{a_{21}} + \hA{a_{12}} = 3 + 2\). <mark>Sono la stessa somma, scritta in ordine diverso</mark> —
+      e la commutatività dei numeri fa il resto. La simmetria nasce dal fatto che stiamo sommando ogni
+      elemento con il suo riflesso.
+      <br><br>
+      <strong>Requisito:</strong> \(\mm{A}\) deve essere <b>quadrata</b> (altrimenti \(\mm{A}\) e \(\mm{A}\T\)
+      non hanno la stessa forma e non si sommano — era la trappola (c) dell'esercizio 5.3).
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Ogni matrice quadrata è una media più uno scarto</div>
+    <p>
+      Dividendo per due si ottiene qualcosa di più elegante di un semplice trucco. Definiamo:
+      \[
+        \hC{\mm{S}} = \tfrac{1}{2}\left(\mm{A} + \mm{A}\T\right) \quad\text{(la }\textbf{parte simmetrica}\text{)}
+        \qquad
+        \hB{\mm{K}} = \tfrac{1}{2}\left(\mm{A} - \mm{A}\T\right) \quad\text{(la }\textbf{parte antisimmetrica}\text{)}
+      \]
+      La prima è simmetrica (\(\mm{S}\T = \mm{S}\)); la seconda è <span class="termine">antisimmetrica</span>,
+      cioè \(\mm{K}\T = -\mm{K}\) (ha necessariamente <b>zeri sulla diagonale</b>: l'unico numero che è
+      l'opposto di sé stesso è lo zero). E adesso sommale:
+      \[ \hC{\mm{S}} + \hB{\mm{K}} = \tfrac{1}{2}\mm{A} + \tfrac{1}{2}\mm{A}\T + \tfrac{1}{2}\mm{A} - \tfrac{1}{2}\mm{A}\T = \mm{A} \]
+    </p>
+    <p>
+      <mark>Ogni matrice quadrata si spezza nella somma di una parte simmetrica e una antisimmetrica</mark>
+      — e <strong>in un modo solo</strong>. Quest'ultima parola non è gratis, quindi guadagniamocela: se
+      esistesse un'altra spaccatura \(\mm{A} = \mm{S}' + \mm{K}'\) (con \(\mm{S}'\) simmetrica e \(\mm{K}'\)
+      antisimmetrica), trasponendo avresti \(\mm{A}\T = \mm{S}' - \mm{K}'\); sommando le due uguaglianze
+      trovi \(\mm{S}' = \tfrac{1}{2}(\mm{A} + \mm{A}\T)\), sottraendole \(\mm{K}' = \tfrac{1}{2}(\mm{A} - \mm{A}\T)\).
+      Sono le nostre. <em>Non c'era scelta.</em> \(\blacksquare\)
+    </p>
+    <p style="margin-bottom:0">
+      È la stessa mossa della statistica: <em>media</em> più <em>scarto</em>. Con la \(\mm{A}\) di sopra:
+      \[
+        \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix}
+        =
+        \underbrace{\begin{bmatrix} 1 &amp; 2.5 \\ 2.5 &amp; 4 \end{bmatrix}}_{\hC{\text{simmetrica}}}
+        +
+        \underbrace{\begin{bmatrix} 0 &amp; -0.5 \\ 0.5 &amp; 0 \end{bmatrix}}_{\hB{\text{antisimmetrica}}}
+      \]
+      Il 2 e il 3 fuori diagonale si sono trasformati nella loro <b>media</b> (2.5) più uno <b>scarto</b>
+      (\(\pm 0.5\)). Tutta la simmetria sta nella media; tutta l'asimmetria nello scarto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Moltiplicare matrici simmetriche</h2>
+
+  <p class="lead">
+    Il secondo modo di fabbricare simmetria è <em>moltiplicativo</em>, ed è talmente importante che da solo
+    genera i minimi quadrati (Cap. 14) e la PCA (Cap. 19). Te l'avevo promesso alla fine del Capitolo 5, e
+    ha un nome che imparerai a riconoscere a occhio: <mark>\(\mm{A}\T\mm{A}\)</mark>.
+  </p>
+
+  <h3>\(\mm{A}\T\mm{A}\) è <em>sempre</em> simmetrica. Sempre.</h3>
+
+  <p>
+    Qualunque \(\mm{A}\): quadrata, rettangolare, alta, larga, piena di zeri, non importa. E la
+    dimostrazione è di tre righe — perché stiamo <strong>incassando l'investimento fatto nel §6.4</strong>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il prodotto che genera mezza statistica <span class="tag">tre righe, grazie a LIVE EVIL</span></div>
+    <div class="f-body">
+      \[
+        \left(\mm{A}\T\mm{A}\right)\T
+        \;\overset{\text{LIVE EVIL (§6.4)}}{=}\; \mm{A}\T\left(\mm{A}\T\right)\T
+        \;\overset{\text{involutività (§5.4)}}{=}\; \mm{A}\T\mm{A}
+        \qquad\blacksquare
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>primo passaggio</dt>
+        <dd>LIVE EVIL: la trasposta di un prodotto <b>rovescia l'ordine</b>. I fattori sono \(\mm{A}\T\) e
+            \(\mm{A}\), quindi diventano \(\mm{A}\T\) e \(\left(\mm{A}\T\right)\T\), in quest'ordine.</dd>
+        <dt>secondo passaggio</dt>
+        <dd>trasporre due volte non fa nulla (§2.3, §5.4): \(\left(\mm{A}\T\right)\T = \mm{A}\).</dd>
+        <dt>conclusione</dt>
+        <dd>\(\left(\mm{A}\T\mm{A}\right)\T = \mm{A}\T\mm{A}\): la matrice è <b>uguale alla propria
+            trasposta</b>, cioè simmetrica (§5.5). E non abbiamo fatto <em>nessuna</em> ipotesi su
+            \(\mm{A}\).</dd>
+        <dt>le forme</dt>
+        <dd>tornano sempre: se \(\mm{A}\) è \(m\times n\), allora \(\mm{A}\T\) è \(n \times m\) e
+            \(\underbrace{(n\times \hC{m})}_{\mm{A}\T}\underbrace{(\hC{m}\times n)}_{\mm{A}} = n \times n\),
+            <b>quadrata</b>. Non poteva essere altrimenti: una matrice non quadrata non potrebbe nemmeno
+            <em>essere</em> simmetrica.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Vale, identica, anche per \(\mm{A}\mm{A}\T\) (stessa dimostrazione). Ma attenzione — e questo è un
+      errore che costa caro nel Cap. 14 e nel Cap. 19: <mark>\(\mm{A}\T\mm{A}\) e \(\mm{A}\mm{A}\T\)
+      <strong>non sono la stessa matrice</strong></mark>. Hanno forme diverse: \(n\times n\) la prima,
+      \(m \times m\) la seconda.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Verifica su una rettangolare <span class="tag">la C del Capitolo 5</span></div>
+    <div class="f-body">
+      \[ \mm{C} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 4 &amp; 5 &amp; 6 \end{bmatrix} \quad (2\times3) \]
+      \[
+        \mm{C}\mm{C}\T = \begin{bmatrix} \hD{14} &amp; 32 \\ 32 &amp; \hD{77} \end{bmatrix} \;(2\times2)
+        \qquad\qquad
+        \mm{C}\T\mm{C} = \begin{bmatrix} \hD{17} &amp; 22 &amp; 27 \\ 22 &amp; \hD{29} &amp; 36 \\ 27 &amp; 36 &amp; \hD{45} \end{bmatrix} \;(3\times3)
+      \]
+    </div>
+    <div class="f-note">
+      Entrambe <strong>simmetriche</strong> ✔ (guarda i numeri fuori diagonale: si specchiano). Entrambe
+      <strong>quadrate</strong> ✔. E di <strong>forme diverse</strong> ✔ — la stessa \(\mm{C}\) produce una
+      \(2\times2\) e una \(3\times3\), a seconda di dove metti la \(\mathsf{T}\).
+      <br><br>
+      Adesso somma le due diagonali, e preparati:
+      \[ \tr(\mm{C}\mm{C}\T) = 14 + 77 = \mathbf{91} \qquad\qquad \tr(\mm{C}\T\mm{C}) = 17 + 29 + 45 = \mathbf{91} \]
+      Due matrici di <em>dimensioni diverse</em>, che non si possono nemmeno confrontare, hanno la
+      <strong>stessa traccia</strong>. Non è un caso, e non è un miracolo: è il §6.9, e lo dimostreremo tra
+      due sezioni. (Tieni d'occhio anche il numero 91: tornerà nel §6.10, da una terza direzione.)
+    </div>
+  </div>
+
+  <h3>E il prodotto di <em>due</em> simmetriche?</h3>
+
+  <p>
+    Domanda naturale: se \(\mm{S}\) e \(\mm{T}\) sono simmetriche, lo è anche \(\mm{S}\mm{T}\)? L'istinto
+    dice sì. L'istinto <strong>sbaglia</strong> — e il bello è che LIVE EVIL ci dice <em>esattamente</em>
+    quando sbaglia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La condizione esatta <span class="tag">e salta fuori la commutatività</span></div>
+    <div class="f-body">
+      \[
+        \left(\mm{S}\mm{T}\right)\T
+        \;\overset{\text{LIVE EVIL}}{=}\; \mm{T}\T\mm{S}\T
+        \;\overset{\text{sono simmetriche}}{=}\; \hB{\mm{T}\mm{S}}
+      \]
+      \[
+        \mm{S}\mm{T} \text{ è simmetrica}
+        \quad\Longleftrightarrow\quad
+        \left(\mm{S}\mm{T}\right)\T = \mm{S}\mm{T}
+        \quad\Longleftrightarrow\quad
+        \hB{\mm{T}\mm{S}} = \mm{S}\mm{T}
+      \]
+    </div>
+    <div class="f-note">
+      <mark>Il prodotto di due matrici simmetriche è simmetrico <strong>se e solo se le due matrici
+      commutano</strong>.</mark> Ecco la «notizia» che ti avevo anticipato nel §6.2: la commutatività non è
+      una curiosità, è <em>la condizione</em> che serve qui. E guarda quanto è costata la dimostrazione: due
+      passaggi, perché LIVE EVIL era già in cassa da tre sezioni. <strong>Gli investimenti in algebra lineare
+      rendono in fretta.</strong>
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Due simmetriche che non commutano <span class="tag">e il prodotto si sfascia</span></div>
+    <div class="f-body">
+      \[
+        \mm{S} = \begin{bmatrix} 1 &amp; 2 \\ 2 &amp; 1 \end{bmatrix} \;\text{(simmetrica)}
+        \qquad
+        \mm{T} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; -1 \end{bmatrix} \;\text{(simmetrica, anzi diagonale)}
+      \]
+      \[
+        \mm{S}\mm{T} = \begin{bmatrix} 1 &amp; \hB{-2} \\ \hA{2} &amp; -1 \end{bmatrix}
+        \qquad\qquad
+        \mm{T}\mm{S} = \begin{bmatrix} 1 &amp; \hA{2} \\ \hB{-2} &amp; -1 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      \(\mm{S}\mm{T}\) <strong>non è simmetrica</strong> (\(-2 \neq 2\) fuori dalla diagonale), e infatti
+      \(\mm{S}\mm{T} \neq \mm{T}\mm{S}\). Ma guarda meglio i due risultati: <mark>\((\mm{S}\mm{T})\T\) è
+      proprio \(\mm{T}\mm{S}\)</mark> — le due matrici sono l'una la trasposta dell'altra, esattamente come
+      prediceva la formula. La teoria non descrive il fenomeno: lo <em>governa</em>.
+      <br><br>
+      <em>(Se invece prendi due simmetriche che commutano — per esempio
+      \(\begin{bmatrix}2&amp;1\\1&amp;2\end{bmatrix}\) e \(\begin{bmatrix}3&amp;1\\1&amp;3\end{bmatrix}\),
+      il cui prodotto in entrambi gli ordini è \(\begin{bmatrix}7&amp;5\\5&amp;7\end{bmatrix}\) — il prodotto
+      è simmetrico, come promesso.)</em>
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché \(\mm{A}\T\mm{A}\) è ovunque (e perché la PCA esiste)</div>
+    <p>
+      Non è una curiosità algebrica: è <strong>l'oggetto più importante della statistica applicata</strong>,
+      e adesso hai gli strumenti per capire perché.
+    </p>
+    <p>
+      Immagina che \(\mm{X}\) sia una <b>tabella di dati</b> (lettura ① del §5.1): ogni riga
+      un'osservazione, ogni colonna una variabile misurata. Allora il prodotto \(\mm{X}\T\mm{X}\) ha una
+      casella per <em>ogni coppia di variabili</em>, e quella casella è il <b>prodotto scalare tra le due
+      colonne</b> — cioè, per il §3.3, una misura di <em>quanto quelle due variabili vanno d'accordo</em>.
+    </p>
+    <p style="margin-bottom:0">
+      <mark>\(\mm{X}\T\mm{X}\) è la tabella di tutti i «quanto si somigliano» tra le variabili</mark> — ed è
+      lo scheletro della <b>matrice di covarianza</b> (Cap. 18). <em>(Scheletro e non ancora covarianza: per
+      averla davvero bisogna prima <b>centrare</b> le colonne, cioè togliere a ciascuna la sua media, e poi
+      dividere per \(n-1\). Sono due rifiniture da statistico, e le farà il Cap. 18; la <b>struttura</b> —
+      che è ciò che conta qui — è già tutta in questo prodotto.)</em>
+      Ed è <strong>simmetrica</strong> — cosa che nel §5.5
+      avevo affermato senza dimostrare, giustificandola solo a parole («quanto \(x\) varia con \(y\)» è la
+      stessa cosa di «quanto \(y\) varia con \(x\)»). Adesso sai che è vera per una ragione strutturale, in
+      due passaggi di LIVE EVIL.
+      <br><br>
+      E siccome è simmetrica, ha autovalori reali e autovettori ortogonali (§15.8). Quegli autovettori sono
+      le <b>componenti principali</b> (Cap. 19). <strong>La PCA funziona perché \(\left(\mm{X}\T\mm{X}\right)\T = \mm{X}\T\mm{X}\).</strong>
+      Tutta la catena — dati → covarianza → simmetria → autovettori ortogonali → PCA — comincia da questa
+      sezione. E i <b>minimi quadrati</b> (Cap. 14) partono dallo stesso punto: la loro equazione famosa,
+      \(\mm{X}\T\mm{X}\vv{\beta} = \mm{X}\T\vv{y}\), ha \(\mm{X}\T\mm{X}\) proprio lì in mezzo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-8"><span class="secnum">Sezione 6.8</span>Moltiplicazione di Hadamard</h2>
+
+  <p>
+    Come per i vettori (§3.7), esiste anche per le matrici la moltiplicazione «ingenua», quella che tutti si
+    aspettano di trovare per prima: <strong>moltiplica le caselle corrispondenti e fermati lì</strong>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto di Hadamard <span class="tag">casella per casella</span></div>
+    <div class="f-body">
+      \[ \left(\mm{A} \odot \mm{B}\right)_{ij} = a_{ij}\,b_{ij} \]
+      \[
+        \begin{bmatrix} 1 &amp; 2 &amp; -1 \\ 0 &amp; 3 &amp; 4 \end{bmatrix}
+        \odot
+        \begin{bmatrix} 2 &amp; 0 &amp; 3 \\ -1 &amp; 5 &amp; 1 \end{bmatrix}
+        =
+        \begin{bmatrix} (1)(2) &amp; (2)(0) &amp; (-1)(3) \\ (0)(-1) &amp; (3)(5) &amp; (4)(1) \end{bmatrix}
+        =
+        \begin{bmatrix} 2 &amp; 0 &amp; -3 \\ 0 &amp; 15 &amp; 4 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Requisito:</strong> <mark>forme <em>identiche</em></mark>, come per la somma (§5.6). E il
+      risultato ha la stessa forma degli ingressi.
+      <br><br>
+      Nota bene che le due matrici dell'esempio sono entrambe \(2\times3\): il prodotto <b>standard</b>
+      \(\mm{A}\mm{B}\) tra loro <strong>non esisterebbe nemmeno</strong> — \((2\times\hB{3})(\hB{2}\times3)\),
+      il 3 e il 2 non si toccano. <mark>Le due moltiplicazioni hanno requisiti <em>opposti</em>: quando una
+      funziona, spesso l'altra no.</mark>
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \(\odot\) e il prodotto vero non hanno niente in comune</div>
+    <p>
+      Per farti vedere quanto siano lontane, prendiamo due matrici \(2\times2\), dove <em>entrambe</em> le
+      operazioni sono definite (le solite due del Capitolo 5):
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix}, \quad
+        \mm{B} = \begin{bmatrix} 0 &amp; -1 \\ 5 &amp; 2 \end{bmatrix}
+        \qquad
+        \hC{\mm{A} \odot \mm{B}} = \begin{bmatrix} 0 &amp; -2 \\ 15 &amp; 8 \end{bmatrix}
+        \qquad
+        \hD{\mm{A}\mm{B}} = \begin{bmatrix} 10 &amp; 3 \\ 20 &amp; 5 \end{bmatrix}
+      \]
+      <b>Non un numero in comune.</b> Stessi ingredienti, universi diversi.
+    </p>
+    <p style="margin-bottom:0">
+      <strong>E qui c'è un bug classico che ti risparmio in anticipo.</strong> In moltissimi ambienti di
+      calcolo il simbolo <span class="sym">*</span> tra due matrici fa <em>Hadamard</em>, e per la
+      moltiplicazione vera serve un simbolo diverso. Il guaio è che sulle matrici quadrate <mark>le forme
+      tornano lo stesso</mark>: il programma non protesta, i numeri escono, e sono <em>silenziosamente
+      sbagliati</em>. È uno degli errori più difficili da scovare in circolazione.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Onestà: in questo libro non tornerà quasi mai</div>
+    <p style="margin-bottom:0">
+      Come per i vettori (§3.7), il prodotto di Hadamard <strong>non ha alcun significato geometrico</strong>:
+      non compone trasformazioni, non misura angoli, non costruisce niente. È una <em>comodità di calcolo</em>
+      — un modo compatto per dire «applica questa griglia di fattori di scala, una per casella». Serve nelle
+      maschere, nei filtri, nelle reti neurali (per «spegnere» selettivamente delle unità).
+      Sapere che esiste ti evita di confonderla con quella vera; oltre a questo, puoi archiviarla.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-9"><span class="secnum">Sezione 6.9</span>Prodotto scalare di Frobenius</h2>
+
+  <p class="lead">
+    Il prodotto scalare tra due <em>vettori</em> (§3.1) misura quanto sono allineati. Domanda: si può fare
+    la stessa cosa tra due <em>matrici</em>? Sì, ed è più facile di quanto sembri — perché una matrice, in
+    fondo, è solo un vettore srotolato male.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto scalare di Frobenius <span class="tag">moltiplica a coppie, poi somma. Di nuovo.</span></div>
+    <div class="f-body">
+      \[
+        \dotp{\mm{A}}{\mm{B}}_F \;=\; \sum_{i=1}^{m}\sum_{j=1}^{n} \hA{a_{ij}}\,\hB{b_{ij}}
+        \;=\; \tr\!\left(\mm{A}\T\mm{B}\right)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\sum_i \sum_j\)</dt>
+        <dd>la <b>doppia sommatoria</b>: non è un mostro, è solo «somma tutte le caselle di una tabella».
+            Fissi una riga, sommi lungo quella riga; poi sommi i totali delle righe. (È la prima volta che
+            la incontri nel libro — il box qui sotto la smonta per bene.)</dd>
+        <dt>\(\hA{a_{ij}}\hB{b_{ij}}\)</dt>
+        <dd><b>stessa casella con stessa casella</b>: è esattamente lo spirito del §3.1 (il primo con il
+            primo, il secondo con il secondo), solo che qui le posizioni hanno due indici invece di uno.</dd>
+        <dt>il risultato</dt>
+        <dd>uno <b>scalare</b>. Un solo numero, che riassume «quanto le due matrici si somigliano».</dd>
+        <dt>\(\tr(\mm{A}\T\mm{B})\)</dt>
+        <dd>la formula equivalente, ed è quella che si usa davvero perché è compatta. Nota il requisito di
+            forma: \(\mm{A}\) e \(\mm{B}\) devono avere la <b>stessa forma</b> (altrimenti la somma casella
+            per casella non avrebbe senso).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Il modo giusto di vederlo:</strong> <mark>srotola le due matrici in due vettori lunghi
+      \(mn\), e fai il prodotto scalare del §3.1.</mark> Tutto qui. Non c'è nessun concetto nuovo — c'è il
+      Capitolo 3, in una stanza più grande.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Verifica: due strade, un numero <span class="tag">le solite A e B</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix}, \quad
+        \mm{B} = \begin{bmatrix} 0 &amp; -1 \\ 5 &amp; 2 \end{bmatrix}
+      \]
+      \[
+        \begin{aligned}
+          \text{(a) casella per casella:}\quad \dotp{\mm{A}}{\mm{B}}_F
+            &amp;= (1)(0) + (2)(-1) + (3)(5) + (4)(2) \\
+            &amp;= 0 - 2 + 15 + 8 = \mathbf{21} \\[8pt]
+          \text{(b) con la traccia:}\quad \mm{A}\T\mm{B}
+            &amp;= \begin{bmatrix} 1 &amp; 3 \\ 2 &amp; 4 \end{bmatrix}
+               \begin{bmatrix} 0 &amp; -1 \\ 5 &amp; 2 \end{bmatrix}
+             = \begin{bmatrix} \hA{15} &amp; 5 \\ 20 &amp; \hA{6} \end{bmatrix} \\[3pt]
+          \tr\!\left(\mm{A}\T\mm{B}\right) &amp;= \hA{15} + \hA{6} = \mathbf{21} \;\;\checkmark
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      Le due strade danno lo stesso numero, e non per fortuna: la traccia di \(\mm{A}\T\mm{B}\) somma solo
+      gli elementi diagonali, e <mark>l'elemento diagonale \((j,j)\) di \(\mm{A}\T\mm{B}\) è esattamente
+      «colonna \(j\) di \(\mm{A}\) · colonna \(j\) di \(\mm{B}\)»</mark>. Sommandoli tutti, ogni casella di
+      \(\mm{A}\) incontra la casella corrispondente di \(\mm{B}\), esattamente una volta. La traccia fa il
+      lavoro della doppia sommatoria — <em>e butta via tutto il resto del prodotto, che non serviva</em>.
+    </div>
+  </div>
+
+  <h3>La promessa del §5.9: perché \(\tr(\mm{A}\mm{B}) = \tr(\mm{B}\mm{A})\)</h3>
+
+  <p>
+    Nel Capitolo 5, nella tabella delle proprietà della traccia, c'era una riga marcata <b>«sorprendente»</b>
+    e con una cambiale: <em>«la dimostreremo nel §6.9»</em>. È adesso. E la sorpresa è doppia, perché
+    \(\mm{A}\mm{B}\) e \(\mm{B}\mm{A}\) — lo abbiamo martellato per tutto il capitolo — sono <em>matrici
+    completamente diverse</em>. Eppure le loro tracce coincidono.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La doppia sommatoria, spiegata una volta per tutte</div>
+    <p>
+      Prima di dimostrare, togliamo di mezzo lo spavento. \(\sum_{i}\sum_{k} t_{ik}\) <strong>non è un
+      mostro</strong>: è una tabella di numeri, e ti si chiede di sommarli <em>tutti</em>.
+    </p>
+    <ul style="margin:.5rem 0">
+      <li>\(\sum_i \left(\sum_k t_{ik}\right)\): fissa una riga, somma lungo quella riga; poi somma i totali
+          delle righe.</li>
+      <li>\(\sum_k \left(\sum_i t_{ik}\right)\): fissa una colonna, somma lungo quella colonna; poi somma i
+          totali delle colonne.</li>
+    </ul>
+    <p style="margin-bottom:0">
+      <mark>Il risultato è lo stesso, perché in entrambi i casi hai sommato tutti i numeri della tabella —
+      solo in un ordine diverso.</mark> È la stessa cosa che fai quando controlli lo scontrino della spesa
+      sommando per reparti anziché riga per riga: il totale non cambia.
+      <strong>Questa è l'unica proprietà che useremo</strong>, e ora la dimostrazione è già mezza fatta.
+    </p>
+  </div>
+
+  <ol class="passi">
+    <li><b>L'elemento diagonale del prodotto.</b> Con \(\mm{A}\) di forma \(m\times n\) e \(\mm{B}\) di forma
+      \(n \times m\), il prodotto \(\mm{A}\mm{B}\) è \(m\times m\). Il suo elemento diagonale è il caso
+      \(j=i\) della formula del §6.1 (riga \(i\) di \(\mm{A}\), colonna \(i\) di \(\mm{B}\)):
+      \[ (\mm{A}\mm{B})_{ii} = \sum_{k=1}^{n} a_{ik}\,b_{ki} \]
+    </li>
+    <li><b>La traccia è la somma di questi</b> (definizione, §5.9). Ed ecco che compare la tabella:
+      \[ \tr(\mm{A}\mm{B}) = \sum_{i=1}^{m} (\mm{A}\mm{B})_{ii} = \sum_{i=1}^{m}\sum_{k=1}^{n} a_{ik}\,b_{ki} \]
+    </li>
+    <li><b>Scambio i due fattori dentro ogni casella.</b> \(a_{ik}\) e \(b_{ki}\) sono <b>numeri</b>, e i
+      numeri commutano (§3.2). <em>Nessuna matrice è stata commutata:</em>
+      \[ = \sum_{i=1}^{m}\sum_{k=1}^{n} b_{ki}\,a_{ik} \]
+    </li>
+    <li><b>Sommo la stessa tabella nell'altro verso</b> (il box qui sopra):
+      \[ = \sum_{k=1}^{n}\left(\sum_{i=1}^{m} b_{ki}\,a_{ik}\right) \]
+    </li>
+    <li><b>Riconosco la somma interna.</b> \(\sum_i b_{ki}a_{ik}\) è «riga \(k\) di \(\mm{B}\) per colonna
+      \(k\) di \(\mm{A}\)», cioè l'elemento diagonale \((\mm{B}\mm{A})_{kk}\). Quindi:
+      \[ = \sum_{k=1}^{n} (\mm{B}\mm{A})_{kk} = \tr(\mm{B}\mm{A}) \qquad\blacksquare \]
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Che cosa è successo davvero (e cosa <em>non</em> è successo)</div>
+    <p style="margin-bottom:0">
+      <mark>Abbiamo scambiato due <em>numeri</em> e risommato la stessa tabella in un altro ordine. Tutto
+      qui.</mark> \(\mm{A}\mm{B}\) e \(\mm{B}\mm{A}\) restano matrici completamente diverse — hanno persino
+      forme diverse! — <strong>ma le loro diagonali, sommate, danno lo stesso totale</strong>: perché
+      entrambe le somme, in fondo, stanno sommando gli stessi \(mn\) prodotti \(a_{ik}b_{ki}\), raccolti in
+      due modi.
+      <br><br>
+      <strong>La verifica che nessuno dimentica.</strong> Riprendi la \(\mm{C}\) del §6.7:
+      \(\mm{C}\mm{C}\T\) è \(2\times2\) con traccia \(14+77 = 91\); \(\mm{C}\T\mm{C}\) è \(3\times3\) con
+      traccia \(17+29+45 = 91\). Due matrici di <em>dimensioni diverse</em>, con elementi tutti diversi,
+      <strong>stesso numero</strong>. Se dovessi convincere qualcuno che l'algebra lineare è piena di magia,
+      gli mostrerei questo.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> La ciclicità è una <em>rotazione</em>, non un rimescolamento</div>
+    <p style="margin-bottom:0">
+      La proprietà si estende a più fattori — \(\tr(\mm{A}\mm{B}\mm{C}) = \tr(\mm{B}\mm{C}\mm{A}) = \tr(\mm{C}\mm{A}\mm{B})\) —
+      e per questo si chiama <span class="termine">ciclicità</span>: l'ultimo fattore passa in testa, come le
+      perle di una <b>collana</b> che fai girare. <mark>Ma non puoi <em>rimescolare</em></mark>: in generale
+      \(\tr(\mm{A}\mm{B}\mm{C}) \neq \tr(\mm{B}\mm{A}\mm{C})\). Una collana, non un sacchetto.
+      <br><br>
+      <strong>A cosa serve davvero</strong>, e qui chiudiamo un cerchio aperto due volte nel Capitolo 5. Nel
+      Cap. 15 scriveremo una matrice come \(\mm{A} = \mm{V}\mm{\Lambda}\mm{V}\inv\) (con \(\mm{\Lambda}\)
+      diagonale, che contiene gli autovalori). Allora, ruotando la collana:
+      \[ \tr(\mm{A}) = \tr\!\left(\mm{V}\mm{\Lambda}\mm{V}\inv\right) = \tr\!\left(\mm{\Lambda}\mm{V}\inv\mm{V}\right) = \tr(\mm{\Lambda}) = \sum_i \lambda_i \]
+      Ed è dimostrato il fatto che nel §5.9 ti avevo dato per buono senza prove:
+      <mark>la traccia è la somma degli autovalori</mark>. Ti serviva solo la ciclicità — cioè questa
+      sezione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-10"><span class="secnum">Sezione 6.10</span>Norme di matrici</h2>
+
+  <p class="lead">
+    Se il prodotto scalare di Frobenius è l'analogo di \(\vv{a}\T\vv{b}\), allora deve esistere anche
+    l'analogo della <em>lunghezza</em>. E infatti: la <span class="termine">norma di Frobenius</span> è
+    semplicemente <mark>la lunghezza di una matrice srotolata</mark>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Norma di Frobenius <span class="tag">Pitagora, in mn dimensioni</span></div>
+    <div class="f-body">
+      \[
+        \norm{\mm{A}}_F \;=\; \sqrt{\sum_{i=1}^{m}\sum_{j=1}^{n} a_{ij}^2}
+        \;=\; \sqrt{\dotp{\mm{A}}{\mm{A}}_F}
+        \;=\; \sqrt{\tr\!\left(\mm{A}\T\mm{A}\right)}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\sum\sum a_{ij}^2\)</dt>
+        <dd><b>la somma di tutti i quadrati</b> degli elementi. È la definizione onesta, quella senza magia:
+            srotola la matrice in un vettore lungo \(mn\), e applica la norma del §2.2. Pitagora, con più
+            termini.</dd>
+        <dt>il pedice \(F\)</dt>
+        <dd>sta per <b>Frobenius</b>, e serve a distinguerla dalle <em>altre</em> norme di matrice che
+            esistono (vedi il box qui sotto). Sui vettori il pedice non serviva perché di norma «standard»
+            ce n'è una sola.</dd>
+        <dt>\(\sqrt{\tr(\mm{A}\T\mm{A})}\)</dt>
+        <dd>la formula compatta, ed è <b>esattamente</b> quella che ti avevo promesso nel §5.9. Nota il
+            parallelo perfetto con i vettori:
+            \(\norm{\vv{a}} = \sqrt{\vv{a}\T\vv{a}}\) (§3.1) diventa
+            \(\norm{\mm{A}}_F = \sqrt{\tr(\mm{A}\T\mm{A})}\). <mark>Stessa architettura, un piano più su:
+            l'unica aggiunta è la traccia, che serve a schiacciare una matrice in un numero.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Esempio, con numeri che danno una radice pulita:</strong>
+      \[
+        \mm{M} = \begin{bmatrix} 1 &amp; 2 \\ -2 &amp; 4 \end{bmatrix}
+        \qquad
+        \norm{\mm{M}}_F = \sqrt{1^2 + 2^2 + (-2)^2 + 4^2} = \sqrt{1 + 4 + 4 + 16} = \sqrt{25} = \mathbf{5}
+      \]
+      E via traccia: \(\mm{M}\T\mm{M} = \begin{bmatrix} 5 &amp; -6 \\ -6 &amp; 20\end{bmatrix}\), la cui
+      traccia è \(5 + 20 = 25\), e \(\sqrt{25} = \mathbf{5}\) ✔. Due strade, un numero.
+      <br><br>
+      <strong>E adesso il 91 che ti avevo detto di tenere d'occhio</strong> (§6.7). Per la
+      \(\mm{C} = \begin{bmatrix}1 &amp; 2 &amp; 3\\ 4 &amp; 5 &amp; 6\end{bmatrix}\):
+      \[ \norm{\mm{C}}_F^2 = 1 + 4 + 9 + 16 + 25 + 36 = \mathbf{91} = \tr(\mm{C}\mm{C}\T) = \tr(\mm{C}\T\mm{C}) \]
+      È lo stesso 91 di prima. <mark>Non erano tre fatti: era un fatto solo, guardato da tre lati</mark> — la
+      traccia di una \(2\times2\), la traccia di una \(3\times3\), e la lunghezza di \(\mm{C}\).
+      Quindi \(\norm{\mm{C}}_F = \sqrt{91} \approx 9.54\).
+    </div>
+  </div>
+
+  <h3>Il trucco svelato: dove finiscono tutti i quadrati</h3>
+
+  <p>
+    Nel §5.9 avevo scritto una frase che allora sembrava un atto di fede: <em>«il prodotto \(\mm{A}\T\mm{A}\)
+    rimescola le cose in modo che ogni elemento di \(\mm{A}\) finisca sulla diagonale, al quadrato»</em>, e
+    ti avevo detto: <em>«non ti chiedo di crederci ora»</em>. Adesso guardiamola succedere, su una
+    \(2\times2\), scritta per esteso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Perché la traccia di \(\mm{A}\T\mm{A}\) cattura tutta la matrice <span class="tag">promessa del §5.9, saldata</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix}
+        \qquad
+        \mm{A}\T = \begin{bmatrix} a &amp; c \\ b &amp; d \end{bmatrix}
+        \qquad
+        \mm{A}\T\mm{A} = \begin{bmatrix} \hA{a^2 + c^2} &amp; ab + cd \\ ab + cd &amp; \hA{b^2 + d^2} \end{bmatrix}
+      \]
+      \[
+        \tr\!\left(\mm{A}\T\mm{A}\right) = \hA{a^2 + c^2} + \hA{b^2 + d^2} = a^2 + b^2 + c^2 + d^2
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Tutti i quadrati, ciascuno esattamente una volta.</strong> Ma il <em>perché strutturale</em> è
+      più bello del conto, ed è questo: l'elemento \((j,j)\) di \(\mm{A}\T\mm{A}\) è «riga \(j\) di
+      \(\mm{A}\T\) per colonna \(j\) di \(\mm{A}\)». Ma la riga \(j\) di \(\mm{A}\T\) <em>è</em> la colonna
+      \(j\) di \(\mm{A}\) (§5.4)! Quindi quell'elemento è <b>la colonna \(j\) moltiplicata scalarmente per
+      sé stessa</b>, cioè \(\norm{\vv{a}_j}^2\) — il «ponte con la norma» del §3.1.
+      <br><br>
+      <mark>Sulla diagonale di \(\mm{A}\T\mm{A}\) ci sono le lunghezze al quadrato delle colonne di
+      \(\mm{A}\).</mark> La traccia le somma tutte; e sommare le lunghezze² di tutte le colonne significa
+      sommare ogni elemento al quadrato, una volta sola. Ecco svelato il trucco che nel §5.9 sembrava magia:
+      <strong>la traccia non è affatto miope — è \(\mm{A}\T\mm{A}\) che le porta tutto sotto il naso.</strong>
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> E fuori dalla diagonale? (il regalo che non ti aspettavi)</div>
+    <p>
+      Guarda di nuovo \(\mm{A}\T\mm{A}\) qui sopra. Sulla diagonale ci sono le lunghezze² delle colonne. E
+      <em>fuori</em>? C'è \(ab + cd\), che è <b>colonna 1 · colonna 2</b>: il loro prodotto scalare, cioè
+      quanto sono <em>allineate</em> (§3.3).
+    </p>
+    <p style="margin-bottom:0">
+      <mark>\(\mm{A}\T\mm{A}\) è la tabella di <em>tutti</em> i prodotti scalari tra le colonne di
+      \(\mm{A}\): sulla diagonale ogni colonna con sé stessa (le lunghezze), fuori ogni colonna con le altre
+      (gli allineamenti).</mark>
+      <br><br>
+      Tre conseguenze, tutte gratis, e tutte già incontrate:
+      <br>• <b>È simmetrica</b> (§6.7) — ovvio, adesso: \(\vv{a}_i\T\vv{a}_j = \vv{a}_j\T\vv{a}_i\), perché
+      il prodotto scalare <em>tra vettori</em> è commutativo (§3.2).
+      <br>• <b>È lo scheletro della matrice di covarianza</b> (Cap. 18), se le colonne sono variabili:
+      «quanto ogni variabile va d'accordo con ogni altra» è letteralmente questa tabella — una volta che le
+      variabili siano state <em>centrate</em> (§6.7).
+      <br>• <b>È l'identità</b> se e solo se le colonne sono <em>ortogonali e di lunghezza 1</em>: fuori
+      diagonale zeri (ortogonali), sulla diagonale uni (unitarie). Sono le <b>matrici ortogonali</b>
+      \(\mm{Q}\T\mm{Q} = \mm{I}\) che hai già visto nello zoo del §5.5 — e adesso sai <em>perché</em> quella
+      formula significa esattamente questo (Cap. 13).
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Ci sono altre norme: «quanto pesa» ≠ «quanto tira»</div>
+    <p style="margin-bottom:0">
+      La norma di Frobenius risponde alla domanda <em>«quanto <b>pesa</b> questa matrice?»</em> — quanto
+      sono grandi, complessivamente, i suoi numeri. Ma per una <em>macchina</em> c'è una domanda più
+      naturale: <em>«quanto <b>tira</b>?»</em>, cioè di quanto può allungare, al massimo, un vettore. Quella
+      è la <span class="termine">norma indotta</span>:
+      \[ \norm{\mm{A}}_2 = \max_{\vv{x} \neq \vv{0}} \frac{\norm{\mm{A}\vv{x}}}{\norm{\vv{x}}} \]
+      <b>Peso</b> contro <b>forza</b>: sono numeri diversi e servono a scopi diversi. Non ci serve calcolarla
+      adesso (non sapremmo nemmeno da dove iniziare a cercare quel massimo) — ma sappi che tornerà, e sarà
+      un vecchio amico: nel Cap. 16 scoprirai che \(\norm{\mm{A}}_2\) è semplicemente <b>il più grande valore
+      singolare</b> della SVD, e che il rapporto tra il più grande e il più piccolo si chiama <em>numero di
+      condizionamento</em> (§16.10) e ti dice quanto è pericoloso fidarsi dei tuoi conti.
+      Quanto alla norma di Frobenius, è lei la quantità che l'<b>approssimazione a rango basso</b> minimizza
+      (§16.8): comprimere significa scegliere la \(\tilde{\mm{A}}\) che rende \(\norm{\mm{A} - \tilde{\mm{A}}}_F\)
+      più piccola possibile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-11"><span class="secnum">Sezione 6.11</span>E la divisione tra matrici?</h2>
+
+  <p class="lead">
+    Domanda legittima, dopo un capitolo intero di moltiplicazioni. La risposta è secca:
+    <mark>la divisione tra matrici <strong>non esiste</strong></mark>. E non è una dimenticanza dei
+    matematici: è un'impossibilità, per <em>due</em> ragioni indipendenti.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Ragione 1: «\(\mm{A}/\mm{B}\)» sarebbe <em>ambiguo</em></div>
+    <p>
+      Con i numeri, \(a/b\) significa «moltiplica \(a\) per il reciproco di \(b\)», e non c'è ambiguità
+      perché \(a \cdot b^{-1} = b^{-1} \cdot a\): l'ordine non conta. Con le matrici l'ordine conta
+      <em>sempre</em> (§6.2), quindi la scrittura «\(\mm{A}/\mm{B}\)» dovrebbe scegliere tra due cose diverse:
+      \[ \mm{A}\mm{B}\inv \qquad\text{oppure}\qquad \mm{B}\inv\mm{A} \;? \]
+      E sono davvero diverse. Con \(\mm{A} = \begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix}\) e
+      \(\mm{B} = \begin{bmatrix}1&amp;1\\0&amp;1\end{bmatrix}\) (la cui inversa è
+      \(\begin{bmatrix}1&amp;-1\\0&amp;1\end{bmatrix}\), come verificherai nel Cap. 12):
+      \[
+        \hA{\mm{A}\mm{B}\inv} = \begin{bmatrix} 1 &amp; 1 \\ 3 &amp; 1 \end{bmatrix}
+        \qquad\qquad
+        \hB{\mm{B}\inv\mm{A}} = \begin{bmatrix} -2 &amp; -2 \\ 3 &amp; 4 \end{bmatrix}
+      \]
+      Non si somigliano nemmeno.
+    </p>
+    <p style="margin-bottom:0">
+      <mark>La barra di frazione non esiste perché sarebbe ambigua</mark>: non c'è modo di sapere da che
+      lato intendi moltiplicare, e nessuna notazione può decidere al posto tuo. Quel che si fa davvero è
+      <strong>moltiplicare per l'inversa, dichiarando da quale lato</strong> — ed è precisamente la regola
+      del §6.2 («stesso lato su entrambi i membri»).
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Ragione 2: l'inversa spesso <em>non c'è</em></div>
+    <p style="margin-bottom:0">
+      Ogni numero diverso da zero ha il suo reciproco. Con le matrici <strong>no</strong>: esistono matrici
+      non nulle che <em>non si possono invertire</em>. Sono le <span class="termine">singolari</span> dello
+      zoo del §5.5 — quelle che schiacciano lo spazio su una retta e buttano via l'informazione (il collasso
+      del widget del §1.1, e la \(\mm{Q}\) del §6.2 che spingeva tutto su una sola direzione).
+      <mark>Non si può disfare uno schiacciamento</mark>: una volta che due punti diversi sono finiti nello
+      stesso posto, nessuna macchina al mondo può sapere da dove venivano.
+      <br><br>
+      È per questo che il Cap. 12 esiste, e che si intitola «Inversa di una matrice» e non «Divisione».
+      L'inversa \(\mm{A}\inv\) è definita da \(\mm{A}\mm{A}\inv = \mm{A}\inv\mm{A} = \mm{I}\) — «la macchina
+      che disfa quello che \(\mm{A}\) ha fatto» — e la prima domanda del capitolo sarà proprio: <em>esiste?</em>
+      Le risposte parziali le hai già. Intanto \(\mm{A}\) deve essere <b>quadrata</b> (§5.3): è il
+      prerequisito, non un indizio. E poi, <em>fra le quadrate</em>, serve che non collassi nulla — cioè che
+      le sue colonne siano indipendenti (§4.6) — che è la stessa cosa di «il determinante non è zero»
+      (Cap. 11). <mark>Queste due <em>sì</em> che sono due modi di dire la stessa cosa</mark>, e nel Cap. 12
+      lo vedrai.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> L'unica «divisione» che esiste</div>
+    <p style="margin-bottom:0">
+      È quella <b>elemento per elemento</b>, cugina di Hadamard, e si scrive con il simbolo \(\oslash\):
+      \[
+        \begin{bmatrix} 6 &amp; 8 \\ 3 &amp; 10 \end{bmatrix} \oslash \begin{bmatrix} 2 &amp; 4 \\ 1 &amp; 5 \end{bmatrix}
+        = \begin{bmatrix} 3 &amp; 2 \\ 3 &amp; 2 \end{bmatrix}
+      \]
+      Richiede forme identiche e nessuno zero al denominatore. Come Hadamard (§6.8), è una <em>comodità di
+      calcolo</em> e non un'operazione dell'algebra lineare: non disfa nessuna trasformazione, non risolve
+      nessun sistema. Se qualcuno ti dice «ho diviso le due matrici», <strong>chiedigli sempre che cosa
+      intende</strong>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li><b>Le forme comandano</b>: \((m\times \hC{n})(\hC{n}\times p) = (m\times p)\). Le interne si
+          toccano e spariscono, le esterne sopravvivono. Se non combaciano, il prodotto <em>non esiste</em>.
+          Fai sempre il conto delle forme <em>prima</em> dell'aritmetica.</li>
+      <li><b>\(\mm{A}\mm{B}\) è una composizione</b>: «applica prima \(\mm{B}\), poi \(\mm{A}\)». La regola
+          riga-per-colonna non è una convenzione: è <em>l'unica</em> compatibile con
+          \(\mm{A}(\mm{B}\vv{x}) = (\mm{A}\mm{B})\vv{x}\). Nessuno l'ha inventata.</li>
+      <li><b>\(\mm{A}\mm{B} \neq \mm{B}\mm{A}\)</b>, e può fallire in tre modi (non esiste / forma diversa /
+          numeri diversi). Restano l'<b>associativa</b> e la <b>distributiva</b>. Nelle equazioni si
+          moltiplica <em>dallo stesso lato</em> su entrambi i membri.</li>
+      <li><b>\(\mm{A}\vv{x} = x_1\vv{a}_1 + x_2\vv{a}_2 + \cdots + x_n\vv{a}_n\)</b> — <em>la frase più
+          importante del libro</em>. \(\mm{A}\vv{x}\) è una <b>combinazione lineare delle colonne</b>,
+          pesata da \(\vv{x}\). Da qui: span delle colonne (Cap. 8), rango (Cap. 7), sistemi (Cap. 10),
+          minimi quadrati (Cap. 14).</li>
+      <li><b>Le colonne di \(\mm{A}\) sono le immagini dei vettori base</b>: \(\mm{A}\vv{e}_j = \vv{a}_j\).
+          <em>Le righe misurano, le colonne costruiscono.</em></li>
+      <li><b>\(\mm{A}\mm{B}\) è una somma di \(n\) strati</b> di rango 1 (prodotti esterni). Il numero di
+          strati è la dimensione interna: è il seme del rango (Cap. 7) e della SVD (Cap. 16).</li>
+      <li><b>Diagonale a sinistra = scala le righe; a destra = scala le colonne.</b> Più in generale:
+          moltiplicare a sinistra opera sulle righe, a destra sulle colonne (Cap. 10).</li>
+      <li><b>LIVE EVIL</b>: \((\mm{A}\mm{B})\T = \mm{B}\T\mm{A}\T\). L'ordine si inverte — <em>obbligato
+          dalle forme</em>, non convenuto. E la stessa regola varrà per l'inversa (Cap. 12).</li>
+      <li><b>\(\mm{A}\T\mm{A}\) è sempre simmetrica</b> (per qualunque \(\mm{A}\)); sulla sua diagonale ci
+          sono le lunghezze² delle colonne, fuori i loro allineamenti. La sua traccia è
+          \(\norm{\mm{A}}_F^2\). È lo scheletro della matrice di covarianza (una volta centrati i dati), ed
+          è il motivo per cui esistono i minimi quadrati e la PCA.</li>
+      <li><b>\(\tr(\mm{A}\mm{B}) = \tr(\mm{B}\mm{A})\)</b> anche quando i due prodotti hanno
+          <em>dimensioni diverse</em>. E da qui: la traccia è la somma degli autovalori (Cap. 15).</li>
+      <li><b>La divisione non esiste</b>: sarebbe ambigua, e l'inversa spesso non c'è. Si moltiplica per
+          l'inversa, dichiarando da che lato (Cap. 12).</li>
+    </ol>
+  </div>
+
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-12"><span class="secnum">Sezione 6.12</span>Esercizi</h2>
+
+  <p>Usa queste matrici. Guarda le forme prima di ogni cosa:</p>
+  <div style="text-align:center">
+    \[
+      \mm{A} = \begin{bmatrix} 2 &amp; 0 &amp; -1 \\ 1 &amp; 3 &amp; 2 \end{bmatrix}_{(2\times3)}
+      \qquad
+      \mm{B} = \begin{bmatrix} 1 &amp; 4 \\ 0 &amp; -2 \\ 3 &amp; 5 \end{bmatrix}_{(3\times2)}
+      \qquad
+      \mm{C} = \begin{bmatrix} 1 &amp; -1 \\ 2 &amp; 0 \end{bmatrix}_{(2\times2)}
+    \]
+    \[
+      \mm{D} = \begin{bmatrix} 3 &amp; 0 \\ 0 &amp; -2 \end{bmatrix} \;\text{(diagonale)}
+      \qquad
+      \mm{S} = \begin{bmatrix} 4 &amp; 1 \\ 1 &amp; 5 \end{bmatrix} \;\text{(simmetrica)}
+    \]
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0"><strong>Senza fare un solo conto</strong>, dì quali di queste espressioni sono
+      <strong>definite</strong>, e con che forma. (È l'esercizio più utile del capitolo: fallo davvero, e a
+      mente.)
+      <br>(a) \(\mm{A}\mm{B}\) &nbsp;·&nbsp; (b) \(\mm{B}\mm{A}\) &nbsp;·&nbsp;
+      (c) \(\mm{A}\mm{C}\) &nbsp;·&nbsp; (d) \(\mm{C}\mm{A}\) &nbsp;·&nbsp;
+      (e) \(\mm{B}\mm{C}\) &nbsp;·&nbsp; (f) \(\mm{C}\mm{B}\) &nbsp;·&nbsp;
+      (g) \(\mm{A} \odot \mm{B}\) &nbsp;·&nbsp; (h) \(\mm{A} + \mm{B}\) &nbsp;·&nbsp;
+      (i) \(\mm{A}\T\mm{A}\) &nbsp;·&nbsp; (j) \(\mm{A}\mm{A}\T\)</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">Calcola \(\mm{A}\mm{B}\) e \(\mm{B}\mm{A}\). Che forma hanno? Poi calcola
+      \(\tr(\mm{A}\mm{B})\) e \(\tr(\mm{B}\mm{A})\) e commenta il risultato.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">Calcola \(\mm{C}\mm{D}\) e \(\mm{D}\mm{C}\). Perché sono diverse? Descrivi
+      <em>a parole</em> che cosa fa \(\mm{D}\) nei due casi. Poi calcola anche \(\mm{C} \odot \mm{D}\) e
+      confrontala con \(\mm{C}\mm{D}\).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">Verifica che \((\mm{A}\mm{B})\T = \mm{B}\T\mm{A}\T\). Poi la domanda cattiva:
+      <strong>\(\mm{A}\T\mm{B}\T\) è definita?</strong> Se sì, quanto vale — ed è uguale a
+      \((\mm{A}\mm{B})\T\)?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.5</div>
+    <p style="margin-bottom:0">Con \(\vv{x} = \begin{bmatrix}3\\-2\end{bmatrix}\), calcola \(\mm{C}\vv{x}\)
+      in <strong>due modi</strong>: (a) per righe, come due prodotti scalari; (b) per colonne, come
+      combinazione lineare. Poi calcola \(\mm{C}\vv{e}_1\) e \(\mm{C}\vv{e}_2\): che cosa ottieni?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.6</div>
+    <p style="margin-bottom:0">Calcola \(\mm{A}\T\mm{A}\) e \(\mm{A}\mm{A}\T\). Che forme hanno? Sono
+      simmetriche? Verifica che \(\tr(\mm{A}\T\mm{A}) = \tr(\mm{A}\mm{A}\T)\) e spiega
+      <strong>a che cosa è uguale quel numero</strong>.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.7</div>
+    <p style="margin-bottom:0">Calcola \(\dotp{\mm{C}}{\mm{D}}_F\) in due modi (casella per casella, e come
+      \(\tr(\mm{C}\T\mm{D})\)). Poi calcola \(\norm{\mm{M}}_F\) con
+      \(\mm{M} = \begin{bmatrix}2 &amp; -4 \\ 4 &amp; 8\end{bmatrix}\).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.8 &nbsp;<span style="color:var(--ink-faint); font-weight:400; text-transform:none; letter-spacing:0">— un po' più impegnativo</span></div>
+    <p style="margin-bottom:0">
+      (a) Dimostra che \(\mm{A}\T\mm{A}\) è simmetrica per <strong>qualunque</strong> \(\mm{A}\), anche
+      rettangolare. <span style="color:var(--ink-faint)">(Ti servono LIVE EVIL del §6.4 e l'involutività
+      del §5.4. Sono due righe.)</span>
+      <br>
+      (b) Dimostra che, se \(\mm{S}\) e \(\mm{T}\) sono simmetriche, \(\mm{S}\mm{T}\) è simmetrica
+      <strong>se e solo se</strong> \(\mm{S}\mm{T} = \mm{T}\mm{S}\).
+      <br>
+      (c) Verificalo con la \(\mm{S}\) data e \(\mm{T} = \begin{bmatrix}2 &amp; 3\\3 &amp; 1\end{bmatrix}\).
+      <br>
+      (d) Sviluppa \((\mm{S} + \mm{T})^2\) e confronta il risultato con
+      \(\mm{S}^2 + 2\mm{S}\mm{T} + \mm{T}^2\). Di quanto sbaglia la formula del liceo?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-13"><span class="secnum">Sezione 6.13</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p>L'unica cosa da guardare sono le <b>dimensioni interne</b>: \((m\times \hC{n})(\hC{n}\times p)\).</p>
+    <div class="tbl-wrap" style="margin:.4rem 0 .8rem">
+    <table class="tbl">
+      <thead><tr><th></th><th>Forme</th><th>Esito</th></tr></thead>
+      <tbody>
+        <tr><td>(a) \(\mm{A}\mm{B}\)</td><td>\((2\times\hC{3})(\hC{3}\times2)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(2\times2\)</td></tr>
+        <tr><td>(b) \(\mm{B}\mm{A}\)</td><td>\((3\times\hC{2})(\hC{2}\times3)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(3\times3\) &nbsp;<em>← stesse matrici, forma diversa!</em></td></tr>
+        <tr><td>(c) \(\mm{A}\mm{C}\)</td><td>\((2\times\hB{3})(\hB{2}\times2)\)</td>
+            <td><b style="color:var(--warm)">INDEFINITA</b> (\(3 \neq 2\))</td></tr>
+        <tr><td>(d) \(\mm{C}\mm{A}\)</td><td>\((2\times\hC{2})(\hC{2}\times3)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(2\times3\) &nbsp;<em>← l'ordine cambia perfino la liceità</em></td></tr>
+        <tr><td>(e) \(\mm{B}\mm{C}\)</td><td>\((3\times\hC{2})(\hC{2}\times2)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(3\times2\)</td></tr>
+        <tr><td>(f) \(\mm{C}\mm{B}\)</td><td>\((2\times\hB{2})(\hB{3}\times2)\)</td>
+            <td><b style="color:var(--warm)">INDEFINITA</b> (\(2 \neq 3\))</td></tr>
+        <tr><td>(g) \(\mm{A} \odot \mm{B}\)</td><td>\(2\times3\) contro \(3\times2\)</td>
+            <td><b style="color:var(--warm)">INDEFINITA</b>: Hadamard vuole forme <em>identiche</em></td></tr>
+        <tr><td>(h) \(\mm{A} + \mm{B}\)</td><td>\(2\times3\) contro \(3\times2\)</td>
+            <td><b style="color:var(--warm)">INDEFINITA</b>: idem, la somma vuole forme identiche</td></tr>
+        <tr><td>(i) \(\mm{A}\T\mm{A}\)</td><td>\((3\times\hC{2})(\hC{2}\times3)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(3\times3\)</td></tr>
+        <tr><td>(j) \(\mm{A}\mm{A}\T\)</td><td>\((2\times\hC{3})(\hC{3}\times2)\)</td>
+            <td><b style="color:var(--green)">DEFINITA</b>, \(2\times2\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin-bottom:0">
+      <b>Le due lezioni</b>, che valgono l'intero esercizio.
+      <br>• Confronta (c) e (d): <mark>le stesse due matrici, e cambiando l'ordine si passa da «non esiste» a
+      «esiste»</mark>. La non-commutatività non è solo questione di numeri diversi: a volte uno dei due
+      prodotti proprio <em>non c'è</em>.
+      <br>• Confronta (a) con (g) e (h): \(\mm{A}\) e \(\mm{B}\) si <b>moltiplicano</b> benissimo, ma non si
+      possono né <b>sommare</b> né <b>moltiplicare alla Hadamard</b>. «Compatibili» per un'operazione non
+      vuol dire compatibili per un'altra — <em>sono requisiti opposti</em> (§6.1).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <div style="text-align:center">
+      \[
+        \mm{A}\mm{B} = \begin{bmatrix} -1 &amp; 3 \\ 7 &amp; 8 \end{bmatrix} \;(2\times2)
+        \qquad\qquad
+        \mm{B}\mm{A} = \begin{bmatrix} 6 &amp; 12 &amp; 7 \\ -2 &amp; -6 &amp; -4 \\ 11 &amp; 15 &amp; 7 \end{bmatrix} \;(3\times3)
+      \]
+    </div>
+    <p>Il dettaglio delle quattro caselle di \(\mm{A}\mm{B}\), per controllare i segni:</p>
+    <div style="text-align:center">
+      \[
+        \begin{aligned}
+          (\mm{A}\mm{B})_{11} &amp;= (2)(1) + (0)(0) + (-1)(3) = 2 + 0 - 3 = \mathbf{-1} \\
+          (\mm{A}\mm{B})_{12} &amp;= (2)(4) + (0)(-2) + (-1)(5) = 8 + 0 - 5 = \mathbf{3} \\
+          (\mm{A}\mm{B})_{21} &amp;= (1)(1) + (3)(0) + (2)(3) = 1 + 0 + 6 = \mathbf{7} \\
+          (\mm{A}\mm{B})_{22} &amp;= (1)(4) + (3)(-2) + (2)(5) = 4 - 6 + 10 = \mathbf{8}
+        \end{aligned}
+      \]
+    </div>
+    <p>
+      <b>Le forme:</b> \(2\times2\) e \(3\times3\). <mark>\(\mm{A}\mm{B}\) e \(\mm{B}\mm{A}\) sono diverse
+      nel modo più radicale possibile: non hanno nemmeno la stessa forma</mark>, quindi la domanda «sono
+      uguali?» non ha proprio senso.
+    </p>
+    <p style="margin-bottom:0">
+      <b>Le tracce:</b> \(\tr(\mm{A}\mm{B}) = -1 + 8 = \mathbf{7}\) e
+      \(\tr(\mm{B}\mm{A}) = 6 - 6 + 7 = \mathbf{7}\). <b>Uguali</b> ✔ — ed è il §6.9 in azione, nella sua
+      versione più spettacolare: una matrice \(2\times2\) e una \(3\times3\), fatte di numeri tutti diversi,
+      con la stessa traccia. Non è fortuna: entrambe le somme stanno sommando gli stessi sei prodotti
+      \(a_{ik}b_{ki}\), raccolti in due ordini.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <div style="text-align:center">
+      \[
+        \mm{C}\mm{D} = \begin{bmatrix} 3 &amp; 2 \\ 6 &amp; 0 \end{bmatrix}
+        \qquad\qquad
+        \mm{D}\mm{C} = \begin{bmatrix} 3 &amp; -3 \\ -4 &amp; 0 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      <b>A parole</b> (che è il vero scopo dell'esercizio):
+      <br>• In \(\mm{C}\mm{D}\) la diagonale sta <b>a destra</b>, quindi <mark>riscala le colonne</mark>: la
+      colonna 1 di \(\mm{C}\) è stata moltiplicata per 3, la colonna 2 per \(-2\).
+      Da \(\begin{bmatrix}1\\2\end{bmatrix}\) e \(\begin{bmatrix}-1\\0\end{bmatrix}\) si ottengono
+      \(\begin{bmatrix}3\\6\end{bmatrix}\) e \(\begin{bmatrix}2\\0\end{bmatrix}\) ✔
+      <br>• In \(\mm{D}\mm{C}\) la diagonale sta <b>a sinistra</b>, quindi <mark>riscala le righe</mark>: la
+      riga 1 per 3 (\(\begin{bmatrix}1 &amp; -1\end{bmatrix} \to \begin{bmatrix}3 &amp; -3\end{bmatrix}\)),
+      la riga 2 per \(-2\) (\(\begin{bmatrix}2 &amp; 0\end{bmatrix} \to \begin{bmatrix}-4 &amp; 0\end{bmatrix}\)) ✔
+    </p>
+    <p style="margin-bottom:0">
+      <b>Hadamard</b>, per contrasto:
+      \(\mm{C} \odot \mm{D} = \begin{bmatrix} (1)(3) &amp; (-1)(0) \\ (2)(0) &amp; (0)(-2) \end{bmatrix}
+      = \begin{bmatrix} 3 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}\).
+      Completamente diversa da \(\mm{C}\mm{D}\), e per un motivo istruttivo: <mark>gli zeri fuori diagonale
+      di \(\mm{D}\), con Hadamard, <em>azzerano</em> gli elementi corrispondenti di \(\mm{C}\)</mark>; con la
+      moltiplicazione vera, invece, quegli zeri si limitano a <em>non contribuire</em> alla somma, e
+      l'elemento sopravvive riscalato. Stessa griglia di zeri, effetti opposti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <div style="text-align:center">
+      \[
+        (\mm{A}\mm{B})\T = \begin{bmatrix} -1 &amp; 7 \\ 3 &amp; 8 \end{bmatrix}
+        \qquad
+        \mm{B}\T\mm{A}\T =
+        \begin{bmatrix} 1 &amp; 0 &amp; 3 \\ 4 &amp; -2 &amp; 5 \end{bmatrix}
+        \begin{bmatrix} 2 &amp; 1 \\ 0 &amp; 3 \\ -1 &amp; 2 \end{bmatrix}
+        = \begin{bmatrix} -1 &amp; 7 \\ 3 &amp; 8 \end{bmatrix} \;\;\checkmark
+      \]
+    </div>
+    <p>
+      <b>E adesso il trabocchetto.</b> \(\mm{A}\T\mm{B}\T\) è \((3\times\hC{2})(\hC{2}\times3)\): le
+      dimensioni interne combaciano, quindi <mark><b>è definita</b></mark> — ed è proprio questo che la rende
+      pericolosa. Vale:
+    </p>
+    <div style="text-align:center">
+      \[
+        \mm{A}\T\mm{B}\T = \begin{bmatrix} 6 &amp; -2 &amp; 11 \\ 12 &amp; -6 &amp; 15 \\ 7 &amp; -4 &amp; 7 \end{bmatrix} \;(3\times3)
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      È una \(3\times3\), mentre \((\mm{A}\mm{B})\T\) è una \(2\times2\): <b>non possono essere uguali
+      nemmeno per forma</b>. <mark>«Definita» non vuol dire «giusta».</mark>
+      <br>
+      Per la cronaca, quella matrice non è un mostro a caso: è \((\mm{B}\mm{A})\T\) — cioè la trasposta del
+      prodotto <em>nell'altro ordine</em> (confrontala con la Soluzione 6.2!). Ed è esattamente quello che
+      LIVE EVIL prevede: \(\mm{A}\T\mm{B}\T = (\mm{B}\mm{A})\T\). Anche quando sbagli, sbagli seguendo una
+      regola.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.5</div>
+    <p><b>(a) Per righe</b> — due prodotti scalari:</p>
+    <div style="text-align:center">
+      \[
+        \mm{C}\vv{x} =
+        \begin{bmatrix} 1 &amp; -1 \\ 2 &amp; 0 \end{bmatrix}
+        \begin{bmatrix} 3 \\ -2 \end{bmatrix}
+        = \begin{bmatrix} (1)(3) + (-1)(-2) \\ (2)(3) + (0)(-2) \end{bmatrix}
+        = \begin{bmatrix} 3 + 2 \\ 6 + 0 \end{bmatrix}
+        = \begin{bmatrix} \mathbf{5} \\ \mathbf{6} \end{bmatrix}
+      \]
+    </div>
+    <p><b>(b) Per colonne</b> — una combinazione lineare, con pesi 3 e \(-2\):</p>
+    <div style="text-align:center">
+      \[
+        \mm{C}\vv{x} = 3\underbrace{\begin{bmatrix} 1 \\ 2 \end{bmatrix}}_{\hA{\vv{c}_1}}
+        + (-2)\underbrace{\begin{bmatrix} -1 \\ 0 \end{bmatrix}}_{\hB{\vv{c}_2}}
+        = \begin{bmatrix} 3 \\ 6 \end{bmatrix} + \begin{bmatrix} 2 \\ 0 \end{bmatrix}
+        = \begin{bmatrix} \mathbf{5} \\ \mathbf{6} \end{bmatrix} \;\;\checkmark
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      Stesso vettore, ovviamente. <b>E i vettori base:</b>
+      \(\mm{C}\vv{e}_1 = \begin{bmatrix}1\\2\end{bmatrix}\) — la <b>prima colonna</b> — e
+      \(\mm{C}\vv{e}_2 = \begin{bmatrix}-1\\0\end{bmatrix}\) — la <b>seconda colonna</b>.
+      <mark>Le colonne <em>sono</em> le immagini dei vettori base</mark> (§6.5): non c'è niente da calcolare,
+      basta leggerle.
+      <br>
+      Nota anche l'effetto del peso negativo: \(-2\) volte \(\begin{bmatrix}-1\\0\end{bmatrix}\) dà
+      \(\begin{bmatrix}2\\0\end{bmatrix}\), cioè fa <em>voltare</em> la colonna. I pesi possono essere
+      negativi: la ricetta ammette anche «togli» (§3.5).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.6</div>
+    <div style="text-align:center">
+      \[
+        \mm{A}\T\mm{A} = \begin{bmatrix} \hD{5} &amp; 3 &amp; 0 \\ 3 &amp; \hD{9} &amp; 6 \\ 0 &amp; 6 &amp; \hD{5} \end{bmatrix} \;(3\times3)
+        \qquad\qquad
+        \mm{A}\mm{A}\T = \begin{bmatrix} \hD{5} &amp; 0 \\ 0 &amp; \hD{14} \end{bmatrix} \;(2\times2)
+      \]
+    </div>
+    <p>
+      <b>Forme diverse</b> (\(3\times3\) e \(2\times2\)) ma <b>entrambe simmetriche</b> ✔ — guarda i numeri
+      fuori diagonale: si specchiano. È il §6.7, e vale per <em>qualunque</em> \(\mm{A}\).
+    </p>
+    <p>
+      <b>Le tracce:</b> \(\tr(\mm{A}\T\mm{A}) = 5 + 9 + 5 = \mathbf{19}\) e
+      \(\tr(\mm{A}\mm{A}\T) = 5 + 14 = \mathbf{19}\) ✔ (di nuovo il §6.9).
+      <br>
+      <b>E quel numero che cos'è?</b> È la <mark>somma dei quadrati di <em>tutti</em> gli elementi di
+      \(\mm{A}\)</mark>:
+      \[ 2^2 + 0^2 + (-1)^2 + 1^2 + 3^2 + 2^2 = 4 + 0 + 1 + 1 + 9 + 4 = \mathbf{19} \]
+      cioè \(\norm{\mm{A}}_F^2\) (§6.10). Quindi \(\norm{\mm{A}}_F = \sqrt{19} \approx 4.36\).
+    </p>
+    <p style="margin-bottom:0">
+      <b>Un regalo che forse non hai notato:</b> \(\mm{A}\mm{A}\T\) è venuta <b>diagonale</b>. Perché? Perché
+      l'elemento fuori diagonale è il prodotto scalare tra la <em>riga 1</em> e la <em>riga 2</em> di
+      \(\mm{A}\): \((2)(1) + (0)(3) + (-1)(2) = 2 + 0 - 2 = 0\). <mark>Le due righe di \(\mm{A}\) sono
+      <b>ortogonali</b></mark> (§3.3) — e quando le righe sono ortogonali, \(\mm{A}\mm{A}\T\) è
+      necessariamente diagonale. (Se fossero anche di lunghezza 1, avresti \(\mm{A}\mm{A}\T = \mm{I}\), cioè
+      righe <b>ortonormali</b>. Attenzione però a non affrettare la conclusione: \(\mm{A}\) resterebbe
+      \(2\times3\), e le <em>matrici ortogonali</em> del §5.5 sono <b>quadrate</b> — tant'è che per questa
+      \(\mm{A}\) il prodotto nell'altro ordine, \(\mm{A}\T\mm{A}\), non fa affatto \(\mm{I}\): guardalo qui
+      sopra.) La struttura di \(\mm{A}\T\mm{A}\) e \(\mm{A}\mm{A}\T\) non è mai casuale:
+      <em>ti sta raccontando la geometria delle colonne e delle righe</em>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.7</div>
+    <p><b>Il prodotto scalare di Frobenius, casella per casella:</b></p>
+    <div style="text-align:center">
+      \[ \dotp{\mm{C}}{\mm{D}}_F = (1)(3) + (-1)(0) + (2)(0) + (0)(-2) = 3 + 0 + 0 + 0 = \mathbf{3} \]
+    </div>
+    <p><b>E con la traccia:</b></p>
+    <div style="text-align:center">
+      \[
+        \mm{C}\T\mm{D} = \begin{bmatrix} 1 &amp; 2 \\ -1 &amp; 0 \end{bmatrix}
+                          \begin{bmatrix} 3 &amp; 0 \\ 0 &amp; -2 \end{bmatrix}
+        = \begin{bmatrix} \hA{3} &amp; -4 \\ -3 &amp; \hA{0} \end{bmatrix}
+        \qquad \tr(\mm{C}\T\mm{D}) = \hA{3} + \hA{0} = \mathbf{3} \;\;\checkmark
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      <b>La norma di \(\mm{M}\):</b> somma dei quadrati \(= 2^2 + (-4)^2 + 4^2 + 8^2 = 4 + 16 + 16 + 64 = 100\),
+      quindi \(\norm{\mm{M}}_F = \sqrt{100} = \mathbf{10}\).
+      <br>
+      <b>Controllo con la traccia</b> (che è il modo in cui si fa davvero):
+      \(\mm{M}\T\mm{M} = \begin{bmatrix} 20 &amp; 24 \\ 24 &amp; 80 \end{bmatrix}\), la cui traccia è
+      \(20 + 80 = 100\) ✔. E nota, per l'ennesima volta, la struttura del §6.10: quel \(20\) è la lunghezza²
+      della prima colonna (\(4 + 16\)), l'\(80\) quella della seconda (\(16 + 64\)), e il \(24\) fuori
+      diagonale è il loro prodotto scalare (\((2)(-4) + (4)(8) = -8 + 32\)). <b>Tutto è dove ti aspetti che
+      sia.</b>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.8</div>
+    <p><b>(a) \(\mm{A}\T\mm{A}\) è sempre simmetrica.</b> Bisogna mostrare che è uguale alla propria
+      trasposta, e sono letteralmente due passaggi:</p>
+    <ol class="passi" style="margin-top:.8rem">
+      <li>Trasponi il prodotto, usando <b>LIVE EVIL</b> (§6.4) — l'ordine dei due fattori si rovescia:
+        \[ \left(\mm{A}\T\mm{A}\right)\T = \mm{A}\T\left(\mm{A}\T\right)\T \]
+      </li>
+      <li>Usa l'<b>involutività</b> (§5.4): trasporre due volte non fa nulla, cioè
+        \(\left(\mm{A}\T\right)\T = \mm{A}\):
+        \[ = \mm{A}\T\mm{A} \]
+        che è la matrice di partenza. Quindi è simmetrica. \(\blacksquare\)
+      </li>
+    </ol>
+    <p>
+      Nota che <strong>non abbiamo fatto nessuna ipotesi su \(\mm{A}\)</strong>: vale anche se è
+      rettangolare, e le forme tornano sempre — \((n\times \hC{m})(\hC{m}\times n) = n \times n\), quadrata,
+      come dev'essere. (Nell'Esercizio 6.6 l'hai verificato con i numeri: \(\mm{A}\T\mm{A}\) era
+      \(3\times3\) e simmetrica.)
+    </p>
+    <p><b>(b) Il prodotto di due simmetriche.</b> Stessa mossa, con in più l'ipotesi
+      \(\mm{S}\T = \mm{S}\) e \(\mm{T}\T = \mm{T}\):</p>
+    <div style="text-align:center">
+      \[
+        \left(\mm{S}\mm{T}\right)\T
+        \;\overset{\text{LIVE EVIL}}{=}\; \mm{T}\T\mm{S}\T
+        \;\overset{\text{simmetriche}}{=}\; \mm{T}\mm{S}
+      \]
+    </div>
+    <p>
+      Ora: \(\mm{S}\mm{T}\) è simmetrica <em>per definizione</em> se \((\mm{S}\mm{T})\T = \mm{S}\mm{T}\). Ma
+      abbiamo appena visto che \((\mm{S}\mm{T})\T = \mm{T}\mm{S}\). Quindi
+      \[ \mm{S}\mm{T} \text{ simmetrica} \iff \mm{T}\mm{S} = \mm{S}\mm{T} \qquad\blacksquare \]
+      cioè <mark>se e solo se le due commutano</mark>.
+    </p>
+    <p><b>(c) La verifica numerica</b>, con \(\mm{S} = \begin{bmatrix}4&amp;1\\1&amp;5\end{bmatrix}\) e
+      \(\mm{T} = \begin{bmatrix}2&amp;3\\3&amp;1\end{bmatrix}\) (entrambe simmetriche):</p>
+    <div style="text-align:center">
+      \[
+        \mm{S}\mm{T} = \begin{bmatrix} 11 &amp; \hA{13} \\ \hB{17} &amp; 8 \end{bmatrix}
+        \qquad\qquad
+        \mm{T}\mm{S} = \begin{bmatrix} 11 &amp; \hB{17} \\ \hA{13} &amp; 8 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      \(\mm{S}\mm{T}\) <b>non è simmetrica</b> (\(13 \neq 17\)) ✔, e le due non commutano ✔ — come da
+      teoria. E guarda i colori: <mark>\((\mm{S}\mm{T})\T\) è esattamente \(\mm{T}\mm{S}\)</mark>, i due
+      elementi fuori diagonale si sono scambiati di posto. La formula del punto (b) non descrive il
+      fenomeno: lo <em>predice</em>.
+    </p>
+    <p>
+      <b>(d) Il prodotto notevole che si rompe.</b> Prima il conto onesto:
+      \(\mm{S} + \mm{T} = \begin{bmatrix}6&amp;4\\4&amp;6\end{bmatrix}\), quindi
+    </p>
+    <div style="text-align:center">
+      \[
+        (\mm{S}+\mm{T})^2 = \begin{bmatrix}6&amp;4\\4&amp;6\end{bmatrix}\begin{bmatrix}6&amp;4\\4&amp;6\end{bmatrix}
+        = \begin{bmatrix} 52 &amp; 48 \\ 48 &amp; 52 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      Ora la <b>formula del liceo</b>, che tratta \(\mm{S}\mm{T}\) e \(\mm{T}\mm{S}\) come se fossero la
+      stessa cosa:
+      \(\mm{S}^2 = \begin{bmatrix}17&amp;9\\9&amp;26\end{bmatrix}\),
+      \(\mm{T}^2 = \begin{bmatrix}13&amp;9\\9&amp;10\end{bmatrix}\),
+      \(2\mm{S}\mm{T} = \begin{bmatrix}22&amp;26\\34&amp;16\end{bmatrix}\), la cui somma è
+    </p>
+    <div style="text-align:center">
+      \[
+        \mm{S}^2 + 2\mm{S}\mm{T} + \mm{T}^2 = \begin{bmatrix} 52 &amp; 44 \\ 52 &amp; 52 \end{bmatrix}
+        \;\neq\;
+        \begin{bmatrix} 52 &amp; 48 \\ 48 &amp; 52 \end{bmatrix} \;\;\text{✘}
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      <b>Sbagliata.</b> La formula giusta tiene i due termini incrociati separati:
+      \[ (\mm{S}+\mm{T})^2 = \mm{S}^2 + \hA{\mm{S}\mm{T}} + \hB{\mm{T}\mm{S}} + \mm{T}^2 \]
+      e infatti \(\mm{S}^2 + \begin{bmatrix}11&amp;13\\17&amp;8\end{bmatrix} + \begin{bmatrix}11&amp;17\\13&amp;8\end{bmatrix} + \mm{T}^2
+      = \begin{bmatrix}52&amp;48\\48&amp;52\end{bmatrix}\) ✔.
+      <br><br>
+      Guarda <em>dove</em> è finito l'errore: la diagonale era giusta (52 e 52), a sbagliare sono stati gli
+      elementi fuori diagonale — perché lì \(\hA{\mm{S}\mm{T}}\) e \(\hB{\mm{T}\mm{S}}\) hanno contributi
+      diversi (13 e 17), e sommare «due volte il primo» non è come sommare «uno e uno».
+      <mark>La distributiva permette di sviluppare; è la commutativa, che non c'è, a vietare di
+      raccogliere.</mark> È l'errore classico del capitolo — e adesso sai esattamente in che punto della
+      matrice andrà a nascondersi.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* utilità: costruisce una tabella-matrice HTML (la stessa del cap. 5) */
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => (Number.isInteger(v) ? v : v.toFixed(1)));
+  let h = `<div class="mtab brk" style="grid-template-columns: repeat(${cols}, auto)">`;
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      h += `<div class="c ${cls(i, j, M[i][j])}" data-i="${i}" data-j="${j}">${fmt(M[i][j])}</div>`;
+  return h + '</div>';
+}
+/* etichetta piccola sopra una matrice */
+function lab(t) {
+  return `<div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.35rem">${t}</div>`;
+}
+/* prodotto tra matrici (usato dai widget) */
+function mmul(X, Y) {
+  return X.map(r => Y[0].map((_, j) => r.reduce((s, v, k) => s + v * Y[k][j], 0)));
+}
+
+
+/* =========================================================================
+   FIGURA 6.1 — la regola delle forme (il domino)
+   ====================================================================== */
+(function () {
+  const svg = document.querySelector('#fig-forme svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n);
+                          for (const k in at) if (at[k] != null) e.setAttribute(k, at[k]); return e; };
+  const T = (x, y, s, o = {}) => {
+    const t = el('text', { x, y, class: o.bold ? 'lbl-b' : 'lbl', fill: o.color || null,
+                           'text-anchor': o.anchor || 'middle', 'font-size': o.size || null,
+                           'font-style': o.italic ? 'italic' : null });
+    t.textContent = s; return t;
+  };
+
+  /* una "tessera" (m × n): due caselle affiancate */
+  function tessera(x, y, m, n, colInterna) {
+    const g = el('g', {});
+    const W = 46, H = 40;
+    [[m, 'var(--ink)'], [n, colInterna]].forEach(([v, c], k) => {
+      g.appendChild(el('rect', { x: x + k * W, y, width: W, height: H, rx: 5,
+                                 fill: k === 1 && colInterna !== 'var(--ink)'
+                                   ? `color-mix(in srgb, ${colInterna} 16%, transparent)` : 'var(--paper-2)',
+                                 stroke: k === 1 ? colInterna : 'var(--rule)',
+                                 'stroke-width': k === 1 ? 2 : 1 }));
+      g.appendChild(T(x + k * W + W / 2, y + H / 2 + 6, v,
+                      { bold: true, color: k === 1 ? colInterna : null, size: 17 }));
+    });
+    g.appendChild(T(x + W, y - 8, '×', { size: 12 }));
+    return g;
+  }
+
+  /* riga 1: le interne combaciano — le due tessere si TOCCANO (è tutta la metafora del domino) */
+  svg.appendChild(tessera(120, 40, 2, 3, 'var(--green)'));
+  svg.appendChild(tessera(216, 40, 3, 2, 'var(--green)'));
+  svg.appendChild(T(330, 66, '=', { size: 18 }));
+  svg.appendChild(tessera(350, 40, 2, 2, 'var(--ink)'));
+  svg.appendChild(T(112, 66, 'combaciano', { bold: true, color: 'var(--green)', anchor: 'end' }));
+  svg.appendChild(T(485, 54, 'le 3 si toccano', { size: 12, color: 'var(--green)', anchor: 'start' }));
+  svg.appendChild(T(485, 72, 'e spariscono', { size: 12, color: 'var(--green)', anchor: 'start' }));
+  /* archetto che unisce le due dimensioni interne */
+  svg.appendChild(el('path', { d: 'M 240,36 C 240,14 262,14 262,36', fill: 'none',
+                               stroke: 'var(--green)', 'stroke-width': 1.6, 'stroke-dasharray': '3 3' }));
+  /* frecce dalle esterne al risultato */
+  svg.appendChild(el('path', { d: 'M 143,88 C 143,112 373,112 373,88', fill: 'none',
+                               stroke: 'var(--ink-faint)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3' }));
+  svg.appendChild(el('path', { d: 'M 285,88 C 285,124 419,124 419,88', fill: 'none',
+                               stroke: 'var(--ink-faint)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3' }));
+  svg.appendChild(T(280, 138, 'le esterne sopravvivono, e danno la forma del risultato', { size: 12, italic: true }));
+
+  /* riga 2: le interne NON combaciano */
+  svg.appendChild(tessera(120, 180, 2, 3, 'var(--warm)'));
+  svg.appendChild(tessera(216, 180, 2, 2, 'var(--warm)'));
+  svg.appendChild(T(330, 206, '=', { size: 18 }));
+  svg.appendChild(T(408, 200, 'non esiste', { bold: true, color: 'var(--warm)', size: 16 }));
+  svg.appendChild(T(408, 220, '(indefinito)', { size: 12, italic: true, color: 'var(--warm)' }));
+  svg.appendChild(T(112, 206, '3 ≠ 2', { bold: true, color: 'var(--warm)', anchor: 'end' }));
+  svg.appendChild(el('path', { d: 'M 240,176 C 240,154 262,154 262,176', fill: 'none',
+                               stroke: 'var(--warm)', 'stroke-width': 1.6, 'stroke-dasharray': '3 3' }));
+  /* crocetta sull'archetto */
+  svg.appendChild(el('path', { d: 'M 245,154 L 257,166 M 257,154 L 245,166', stroke: 'var(--warm)',
+                               'stroke-width': 2.2, fill: 'none' }));
+})();
+
+
+/* =========================================================================
+   WIDGET §6.1 — il moltiplicatore (schema a L, quattro prospettive)
+   ====================================================================== */
+(function () {
+  const grid = document.getElementById('wm-grid');
+  const out  = document.getElementById('wm-out');
+
+  const A  = [[1, 2, -1], [0, 3, 4]];      // 2×3
+  const B  = [[2, 0], [-1, 1], [3, 4]];    // 3×2
+  const AB = mmul(A, B);                   // 2×2
+  const n  = 3;                            // dimensione interna = numero di strati
+
+  let mode = 0;          // 0 elemento · 1 colonne · 2 righe · 3 strati
+  let si = 0, sj = 0;    // cella selezionata di AB
+  let nStrati = 1;       // quanti strati sovrapposti (modo 3)
+
+  /* il k-esimo strato: colonna k di A per riga k di B (prodotto esterno) */
+  const strato = k => A.map(r => B[k].map(b => r[k] * b));
+  const sommaStrati = q => {
+    const S = [[0, 0], [0, 0]];
+    for (let k = 0; k < q; k++) {
+      const L = strato(k);
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) S[i][j] += L[i][j];
+    }
+    return S;
+  };
+
+  const COL = ['var(--accent)', 'var(--green)', 'var(--gold)'];   // un colore per strato
+
+  function clsA(i, j) {
+    if (mode === 0) return i === si ? 'g' : 'lo';
+    if (mode === 1) return '';                       // tutta A partecipa
+    if (mode === 2) return i === si ? 'g' : 'lo';
+    return j === nStrati - 1 ? 'g' : 'lo';           // strati: la colonna k
+  }
+  function clsB(i, j) {
+    if (mode === 0) return j === sj ? 'w' : 'lo';
+    if (mode === 1) return j === sj ? 'w' : 'lo';
+    if (mode === 2) return '';                       // tutta B partecipa
+    return i === nStrati - 1 ? 'w' : 'lo';           // strati: la riga k
+  }
+  function clsAB(i, j) {
+    if (mode === 0) return i === si && j === sj ? 'p hl' : '';
+    if (mode === 1) return j === sj ? 'p' : 'lo';
+    if (mode === 2) return i === si ? 'p' : 'lo';
+    return '';
+  }
+
+  function render() {
+    const parziale = sommaStrati(nStrati);
+    const clsSomma = (i, j, v) => (v === AB[i][j] ? 'g' : 'w');
+
+    grid.innerHTML = `
+      <div style="display:grid; grid-template-columns:auto auto; gap:1.1rem 1.6rem;
+                  justify-content:center; align-items:end; min-width:min-content">
+        <div></div>
+        <div>${lab('B &nbsp;(3×2)')}<div id="wm-B">${matHTML(B, { cls: clsB })}</div></div>
+        <div>${lab('A &nbsp;(2×3)')}<div id="wm-A">${matHTML(A, { cls: clsA })}</div></div>
+        <div>${lab(mode === 3 ? `somma dei primi ${nStrati} strati` : 'AB &nbsp;(2×2)')}
+             <div id="wm-AB">${matHTML(mode === 3 ? parziale : AB,
+                                       { cls: mode === 3 ? clsSomma : clsAB })}</div></div>
+      </div>
+      ${mode === 3 ? `
+        <div style="margin-top:1rem; text-align:center">
+          <div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.5rem">
+            aggiungi un lucido alla volta — le celle diventano <b style="color:var(--green)">verdi</b>
+            quando raggiungono il valore finale di AB
+          </div>
+          ${[1, 2, 3].map(q => `<button class="w-btn ${q === nStrati ? 'on' : ''}" data-s="${q}"
+              style="margin:0 .2rem">${q} strat${q === 1 ? 'o' : 'i'}</button>`).join('')}
+        </div>` : ''}`;
+
+    /* hover/tap sulle celle di AB (modi 0-2) */
+    if (mode !== 3) {
+      grid.querySelectorAll('#wm-AB .c').forEach(c => {
+        const pick = () => { si = +c.dataset.i; sj = +c.dataset.j; render(); };
+        c.addEventListener('mouseenter', pick);
+        c.addEventListener('click', pick);
+        c.style.cursor = 'pointer';
+      });
+    } else {
+      grid.querySelectorAll('[data-s]').forEach(b =>
+        b.onclick = () => { nStrati = +b.dataset.s; render(); });
+    }
+    readout();
+  }
+
+  function readout() {
+    /* i negativi vanno tra parentesi, altrimenti si legge «2·-1» */
+    const par = v => (v < 0 ? `(−${-v})` : `${v}`);
+    /* una somma leggibile: 2 + (−2) + (−3)  ->  2 − 2 − 3 */
+    const somma = vs => vs.reduce((s, v, k) =>
+      s + (k === 0 ? `${v}` : (v < 0 ? ` − ${-v}` : ` + ${v}`)), '');
+    const A_ = v => `<b style="color:var(--accent)">${par(v)}</b>`;
+    const B_ = v => `<b style="color:var(--warm)">${par(v)}</b>`;
+
+    if (mode === 0) {
+      const termini = [0, 1, 2].map(k => `${A_(A[si][k])}·${B_(B[k][sj])}`).join(' + ');
+      const conti   = somma([0, 1, 2].map(k => A[si][k] * B[k][sj]));
+      out.innerHTML = `
+        <div class="big"><b>(AB)<sub>${si + 1}${sj + 1}</sub></b> = ${termini}
+          = ${conti} = <b style="color:var(--violet)">${AB[si][sj]}</b></div>
+        <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.9rem">
+          <span style="color:var(--accent)"><b>riga ${si + 1} di A</b></span> ·
+          <span style="color:var(--warm)"><b>colonna ${sj + 1} di B</b></span> — è un
+          <b>prodotto scalare</b> (§3.1): il caso più piccolo della moltiplicazione tra matrici.
+          I tre termini sono tre perché la dimensione interna è <b>3</b>.
+        </div>`;
+    } else if (mode === 1) {
+      const combinazione = [0, 1, 2]
+        .map(k => `${B_(B[k][sj])}·<b style="color:var(--accent)">a<sub>${k + 1}</sub></b>`)
+        .join(' + ');
+      out.innerHTML = `
+        <div><b>colonna ${sj + 1} di AB</b> = A · (colonna ${sj + 1} di B) = ${combinazione}
+          = <b style="color:var(--violet)">[${AB[0][sj]}, ${AB[1][sj]}]</b></div>
+        <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.9rem">
+          Ogni colonna del risultato è una <b>combinazione lineare delle colonne di A</b> (§6.5), e i
+          <span style="color:var(--warm)"><b>pesi</b></span> sono i numeri della colonna corrispondente di B.
+          <mark>È la lettura ② — quella che genera lo spazio delle colonne (Cap. 8) e il rango (Cap. 7).</mark>
+        </div>`;
+    } else if (mode === 2) {
+      out.innerHTML = `
+        <div><b>riga ${si + 1} di AB</b> = (riga ${si + 1} di A) · B =
+          <span style="color:var(--accent)"><b>[${A[si].join(', ')}]</b></span> · B =
+          <b style="color:var(--violet)">[${AB[si].join(', ')}]</b></div>
+        <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.9rem">
+          Una riga di A, applicata a <em>tutta</em> B, produce una riga intera del risultato.
+          È la lettura ③: <b>moltiplicare a sinistra significa operare sulle righe</b> — il principio su cui
+          si regge l'eliminazione di Gauss (Cap. 10).
+        </div>`;
+    } else {
+      const k = nStrati - 1;
+      const L = strato(k);
+      const P = sommaStrati(nStrati);
+      const fatte = P.flat().filter((v, idx) => v === AB.flat()[idx]).length;
+      out.innerHTML = `
+        <div>
+          <b style="color:${COL[k]}">strato ${nStrati}</b> =
+          (colonna ${nStrati} di A) · (riga ${nStrati} di B) =
+          <span style="color:var(--accent)">[${A.map(r => r[k]).join(', ')}]</span> ·
+          <span style="color:var(--warm)">[${B[k].join(', ')}]</span> =
+          <span style="font-family:var(--mono)">[[${L[0].join(', ')}], [${L[1].join(', ')}]]</span>
+        </div>
+        <div style="margin-top:.45rem; color:var(--ink-soft); font-size:.9rem">
+          Guarda le righe di questo strato: sono la <b>stessa</b> riga di B, riscalata. È la
+          <b>tavola pitagorica</b> del §3.6 — <b>rango 1</b>, la matrice più povera che esista.
+          ${nStrati < 3
+            ? `<br>Con ${nStrati} strat${nStrati === 1 ? 'o' : 'i'} solo <b>${fatte} caselle su 4</b> sono
+               già a posto: <mark>i lucidi vanno sovrapposti tutti e ${n}</mark>.`
+            : `<br><b style="color:var(--green)">Tutte e 4 le caselle sono verdi: gli strati hanno ricostruito AB.</b>
+               <mark>Il numero di strati è la dimensione interna (${n})</mark> — se è piccola, per quanto sia
+               grande il prodotto, dentro c'è poco (§7.6). La SVD (Cap. 16) fa il percorso inverso: spacca una
+               matrice nei suoi strati e butta via i meno importanti. Si chiama compressione.`}
+        </div>`;
+    }
+  }
+
+  document.getElementById('wm-ctrl').querySelectorAll('[data-m]').forEach(b => {
+    b.onclick = () => {
+      mode = +b.dataset.m;
+      document.getElementById('wm-ctrl').querySelectorAll('[data-m]')
+        .forEach(x => x.classList.toggle('on', x === b));
+      render();
+    };
+  });
+  render();
+})();
+
+
+/* =========================================================================
+   WIDGET §6.2 — AB ≠ BA: due ordini, due mondi
+   ====================================================================== */
+(function () {
+  const ctrl = document.getElementById('wo-ctrl');
+  const out  = document.getElementById('wo-out');
+
+  const TRAS = [
+    { n: 'rotazione 90°',    M: [[0, -1], [1, 0]] },
+    { n: 'allunga x ×2',     M: [[2, 0], [0, 1]] },
+    { n: 'inclina (shear)',  M: [[1, 1], [0, 1]] },
+    { n: 'rifletti su x',    M: [[1, 0], [0, -1]] },
+    { n: 'allunga y ×2',     M: [[1, 0], [0, 2]] }
+  ];
+  let i1 = 0, i2 = 1;    // scelte iniziali: rotazione 90° e allunga x  (il caso da manuale)
+
+  const p1 = new Plot(document.getElementById('wo-svg1'), { xmin: -2.6, xmax: 2.6, ymin: -2.6, ymax: 2.6 });
+  const p2 = new Plot(document.getElementById('wo-svg2'), { xmin: -2.6, xmax: 2.6, ymin: -2.6, ymax: 2.6 });
+
+  ctrl.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:.4rem">
+      <span style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); min-width:2.2rem">M₁</span>
+      ${TRAS.map((t, k) => `<button class="w-btn" data-a="${k}">${t.n}</button>`).join('')}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:.4rem">
+      <span style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); min-width:2.2rem">M₂</span>
+      ${TRAS.map((t, k) => `<button class="w-btn" data-b="${k}">${t.n}</button>`).join('')}
+    </div>
+    <button class="w-btn" id="wo-go" style="align-self:flex-start">▶ esegui in due tempi</button>`;
+
+  const eq = (X, Y) => X.every((r, i) => r.every((v, j) => Math.abs(v - Y[i][j]) < 1e-9));
+  const lerp = (X, Y, t) => X.map((r, i) => r.map((v, j) => v + t * (Y[i][j] - v)));
+  const I = [[1, 0], [0, 1]];
+
+  /* disegna un pannello con la matrice corrente M, più (facoltativo) il quadrato finale dell'altro */
+  function draw(p, M, altro) {
+    p.clear(); p.grid(); p.axes({ numbers: false });
+    const T = (x, y) => [M[0][0] * x + M[0][1] * y, M[1][0] * x + M[1][1] * y];
+    for (let k = -6; k <= 6; k++) {
+      let a = T(k, -6), b = T(k, 6);
+      p.line(a[0], a[1], b[0], b[1], { color: 'var(--accent)', width: 1, opacity: .3 });
+      a = T(-6, k); b = T(6, k);
+      p.line(a[0], a[1], b[0], b[1], { color: 'var(--accent)', width: 1, opacity: .3 });
+    }
+    if (altro) {
+      const Q = (x, y) => [altro[0][0] * x + altro[0][1] * y, altro[1][0] * x + altro[1][1] * y];
+      p.poly([[0, 0], Q(1, 0), Q(1, 1), Q(0, 1)],
+             { color: 'var(--ink-faint)', dash: '5 4', width: 1.6 });
+    }
+    p.poly([[0, 0], T(1, 0), T(1, 1), T(0, 1)],
+           { fill: 'color-mix(in srgb, var(--accent) 20%, transparent)' });
+    p.arrow(0, 0, M[0][0], M[1][0], { color: 'var(--accent)', width: 2.8 });   // immagine di e₁ = colonna 1
+    p.arrow(0, 0, M[0][1], M[1][1], { color: 'var(--warm)', width: 2.8 });     // immagine di e₂ = colonna 2
+  }
+
+  const mini = M =>
+    `<span class="minimat c2">${M.flat().map(v => `<span>${v.toFixed(0)}</span>`).join('')}</span>`;
+
+  function stato() {
+    const M1 = TRAS[i1].M, M2 = TRAS[i2].M;
+    const P21 = mmul(M2, M1);   // prima M₁, poi M₂
+    const P12 = mmul(M1, M2);   // prima M₂, poi M₁
+    document.getElementById('wo-lab1').innerHTML = `<b>M₂M₁</b> — prima <b style="color:var(--accent)">${TRAS[i1].n}</b>, poi ${TRAS[i2].n}`;
+    document.getElementById('wo-lab2').innerHTML = `<b>M₁M₂</b> — prima <b style="color:var(--accent)">${TRAS[i2].n}</b>, poi ${TRAS[i1].n}`;
+    draw(p1, P21, P12); draw(p2, P12, P21);
+
+    const uguali = eq(P21, P12);
+    out.innerHTML = `
+      <div style="display:flex; gap:1.2rem; justify-content:center; align-items:center; flex-wrap:wrap">
+        <span><b>M₂M₁</b> = ${mini(P21)}</span>
+        <span style="font-size:1.2rem; color:${uguali ? 'var(--green)' : 'var(--warm)'}">
+          ${uguali ? '=' : '≠'}</span>
+        <span><b>M₁M₂</b> = ${mini(P12)}</span>
+      </div>
+      <div style="margin-top:.5rem; color:var(--ink-soft); font-size:.9rem; text-align:left">
+        ${uguali
+          ? `<b style="color:var(--green)">Queste due commutano!</b> Capita — due rotazioni, due dilatazioni
+             sugli stessi assi, qualunque matrice con I. <mark>La commutatività non è vietata: è rara.</mark>
+             Quando c'è, è una <em>notizia</em> (§6.7).`
+          : `<b style="color:var(--warm)">L'ordine conta.</b> I due pannelli partono uguali e finiscono
+             diversi: <mark>la seconda trasformazione non lavora sullo spazio di partenza, lavora su quello
+             che la prima ha già stravolto</mark>. Il contorno <b>tratteggiato</b> mostra, su ogni pannello,
+             dove sarebbe finito il quadrato con l'ordine invertito.`}
+      </div>`;
+  }
+
+  /* animazione in due tempi: prima trasformazione, pausa, seconda.
+     `gen` e' un contatore di generazione: se l'utente cambia trasformazione mentre l'animazione gira,
+     sync() lo incrementa e il frame in volo si accorge di essere vecchio e si ferma. Senza questo, per
+     due secondi le etichette direbbero una cosa e i pannelli ne mostrerebbero un'altra. */
+  let running = false, gen = 0;
+  function esegui() {
+    if (running) return;
+    running = true;
+    const mia = ++gen;
+    const M1 = TRAS[i1].M, M2 = TRAS[i2].M;
+    const P21 = mmul(M2, M1), P12 = mmul(M1, M2);
+    const t0 = performance.now();
+    const FASE = 750, PAUSA = 450;
+
+    function frame(now) {
+      if (mia !== gen) { running = false; return; }   // sorpassato da un click: mollo il colpo
+      const t = now - t0;
+      let a, b;                       // matrici correnti dei due pannelli
+      if (t < FASE) {                 // fase 1: ciascuno applica la SUA prima trasformazione
+        const u = t / FASE;
+        a = lerp(I, M1, u); b = lerp(I, M2, u);
+      } else if (t < FASE + PAUSA) {  // pausa: «a metà strada» — e i due stati sono già diversi
+        a = M1; b = M2;
+      } else if (t < 2 * FASE + PAUSA) {
+        const u = (t - FASE - PAUSA) / FASE;
+        a = lerp(M1, P21, u); b = lerp(M2, P12, u);
+      } else {
+        running = false; stato();
+        return;
+      }
+      draw(p1, a, null); draw(p2, b, null);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function sync() {
+    gen++;                                   // aborta un'eventuale animazione in corso
+    ctrl.querySelectorAll('[data-a]').forEach(b => b.classList.toggle('on', +b.dataset.a === i1));
+    ctrl.querySelectorAll('[data-b]').forEach(b => b.classList.toggle('on', +b.dataset.b === i2));
+    stato();
+  }
+  ctrl.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { i1 = +b.dataset.a; sync(); });
+  ctrl.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { i2 = +b.dataset.b; sync(); });
+  document.getElementById('wo-go').onclick = esegui;
+  sync();
+})();
+
+
+/* =========================================================================
+   WIDGET §6.3 — D a sinistra tira le righe, D a destra tira le colonne
+   ====================================================================== */
+(function () {
+  const body = document.getElementById('wd-body');
+  const out  = document.getElementById('wd-out');
+  const s1 = document.getElementById('wd-d1'), s2 = document.getElementById('wd-d2');
+  const o1 = s1.nextElementSibling, o2 = s2.nextElementSibling;
+  const A = [[1, 2], [3, 4]];
+
+  function draw() {
+    const d1 = parseFloat(s1.value), d2 = parseFloat(s2.value);
+    o1.textContent = d1.toFixed(1);
+    o2.textContent = d2.toFixed(1);
+    const D  = [[d1, 0], [0, d2]];
+    const DA = mmul(D, A);   // scala le righe
+    const AD = mmul(A, D);   // scala le colonne
+
+    const fmt = v => (Number.isInteger(v) ? v : v.toFixed(1));
+    body.innerHTML = `
+      <div style="text-align:center">
+        ${lab('D &nbsp;(diagonale)')}
+        ${matHTML(D, { cls: (i, j) => (i === j ? (i === 0 ? 'g' : 'w') : 'z'), fmt })}
+      </div>
+      <div style="text-align:center">
+        ${lab('<b>DA</b> — D a SINISTRA')}
+        ${matHTML(DA, { cls: i => (i === 0 ? 'g' : 'w'), fmt })}
+        <div style="font-family:var(--sans); font-size:11.5px; color:var(--ink-faint); margin-top:.4rem">
+          scala le <b>righe</b></div>
+      </div>
+      <div style="text-align:center">
+        ${lab('<b>AD</b> — D a DESTRA')}
+        ${matHTML(AD, { cls: (i, j) => (j === 0 ? 'g' : 'w'), fmt })}
+        <div style="font-family:var(--sans); font-size:11.5px; color:var(--ink-faint); margin-top:.4rem">
+          scala le <b>colonne</b></div>
+      </div>`;
+
+    const uguali = DA.every((r, i) => r.every((v, j) => Math.abs(v - AD[i][j]) < 1e-9));
+    out.innerHTML = `
+      <div>Su <b>A = [[1, 2], [3, 4]]</b>:
+        <span style="color:var(--green)"><b>d₁ = ${d1.toFixed(1)}</b></span> comanda la
+        <b>prima riga</b> (in DA) o la <b>prima colonna</b> (in AD);
+        <span style="color:var(--warm)"><b>d₂ = ${d2.toFixed(1)}</b></span> la seconda.</div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.9rem">
+        ${uguali
+          ? `<b style="color:var(--green)">Qui DA = AD</b> — succede solo perché d₁ = d₂, cioè D = λI: una
+             pura dilatazione, che non ha direzioni preferite e quindi non fa differenza fra righe e
+             colonne. È l'unica diagonale che commuta con <em>tutte</em> le matrici.`
+          : `<mark>A sinistra comanda le righe, a destra comanda le colonne</mark> — ed ecco perché
+             <b>DA ≠ AD</b>. Non è un caos di numeri: è la differenza tra «agisci sulle righe» e «agisci
+             sulle colonne». È il principio dell'eliminazione di Gauss (Cap. 10).`}
+      </div>`;
+  }
+  s1.oninput = draw; s2.oninput = draw;
+  draw();
+})();
+
+
+/* =========================================================================
+   WIDGET §6.5 — Ax è una combinazione delle colonne
+   ====================================================================== */
+(function () {
+  const out = document.getElementById('wc-out');
+  const sx1 = document.getElementById('wc-x1'), sx2 = document.getElementById('wc-x2');
+  const ox1 = sx1.nextElementSibling, ox2 = sx2.nextElementSibling;
+  const p = new Plot(document.getElementById('wc-svg'),
+                     { xmin: -6.2, xmax: 6.2, ymin: -4.4, ymax: 4.4 });
+
+  let a1 = [2, 1], a2 = [-1, 2];     // le due colonne di A (trascinabili)
+
+  function draw() {
+    const x1 = parseFloat(sx1.value), x2 = parseFloat(sx2.value);
+    ox1.textContent = x1.toFixed(2);
+    ox2.textContent = x2.toFixed(2);
+
+    const det = a1[0] * a2[1] - a1[1] * a2[0];
+    /* con snap 0.5 il determinante e' sempre un multiplo di 0.25: questa soglia e' di fatto «det = 0» */
+    const degenere = Math.abs(det) < 0.25;
+    /* caso limite: colonne dipendenti. La direzione dello span e' quella della colonna NON nulla
+       (se trascini a₁ sull'origine, lo span e' la retta di a₂, non di a₁); se sono nulle entrambe,
+       lo span e' il solo punto O e non c'e' nessuna retta da disegnare. */
+    const n1 = Math.hypot(a1[0], a1[1]), n2 = Math.hypot(a2[0], a2[1]);
+    const base = n1 >= n2 ? a1 : a2, Lmax = Math.max(n1, n2);
+    const nulle = Lmax < 1e-9;
+
+    /* Ax, calcolato come combinazione delle colonne */
+    const Ax = [x1 * a1[0] + x2 * a2[0], x1 * a1[1] + x2 * a2[1]];
+
+    p.clear(); p.grid(); p.axes();
+
+    /* il reticolo obliquo generato dalle colonne: il "sistema di coordinate personalizzato" (§3.5) */
+    if (!degenere) {
+      for (let k = -6; k <= 6; k++) {
+        const A_ = [a1[0] * k - a2[0] * 8, a1[1] * k - a2[1] * 8];
+        const B_ = [a1[0] * k + a2[0] * 8, a1[1] * k + a2[1] * 8];
+        p.line(A_[0], A_[1], B_[0], B_[1], { color: 'var(--ink-faint)', width: 1, opacity: .22 });
+        const C_ = [a2[0] * k - a1[0] * 8, a2[1] * k - a1[1] * 8];
+        const D_ = [a2[0] * k + a1[0] * 8, a2[1] * k + a1[1] * 8];
+        p.line(C_[0], C_[1], D_[0], D_[1], { color: 'var(--ink-faint)', width: 1, opacity: .22 });
+      }
+    } else if (!nulle) {
+      /* colonne dipendenti: lo span è collassato sulla retta della colonna non nulla */
+      const u = [base[0] / Lmax * 9, base[1] / Lmax * 9];
+      p.line(-u[0], -u[1], u[0], u[1], { color: 'var(--warm)', width: 2.4, opacity: .5 });
+    }
+
+    /* le colonne di A, sottili (sono gli "ingredienti") */
+    p.arrow(0, 0, a1[0], a1[1], { color: 'var(--accent)', width: 1.6, opacity: .45 });
+    p.arrow(0, 0, a2[0], a2[1], { color: 'var(--warm)', width: 1.6, opacity: .45 });
+
+    /* la costruzione testa-coda: x₁a₁ dall'origine, poi x₂a₂ dalla sua punta */
+    const q = [x1 * a1[0], x1 * a1[1]];
+    p.arrow(0, 0, q[0], q[1], { color: 'var(--accent)', width: 3.4, label: 'x₁a₁', lx: 13, ly: 13 });
+    p.arrow(q[0], q[1], Ax[0], Ax[1], { color: 'var(--warm)', width: 3.4, label: 'x₂a₂', lx: 13, ly: 13 });
+    p.poly([[0, 0], q, Ax, [x2 * a2[0], x2 * a2[1]]],
+           { color: 'var(--ink-faint)', dash: '4 4', width: 1.1 });
+
+    /* il risultato */
+    p.arrow(0, 0, Ax[0], Ax[1], { color: 'var(--violet)', width: 3, label: 'Ax', lx: -16, ly: -16 });
+    p.dot(Ax[0], Ax[1], { color: 'var(--violet)', r: 5 });
+
+    /* le punte trascinabili delle due colonne */
+    p.handle(a1[0], a1[1], { color: 'var(--accent)', snap: 0.5 }, (x, y) => { a1 = [x, y]; draw(); });
+    p.handle(a2[0], a2[1], { color: 'var(--warm)', snap: 0.5 }, (x, y) => { a2 = [x, y]; draw(); });
+    p.text(a1[0], a1[1], 'a₁', { dx: 16, dy: -8, bold: true, color: 'var(--accent)' });
+    p.text(a2[0], a2[1], 'a₂', { dx: -16, dy: -8, bold: true, color: 'var(--warm)' });
+
+    /* readout: le due letture, affiancate */
+    const f = v => W.fmt(v, 2);
+    const r1 = a1[0] * x1 + a2[0] * x2, r2 = a1[1] * x1 + a2[1] * x2;
+    out.innerHTML = `
+      <div style="display:flex; gap:1.4rem; justify-content:center; flex-wrap:wrap; text-align:left">
+        <div style="flex:1; min-width:15rem">
+          <div style="font-family:var(--sans); font-size:11px; font-weight:750; letter-spacing:.08em;
+                      text-transform:uppercase; color:var(--accent); margin-bottom:.25rem">
+            per colonne · le colonne costruiscono</div>
+          <div style="font-size:.94rem">
+            ${f(x1)}·<span style="color:var(--accent)"><b>[${f(a1[0])}, ${f(a1[1])}]</b></span>
+            + ${f(x2)}·<span style="color:var(--warm)"><b>[${f(a2[0])}, ${f(a2[1])}]</b></span>
+            = <b style="color:var(--violet)">[${f(Ax[0])}, ${f(Ax[1])}]</b></div>
+        </div>
+        <div style="flex:1; min-width:15rem">
+          <div style="font-family:var(--sans); font-size:11px; font-weight:750; letter-spacing:.08em;
+                      text-transform:uppercase; color:var(--ink-soft); margin-bottom:.25rem">
+            per righe · le righe misurano</div>
+          <div style="font-size:.94rem">
+            riga₁·x = ${f(a1[0])}·${f(x1)} + ${f(a2[0])}·${f(x2)} = <b>${f(r1)}</b><br>
+            riga₂·x = ${f(a1[1])}·${f(x1)} + ${f(a2[1])}·${f(x2)} = <b>${f(r2)}</b></div>
+        </div>
+      </div>
+      <div style="margin-top:.6rem; color:var(--ink-soft); font-size:.9rem; text-align:left">
+        ${nulle
+          ? `⚠ <b style="color:var(--warm)">Le colonne sono entrambe nulle.</b> Qui lo span non è nemmeno
+             una retta: è il <b>solo punto O</b>. Questa è la matrice nulla (§5.5), e infatti
+             <mark>Ax = 0 qualunque sia x</mark>: la macchina che distrugge tutta l'informazione.`
+          : degenere
+          ? `⚠ <b style="color:var(--warm)">Le colonne sono diventate dipendenti</b> (§4.6): sono
+             allineate. Da adesso, per quanto muovi i cursori, <mark>Ax non può uscire da quella retta</mark>
+             — lo span delle colonne è collassato (§4.5). Questa matrice è <b>singolare</b>: è lo stesso
+             collasso del §1.1 e del §5.8. Nel Cap. 7 avrà finalmente un nome: <b>rango</b> deficiente.`
+          : `<mark>Stesso vettore, due letture.</mark> Usa quella per righe per <b>calcolare</b>, quella per
+             colonne per <b>capire</b>. E nota il reticolo obliquo: le colonne di A sono un
+             <em>sistema di coordinate personalizzato</em> (§3.5), e x dice quanti passi fare lungo ciascun asse.`}
+      </div>`;
+  }
+
+  sx1.oninput = draw; sx2.oninput = draw;
+  document.getElementById('wc-e1').onclick = () => { sx1.value = 1; sx2.value = 0; draw(); };
+  document.getElementById('wc-e2').onclick = () => { sx1.value = 0; sx2.value = 1; draw(); };
+  draw();
+})();
+</script>
+</body>
+</html>

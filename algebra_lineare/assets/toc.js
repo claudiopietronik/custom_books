@@ -93,7 +93,7 @@ const TOC = [
     n: 6,
     titolo: "Moltiplicazione tra matrici",
     file: "cap06-moltiplicazione-matrici.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "La moltiplicazione “standard”" },
       { id: "s6-2", n: "6.2", t: "Moltiplicazione ed equazioni" },
