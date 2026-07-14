@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Matrici — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>Matrici</h1>
+    <p class="standfirst">
+      Una matrice è una griglia di numeri. Detta così sembra la cosa più noiosa del mondo — e invece è
+      l'oggetto più <em>versatile</em> della matematica applicata, perché la stessa griglia può essere
+      letta in quattro modi completamente diversi. In questo capitolo impariamo a leggerla in tutti e
+      quattro, le diamo una notazione precisa, e facciamo il giro dello zoo: perché di matrici ne esistono
+      molte specie, e riconoscerle a colpo d'occhio ti risparmierà una quantità enorme di lavoro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Nei capitoli 2–4 abbiamo costruito i <em>vettori</em> e gli <em>spazi</em> in cui vivono. Questo
+      capitolo apre il secondo atto: le <strong>trasformazioni</strong>. Qui però ci limitiamo a
+      <em>presentare</em> le matrici — che aspetto hanno, come si chiamano le loro parti, quali operazioni
+      «facili» ammettono. La moltiplicazione, che è dove tutto succede davvero, è il Capitolo 6.
+      Considera questo capitolo come il momento in cui si fanno le presentazioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Interpretazioni e usi delle matrici</h2>
+
+  <p class="lead">
+    Prima di ogni notazione, la cosa più importante: <mark>la stessa matrice si può leggere in almeno
+    quattro modi diversi</mark>, e la vera abilità dell'algebra lineare è <strong>saltare dall'uno
+    all'altro a seconda di quale rende facile il problema che hai davanti</strong>.
+  </p>
+
+  <p>
+    Non sono quattro «tipi» di matrice: sono quattro <em>letture</em> dello stesso identico oggetto,
+    esattamente come nel Capitolo 2 un vettore era contemporaneamente una lista e una freccia. Guarda la
+    matrice qui sotto — è sempre la stessa — e cambia lettura con i pulsanti.
+  </p>
+
+  <div class="widget" id="w-letture">
+    <div class="w-head">
+      <span>Una matrice, quattro letture</span>
+      <span class="hint">clicca i pulsanti: la matrice non cambia mai</span>
+    </div>
+    <div class="w-controls" style="margin:0 0 .9rem">
+      <button class="w-btn on" data-l="0">① tabella di dati</button>
+      <button class="w-btn"    data-l="1">② colonne affiancate</button>
+      <button class="w-btn"    data-l="2">③ trasformazione</button>
+      <button class="w-btn"    data-l="3">④ sistema di equazioni</button>
+    </div>
+    <div class="w-stage" style="padding:1rem">
+      <div id="wl-panels"></div>
+    </div>
+    <div class="w-readout" id="wl-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le quattro letture, in tabella</div>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Lettura</th><th>La matrice è…</th><th>Quando conviene</th><th>Dove nel libro</th></tr></thead>
+      <tbody>
+        <tr><td><b>① Dati</b></td>
+            <td>una <b>tabella</b>: ogni riga un'osservazione, ogni colonna una variabile misurata</td>
+            <td>quando fai statistica: la matrice <em>è</em> il tuo dataset</td>
+            <td>Cap. 18, 19</td></tr>
+        <tr><td><b>② Colonne</b></td>
+            <td>un <b>mucchio di vettori</b> messi uno accanto all'altro</td>
+            <td>quando ti chiedi «cosa posso raggiungere?»: è lo <em>span</em> delle colonne (§4.5)</td>
+            <td>Cap. 7, 8</td></tr>
+        <tr><td><b>③ Trasformazione</b> <span style="color:var(--green)">★</span></td>
+            <td>una <b>macchina</b> che deforma lo spazio: prende un vettore, ne restituisce un altro</td>
+            <td>quando vuoi capire <em>geometricamente</em> cosa succede. È la lettura più profonda</td>
+            <td>Cap. 6, 13, 15</td></tr>
+        <tr><td><b>④ Sistema</b></td>
+            <td>i <b>coefficienti</b> di un sistema di equazioni, impacchettati</td>
+            <td>quando devi <em>risolvere</em> qualcosa: \(\mm{A}\vv{x} = \vv{b}\)</td>
+            <td>Cap. 10, 12, 14</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      <strong>Il consiglio pratico:</strong> quando un problema con le matrici ti sembra impenetrabile,
+      prova a cambiare lettura. Nove volte su dieci il muro cade. Un esempio che vedrai davvero: «questo
+      sistema ha soluzione?» (lettura ④) è una domanda difficile da guardare; ma tradotta in «il vettore
+      \(\vv{b}\) sta nello span delle colonne di \(\mm{A}\)?» (lettura ②) diventa quasi ovvia.
+      È lo stesso problema. Cambia solo l'angolo da cui lo guardi.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Altre cose che una matrice può rappresentare</div>
+    <p style="margin-bottom:0">
+      Le quattro letture sopra sono <em>strutturali</em>. Ma vale la pena sapere che, nella pratica, le
+      matrici compaiono ovunque ci siano <strong>relazioni tra coppie di cose</strong>:
+    </p>
+    <ul style="margin:.6rem 0 0">
+      <li><b>Un'immagine in bianco e nero</b>: \(a_{ij}\) è la luminosità del pixel nella riga \(i\),
+          colonna \(j\). Comprimerla (Cap. 16) significa buttare via i pezzi meno importanti di questa matrice.</li>
+      <li><b>Una rete</b> (sociale, stradale, di link): \(a_{ij} = 1\) se il nodo \(i\) è collegato al nodo
+          \(j\). PageRank cerca un autovettore di questa matrice (Cap. 15).</li>
+      <li><b>Una matrice di covarianza</b>: \(a_{ij}\) dice quanto le variabili \(i\) e \(j\) «si muovono
+          insieme» (Cap. 18). È il punto di partenza della PCA.</li>
+      <li><b>Una matrice di distanze</b>: \(a_{ij}\) è quanto dista la città \(i\) dalla città \(j\).</li>
+    </ul>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Termini e notazione</h2>
+
+  <p>
+    Adesso mettiamo i nomi alle parti. Sembra burocrazia, ma è la burocrazia che ti evita di sbagliare
+    tutti i conti dei prossimi dodici capitoli.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Notazione di una matrice <span class="tag">righe prima, colonne poi. Sempre.</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} \;=\;
+        \begin{bmatrix}
+          \hA{a_{11}} &amp; a_{12} &amp; \cdots &amp; a_{1n} \\
+          a_{21} &amp; \hD{a_{22}} &amp; \cdots &amp; a_{2n} \\
+          \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+          \hB{a_{m1}} &amp; a_{m2} &amp; \cdots &amp; a_{mn}
+        \end{bmatrix}
+        \qquad \mm{A} \in \R^{\hC{m \times n}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\)</dt>
+        <dd><b>MAIUSCOLO e in grassetto</b>: è così che si riconosce una matrice a colpo d'occhio.
+            (Ricorda la legenda del §1.2: minuscolo corsivo = scalare, minuscolo grassetto = vettore,
+            MAIUSCOLO grassetto = matrice.)</dd>
+        <dt>\(a_{ij}\)</dt>
+        <dd>l'elemento nella <b>riga \(i\)</b> e nella <b>colonna \(j\)</b>. Minuscolo e senza grassetto,
+            perché un singolo elemento è uno <em>scalare</em>.
+            <mark>Il primo indice è SEMPRE la riga, il secondo SEMPRE la colonna.</mark> Non c'è nessuna
+            eccezione, in nessun libro, mai.</dd>
+        <dt>\(\hC{m \times n}\)</dt>
+        <dd>la <b>forma</b> della matrice: \(m\) righe, \(n\) colonne. Si legge «emme per enne».
+            Anche qui: <b>righe prima</b>.</dd>
+        <dt>\(\hA{a_{11}}\), \(\hD{a_{22}}\)</dt>
+        <dd>gli elementi con i <b>due indici uguali</b> formano la <span class="termine">diagonale
+            principale</span> (§5.9). Sono quelli che vanno dall'angolo in alto a sinistra verso il basso
+            a destra.</dd>
+        <dt>\(\hB{a_{m1}}\)</dt>
+        <dd>l'elemento in <b>basso a sinistra</b>: ultima riga (\(m\)), prima colonna (\(1\)).
+            Leggilo lentamente: «a-emme-uno», non «a-uno-emme».</dd>
+        <dt>\(\ddots\)</dt>
+        <dd>i puntini in diagonale: «e così via, seguendo lo schema». Come i \(\vdots\) del §2.2, servono
+            solo a non impegnarsi su quanto è grande la matrice.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Il trucco per non sbagliare mai l'ordine degli indici</strong> (e ti giuro che serve, perché
+      lo sbaglieranno tutti tranne te): pensa a un <em>ascensore</em>. <mark>Prima <strong>scendi</strong>
+      al piano \(i\) (la riga), poi <strong>cammini</strong> lungo il corridoio fino alla porta \(j\)
+      (la colonna).</mark> Verticale prima, orizzontale poi. Vale per gli indici \(a_{ij}\), vale per la
+      forma \(m \times n\), varrà per tutto il libro.
+    </div>
+  </div>
+
+  <figure class="fig" id="fig-anatomia">
+    <svg viewBox="0 0 560 300" role="img" aria-label="Anatomia di una matrice: righe, colonne, indici, diagonale"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 5.1</span> — L'anatomia di una matrice \(3\times4\) (tre righe, quattro
+      colonne). In <b style="color:var(--accent)">blu</b> la <b>diagonale principale</b>: gli elementi con
+      i due indici uguali. Nota che, essendo la matrice rettangolare, la diagonale «finisce» prima di
+      arrivare all'angolo — non c'è nessun \(a_{44}\), perché non c'è una quarta riga.
+    </figcaption>
+  </figure>
+
+  <h3>Le due notazioni compatte che useremo davvero</h3>
+
+  <p>
+    Scrivere tutti gli \(a_{ij}\) è pesante. Nella pratica si usano due abbreviazioni, e la seconda è
+    quella che ti cambierà la vita nel Capitolo 6.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Matrice come pila di colonne <span class="tag">la notazione più utile del libro</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} \;=\;
+        \begin{bmatrix}
+          \Big| &amp; \Big| &amp; &amp; \Big| \\
+          \hA{\vv{a}_1} &amp; \hD{\vv{a}_2} &amp; \cdots &amp; \hB{\vv{a}_n} \\
+          \Big| &amp; \Big| &amp; &amp; \Big|
+        \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{a}_j\)</dt>
+        <dd>la <b>\(j\)-esima colonna</b> di \(\mm{A}\), vista come un <em>vettore</em> a sé stante (di
+            \(\R^m\): ha tanti elementi quante sono le righe). Grassetto minuscolo, perché è un vettore.
+            Il pedice indica <em>quale colonna</em>, non un elemento.</dd>
+        <dt>le barre \(\big|\)</dt>
+        <dd>non sono simboli matematici: sono un <b>disegno</b>. Servono solo a ricordarti visivamente
+            che ogni colonna è un vettore verticale. Alcuni libri le omettono.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Perché è così importante.</strong> Perché nel §6.5 dimostreremo la frase più importante del
+      libro: <mark>\(\mm{A}\vv{x}\) è una <em>combinazione lineare delle colonne</em> di \(\mm{A}\),
+      pesata dagli elementi di \(\vv{x}\)</mark>. Cioè
+      \(\mm{A}\vv{x} = x_1\vv{a}_1 + x_2\vv{a}_2 + \cdots + x_n\vv{a}_n\). Da quella singola frase
+      discendono lo spazio delle colonne (Cap. 8), il rango (Cap. 7), la risolubilità dei sistemi
+      (Cap. 10) e i minimi quadrati (Cap. 14). Abituati fin da ora a <em>vedere</em> le colonne.
+      <br><br>
+      Analogamente si può scrivere una matrice come una <em>pila di righe</em>; lo faremo, ma molto
+      più di rado. In algebra lineare, <b>le colonne sono le protagoniste</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Dimensionalità</h2>
+
+  <p>
+    La <span class="termine">dimensionalità</span> (o <em>forma</em>, o <em>size</em>) di una matrice è la
+    coppia \(m \times n\). È il dato più importante da controllare <em>prima</em> di fare qualunque conto:
+    la maggior parte degli errori in algebra lineare non sono errori di aritmetica, sono <strong>forme che
+    non combaciano</strong>.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Nome</th><th>Forma</th><th>Esempio</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td><b>Quadrata</b></td><td>\(n \times n\)</td>
+          <td>\(\begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix}\)</td>
+          <td>tante righe quante colonne. <b>Solo le quadrate</b> possono avere un determinante (Cap. 11),
+              un'inversa (Cap. 12), degli autovalori (Cap. 15).</td></tr>
+      <tr><td><b>Rettangolare alta</b></td><td>\(m \times n\), con \(m &gt; n\)</td>
+          <td>\(\begin{bmatrix}1&amp;2\\3&amp;4\\5&amp;6\end{bmatrix}\) &nbsp;(3×2)</td>
+          <td>più righe che colonne. È la forma tipica dei <b>dati</b>: tante osservazioni, poche
+              variabili. Genera i minimi quadrati (Cap. 14).</td></tr>
+      <tr><td><b>Rettangolare larga</b></td><td>\(m \times n\), con \(m &lt; n\)</td>
+          <td>\(\begin{bmatrix}1&amp;2&amp;3\\4&amp;5&amp;6\end{bmatrix}\) &nbsp;(2×3)</td>
+          <td>più colonne che righe. Tipica dei sistemi <em>sottodeterminati</em>: più incognite che
+              equazioni → infinite soluzioni (Cap. 10).</td></tr>
+      <tr><td><b>Vettore colonna</b></td><td>\(m \times 1\)</td>
+          <td>\(\begin{bmatrix}1\\2\end{bmatrix}\)</td>
+          <td>sì: <b>un vettore è una matrice</b> con una sola colonna. Tutto ciò che vale per le matrici
+              vale anche per lui.</td></tr>
+      <tr><td><b>Vettore riga</b></td><td>\(1 \times n\)</td>
+          <td>\(\begin{bmatrix}1&amp;2\end{bmatrix}\)</td>
+          <td>una sola riga.</td></tr>
+      <tr><td><b>Scalare</b></td><td>\(1 \times 1\)</td><td>\(\begin{bmatrix}7\end{bmatrix}\)</td>
+          <td>e anche un numero è, tecnicamente, una matrice minuscola. Ecco perché il prodotto scalare
+              «riga per colonna» dà \((1\times n)(n\times 1) = 1\times 1\).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \(2\times3\) non è \(3\times2\)</div>
+    <p style="margin-bottom:0">
+      Sono due forme <em>diverse</em>, e scambiarle è la strada più breve per un conto sbagliato. Una
+      matrice \(2\times3\) ha <b>2 righe e 3 colonne</b>, cioè è <em>larga</em>. Entrambe hanno 6 elementi,
+      ma <strong>il numero di elementi non è la forma</strong>: la forma è quella che decide se una
+      moltiplicazione è lecita o no (§6.1).
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> «Dimensionalità» ≠ «dimensione dello spazio delle colonne»</div>
+    <p style="margin-bottom:0">
+      Ancora questa parola, ancora due significati (te l'avevo detto nel §4.1). La forma \(m\times n\) ti
+      dice <em>quanto è grande la griglia</em>. Ma <strong>non</strong> ti dice quante direzioni
+      <em>indipendenti</em> contengono le sue colonne — quello è il <span class="termine">rango</span>, ed
+      è il Capitolo 7. Una matrice \(100\times100\) può benissimo avere rango 1 (ricordi il prodotto
+      esterno del §3.6?): grande griglia, pochissima sostanza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>L'operazione di trasposizione</h2>
+
+  <p>
+    Per i vettori (§2.3) la trasposta ruotava una colonna in una riga. Per le matrici è la stessa idea,
+    generalizzata: <strong>si scambiano righe e colonne</strong>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Trasposta di una matrice <span class="tag">gli indici si scambiano</span></div>
+    <div class="f-body">
+      \[
+        \left(\mm{A}\T\right)_{\hA{i}\hB{j}} \;=\; a_{\hB{j}\hA{i}}
+        \qquad\qquad
+        \mm{A} \in \R^{m\times n} \;\Longrightarrow\; \mm{A}\T \in \R^{n \times m}
+      \]
+      \[
+        \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 4 &amp; 5 &amp; 6 \end{bmatrix}\T
+        =
+        \begin{bmatrix} 1 &amp; 4 \\ 2 &amp; 5 \\ 3 &amp; 6 \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\left(\mm{A}\T\right)_{ij} = a_{ji}\)</dt>
+        <dd>è tutta qui la definizione: <b>l'elemento di posto \((i,j)\) nella trasposta è l'elemento di
+            posto \((j,i)\) nell'originale</b>. Gli indici si scambiano di posto. Leggila due volte: è la
+            definizione più compatta e più precisa possibile.</dd>
+        <dt>la forma</dt>
+        <dd><b>si ribalta</b>: una \(2\times3\) diventa una \(3\times2\). Una matrice <em>alta</em> diventa
+            <em>larga</em>. Solo le quadrate mantengono la stessa forma.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Le due proprietà da ricordare:</strong>
+      <br>• \(\left(\mm{A}\T\right)\T = \mm{A}\) — trasporre due volte non fa nulla (come per i vettori).
+      <br>• <b>La diagonale principale non si muove</b>: l'elemento \(a_{ii}\) va nel posto \((i,i)\),
+      cioè resta dove sta. Sono gli unici elementi immobili.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La trasposizione è un ribaltamento attorno alla diagonale</div>
+    <p style="margin-bottom:0">
+      Immagina che la <b>diagonale principale sia uno specchio</b>, o la cerniera di una porta. Trasporre
+      significa <strong>ribaltare la matrice attorno a quella cerniera</strong>: quello che stava sopra
+      finisce sotto, e viceversa. Gli elementi <em>sulla</em> cerniera restano dove sono.
+      <br>
+      Nel widget qui sotto, passa il mouse (o il dito) su una cella: ti mostro dove finisce dopo la
+      trasposizione. È la stessa cella, riflessa nello specchio.
+    </p>
+  </div>
+
+  <div class="widget" id="w-trasp">
+    <div class="w-head">
+      <span>La trasposta come ribaltamento</span>
+      <span class="hint">passa il mouse su una cella</span>
+    </div>
+    <div class="w-stage" style="padding:1.3rem; text-align:center">
+      <div id="wt-body"></div>
+    </div>
+    <div class="w-readout" id="wt-out">
+      Passa il mouse su una cella di <b>A</b> per vedere dove finisce in <b>Aᵀ</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Zoologia delle matrici</h2>
+
+  <p class="lead">
+    Le matrici non sono tutte uguali. Alcune hanno una <em>struttura</em> particolare, e quella struttura
+    è un regalo: se riconosci il tipo, sai già in anticipo un mucchio di cose — quanto costa invertirla,
+    se i suoi autovalori sono reali, se conserva le lunghezze.
+  </p>
+
+  <p>
+    Questa sezione è un <strong>catalogo di riferimento</strong>. Non serve impararlo a memoria adesso:
+    serve sapere che esiste, e tornarci quando incontrerai un nome che non ricordi. Clicca una specie e
+    guardala.
+  </p>
+
+  <div class="widget" id="w-zoo">
+    <div class="w-head">
+      <span>Lo zoo delle matrici</span>
+      <span class="hint">clicca una specie</span>
+    </div>
+    <div class="w-controls" id="wz-ctrl" style="margin:0 0 .9rem"></div>
+    <div class="w-stage" style="padding:1.3rem; text-align:center">
+      <div id="wz-mat"></div>
+    </div>
+    <div class="w-readout" id="wz-out"></div>
+  </div>
+
+  <h3>Le specie che devi davvero conoscere</h3>
+
+  <p>
+    Di tutto lo zoo, tre meritano un paragrafo a parte, perché le userai in continuazione.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La matrice identità \(\mm{I}\)</div>
+    <p>
+      È la matrice quadrata con <strong>1 sulla diagonale e 0 ovunque</strong>:
+      \[
+        \mm{I}_3 = \begin{bmatrix} 1 &amp; 0 &amp; 0 \\ 0 &amp; 1 &amp; 0 \\ 0 &amp; 0 &amp; 1 \end{bmatrix}
+      \]
+    </p>
+    <p style="margin-bottom:0">
+      <mark>È l'elemento neutro della moltiplicazione</mark>: \(\mm{A}\mm{I} = \mm{I}\mm{A} = \mm{A}\).
+      In una parola, è <strong>il numero 1 delle matrici</strong>. Geometricamente (lettura ③) è la
+      trasformazione che <em>non fa niente</em>: lascia ogni vettore esattamente dov'è.
+      Le sue colonne, guarda un po', sono i vettori della base canonica \(\vv{e}_1, \vv{e}_2, \vv{e}_3\)
+      del §3.9. Non è un caso: l'identità è la matrice che manda ogni vettore base in sé stesso.
+      <br><span style="color:var(--ink-faint)">(Il pedice indica la dimensione: \(\mm{I}_3\) è
+      \(3\times3\). Spesso si scrive solo \(\mm{I}\), e la dimensione si capisce dal contesto.)</span>
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le matrici simmetriche</div>
+    <p>
+      Una matrice è <span class="termine">simmetrica</span> se è <strong>uguale alla propria
+      trasposta</strong>:
+      \[ \mm{A} = \mm{A}\T \qquad\text{cioè}\qquad a_{ij} = a_{ji} \;\;\text{per ogni } i,j \]
+    </p>
+    <p style="margin-bottom:0">
+      Visivamente: <mark>è identica se la ribalti attorno alla diagonale</mark> — lo specchio del §5.4 la
+      lascia invariata. Deve necessariamente essere <b>quadrata</b> (altrimenti \(\mm{A}\) e \(\mm{A}\T\)
+      non avrebbero nemmeno la stessa forma, e non potrebbero essere uguali).
+      <br><br>
+      <strong>Perché ci interessano tantissimo.</strong> Le matrici simmetriche sono le più «gentili» che
+      esistano: i loro autovalori sono <em>sempre reali</em> e i loro autovettori sono <em>sempre
+      ortogonali</em> (§15.8). Sono anche il tipo di matrice che salta fuori naturalmente in statistica:
+      <b>la matrice di covarianza è simmetrica</b> (Cap. 18), perché «quanto \(x\) varia insieme a \(y\)»
+      è la stessa cosa di «quanto \(y\) varia insieme a \(x\)». Ed è per questo che la PCA funziona così
+      bene (Cap. 19).
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le matrici diagonali</div>
+    <p>
+      Tutti gli elementi <strong>fuori dalla diagonale sono zero</strong>:
+      \[
+        \mm{D} = \begin{bmatrix} 3 &amp; 0 &amp; 0 \\ 0 &amp; -1 &amp; 0 \\ 0 &amp; 0 &amp; 5 \end{bmatrix}
+      \]
+    </p>
+    <p style="margin-bottom:0">
+      Sono le matrici <strong>più semplici del mondo</strong>, e per un motivo profondo: geometricamente
+      (lettura ③) una matrice diagonale <mark>allunga o accorcia lungo ciascun asse, indipendentemente
+      dagli altri, senza mescolare nulla</mark>. Ogni direzione fa gli affari suoi. Moltiplicarle, elevarle
+      a potenza, invertirle: tutto diventa banale (basta lavorare sui singoli numeri della diagonale, §6.3
+      e §12.2).
+      <br><br>
+      <strong>Ed ecco il segreto di metà del libro:</strong> l'obiettivo di <em>tutte</em> le decomposizioni
+      (autovalori, SVD, PCA) è <mark>trovare un sistema di coordinate in cui una matrice complicata
+      <em>diventa diagonale</em></mark>. Non perché ci piacciano le diagonali, ma perché in quel sistema di
+      coordinate il problema si spezza in tanti problemi minuscoli e indipendenti. Tienilo a mente: quando
+      nel Cap. 15 vedrai \(\mm{A} = \mm{V}\mm{\Lambda}\mm{V}\inv\), quella \(\mm{\Lambda}\) al centro è
+      diagonale, ed è tutto il punto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Addizione e sottrazione</h2>
+
+  <p>
+    Dopo tanta teoria, un attimo di riposo: la somma di matrici è banale, ed è banale esattamente come lo
+    era per i vettori (§2.4).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Addizione di matrici <span class="tag">elemento per elemento</span></div>
+    <div class="f-body">
+      \[
+        \left(\mm{A} + \mm{B}\right)_{ij} \;=\; a_{ij} + b_{ij}
+      \]
+      \[
+        \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix} +
+        \begin{bmatrix} 5 &amp; -1 \\ 0 &amp; 2 \end{bmatrix} =
+        \begin{bmatrix} 1+5 &amp; 2-1 \\ 3+0 &amp; 4+2 \end{bmatrix} =
+        \begin{bmatrix} 6 &amp; 1 \\ 3 &amp; 6 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Condizione unica e non negoziabile:</strong> \(\mm{A}\) e \(\mm{B}\) devono avere
+      <mark>esattamente la stessa forma</mark>. Una \(2\times3\) più una \(3\times2\) <em>non esiste</em>,
+      nonostante entrambe abbiano 6 elementi: non c'è modo di accoppiare le caselle.
+      Il risultato ha, ovviamente, la stessa forma degli addendi.
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Proprietà</th><th>In formula</th></tr></thead>
+    <tbody>
+      <tr><td><b>Commutativa</b></td><td>\(\mm{A}+\mm{B} = \mm{B}+\mm{A}\)</td></tr>
+      <tr><td><b>Associativa</b></td><td>\((\mm{A}+\mm{B})+\mm{C} = \mm{A}+(\mm{B}+\mm{C})\)</td></tr>
+      <tr><td><b>Elemento neutro</b></td><td>\(\mm{A} + \mm{0} = \mm{A}\) &nbsp;(la matrice nulla)</td></tr>
+      <tr><td><b>Trasposta di una somma</b></td><td>\((\mm{A}+\mm{B})\T = \mm{A}\T + \mm{B}\T\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Tutte gratis, per lo stesso motivo di sempre: la somma agisce <em>una casella per volta</em>, e dentro
+    ogni casella c'è una normalissima somma di numeri. <strong>Goditi questa semplicità</strong>: nel
+    Capitolo 6 la moltiplicazione sarà tutta un'altra storia, e la proprietà commutativa
+    <em>sparirà</em>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Moltiplicazione scalare-matrice</h2>
+
+  <div class="formula">
+    <div class="f-head">Scalare per matrice <span class="tag">lo stesso numero su ogni casella</span></div>
+    <div class="f-body">
+      \[
+        \left(\hC{\lambda}\mm{A}\right)_{ij} = \hC{\lambda}\,a_{ij}
+        \qquad\qquad
+        3\begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix} =
+        \begin{bmatrix} 3 &amp; 6 \\ 9 &amp; 12 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Nessuna sorpresa: <strong>ogni elemento viene moltiplicato per lo stesso \(\lambda\)</strong>.
+      Funziona per qualunque forma (non serve che sia quadrata), e vale
+      \(\lambda\mm{A} = \mm{A}\lambda\) — è una delle rare moltiplicazioni in cui l'ordine non conta,
+      perché uno dei due fattori è un semplice numero.
+      <br><br>
+      <strong>Geometricamente</strong> (lettura ③): se \(\mm{A}\) deformava lo spazio in un certo modo,
+      \(2\mm{A}\) fa la <em>stessa</em> deformazione e poi raddoppia tutto. La «forma» della trasformazione
+      non cambia, cambia la sua intensità.
+      <br><br>
+      <strong>Proprietà</strong> (tutte ereditate dai numeri):
+      \(\lambda(\mm{A}+\mm{B}) = \lambda\mm{A} + \lambda\mm{B}\), &nbsp;
+      \((\lambda+\mu)\mm{A} = \lambda\mm{A} + \mu\mm{A}\), &nbsp;
+      \((\lambda\mm{A})\T = \lambda\,\mm{A}\T\).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-8"><span class="secnum">Sezione 5.8</span>Lo “shifting” di una matrice</h2>
+
+  <p class="lead">
+    Ed ecco un'operazione che sembra un'inezia — <em>«aggiungi un numero alla diagonale»</em> — e che
+    invece è uno degli attrezzi più usati di tutta la matematica applicata. Compare nel calcolo degli
+    autovalori, nella regolarizzazione, nel machine learning, nella statistica.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Shifting <span class="tag">A + λI</span></div>
+    <div class="f-body">
+      \[
+        \tilde{\mm{A}} \;=\; \mm{A} + \hC{\lambda}\mm{I}
+      \]
+      \[
+        \begin{bmatrix} 4 &amp; 5 &amp; 1 \\ 0 &amp; 1 &amp; 11 \\ 4 &amp; 9 &amp; 7 \end{bmatrix}
+        + \hC{0.1}
+        \begin{bmatrix} 1 &amp; 0 &amp; 0 \\ 0 &amp; 1 &amp; 0 \\ 0 &amp; 0 &amp; 1 \end{bmatrix}
+        =
+        \begin{bmatrix} \hD{4.1} &amp; 5 &amp; 1 \\ 0 &amp; \hD{1.1} &amp; 11 \\ 4 &amp; 9 &amp; \hD{7.1} \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{I}\)</dt>
+        <dd>la matrice <b>identità</b>: 1 sulla diagonale, 0 altrove. È lei che «indirizza» il \(\lambda\)
+            esclusivamente sulla diagonale.</dd>
+        <dt>\(\hC{\lambda}\)</dt>
+        <dd>lo scalare di cui «spostiamo» la matrice. Di solito è <b>piccolo</b>: l'idea è dare una
+            spintarella, non stravolgere.</dd>
+        <dt>\(\hD{\text{il risultato}}\)</dt>
+        <dd><mark>SOLO gli elementi diagonali cambiano</mark> (aumentano di \(\lambda\)). Tutti gli altri
+            restano <em>identici</em>, perché fuori dalla diagonale \(\mm{I}\) ha zeri, e sommare zero non
+            fa nulla.</dd>
+        <dt>requisito</dt>
+        <dd>\(\mm{A}\) deve essere <b>quadrata</b>. Altrimenti non esisterebbe una \(\mm{I}\) della forma
+            giusta da sommarle.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La tilde (\(\tilde{\mm{A}}\), «A tilde») è solo un modo per dire «una versione modificata di
+      \(\mm{A}\)». <strong>Attenzione:</strong> \(\tilde{\mm{A}} \neq \mm{A}\). Lo shifting
+      <em>cambia</em> la matrice — non è un trucco di riscrittura. Se lo usi su dei dati, stai
+      <em>alterando i dati</em>, e devi sapere perché lo stai facendo.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> A che serve? A «staccare» una matrice dal baratro</div>
+    <p>
+      Ricordi il widget del §1.1? Quando il determinante andava a zero, il piano <strong>collassava</strong>
+      su una retta e la trasformazione diventava irreversibile. Una matrice in quello stato si dice
+      <span class="termine">singolare</span>: non si può invertire, i sistemi con lei dentro esplodono, i
+      calcoli numerici diventano instabili.
+    </p>
+    <p style="margin-bottom:0">
+      Lo shifting è <mark>la manovra di emergenza</mark>: aggiungendo un pizzico di identità, si «gonfia»
+      la diagonale quel tanto che basta a rendere la matrice di nuovo invertibile.
+      È come mescolare la tua matrice malandata con un'oncia di trasformazione-che-non-fa-danni
+      (l'identità). Provalo qui sotto: parti da una matrice singolare e alza \(\lambda\).
+    </p>
+  </div>
+
+  <div class="widget" id="w-shift">
+    <div class="w-head">
+      <span>Shifting: A + λI</span>
+      <span class="hint">muovi λ e guarda la diagonale (e il determinante)</span>
+    </div>
+    <div class="w-stage" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:1.5rem; padding:1rem">
+      <div id="ws-mat"></div>
+      <svg viewBox="0 0 300 260" style="max-width:300px" role="img" aria-label="Effetto dello shifting sulla trasformazione del piano"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>λ</label><input type="range" min="0" max="3" step="0.05" value="0"><output>0.00</output></div>
+      <button class="w-btn on" data-m="1,2,0.5,1">A singolare (det = 0)</button>
+      <button class="w-btn" data-m="2,1,1,3">A normale</button>
+    </div>
+    <div class="w-readout" id="ws-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Dove ritroverai lo shifting (e sono posti importanti)</div>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Dove</th><th>Come compare</th><th>Perché</th></tr></thead>
+      <tbody>
+        <tr><td><b>Cap. 7</b> — rango</td><td>\(\mm{A} + \lambda\mm{I}\)</td>
+            <td>«gonfiare» il rango di una matrice deficiente</td></tr>
+        <tr><td><b>Cap. 11</b> — determinante</td><td>\(\det(\mm{A} - \lambda\mm{I}) = 0\)</td>
+            <td>è il <b>polinomio caratteristico</b>: si cercano i \(\lambda\) che rendono la matrice
+                <em>singolare</em>. Lo shifting al contrario!</td></tr>
+        <tr><td><b>Cap. 15</b> — autovalori</td><td>\(\mm{A}\vv{v} = \lambda\vv{v} \Leftrightarrow (\mm{A}-\lambda\mm{I})\vv{v} = \vv{0}\)</td>
+            <td><mark>gli autovalori <em>sono</em> gli shift che rendono \(\mm{A}\) singolare</mark></td></tr>
+        <tr><td><b>Cap. 19</b> — PCA</td><td>\(\mm{C} + \lambda\mm{I}\)</td>
+            <td><b>regolarizzazione</b>: stabilizza una matrice di covarianza quasi-singolare (quando hai
+                poche osservazioni e tante variabili)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Guarda la terza riga, perché è una piccola rivelazione: <strong>un autovalore è esattamente quel
+      valore di \(\lambda\) che, sottratto alla diagonale, rende la matrice singolare.</strong> Cioè: gli
+      autovalori sono gli «anti-shift», i punti di rottura. Quando arriverai al Cap. 15 quella definizione
+      ti sembrerà naturale — perché avrai già giocato con il cursore qui sopra.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-9"><span class="secnum">Sezione 5.9</span>Diagonale e traccia</h2>
+
+  <h3>La diagonale</h3>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Definizione — diagonale principale</div>
+    <p style="margin-bottom:0">
+      La <span class="termine">diagonale principale</span> di una matrice è l'insieme degli elementi
+      \(a_{ii}\), cioè quelli con <strong>i due indici uguali</strong>: \(a_{11}, a_{22}, a_{33}, \dots\)
+      Va dall'angolo in alto a sinistra verso il basso a destra, e <strong>si ferma appena finiscono le
+      righe o le colonne</strong>. Una matrice \(3\times5\) ha una diagonale di soli 3 elementi.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \(\diag\) è una parola, due operazioni <em>opposte</em></div>
+    <p style="margin-bottom:0">
+      Fai attenzione, perché è una fonte di confusione classica. Lo stesso simbolo si usa per due cose che
+      fanno il contrario l'una dell'altra, e si capisce quale intendi <em>solo</em> guardando che cosa gli
+      dai in pasto:
+    </p>
+    <div class="tbl-wrap" style="margin:.6rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Se le dai…</th><th>…ti restituisce</th><th>Esempio</th></tr></thead>
+      <tbody>
+        <tr><td>una <b>matrice</b></td><td>un <b>vettore</b>: <em>estrae</em> la diagonale</td>
+            <td>\(\diag\begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix} = \begin{bmatrix}1\\4\end{bmatrix}\)</td></tr>
+        <tr><td>un <b>vettore</b></td><td>una <b>matrice</b>: <em>costruisce</em> una diagonale</td>
+            <td>\(\diag\begin{bmatrix}1\\4\end{bmatrix} = \begin{bmatrix}1&amp;0\\0&amp;4\end{bmatrix}\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <h3>La traccia</h3>
+
+  <div class="formula">
+    <div class="f-head">Traccia <span class="tag">la somma della diagonale</span></div>
+    <div class="f-body">
+      \[
+        \tr(\mm{A}) \;=\; \sum_{i=1}^{n} \hA{a_{ii}}
+        \qquad\qquad
+        \tr\begin{bmatrix} \hA{4} &amp; 5 &amp; 1 \\ 0 &amp; \hA{1} &amp; 11 \\ 4 &amp; 9 &amp; \hA{7} \end{bmatrix}
+        = 4 + 1 + 7 = 12
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\tr(\cdot)\)</dt>
+        <dd>si legge «traccia» (in inglese <em>trace</em>). Il risultato è uno <b>scalare</b>: un numero
+            solo, che riassume qualcosa dell'intera matrice.</dd>
+        <dt>\(\hA{a_{ii}}\)</dt>
+        <dd>gli elementi <b>diagonali</b>, e solo loro. Tutto il resto della matrice viene
+            <em>completamente ignorato</em>. È una definizione brutalmente selettiva — e infatti sorprende
+            che possa servire a qualcosa.</dd>
+        <dt>requisito</dt>
+        <dd>la matrice deve essere <b>quadrata</b>. (Su una rettangolare la definizione si potrebbe anche
+            scrivere, ma perderebbe tutte le proprietà utili, quindi non si fa.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>«Ma perché sommare proprio la diagonale?»</strong> È la domanda giusta, e la risposta è:
+      perché quella somma è <em>miracolosamente stabile</em>. Nel Cap. 15 scoprirai che
+      <mark>la traccia è uguale alla somma degli autovalori</mark>: cioè un numero che si legge in due
+      secondi guardando la diagonale contiene un'informazione profondissima sulla trasformazione. È una
+      scorciatoia che pare un trucco di magia, e la userai per controllare i tuoi conti.
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Proprietà della traccia</th><th>In formula</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td><b>Lineare sulla somma</b></td><td>\(\tr(\mm{A}+\mm{B}) = \tr(\mm{A}) + \tr(\mm{B})\)</td>
+          <td>ovvio: la diagonale della somma è la somma delle diagonali</td></tr>
+      <tr><td><b>Omogenea</b></td><td>\(\tr(\lambda\mm{A}) = \lambda\,\tr(\mm{A})\)</td>
+          <td>quindi la traccia è una funzione <em>lineare</em> (§1.1!)</td></tr>
+      <tr><td><b>Invariante per trasposta</b></td><td>\(\tr(\mm{A}\T) = \tr(\mm{A})\)</td>
+          <td>logico: la trasposta non tocca la diagonale (§5.4)</td></tr>
+      <tr><td><b>Ciclica</b></td><td>\(\tr(\mm{A}\mm{B}) = \tr(\mm{B}\mm{A})\)</td>
+          <td><b>sorprendente</b>, perché in generale \(\mm{A}\mm{B} \neq \mm{B}\mm{A}\)! Eppure le
+              <em>tracce</em> coincidono. La dimostreremo nel §6.9.</td></tr>
+      <tr><td><b>Somma degli autovalori</b></td><td>\(\tr(\mm{A}) = \sum_i \lambda_i\)</td>
+          <td>il risultato più profondo. Cap. 15.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Un assaggio: la traccia misura «quanto è grande» una matrice</div>
+    <p style="margin-bottom:0">
+      Nel §6.10 definiremo la <em>norma di Frobenius</em>, cioè la lunghezza di una matrice — l'analogo
+      della norma di un vettore. La formula sarà:
+      \[ \norm{\mm{A}}_F = \sqrt{\tr(\mm{A}\T\mm{A})} \]
+      Sorpresa: la traccia, che sembrava ignorare quasi tutta la matrice, riesce a <em>catturarla
+      tutta</em> — perché il prodotto \(\mm{A}\T\mm{A}\) rimescola le cose in modo che ogni elemento di
+      \(\mm{A}\) finisca sulla diagonale, al quadrato. Non ti chiedo di crederci ora: solo di notare che
+      la traccia non è affatto l'operazione miope che sembrava.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><b>Una matrice si legge in quattro modi</b>: tabella di dati, colonne affiancate,
+          <b>trasformazione dello spazio</b> (la più profonda), sistema di equazioni. Cambiare lettura è
+          la mossa che sblocca i problemi difficili.</li>
+      <li><b>\(a_{ij}\): riga prima, colonna poi.</b> Sempre. E anche \(m \times n\): righe prima.
+          <em>(L'ascensore: prima scendi, poi cammini.)</em></li>
+      <li><b>Una matrice è una pila di vettori colonna.</b> \(\mm{A}\vv{x}\) sarà una loro combinazione
+          lineare (§6.5): abituati a vederle.</li>
+      <li><b>La trasposta ribalta attorno alla diagonale</b>: \((\mm{A}\T)_{ij} = a_{ji}\), e la forma
+          \(m\times n\) diventa \(n \times m\).</li>
+      <li><b>Simmetrica = \(\mm{A} = \mm{A}\T\)</b> (le più gentili che esistano);
+          <b>diagonale</b> = zero fuori dalla diagonale (le più semplici);
+          <b>identità \(\mm{I}\)</b> = il numero 1 delle matrici.</li>
+      <li><b>Somma e prodotto per scalare</b>: elemento per elemento, nessuna sorpresa.</li>
+      <li><b>Shifting \(\mm{A} + \lambda\mm{I}\)</b>: tocca <em>solo</em> la diagonale. Serve a staccare
+          una matrice dalla singolarità — e gli autovalori sono proprio gli shift che ce la spingono
+          dentro.</li>
+      <li><b>Traccia = somma della diagonale</b>, e (colpo di scena, Cap. 15) <b>= somma degli
+          autovalori</b>.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-10"><span class="secnum">Sezione 5.10</span>Esercizi</h2>
+
+  <p>Usa queste matrici:</p>
+  <div style="text-align:center">
+    \[
+      \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix} \qquad
+      \mm{B} = \begin{bmatrix} 0 &amp; -1 \\ 5 &amp; 2 \end{bmatrix} \qquad
+      \mm{C} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 4 &amp; 5 &amp; 6 \end{bmatrix} \qquad
+      \mm{S} = \begin{bmatrix} 2 &amp; 7 \\ 7 &amp; -3 \end{bmatrix}
+    \]
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">Per ciascuna matrice indica la <strong>forma</strong> \(m\times n\), e dì
+      se è quadrata, alta o larga. Poi scrivi il valore degli elementi
+      \(a_{21}\), \(b_{12}\), \(c_{23}\) e \(c_{32}\).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">Calcola \(\mm{A}\T\), \(\mm{C}\T\) e \(\mm{S}\T\). Che cosa noti su
+      \(\mm{S}\)?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">Quali di queste espressioni sono <strong>indefinite</strong>?
+      <br>(a) \(\mm{A} + \mm{B}\) &nbsp;·&nbsp;
+      (b) \(\mm{A} + \mm{C}\) &nbsp;·&nbsp;
+      (c) \(\mm{C} + \mm{C}\T\) &nbsp;·&nbsp;
+      (d) \(2\mm{C}\) &nbsp;·&nbsp;
+      (e) \(\mm{A} + 3\) &nbsp;·&nbsp;
+      (f) \(\mm{A} + 3\mm{I}\) &nbsp;·&nbsp;
+      (g) \(\tr(\mm{C})\)</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">Calcola \(2\mm{A} - \mm{B}\) e \(\tr(2\mm{A} - \mm{B})\). Poi verifica,
+      calcolandoli separatamente, che \(\tr(2\mm{A} - \mm{B}) = 2\tr(\mm{A}) - \tr(\mm{B})\).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.5</div>
+    <p style="margin-bottom:0">Calcola lo shift \(\mm{A} + 2\mm{I}\). Quali elementi sono cambiati?
+      Quanto vale \(\tr(\mm{A} + 2\mm{I})\)? Riesci a trovare una <strong>regola generale</strong> per
+      \(\tr(\mm{A} + \lambda\mm{I})\) quando \(\mm{A}\) è \(n\times n\)?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.6</div>
+    <p style="margin-bottom:0">Trova un valore di \(\lambda\) per cui \(\mm{A} + \lambda\mm{I}\) abbia il
+      determinante <strong>uguale a zero</strong> (cioè diventi singolare).
+      <span style="color:var(--ink-faint)">(Per una \(2\times2\), \(\det\begin{bmatrix}a&amp;b\\c&amp;d\end{bmatrix} = ad-bc\),
+      come nel widget del §1.1. Attenzione: le soluzioni sono due.)</span></p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.7</div>
+    <p style="margin-bottom:0">Vero o falso, con motivazione:
+      <br>(a) Se \(\mm{A}\) è simmetrica, allora è quadrata.
+      <br>(b) Se \(\mm{A}\) è quadrata, allora è simmetrica.
+      <br>(c) La trasposta di una matrice diagonale è la matrice stessa.
+      <br>(d) \(\tr(\mm{A}\T) = \tr(\mm{A})\) per ogni matrice quadrata.
+      <br>(e) Una matrice \(3\times5\) ha una diagonale principale di 5 elementi.
+      <br>(f) Lo shifting cambia solo la diagonale, quindi non cambia il determinante.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.8 &nbsp;<span style="color:var(--ink-faint); font-weight:400; text-transform:none; letter-spacing:0">— un po' più impegnativo</span></div>
+    <p style="margin-bottom:0">Dimostra che, per <strong>qualunque</strong> matrice quadrata \(\mm{A}\),
+      la matrice \(\mm{A} + \mm{A}\T\) è <strong>sempre simmetrica</strong>.
+      <span style="color:var(--ink-faint)">(Suggerimento: devi mostrare che è uguale alla propria
+      trasposta. Ti servono \((\mm{X}+\mm{Y})\T = \mm{X}\T+\mm{Y}\T\) e \((\mm{X}\T)\T = \mm{X}\).)</span>
+      <br>Poi verifica il risultato su \(\mm{A} = \begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix}\).</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-11"><span class="secnum">Sezione 5.11</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p>
+      <b>Forme:</b> \(\mm{A}\) è \(2\times2\) → <b>quadrata</b>. \(\mm{B}\) è \(2\times2\) →
+      <b>quadrata</b>. \(\mm{C}\) è \(2\times3\) (2 righe, 3 colonne) → <b>larga</b>.
+      \(\mm{S}\) è \(2\times2\) → <b>quadrata</b>.
+    </p>
+    <p style="margin-bottom:0">
+      <b>Elementi</b> (ricorda: riga prima, colonna poi):
+      <br>\(a_{21}\) = riga 2, colonna 1 di \(\mm{A}\) = \(\mathbf{3}\). <em>(Non 2! Se hai risposto 2,
+      hai letto «colonna 2, riga 1»: è l'errore classico. Ripeti l'ascensore: prima scendi, poi cammini.)</em>
+      <br>\(b_{12}\) = riga 1, colonna 2 di \(\mm{B}\) = \(\mathbf{-1}\).
+      <br>\(c_{23}\) = riga 2, colonna 3 di \(\mm{C}\) = \(\mathbf{6}\).
+      <br>\(c_{32}\) = riga 3, colonna 2 di \(\mm{C}\) = <b>non esiste!</b> \(\mm{C}\) ha solo 2 righe.
+      L'elemento è <em>indefinito</em>. È una domanda-trabocchetto, e serve a farti verificare
+      <em>sempre</em> che gli indici stiano dentro la forma.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <div style="text-align:center">
+      \[
+        \mm{A}\T = \begin{bmatrix} 1 &amp; 3 \\ 2 &amp; 4 \end{bmatrix} \qquad
+        \mm{C}\T = \begin{bmatrix} 1 &amp; 4 \\ 2 &amp; 5 \\ 3 &amp; 6 \end{bmatrix} \qquad
+        \mm{S}\T = \begin{bmatrix} 2 &amp; 7 \\ 7 &amp; -3 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      Nota che \(\mm{C}\) era \(2\times3\) e \(\mm{C}\T\) è \(3\times2\): la forma <b>si ribalta</b>.
+      E nota che nelle matrici quadrate le diagonali sono rimaste dove stavano (1 e 4 in \(\mm{A}\);
+      2 e −3 in \(\mm{S}\)).
+    </p>
+    <p style="margin-bottom:0">
+      <b>Su \(\mm{S}\): \(\mm{S}\T = \mm{S}\)!</b> È <b>simmetrica</b>. Si vede subito guardando gli
+      elementi fuori diagonale: \(s_{12} = 7\) e \(s_{21} = 7\), sono uguali. Il «riflesso nello specchio
+      della diagonale» la lascia identica a sé stessa.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p>
+      <b>(a) DEFINITA.</b> Entrambe \(2\times2\), stessa forma ✔ →
+      \(\begin{bmatrix}1&amp;1\\8&amp;6\end{bmatrix}\).
+    </p>
+    <p>
+      <b>(b) INDEFINITA.</b> \(\mm{A}\) è \(2\times2\), \(\mm{C}\) è \(2\times3\). Forme diverse: non c'è
+      modo di accoppiare le caselle. La somma richiede forme <em>identiche</em>, non «compatibili».
+    </p>
+    <p>
+      <b>(c) INDEFINITA</b>, ed è una trappola raffinata. \(\mm{C}\) è \(2\times3\), ma \(\mm{C}\T\) è
+      \(3\times2\): la trasposta ha <em>ribaltato</em> la forma, quindi le due non si possono sommare.
+      <mark>\(\mm{A}+\mm{A}\T\) ha senso solo se \(\mm{A}\) è quadrata</mark> — che è esattamente l'ipotesi
+      dell'esercizio 5.8, e ora sai perché serve.
+    </p>
+    <p>
+      <b>(d) DEFINITA.</b> Il prodotto per scalare funziona su <em>qualunque</em> forma:
+      \(2\mm{C} = \begin{bmatrix}2&amp;4&amp;6\\8&amp;10&amp;12\end{bmatrix}\).
+    </p>
+    <p>
+      <b>(e) INDEFINITA.</b> \(\mm{A}\) è una matrice, \(3\) è uno scalare:
+      <mark>non si somma una matrice a un numero</mark>. È lo stesso errore di tipo dell'esercizio 2.3(e).
+      (Alcuni linguaggi di programmazione lo permettono aggiungendo 3 a <em>tutte</em> le caselle: è
+      <em>broadcasting</em>, una comodità informatica, non matematica.)
+    </p>
+    <p>
+      <b>(f) DEFINITA!</b> Guarda la differenza con (e): qui c'è \(\mm{I}\). \(3\mm{I}\) è una
+      <em>matrice</em> \(2\times2\) (con 3 sulla diagonale), quindi la somma è lecita. <b>È lo shifting</b>
+      del §5.8: \(\mm{A}+3\mm{I} = \begin{bmatrix}4&amp;2\\3&amp;7\end{bmatrix}\).
+      <mark>Ecco a cosa serve davvero la \(\mm{I}\) in quella formula</mark>: a trasformare un numero in
+      una matrice della forma giusta, così che la somma abbia senso — e a indirizzarlo solo sulla diagonale.
+    </p>
+    <p style="margin-bottom:0">
+      <b>(g) INDEFINITA.</b> \(\mm{C}\) è \(2\times3\), non quadrata: la traccia non è definita.
+      (Potresti sommare i due elementi della «diagonale» 1 e 5, ma quella somma non godrebbe di nessuna
+      delle proprietà utili, quindi la definizione semplicemente non si dà.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <div style="text-align:center">
+      \[
+        2\mm{A} = \begin{bmatrix} 2 &amp; 4 \\ 6 &amp; 8 \end{bmatrix}
+        \qquad
+        2\mm{A} - \mm{B} = \begin{bmatrix} 2-0 &amp; 4-(-1) \\ 6-5 &amp; 8-2 \end{bmatrix}
+        = \begin{bmatrix} 2 &amp; 5 \\ 1 &amp; 6 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      \(\tr(2\mm{A} - \mm{B}) = 2 + 6 = \mathbf{8}\).
+    </p>
+    <p style="margin-bottom:0">
+      <b>Verifica della linearità:</b> \(\tr(\mm{A}) = 1 + 4 = 5\) e \(\tr(\mm{B}) = 0 + 2 = 2\).
+      Quindi \(2\tr(\mm{A}) - \tr(\mm{B}) = 2(5) - 2 = 10 - 2 = \mathbf{8}\) ✔ — coincide.
+      <br>
+      Non è magia: la traccia guarda solo la diagonale, e la diagonale di una somma è la somma delle
+      diagonali. <mark>La traccia è una funzione lineare</mark> nel senso esatto del §1.1 (additiva e
+      omogenea). Il che significa che puoi «portarla dentro» le somme e i multipli scalari senza pensarci.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.5</div>
+    <div style="text-align:center">
+      \[
+        \mm{A} + 2\mm{I}
+        = \begin{bmatrix} 1 &amp; 2 \\ 3 &amp; 4 \end{bmatrix} + \begin{bmatrix} 2 &amp; 0 \\ 0 &amp; 2 \end{bmatrix}
+        = \begin{bmatrix} \mathbf{3} &amp; 2 \\ 3 &amp; \mathbf{6} \end{bmatrix}
+      \]
+    </div>
+    <p>
+      Sono cambiati <b>solo i due elementi diagonali</b> (\(1 \to 3\) e \(4 \to 6\)): entrambi aumentati di
+      2. Il \(2\) fuori diagonale e il \(3\) fuori diagonale sono rimasti intatti, perché lì \(\mm{I}\) ha
+      zeri.
+    </p>
+    <p>
+      \(\tr(\mm{A}+2\mm{I}) = 3 + 6 = \mathbf{9}\). &nbsp;(Controllo: \(\tr(\mm{A}) = 5\), e \(5 + 2\cdot2 = 9\) ✔)
+    </p>
+    <p style="margin-bottom:0">
+      <b>La regola generale.</b> Se \(\mm{A}\) è \(n\times n\), lo shift aggiunge \(\lambda\) a
+      <em>ciascuno</em> degli \(n\) elementi diagonali. Quindi la traccia aumenta di \(\lambda\) per
+      \(n\) volte:
+      \[ \tr(\mm{A} + \lambda\mm{I}) \;=\; \tr(\mm{A}) + \hA{n\lambda} \]
+      Qui \(n = 2\) e \(\lambda = 2\), quindi \(5 + (2)(2) = 9\) ✔.
+      <br>
+      <span style="color:var(--ink-faint)">(Un altro modo di vederla, più elegante: per linearità della
+      traccia, \(\tr(\mm{A}+\lambda\mm{I}) = \tr(\mm{A}) + \lambda\tr(\mm{I})\), e \(\tr(\mm{I}_n) = n\)
+      perché la diagonale dell'identità è fatta di \(n\) uni.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.6</div>
+    <p>Scriviamo lo shift e imponiamo determinante nullo:</p>
+    <div style="text-align:center">
+      \[
+        \mm{A} + \lambda\mm{I} = \begin{bmatrix} 1+\lambda &amp; 2 \\ 3 &amp; 4+\lambda \end{bmatrix}
+      \]
+      \[
+        \det = (1+\lambda)(4+\lambda) - (2)(3) = 0
+      \]
+    </div>
+    <p>Sviluppiamo, senza saltare passaggi:</p>
+    <div style="text-align:center">
+      \[
+        \begin{aligned}
+          (1+\lambda)(4+\lambda) - 6 &amp;= 0 \\
+          4 + \lambda + 4\lambda + \lambda^2 - 6 &amp;= 0 \\
+          \lambda^2 + 5\lambda - 2 &amp;= 0
+        \end{aligned}
+      \]
+    </div>
+    <p>
+      Formula risolutiva: \(\lambda = \dfrac{-5 \pm \sqrt{25 + 8}}{2} = \dfrac{-5 \pm \sqrt{33}}{2}\).
+      Numericamente: \(\lambda_1 \approx \mathbf{0.372}\) e \(\lambda_2 \approx \mathbf{-5.372}\).
+    </p>
+    <p style="margin-bottom:0">
+      <b>Verifica</b> con \(\lambda_1 \approx 0.372\):
+      \(\det\begin{bmatrix}1.372 &amp; 2\\3 &amp; 4.372\end{bmatrix} = (1.372)(4.372) - 6 \approx 5.999 - 6 \approx 0\) ✔
+      <br><br>
+      <b>Quello che hai appena fatto ha un nome.</b> Quel polinomio \(\lambda^2 + 5\lambda - 2\) è il
+      <span class="termine">polinomio caratteristico</span> di \(\mm{A}\) (Cap. 11), e i due \(\lambda\)
+      che lo annullano sono — a meno del segno, perché la convenzione standard usa
+      \(\det(\mm{A} - \lambda\mm{I})\) — <mark>gli <strong>autovalori</strong> di \(\mm{A}\)</mark>
+      (Cap. 15). Hai risolto un'equazione di secondo grado da terza liceo e sei arrivato al concetto più
+      importante della seconda metà del libro. Tienila da parte, questa: ci torneremo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.7</div>
+    <p>
+      <b>(a) VERO.</b> Perché \(\mm{A} = \mm{A}\T\) possa anche solo <em>avere senso</em>, le due matrici
+      devono avere la stessa forma. Ma se \(\mm{A}\) è \(m\times n\), allora \(\mm{A}\T\) è \(n\times m\).
+      Uguali solo se \(m = n\). <mark>La simmetria implica la quadratura, per pura questione di forme</mark>
+      — prima ancora di guardare i numeri.
+    </p>
+    <p>
+      <b>(b) FALSO.</b> L'implicazione non si inverte. \(\mm{A} = \begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix}\)
+      è quadrata ma \(a_{12} = 2 \neq 3 = a_{21}\): non è simmetrica. Essere quadrata è
+      <em>necessario</em> per la simmetria, ma non <em>sufficiente</em>.
+    </p>
+    <p>
+      <b>(c) VERO.</b> Una matrice diagonale ha zeri ovunque tranne che sulla diagonale, e la trasposta
+      (i) non tocca la diagonale, (ii) scambia gli elementi fuori diagonale — che però sono tutti zeri, e
+      scambiare zeri con zeri non cambia nulla. Quindi \(\mm{D}\T = \mm{D}\).
+      <b>Corollario:</b> ogni matrice diagonale è anche simmetrica.
+    </p>
+    <p>
+      <b>(d) VERO.</b> La trasposizione manda \(a_{ii}\) in posizione \((i,i)\): gli elementi diagonali
+      <em>non si muovono</em>. La diagonale è identica, quindi la sua somma pure.
+    </p>
+    <p>
+      <b>(e) FALSO.</b> Ne ha <b>3</b>. La diagonale si ferma appena finisce la dimensione più corta: gli
+      elementi sono \(a_{11}, a_{22}, a_{33}\), e un \(a_{44}\) richiederebbe una quarta riga che non
+      esiste. In generale una \(m\times n\) ha una diagonale di \(\min(m,n)\) elementi.
+    </p>
+    <p style="margin-bottom:0">
+      <b>(f) FALSO</b>, ed è il punto centrale del §5.8. Lo shifting cambia solo la diagonale, sì — ma il
+      determinante <em>dipende</em> dalla diagonale! Nell'esercizio 5.6 hai visto che il determinante di
+      \(\mm{A}+\lambda\mm{I}\) è \(\lambda^2 + 5\lambda - 2\): cambia eccome al variare di \(\lambda\).
+      <mark>Anzi: è proprio perché il determinante cambia che lo shifting è utile</mark> — serve
+      esattamente a <em>spostarlo lontano da zero</em>, cioè a rendere invertibile una matrice che non lo era.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.8</div>
+    <p>
+      Per dimostrare che una matrice \(\mm{M}\) è simmetrica, bisogna far vedere una cosa sola:
+      \(\mm{M}\T = \mm{M}\). Qui \(\mm{M} = \mm{A}+\mm{A}\T\), quindi calcoliamone la trasposta.
+    </p>
+    <ol class="passi" style="margin-top:1rem">
+      <li>Partiamo dalla trasposta della nostra matrice:
+          \[ \left(\mm{A} + \mm{A}\T\right)\T \]</li>
+      <li>Usiamo la proprietà «la trasposta di una somma è la somma delle trasposte» (§5.6):
+          \[ = \mm{A}\T + \left(\mm{A}\T\right)\T \]</li>
+      <li>Usiamo l'involutività (§5.4): trasporre due volte riporta all'originale, quindi
+          \(\left(\mm{A}\T\right)\T = \mm{A}\):
+          \[ = \mm{A}\T + \mm{A} \]</li>
+      <li>La somma di matrici è <b>commutativa</b> (§5.6), quindi possiamo riordinare:
+          \[ = \mm{A} + \mm{A}\T \]
+          che è <em>esattamente la matrice di partenza</em>. Abbiamo mostrato
+          \(\left(\mm{A}+\mm{A}\T\right)\T = \mm{A}+\mm{A}\T\): è simmetrica. \(\blacksquare\)</li>
+    </ol>
+    <p><b>Verifica numerica</b> con \(\mm{A} = \begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix}\):</p>
+    <div style="text-align:center">
+      \[
+        \mm{A} + \mm{A}\T
+        = \begin{bmatrix}1&amp;2\\3&amp;4\end{bmatrix} + \begin{bmatrix}1&amp;3\\2&amp;4\end{bmatrix}
+        = \begin{bmatrix}2 &amp; \mathbf{5} \\ \mathbf{5} &amp; 8\end{bmatrix}
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      I due elementi fuori diagonale sono entrambi \(5\): simmetrica ✔. E si capisce <em>perché</em>:
+      l'elemento di posto \((1,2)\) della somma è \(a_{12} + a_{21} = 2+3 = 5\), e quello di posto
+      \((2,1)\) è \(a_{21} + a_{12} = 3+2 = 5\). <mark>Sono la stessa somma, scritta in ordine diverso</mark>
+      — ed è la commutatività dei numeri a garantire che coincidano. Tutta la dimostrazione formale qui
+      sopra, in fondo, dice solo questo.
+      <br><br>
+      <b>Perché è utile.</b> Questo è un <em>modo di fabbricare</em> matrici simmetriche a partire da
+      matrici qualsiasi, e lo useremo nel §6.6. Ne esiste un altro, ancora più importante, che vedrai al
+      §6.7: <mark>\(\mm{A}\T\mm{A}\) è sempre simmetrica</mark>, per qualunque \(\mm{A}\), anche
+      rettangolare. Da quella singola osservazione nasceranno i minimi quadrati (Cap. 14) e la PCA
+      (Cap. 19).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* utilità: costruisce una tabella-matrice HTML */
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => (Number.isInteger(v) ? v : v.toFixed(1)));
+  let h = `<div class="mtab brk" style="grid-template-columns: repeat(${cols}, auto)">`;
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      h += `<div class="c ${cls(i, j, M[i][j])}" data-i="${i}" data-j="${j}">${fmt(M[i][j])}</div>`;
+  return h + '</div>';
+}
+
+
+/* =========================================================================
+   WIDGET §5.1 — una matrice, quattro letture
+   ====================================================================== */
+(function () {
+  const root = document.getElementById('w-letture');
+  const box  = document.getElementById('wl-panels');
+  const out  = document.getElementById('wl-out');
+  const A = [[2, -1], [1, 1.5]];
+
+  box.innerHTML = `
+    <div data-p="0" style="text-align:center">
+      <table class="tbl" style="max-width:26rem; margin:0 auto; font-size:13.5px">
+        <thead><tr><th></th><th>ore di studio</th><th>caffè bevuti</th></tr></thead>
+        <tbody>
+          <tr><td><b>studente 1</b></td><td>2</td><td>−1</td></tr>
+          <tr><td><b>studente 2</b></td><td>1</td><td>1.5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-p="1" style="text-align:center">
+      <svg id="wl-svg1" viewBox="0 0 420 260" style="max-width:420px"></svg>
+    </div>
+    <div data-p="2" style="text-align:center">
+      <svg id="wl-svg2" viewBox="0 0 420 260" style="max-width:420px"></svg>
+    </div>
+    <div data-p="3" style="text-align:center; padding:1.5rem 0">
+      <div style="font-family:var(--mono); font-size:16px; line-height:2.1">
+        2·x₁ &minus; 1·x₂ = b₁<br>
+        1·x₁ + 1.5·x₂ = b₂
+      </div>
+      <div style="font-family:var(--sans); font-size:13px; color:var(--ink-faint); margin-top:.8rem">
+        i numeri della matrice sono i <b>coefficienti</b>; le incognite stanno nel vettore x
+      </div>
+    </div>`;
+
+  // pannello ② : le colonne come vettori
+  {
+    const p = new Plot(document.getElementById('wl-svg1'), { xmin: -2.4, xmax: 3.4, ymin: -1.6, ymax: 2.6 });
+    p.grid(); p.axes();
+    p.arrow(0, 0, 2, 1, { color: 'var(--accent)', width: 3.2, label: 'a₁ = colonna 1', lx: 0, ly: 20, ldx: 20 });
+    p.arrow(0, 0, -1, 1.5, { color: 'var(--warm)', width: 3.2, label: 'a₂ = colonna 2', lx: 0, ly: -16, ldx: -18 });
+  }
+  // pannello ③ : la trasformazione del piano
+  {
+    const p = new Plot(document.getElementById('wl-svg2'), { xmin: -3, xmax: 3, ymin: -2, ymax: 2.6 });
+    p.grid(); p.axes();
+    const M = (x, y) => [A[0][0] * x + A[0][1] * y, A[1][0] * x + A[1][1] * y];
+    for (let k = -5; k <= 5; k++) {
+      let q = [M(k, -5), M(k, 5)];
+      p.line(q[0][0], q[0][1], q[1][0], q[1][1], { color: 'var(--accent)', width: k === 0 ? 1.8 : 1, opacity: k === 0 ? .8 : .35 });
+      q = [M(-5, k), M(5, k)];
+      p.line(q[0][0], q[0][1], q[1][0], q[1][1], { color: 'var(--accent)', width: k === 0 ? 1.8 : 1, opacity: k === 0 ? .8 : .35 });
+    }
+    p.poly([[0, 0], M(1, 0), M(1, 1), M(0, 1)],
+           { fill: 'color-mix(in srgb, var(--accent) 18%, transparent)' });
+    p.arrow(0, 0, 2, 1, { color: 'var(--accent)', width: 3 });
+    p.arrow(0, 0, -1, 1.5, { color: 'var(--warm)', width: 3 });
+    p.text(0, 2.35, 'la griglia grigia (prima) → la griglia blu (dopo)', { size: 11.5, italic: true });
+  }
+
+  const testi = [
+    ['① Tabella di dati',
+     'Righe = <b>osservazioni</b> (i due studenti), colonne = <b>variabili</b> misurate. La matrice <em>è</em> il dataset. È la lettura della statistica: da qui nascono covarianza (Cap. 18) e PCA (Cap. 19).'],
+    ['② Colonne affiancate',
+     'La matrice è un <b>mucchio di vettori</b>: la colonna 1 è <span style="color:var(--accent)"><b>(2, 1)</b></span>, la colonna 2 è <span style="color:var(--warm)"><b>(−1, 1.5)</b></span>. Chiedersi «cosa posso raggiungere?» significa chiedersi qual è il loro <b>span</b> (§4.5). Da qui: rango (Cap. 7) e spazio delle colonne (Cap. 8).'],
+    ['③ Trasformazione dello spazio &nbsp;<span style="color:var(--green)">★ la più profonda</span>',
+     'La matrice <b>deforma il piano</b>. E guarda: le due frecce sono <em>esattamente</em> le colonne del pannello ②. Non è una coincidenza — <mark>le colonne dicono dove finiscono i vettori base</mark> (lo dimostreremo nel §6.5).'],
+    ['④ Sistema di equazioni',
+     'I numeri della matrice sono i <b>coefficienti</b> di un sistema. Risolvere \\(\\mm{A}\\vv{x}=\\vv{b}\\) significa trovare le incognite. È la lettura del Cap. 10 — e nota che «il sistema ha soluzione?» è <em>la stessa domanda</em> di «\\(\\vv{b}\\) sta nello span delle colonne?» (lettura ②).']
+  ];
+
+  function show(i) {
+    box.querySelectorAll('[data-p]').forEach(el => el.style.display = (+el.dataset.p === i ? '' : 'none'));
+    root.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('on', +b.dataset.l === i));
+    out.innerHTML = `
+      <div style="display:flex; gap:1rem; align-items:center; justify-content:center; flex-wrap:wrap">
+        <span style="font-family:var(--sans); font-size:12px; color:var(--ink-faint)">sempre la stessa A:</span>
+        ${matHTML(A)}
+      </div>
+      <div style="margin-top:.6rem; text-align:left">
+        <b>${testi[i][0]}</b>
+        <div style="margin-top:.25rem; color:var(--ink-soft); font-size:.92rem">${testi[i][1]}</div>
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  root.querySelectorAll('[data-l]').forEach(b => b.onclick = () => show(+b.dataset.l));
+  show(0);
+})();
+
+
+/* =========================================================================
+   FIGURA 5.1 — anatomia di una matrice
+   ====================================================================== */
+(function () {
+  const svg = document.querySelector('#fig-anatomia svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n);
+                          for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const T = (x, y, s, o = {}) => {
+    const t = el('text', { x, y, class: o.bold ? 'lbl-b' : 'lbl', fill: o.color || null,
+                           'text-anchor': o.anchor || 'middle', 'font-size': o.size || null,
+                           'font-style': o.italic ? 'italic' : null });
+    t.textContent = s; return t;
+  };
+
+  const X0 = 150, Y0 = 70, W = 78, H = 52;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) {
+    const diag = i === j;
+    svg.appendChild(el('rect', {
+      x: X0 + j * W, y: Y0 + i * H, width: W - 4, height: H - 4, rx: 6,
+      fill: diag ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'var(--paper-2)',
+      stroke: diag ? 'var(--accent)' : 'var(--rule)', 'stroke-width': diag ? 1.8 : 1
+    }));
+    const t = T(X0 + j * W + (W - 4) / 2, Y0 + i * H + (H - 4) / 2 + 5,
+                `a${'₁₂₃'[i]}${'₁₂₃₄'[j]}`, { bold: diag, color: diag ? 'var(--accent)' : null, size: 15 });
+    svg.appendChild(t);
+  }
+
+  // parentesi
+  const x1 = X0 - 12, x2 = X0 + 4 * W - 4 + 12, yA = Y0 - 8, yB = Y0 + 3 * H - 4 + 8;
+  svg.appendChild(el('path', { d: `M${x1 + 10},${yA} L${x1},${yA} L${x1},${yB} L${x1 + 10},${yB}`,
+                               fill: 'none', stroke: 'var(--ink-soft)', 'stroke-width': 2.5 }));
+  svg.appendChild(el('path', { d: `M${x2 - 10},${yA} L${x2},${yA} L${x2},${yB} L${x2 - 10},${yB}`,
+                               fill: 'none', stroke: 'var(--ink-soft)', 'stroke-width': 2.5 }));
+
+  svg.appendChild(T(X0 + 2 * W - 2, 40, '4 colonne  (n = 4)', { bold: true }));
+  const r = T(60, Y0 + 1.5 * H, '3 righe', { bold: true }); svg.appendChild(r);
+  svg.appendChild(T(60, Y0 + 1.5 * H + 18, '(m = 3)', {}));
+  svg.appendChild(T(90, Y0 + 3 * H + 40, 'forma:  3 × 4', { bold: true, color: 'var(--violet)', size: 14, anchor: 'start' }));
+  svg.appendChild(T(280, Y0 + 3 * H + 40, 'diagonale principale: a₁₁, a₂₂, a₃₃', { color: 'var(--accent)', size: 13, anchor: 'start' }));
+  svg.appendChild(T(280, Y0 + 3 * H + 60, '(si ferma: non c\'è una quarta riga)', { size: 11.5, italic: true, anchor: 'start' }));
+})();
+
+
+/* =========================================================================
+   WIDGET §5.4 — la trasposta come ribaltamento
+   ====================================================================== */
+(function () {
+  const body = document.getElementById('wt-body');
+  const out  = document.getElementById('wt-out');
+  const A = [[1, 2, 3], [4, 5, 6]];
+  const AT = [[1, 4], [2, 5], [3, 6]];
+
+  body.innerHTML = `
+    <div style="display:inline-flex; align-items:center; gap:1.6rem; flex-wrap:wrap; justify-content:center">
+      <div>
+        <div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.4rem">A &nbsp;(2×3)</div>
+        <div id="wt-a">${matHTML(A)}</div>
+      </div>
+      <div style="font-size:22px; color:var(--ink-faint)">→ ᵀ →</div>
+      <div>
+        <div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.4rem">Aᵀ &nbsp;(3×2)</div>
+        <div id="wt-at">${matHTML(AT)}</div>
+      </div>
+    </div>`;
+
+  const cellsA  = body.querySelectorAll('#wt-a .c');
+  const cellsAT = body.querySelectorAll('#wt-at .c');
+
+  cellsA.forEach(c => {
+    const hi = () => {
+      const i = +c.dataset.i, j = +c.dataset.j;
+      cellsA.forEach(x => x.classList.remove('hl'));
+      cellsAT.forEach(x => x.classList.remove('hl'));
+      c.classList.add('hl');
+      cellsAT.forEach(x => { if (+x.dataset.i === j && +x.dataset.j === i) x.classList.add('hl'); });
+      out.innerHTML = `
+        <b>a<sub>${i + 1}${j + 1}</sub> = ${A[i][j]}</b> &nbsp;(riga ${i + 1}, colonna ${j + 1} di A)
+        &nbsp;→&nbsp; finisce in
+        <b>(Aᵀ)<sub>${j + 1}${i + 1}</sub></b> &nbsp;(riga ${j + 1}, colonna ${i + 1} di Aᵀ)
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.88rem">
+          gli indici si sono <b>scambiati</b>: (${i + 1}, ${j + 1}) → (${j + 1}, ${i + 1}).
+          ${i === j ? '<b style="color:var(--accent)">Questo elemento è sulla diagonale: non si è mosso!</b>' : ''}
+        </div>`;
+    };
+    c.addEventListener('mouseenter', hi);
+    c.addEventListener('click', hi);
+  });
+})();
+
+
+/* =========================================================================
+   WIDGET §5.5 — lo zoo delle matrici
+   ====================================================================== */
+(function () {
+  const ctrl = document.getElementById('wz-ctrl');
+  const mat  = document.getElementById('wz-mat');
+  const out  = document.getElementById('wz-out');
+
+  const specie = [
+    { n: 'nulla', M: [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+      cls: () => 'z',
+      d: 'Tutti zeri. Si scrive <b>0</b> (in grassetto). È l\'elemento neutro della somma: <b>A + 0 = A</b>. Come trasformazione, schiaccia <em>ogni</em> vettore nell\'origine — è la macchina che distrugge tutta l\'informazione.' },
+    { n: 'quadrata', M: [[4,1,7,2],[3,5,0,8],[9,2,6,1],[0,7,3,4]],
+      cls: (i,j) => i===j ? 'd' : '',
+      d: 'Stesso numero di righe e colonne (<b>n×n</b>). <mark>Solo le quadrate possono avere determinante (Cap. 11), inversa (Cap. 12) e autovalori (Cap. 15)</mark>: sono le uniche che trasformano uno spazio in <em>sé stesso</em>, e quindi le uniche di cui abbia senso chiedersi «si può annullare?».' },
+    { n: 'rettangolare', M: [[4,1,7],[3,5,0],[9,2,6],[0,7,3],[2,8,1]],
+      cls: (i,j) => i===j ? 'd' : '',
+      d: 'Righe ≠ colonne. Questa è <b>5×3</b>, cioè <em>alta</em>: la forma tipica dei dati (5 osservazioni, 3 variabili). Manda vettori di ℝ³ in vettori di ℝ⁵: <b>cambia lo spazio in cui vivi</b>. Non ha né determinante né inversa (ma ha una <em>pseudo</em>inversa, §12.8).' },
+    { n: 'simmetrica', M: [[2,7,-1,3],[7,5,4,0],[-1,4,6,8],[3,0,8,1]],
+      cls: (i,j) => i===j ? 'd' : (i<j ? 'g' : 'w'),
+      d: '<b>A = Aᵀ</b>: identica se la ribalti attorno alla diagonale. Le celle <span style="color:var(--green)"><b>verdi</b></span> e <span style="color:var(--warm)"><b>rosse</b></span> sono a coppie uguali (a<sub>ij</sub> = a<sub>ji</sub>). <mark>Sono le matrici più «gentili» che esistano</mark>: autovalori sempre reali, autovettori sempre ortogonali (§15.8). La matrice di covarianza è simmetrica — ed è per questo che la PCA funziona.' },
+    { n: 'diagonale', M: [[3,0,0,0],[0,-1,0,0],[0,0,5,0],[0,0,0,2]],
+      cls: (i,j) => i===j ? 'd' : 'z',
+      d: 'Zero <b>fuori</b> dalla diagonale. Come trasformazione: <mark>allunga o accorcia lungo ciascun asse senza mescolare niente</mark> — ogni direzione fa gli affari suoi. Sono le matrici più semplici del mondo: moltiplicarle, invertirle, elevarle a potenza è banale. <b>L\'obiettivo di tutte le decomposizioni è rendere diagonale una matrice</b> (Cap. 15, 16).' },
+    { n: 'identità I', M: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],
+      cls: (i,j) => i===j ? 'd' : 'z',
+      d: 'Diagonale, con tutti <b>1</b>. È <mark>il numero 1 delle matrici</mark>: <b>AI = IA = A</b>. Come trasformazione, <em>non fa niente</em>: ogni vettore resta dov\'è. Le sue colonne sono i vettori della base canonica e₁, e₂, … (§3.9). Compare ovunque: nello shifting (§5.8), nella definizione di inversa (Cap. 12), negli autovalori (Cap. 15).' },
+    { n: 'triangolare sup.', M: [[4,1,7,2],[0,5,0,8],[0,0,6,1],[0,0,0,4]],
+      cls: (i,j) => i===j ? 'd' : (i<j ? 'g' : 'z'),
+      d: 'Zero <b>sotto</b> la diagonale (esiste anche la <em>triangolare inferiore</em>, con gli zeri sopra). Sono facilissime da risolvere: parti dall\'ultima equazione, che ha una sola incognita, e risali. <mark>È esattamente ciò che fa l\'eliminazione di Gauss (Cap. 10)</mark>: trasforma una matrice qualsiasi in una triangolare. E il loro determinante è solo il prodotto della diagonale (§11.6).' },
+    { n: 'a bande', M: [[4,1,0,0],[3,5,8,0],[0,2,6,1],[0,0,7,4]],
+      cls: (i,j) => Math.abs(i-j)<=1 ? (i===j ? 'd' : 'g') : 'z',
+      d: 'I valori non nulli stanno solo in una <b>fascia</b> attorno alla diagonale. Questa, con una sola banda per lato, si chiama <em>tridiagonale</em>. Compaiono quando ogni elemento «parla» solo con i suoi <b>vicini</b>: equazioni differenziali, filtri, catene. Sono <em>sparse</em>, e quindi rapidissime da trattare al computer.' },
+    { n: 'di Toeplitz', M: [[3,1,7,2],[8,3,1,7],[6,8,3,1],[4,6,8,3]],
+      cls: (i,j) => i===j ? 'd' : (i-j===1 || j-i===1 ? 'g' : ''),
+      d: 'Costante lungo <b>ogni diagonale</b>: l\'elemento dipende solo da <b>i − j</b>, cioè da <em>quanto</em> sei lontano dalla diagonale, non da <em>dove</em> ti trovi. Descrivono sistemi <b>invarianti nel tempo</b>: la risposta a un impulso è sempre la stessa, ovunque tu lo dia. Sono la matematica dietro convoluzioni e filtri.' },
+    { n: 'ortogonale', M: [[0.707,-0.707,0,0],[0.707,0.707,0,0],[0,0,0.707,-0.707],[0,0,0.707,0.707]],
+      cls: () => '',
+      d: 'Colonne <b>ortogonali fra loro e di lunghezza 1</b> (§3.9). Proprietà magica: <b>QᵀQ = I</b>, quindi <mark>l\'inversa è semplicemente la trasposta</mark> — invertirla non costa nulla. Come trasformazione, <b>ruota e/o riflette senza deformare</b>: conserva lunghezze e angoli. È il Sacro Graal del Cap. 13, e il cuore della SVD (Cap. 16).' },
+    { n: 'singolare', M: [[1,2,3,4],[2,4,6,8],[1,1,1,1],[3,5,7,9]],
+      cls: (i,j) => i<=1 ? 'w' : '',
+      d: 'Ha determinante <b>zero</b>: le sue colonne (o righe) sono <b>linearmente dipendenti</b> (§4.6). Qui la riga 2 è il doppio della riga 1 (in <span style="color:var(--warm)"><b>rosso</b></span>): informazione ridondante. <mark>Schiaccia lo spazio in una dimensione più bassa e non si può invertire</mark>: è il collasso che vedevi nel widget del §1.1. Il suo <em>rango</em> è deficiente (Cap. 7).' }
+  ];
+
+  ctrl.innerHTML = specie.map((s, i) =>
+    `<button class="w-btn ${i === 0 ? 'on' : ''}" data-z="${i}">${s.n}</button>`).join('');
+
+  function show(i) {
+    const s = specie[i];
+    ctrl.querySelectorAll('[data-z]').forEach(b => b.classList.toggle('on', +b.dataset.z === i));
+    mat.innerHTML = matHTML(s.M, { cls: s.cls, fmt: v => (Number.isInteger(v) ? v : v.toFixed(2)) })
+      + `<div class="mleg"><i style="background:color-mix(in srgb, var(--accent) 26%, var(--paper-3))"></i>diagonale
+         <i style="background:var(--paper-2)"></i>zero
+         <i style="background:color-mix(in srgb, var(--green) 20%, var(--paper-3))"></i>notevole</div>`;
+    out.innerHTML = `<b style="text-transform:uppercase; letter-spacing:.06em; color:var(--accent)">${s.n}</b>
+      <div style="margin-top:.4rem; text-align:left; color:var(--ink-soft); font-size:.93rem">${s.d}</div>`;
+  }
+  ctrl.querySelectorAll('[data-z]').forEach(b => b.onclick = () => show(+b.dataset.z));
+  show(0);
+})();
+
+
+/* =========================================================================
+   WIDGET §5.8 — shifting
+   ====================================================================== */
+(function () {
+  const root = document.getElementById('w-shift');
+  const matBox = document.getElementById('ws-mat');
+  const out = document.getElementById('ws-out');
+  const sl = root.querySelector('input[type=range]');
+  const ov = root.querySelector('output');
+  const p = new Plot(root.querySelector('svg'), { xmin: -3, xmax: 3, ymin: -2.6, ymax: 2.6 });
+  let A = [[1, 2], [0.5, 1]];
+
+  root.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+    const v = b.dataset.m.split(',').map(Number);
+    A = [[v[0], v[1]], [v[2], v[3]]];
+    root.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b));
+    draw();
+  });
+  sl.oninput = draw;
+
+  function draw() {
+    const L = parseFloat(sl.value);
+    ov.textContent = L.toFixed(2);
+    const S = [[A[0][0] + L, A[0][1]], [A[1][0], A[1][1] + L]];
+    const det = S[0][0] * S[1][1] - S[0][1] * S[1][0];
+
+    matBox.innerHTML = matHTML(S, {
+      cls: (i, j) => (i === j ? 'd' : ''),
+      fmt: v => v.toFixed(2)
+    }) + `<div class="mleg" style="text-align:center"><i style="background:color-mix(in srgb, var(--accent) 26%, var(--paper-3))"></i>
+          solo la diagonale cambia</div>`;
+
+    p.clear(); p.grid(); p.axes({ numbers: false });
+    const M = (x, y) => [S[0][0] * x + S[0][1] * y, S[1][0] * x + S[1][1] * y];
+    for (let k = -6; k <= 6; k++) {
+      let q = [M(k, -6), M(k, 6)];
+      p.line(q[0][0], q[0][1], q[1][0], q[1][1], { color: 'var(--accent)', width: 1, opacity: .4 });
+      q = [M(-6, k), M(6, k)];
+      p.line(q[0][0], q[0][1], q[1][0], q[1][1], { color: 'var(--accent)', width: 1, opacity: .4 });
+    }
+    p.poly([[0, 0], M(1, 0), M(1, 1), M(0, 1)],
+           { fill: Math.abs(det) < 0.04
+               ? 'color-mix(in srgb, var(--warm) 30%, transparent)'
+               : 'color-mix(in srgb, var(--green) 22%, transparent)' });
+    p.arrow(0, 0, S[0][0], S[1][0], { color: 'var(--accent)', width: 2.6 });
+    p.arrow(0, 0, S[0][1], S[1][1], { color: 'var(--warm)', width: 2.6 });
+
+    const sing = Math.abs(det) < 0.04;
+    out.innerHTML = `
+      <b>Ã = A + ${L.toFixed(2)}·I</b> &nbsp;→&nbsp;
+      <b>det(Ã)</b> = <span style="color:${sing ? 'var(--warm)' : 'var(--green)'}"><b>${det.toFixed(3)}</b></span>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.88rem">
+        ${sing
+          ? '⚠ <b style="color:var(--warm)">Singolare</b>: il quadrato unitario è collassato, l\'area è zero. La matrice non è invertibile.'
+          : (L === 0
+             ? 'La matrice è invertibile: il quadrato unitario ha area ' + Math.abs(det).toFixed(2) + '. Prova ad alzare λ.'
+             : `Alzando λ il determinante si è <b>allontanato da zero</b>: la matrice è ora saldamente invertibile. Nota che <b>solo la diagonale è cambiata</b>, eppure la trasformazione è tutta diversa — e per λ molto grande Ã tende a comportarsi come una pura <b>dilatazione</b> (λI).`)}
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

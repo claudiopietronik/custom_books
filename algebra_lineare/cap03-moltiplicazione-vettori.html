@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Moltiplicazione tra vettori — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Moltiplicazione tra vettori</h1>
+    <p class="standfirst">
+      «Moltiplicare due vettori» non vuol dire una cosa sola: vuol dire <em>quattro</em> cose diverse,
+      con quattro risultati diversi. Una di queste — il <strong>prodotto scalare</strong> — è
+      l'operazione più importante dell'intero libro: da lei discendono angoli, distanze, proiezioni,
+      correlazioni e, alla fine, la PCA. Le altre tre servono, ma vengono dopo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> La mappa del capitolo, in dieci secondi</div>
+    <div class="tbl-wrap" style="margin:.5rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Operazione</th><th>Si scrive</th><th>Ingressi</th><th>Uscita</th><th>Dove</th></tr></thead>
+      <tbody>
+        <tr><td><b>Prodotto scalare</b> <span style="color:var(--green)">★ il re</span></td>
+            <td>\(\vv{a}\T\vv{b}\)</td><td>2 vettori di uguale dim.</td>
+            <td><b>uno scalare</b></td><td>§3.1 – §3.4</td></tr>
+        <tr><td><b>Prodotto esterno</b></td>
+            <td>\(\vv{a}\vv{b}\T\)</td><td>2 vettori di dim. qualunque</td>
+            <td><b>una matrice</b></td><td>§3.6</td></tr>
+        <tr><td><b>Prodotto di Hadamard</b></td>
+            <td>\(\vv{a} \odot \vv{b}\)</td><td>2 vettori di uguale dim.</td>
+            <td><b>un vettore</b></td><td>§3.7</td></tr>
+        <tr><td><b>Prodotto vettoriale</b></td>
+            <td>\(\vv{a} \times \vv{b}\)</td><td>2 vettori di \(\R^3\), e solo di \(\R^3\)</td>
+            <td><b>un vettore</b></td><td>§3.8</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Tienila d'occhio: metà della confusione sulle moltiplicazioni nasce dal non sapere
+      <em>che tipo di oggetto</em> uscirà dal conto. Prima di moltiplicare, chiediti sempre:
+      «sto per ottenere un numero, un vettore o una matrice?».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Prodotto scalare: l'algebra</h2>
+
+  <p class="lead">
+    La regola è di una semplicità disarmante: <strong>moltiplica gli elementi a coppie, poi somma
+    tutto</strong>. Il fatto che da una regola così stupida esca fuori il concetto di <em>angolo</em>
+    è una delle cose più belle della matematica, e la scopriremo nel §3.4.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto scalare <span class="tag">moltiplica a coppie, poi somma</span></div>
+    <div class="f-body">
+      \[
+        \hD{\vv{a}\T\vv{b}} \;=\; \hB{\sum_{i=1}^{n}} \hA{a_i b_i}
+        \;=\; \hA{a_1b_1} + \hA{a_2b_2} + \cdots + \hA{a_nb_n}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hD{\vv{a}\T\vv{b}}\)</dt>
+        <dd>la notazione che useremo <b>sempre</b>. Nota la \(\mathsf{T}\): il primo vettore è
+            <em>trasposto</em>, cioè trasformato in una <b>riga</b>; il secondo resta una <b>colonna</b>.
+            Riga per colonna. Quella \(\mathsf{T}\) non è un vezzo: è ciò che fa combaciare le forme
+            (§2.3), e nel Cap. 6 scoprirai che il prodotto scalare è il <em>caso più piccolo possibile</em>
+            della moltiplicazione tra matrici.</dd>
+        <dt>\(\hA{a_i b_i}\)</dt>
+        <dd>il prodotto dell'\(i\)-esimo elemento di \(\vv{a}\) per l'\(i\)-esimo elemento di \(\vv{b}\).
+            <b>Stessa posizione con stessa posizione</b>: il primo con il primo, il secondo con il secondo.
+            Mai il primo con il terzo.</dd>
+        <dt>\(\hB{\sum_{i=1}^{n}}\)</dt>
+        <dd>e poi <b>si somma tutto</b>. È questo passaggio che «schiaccia» il risultato in un numero solo:
+            tutte le \(n\) informazioni collassano in una.</dd>
+        <dt>il risultato</dt>
+        <dd>è uno <b>scalare</b>, un singolo numero — e da qui viene il nome «prodotto <em>scalare</em>».
+            Non è un vettore. Non ha componenti. Non lo puoi disegnare come una freccia.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Requisito ferreo:</strong> \(\vv{a}\) e \(\vv{b}\) devono avere la <b>stessa
+      dimensionalità</b>. Altrimenti a un certo punto ti resterebbe un elemento senza partner, e il conto
+      si ferma. Il prodotto scalare tra un vettore di \(\R^2\) e uno di \(\R^3\) <em>non esiste</em>.
+    </div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Tutti i nomi e tutte le notazioni della stessa cosa</div>
+    <p>Questa singola operazione ha una quantità imbarazzante di nomi. Sono tutti sinonimi:
+       <b>prodotto scalare</b>, <b>prodotto interno</b>, <b>prodotto punto</b>, <em>dot product</em>,
+       <em>inner product</em>.</p>
+    <p style="margin-bottom:0">E tre notazioni, che incontrerai tutte:
+      \[ \underbrace{\vv{a}\T\vv{b}}_{\small\text{ la nostra}} \quad=\quad
+         \underbrace{\vv{a}\cdot\vv{b}}_{\small\text{ fisica, liceo}} \quad=\quad
+         \underbrace{\dotp{\vv{a}}{\vv{b}}}_{\small\text{ matematica astratta}} \]
+      La prima è quella dell'algebra lineare «di lavoro» (e la nostra) e ha il pregio di ricordarti la
+      forma degli oggetti: riga per colonna. La seconda, con il puntino, è quella della fisica e delle
+      scuole superiori — ed è da lì che viene il nome inglese <em>dot product</em>. La terza, con le
+      parentesi angolari, è quella dei matematici quando lavorano in spazi più astratti dei nostri.
+      <mark>Stessa operazione, stesso risultato.</mark>
+    </p>
+  </div>
+
+  <h3>Un conto svolto, senza saltare niente</h3>
+
+  <div class="formula">
+    <div class="f-head">Esempio numerico <span class="tag">quattro dimensioni</span></div>
+    <div class="f-body">
+      \[
+        \vv{a} = \begin{bmatrix} 1 \\ 0 \\ 2 \\ 5 \end{bmatrix}, \quad
+        \vv{b} = \begin{bmatrix} 2 \\ 8 \\ -6 \\ 1 \end{bmatrix}
+      \]
+      \[
+        \begin{aligned}
+          \vv{a}\T\vv{b}
+            &amp;= \begin{bmatrix} 1 &amp; 0 &amp; 2 &amp; 5 \end{bmatrix}
+               \begin{bmatrix} 2 \\ 8 \\ -6 \\ 1 \end{bmatrix}
+            &amp;&amp; \small\text{(a diventa una riga: è la } \mathsf{T}\text{)} \\[3pt]
+            &amp;= (1)(2) + (0)(8) + (2)(-6) + (5)(1)
+            &amp;&amp; \small\text{(coppie corrispondenti)} \\[3pt]
+            &amp;= 2 + 0 - 12 + 5
+            &amp;&amp; \small\text{(svolgo i prodotti)} \\[3pt]
+            &amp;= \mathbf{-5}
+            &amp;&amp; \small\text{(sommo: un numero solo)}
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      Osserva due cose. <strong>Il risultato è negativo</strong>: il prodotto scalare può benissimo esserlo,
+      e nel §3.3 scoprirai che quel segno meno racconta qualcosa di preciso (i due vettori formano un angolo
+      <em>ottuso</em>). <strong>Lo zero in seconda posizione ha annullato l'8</strong>: se una componente di
+      \(\vv{a}\) è zero, la componente corrispondente di \(\vv{b}\) non partecipa al risultato, per quanto
+      grande sia. Il prodotto scalare misura le <em>coincidenze</em>, non le grandezze isolate.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il ponte con la norma (già lo conosci)</div>
+    <p>Che succede se moltiplichi un vettore <em>per sé stesso</em>? Ogni elemento incontra sé stesso:</p>
+    \[
+      \vv{a}\T\vv{a} = \sum_{i=1}^{n} a_i a_i = \sum_{i=1}^{n} a_i^2 = \norm{\vv{a}}^2
+    \]
+    <p style="margin-bottom:0">
+      <mark>Il prodotto scalare di un vettore con sé stesso è la sua norma al quadrato.</mark> Non è una
+      coincidenza né un trucchetto: significa che <em>la lunghezza non è un concetto separato dal prodotto
+      scalare — ci nasce dentro</em>. Da qui in poi userai continuamente questa identità nelle due direzioni:
+      \(\norm{\vv{a}}^2 = \vv{a}\T\vv{a}\) quando vuoi togliere una radice di mezzo, e
+      \(\vv{a}\T\vv{a} = \norm{\vv{a}}^2\) quando vuoi riconoscere una lunghezza dentro un'espressione.
+      Ti servirà tra pochissimo, nel §3.4.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Proprietà del prodotto scalare</h2>
+
+  <p>
+    Come per la somma (§2.4), quasi tutte le proprietà sono <em>gratis</em>: il prodotto scalare è fatto di
+    moltiplicazioni e somme tra numeri, quindi eredita le regole dei numeri. Ma c'è una proprietà che
+    <strong>non</strong> eredita, e ignorarla è una delle fonti di errore più comuni. Andiamo con ordine.
+  </p>
+
+  <h3>Le tre che valgono</h3>
+
+  <div class="formula">
+    <div class="f-head">Proprietà del prodotto scalare <span class="tag">tutte dimostrabili in una riga</span></div>
+    <div class="f-body">
+      \[
+        \begin{aligned}
+          \textbf{commutativa: } &amp;&amp; \vv{a}\T\vv{b} &amp;= \vv{b}\T\vv{a} \\[3pt]
+          \textbf{distributiva: } &amp;&amp; \vv{a}\T(\vv{b}+\vv{c}) &amp;= \vv{a}\T\vv{b} + \vv{a}\T\vv{c} \\[3pt]
+          \textbf{omogenea: }     &amp;&amp; (\lambda\vv{a})\T\vv{b} &amp;= \lambda(\vv{a}\T\vv{b}) = \vv{a}\T(\lambda\vv{b})
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      <p><strong>Perché la commutativa è vera:</strong> \(\sum_i a_i b_i = \sum_i b_i a_i\), perché
+         \(a_ib_i = b_ia_i\) per ogni singolo \(i\) (la moltiplicazione tra <em>numeri</em> è commutativa).
+         Fine. <b>Attenzione</b>: questa è una proprietà speciale del prodotto scalare, e ti abituerà male.
+         La moltiplicazione tra <em>matrici</em> (Cap. 6) <mark>non è commutativa</mark>: lì
+         \(\mm{A}\mm{B} \neq \mm{B}\mm{A}\) quasi sempre. Goditela finché dura.</p>
+      <p style="margin-bottom:0"><strong>Distributiva e omogenea, insieme, dicono una cosa sola:</strong>
+         il prodotto scalare è una <em>funzione lineare</em> — sono precisamente le due regole del §1.1!
+         Se «congeli» \(\vv{a}\) e guardi \(\vv{b}\) come l'ingresso, la macchina
+         \(L(\vv{b}) = \vv{a}\T\vv{b}\) è lineare: additiva e omogenea. E vale anche l'inverso, che è un
+         risultato profondo: <mark>ogni funzione lineare che prende un vettore e restituisce un numero
+         <em>è</em> un prodotto scalare con qualche vettore fisso</mark>. Ricordi l'esercizio 1.1(e),
+         \(L(x,y) = x+y\)? Era il prodotto scalare con \(\begin{bmatrix}1\\1\end{bmatrix}\).</p>
+    </div>
+  </div>
+
+  <h3>La proprietà che NON vale: l'associativa</h3>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> \((\vv{a}\T\vv{b})\,\vv{c} \;\neq\; \vv{a}\,(\vv{b}\T\vv{c})\)</div>
+    <p>
+      Verrebbe voglia di spostare le parentesi come si fa con i numeri. Non si può, e capire
+      <em>perché</em> è più utile che impararlo a memoria. Guarda che <b>tipo</b> di oggetti stai
+      maneggiando:
+    </p>
+    <ul>
+      <li>\(\vv{a}\T\vv{b}\) è uno <b>scalare</b>. Quindi \((\vv{a}\T\vv{b})\vv{c}\) è
+          «un numero × il vettore \(\vv{c}\)» → un vettore <b>nella direzione di \(\vv{c}\)</b>.</li>
+      <li>\(\vv{b}\T\vv{c}\) è uno <b>scalare</b>. Quindi \(\vv{a}(\vv{b}\T\vv{c})\) è
+          «il vettore \(\vv{a}\) × un numero» → un vettore <b>nella direzione di \(\vv{a}\)</b>.</li>
+    </ul>
+    <p style="margin-bottom:0">
+      <mark>Uno punta come \(\vv{c}\), l'altro punta come \(\vv{a}\).</mark> Non c'è alcuna ragione perché
+      coincidano — e infatti in generale non coincidono. Con
+      \(\vv{a}=\begin{bmatrix}1\\0\end{bmatrix}\), \(\vv{b}=\begin{bmatrix}1\\1\end{bmatrix}\),
+      \(\vv{c}=\begin{bmatrix}0\\1\end{bmatrix}\):
+      \((\vv{a}\T\vv{b})\vv{c} = 1\cdot\begin{bmatrix}0\\1\end{bmatrix} = \begin{bmatrix}0\\1\end{bmatrix}\),
+      mentre
+      \(\vv{a}(\vv{b}\T\vv{c}) = \begin{bmatrix}1\\0\end{bmatrix}\cdot 1 = \begin{bmatrix}1\\0\end{bmatrix}\).
+      Diversi. Le parentesi, qui, <strong>non sono decorative: cambiano il risultato</strong>.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Definita positività</div>
+    <p style="margin-bottom:0">
+      \[ \vv{a}\T\vv{a} = \norm{\vv{a}}^2 \;\ge\; 0, \qquad\text{e}\qquad \vv{a}\T\vv{a} = 0 \iff \vv{a} = \vv{0} \]
+      Il prodotto scalare di un vettore con sé stesso non è <em>mai</em> negativo (è una somma di quadrati),
+      e vale zero <em>soltanto</em> per il vettore nullo (l'abbiamo dimostrato nell'esercizio 2.7d).
+      Il simbolo \(\iff\) significa «se e solo se»: l'implicazione vale in entrambi i versi.
+      Questa proprietà sembra pedante ma è il pilastro su cui si regge tutto il Cap. 17 (forma quadratica)
+      e la nozione di <em>matrice definita positiva</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Prodotto scalare: la geometria</h2>
+
+  <p class="lead">
+    Adesso la seconda faccia della stessa medaglia. Esiste una formula completamente diversa per calcolare
+    lo <em>stesso</em> numero — una formula che non guarda le componenti, ma le lunghezze e l'angolo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto scalare, formula geometrica <span class="tag">l'altra faccia</span></div>
+    <div class="f-body">
+      \[
+        \vv{a}\T\vv{b} \;=\; \hA{\norm{\vv{a}}} \; \hB{\norm{\vv{b}}} \; \hC{\cos\theta}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\norm{\vv{a}}}, \hB{\norm{\vv{b}}}\)</dt>
+        <dd>le <b>lunghezze</b> dei due vettori (§2.2). Sono numeri, e non sono mai negativi.</dd>
+        <dt>\(\hC{\theta}\)</dt>
+        <dd>l'<b>angolo tra i due vettori</b> (theta), misurato mettendoli entrambi con la coda
+            nell'origine. Per convenzione si prende sempre l'angolo «piccolo»: \(0 \le \theta \le 180°\).
+            Non serve specificare il verso, perché il coseno è simmetrico: \(\cos(-\theta) = \cos\theta\),
+            e infatti il prodotto scalare è commutativo.</dd>
+        <dt>\(\hC{\cos\theta}\)</dt>
+        <dd>ed è qui che succede tutto. Il coseno è un numero <b>tra \(-1\) e \(+1\)</b>: vale \(1\)
+            quando i vettori sono <em>allineati</em>, \(0\) quando sono <em>perpendicolari</em>, \(-1\)
+            quando sono <em>opposti</em>. È il «fattore di allineamento».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Come leggerla, a parole:</strong> il prodotto scalare è il prodotto delle due lunghezze,
+      <em>scontato</em> di un fattore che dipende da quanto i due vettori sono d'accordo sulla direzione.
+      Se puntano nello stesso verso, nessuno sconto (\(\cos 0° = 1\)) e ottieni il massimo possibile,
+      \(\norm{\vv{a}}\norm{\vv{b}}\). Se sono perpendicolari, sconto totale: il risultato è
+      <strong>zero</strong>, per quanto lunghi siano i due vettori. Se puntano in versi opposti, il
+      risultato diventa negativo.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'intuizione che vale per tutto il libro</div>
+    <p style="margin-bottom:0">
+      <mark>Il prodotto scalare misura <strong>quanto due vettori sono d'accordo</strong>.</mark>
+      Non «quanto sono grandi», non «quanto sono vicini»: quanto <em>puntano nella stessa direzione</em>,
+      pesato per quanto sono lunghi. È un misuratore di <em>somiglianza direzionale</em>.
+      Tienilo stretto: quando nel Cap. 18 il prodotto scalare (normalizzato) diventerà il
+      <em>coefficiente di correlazione</em> tra due variabili, e nel Cap. 19 la PCA cercherà le direzioni
+      di massimo accordo dentro una nuvola di dati, starai ancora usando <em>questa</em> idea.
+    </p>
+  </div>
+
+  <h3>Il segno racconta l'angolo</h3>
+
+  <p>
+    Dato che \(\norm{\vv{a}}\) e \(\norm{\vv{b}}\) sono sempre \(\ge 0\), <strong>il segno del prodotto
+    scalare è deciso interamente dal coseno</strong>, cioè dall'angolo. Questa è la cosa più usata in
+    pratica di tutto il capitolo:
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Angolo \(\theta\)</th><th>\(\cos\theta\)</th><th>\(\vv{a}\T\vv{b}\)</th><th>I due vettori…</th></tr></thead>
+    <tbody>
+      <tr><td>\(\theta = 0°\)</td><td>\(+1\)</td><td><b style="color:var(--green)">massimo</b> (\(=\norm{\vv{a}}\norm{\vv{b}}\))</td><td>puntano esattamente uguale</td></tr>
+      <tr><td>\(0° &lt; \theta &lt; 90°\)</td><td>positivo</td><td><b style="color:var(--green)">positivo</b></td><td>sono «d'accordo» (angolo acuto)</td></tr>
+      <tr><td><b>\(\theta = 90°\)</b></td><td>\(0\)</td><td><b style="color:var(--accent)">zero</b></td><td><b>sono perpendicolari (ortogonali)</b></td></tr>
+      <tr><td>\(90° &lt; \theta &lt; 180°\)</td><td>negativo</td><td><b style="color:var(--warm)">negativo</b></td><td>sono «in disaccordo» (angolo ottuso)</td></tr>
+      <tr><td>\(\theta = 180°\)</td><td>\(-1\)</td><td><b style="color:var(--warm)">minimo</b> (\(=-\norm{\vv{a}}\norm{\vv{b}}\))</td><td>puntano esattamente all'opposto</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Definizione — ortogonalità</div>
+    <p style="margin-bottom:0">
+      Due vettori si dicono <span class="termine">ortogonali</span> (sinonimo di «perpendicolari»)
+      quando il loro prodotto scalare è zero:
+      \[ \vv{a} \perp \vv{b} \iff \vv{a}\T\vv{b} = 0 \]
+      <mark>Questa è, senza esagerazione, la riga più usata di tutto il libro.</mark> Ogni volta che
+      vorrai imporre una perpendicolarità — nelle proiezioni (Cap. 13), nei minimi quadrati (Cap. 14),
+      negli spazi ortogonali (Cap. 8), nella PCA (Cap. 19) — <em>non</em> tirerai fuori un goniometro:
+      scriverai «prodotto scalare uguale a zero» e risolverai un'equazione. La geometria diventa algebra.
+      <br><br>
+      <span style="color:var(--ink-faint)">Piccola stranezza da conoscere: il vettore nullo \(\vv{0}\) è
+      ortogonale a <em>tutti</em> i vettori, perché \(\vv{0}\T\vv{b} = 0\) sempre. È un caso degenere —
+      \(\vv{0}\) non ha una direzione, quindi non può «essere in disaccordo» con nessuno.</span>
+    </p>
+  </div>
+
+  <figure class="fig wide" id="fig-segni">
+    <svg viewBox="0 0 660 240" role="img" aria-label="I tre casi del segno del prodotto scalare"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 3.1</span> — Il segno del prodotto scalare è una <b>bussola</b>.
+      A parità di lunghezze, tutto dipende da dove punta il secondo vettore rispetto al primo:
+      <b style="color:var(--green)">positivo</b> se l'angolo è acuto (i vettori collaborano),
+      <b style="color:var(--accent)">esattamente zero</b> se sono perpendicolari (non hanno nulla in comune),
+      <b style="color:var(--warm)">negativo</b> se l'angolo è ottuso (si contrastano).
+      La linea tratteggiata segna il confine dei 90°: <em>attraversarla cambia il segno</em>.
+    </figcaption>
+  </figure>
+
+  <p>
+    Nel widget qui sotto le due formule vengono calcolate <strong>in parallelo</strong>: a sinistra
+    l'algebra (§3.1: moltiplica e somma), a destra la geometria (§3.3: lunghezze e coseno). Trascina i
+    vettori come vuoi: <mark>i due numeri restano sempre identici</mark>. Quel fatto è il §3.4, ed è il
+    cuore del capitolo.
+  </p>
+
+  <div class="widget" id="w-dot">
+    <div class="w-head">
+      <span>Le due formule danno sempre lo stesso numero</span>
+      <span class="hint">trascina le due punte</span>
+    </div>
+    <div class="w-stage">
+      <svg viewBox="0 0 560 380" role="img" aria-label="Prodotto scalare interattivo: formula algebrica e geometrica a confronto"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" data-preset="3,1|-1,3">rendili ortogonali</button>
+      <button class="w-btn" data-preset="3,1|1.5,0.5">rendili allineati</button>
+      <button class="w-btn" data-preset="3,1|-3,-1">rendili opposti</button>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Perché il coseno non può «sforare»: Cauchy-Schwarz</div>
+    <p style="margin-bottom:0">
+      Dalla formula geometrica, isolando il coseno, si ottiene
+      \(\cos\theta = \dfrac{\vv{a}\T\vv{b}}{\norm{\vv{a}}\norm{\vv{b}}}\).
+      Ma il coseno di un angolo <em>deve</em> stare tra \(-1\) e \(1\). Questo obbliga il prodotto scalare
+      a non superare mai il prodotto delle lunghezze:
+      \[ \abs{\vv{a}\T\vv{b}} \;\le\; \norm{\vv{a}}\,\norm{\vv{b}} \]
+      Si chiama <span class="termine">disuguaglianza di Cauchy-Schwarz</span> ed è uno dei risultati più
+      importanti della matematica. L'uguaglianza vale <em>solo</em> quando i due vettori sono allineati
+      (\(\theta = 0°\) o \(180°\)), cioè quando uno è multiplo dell'altro. Nel §3.4 vedrai che questa
+      disuguaglianza è anche ciò che ci <em>autorizza</em> a parlare di angoli in \(\R^{300}\).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Algebra e geometria: perché coincidono</h2>
+
+  <p>
+    Abbiamo due formule per la stessa cosa:
+  </p>
+
+  <div style="text-align:center">
+    \[
+      \underbrace{\sum_{i=1}^n a_i b_i}_{\textstyle\small\text{ non c'è nessun angolo, qui}}
+      \qquad\stackrel{?}{=}\qquad
+      \underbrace{\norm{\vv{a}}\norm{\vv{b}}\cos\theta}_{\textstyle\small\text{ non ci sono componenti, qui}}
+    \]
+  </div>
+
+  <p>
+    A sinistra c'è solo aritmetica: moltiplica, somma. Non compare nessun angolo, nessuna nozione di
+    «direzione». A destra c'è pura geometria: lunghezze e un angolo. <strong>Come fa la prima a
+    «sapere» il coseno?</strong> Questa non è una domanda oziosa: è <em>la</em> domanda del capitolo, e la
+    risposta è una delle dimostrazioni più eleganti che vedrai.
+  </p>
+
+  <h3>L'ingrediente: il teorema del coseno</h3>
+
+  <p>
+    Ci serve un solo fatto dalla geometria delle scuole superiori. In un triangolo qualunque, se due lati
+    misurano \(A\) e \(B\) e formano tra loro un angolo \(\theta\), il terzo lato \(C\) misura:
+  </p>
+
+  <div style="text-align:center">
+    \[ C^2 = A^2 + B^2 - 2AB\cos\theta \]
+  </div>
+
+  <p>
+    È <strong>Pitagora con una correzione</strong>: quando \(\theta = 90°\), il coseno vale zero, il termine
+    di correzione sparisce e resta \(C^2 = A^2 + B^2\), cioè Pitagora esatto. Quando l'angolo si chiude
+    (\(\theta &lt; 90°\)) il coseno è positivo, sottraiamo qualcosa e il terzo lato è <em>più corto</em> di
+    quanto direbbe Pitagora: giusto, perché i due lati stanno «collassando» uno sull'altro. Quando l'angolo
+    si apre, succede il contrario.
+  </p>
+
+  <figure class="fig" id="fig-coseno">
+    <svg viewBox="0 0 520 300" role="img" aria-label="Il triangolo del teorema del coseno costruito con due vettori"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 3.2</span> — Il triangolo su cui poggia tutta la dimostrazione. I due lati
+      sono i vettori \(\vv{a}\) e \(\vv{b}\) con la coda nell'origine; il terzo lato è la freccia che va
+      <b>dalla punta di \(\vv{b}\) alla punta di \(\vv{a}\)</b>, cioè \(\vv{a}-\vv{b}\) (§2.4 — ecco perché
+      insistevo tanto su quel verso). Adesso misureremo la lunghezza di quel terzo lato in <b>due modi
+      diversi</b>, e imporremo che i due modi diano lo stesso numero.
+    </figcaption>
+  </figure>
+
+  <h3>La dimostrazione</h3>
+
+  <p>
+    L'idea è questa: calcolare \(\norm{\vv{a}-\vv{b}}^2\) — la lunghezza al quadrato del terzo lato — in
+    due modi indipendenti. Uno con la geometria, uno con l'algebra. Poiché è la stessa quantità, i due
+    risultati devono essere uguali, e da quell'uguaglianza cadrà fuori la formula.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Via 1 — la geometria <span class="tag">teorema del coseno, applicato tale quale</span></div>
+    <div class="f-body">
+      \[
+        \norm{\vv{a}-\vv{b}}^2
+        \;=\; \norm{\vv{a}}^2 + \norm{\vv{b}}^2 - 2\,\hC{\norm{\vv{a}}\norm{\vv{b}}\cos\theta}
+      \]
+    </div>
+    <div class="f-note">
+      Nient'altro che \(C^2 = A^2+B^2-2AB\cos\theta\), dove \(A = \norm{\vv{a}}\), \(B = \norm{\vv{b}}\)
+      e \(C = \norm{\vv{a}-\vv{b}}\), leggendo il triangolo della Figura 3.2.
+      <b>Nota bene il pezzo evidenziato:</b> è esattamente la formula geometrica che vogliamo dimostrare.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Via 2 — l'algebra <span class="tag">solo le proprietà del §3.2</span></div>
+    <div class="f-body">
+      \[
+        \begin{aligned}
+          \norm{\vv{a}-\vv{b}}^2
+            &amp;= (\vv{a}-\vv{b})\T(\vv{a}-\vv{b})
+            &amp;&amp; \small\text{(norma}^2 = \text{prodotto scalare con sé stesso, §3.1)} \\[3pt]
+            &amp;= \vv{a}\T\vv{a} - \vv{a}\T\vv{b} - \vv{b}\T\vv{a} + \vv{b}\T\vv{b}
+            &amp;&amp; \small\text{(distributiva, §3.2 — come } (x-y)^2 \text{ tra numeri)} \\[3pt]
+            &amp;= \vv{a}\T\vv{a} - 2\,\vv{a}\T\vv{b} + \vv{b}\T\vv{b}
+            &amp;&amp; \small\text{(commutativa: } \vv{b}\T\vv{a} = \vv{a}\T\vv{b}\text{)} \\[3pt]
+            &amp;= \norm{\vv{a}}^2 + \norm{\vv{b}}^2 - 2\,\hD{\vv{a}\T\vv{b}}
+            &amp;&amp; \small\text{(riconosco le norme: } \vv{a}\T\vv{a} = \norm{\vv{a}}^2 \text{)}
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      Qui non è entrato <em>nessun</em> concetto geometrico: solo la definizione algebrica del prodotto
+      scalare e le sue proprietà. <b>Nota il pezzo evidenziato:</b> è la formula algebrica.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il colpo finale</div>
+    <p>Le due vie calcolano <em>la stessa identica quantità</em>. Quindi i risultati devono coincidere:</p>
+    \[
+      \cancel{\norm{\vv{a}}^2} + \cancel{\norm{\vv{b}}^2} - 2\,\hD{\vv{a}\T\vv{b}}
+      \;=\;
+      \cancel{\norm{\vv{a}}^2} + \cancel{\norm{\vv{b}}^2} - 2\,\hC{\norm{\vv{a}}\norm{\vv{b}}\cos\theta}
+    \]
+    <p>
+      I termini \(\norm{\vv{a}}^2\) e \(\norm{\vv{b}}^2\) compaiono identici da entrambe le parti e si
+      semplificano. Resta \(-2\,\vv{a}\T\vv{b} = -2\,\norm{\vv{a}}\norm{\vv{b}}\cos\theta\), e dividendo
+      per \(-2\):
+    </p>
+    \[
+      \boxed{\;\hD{\vv{a}\T\vv{b}} \;=\; \hC{\norm{\vv{a}}\,\norm{\vv{b}}\,\cos\theta}\;} \qquad \blacksquare
+    \]
+    <p style="margin-bottom:0">
+      Le due definizioni <strong>non erano due</strong>. Erano la stessa, vista da due lati.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La conseguenza che vale il capitolo intero</div>
+    <p>
+      Fermati un secondo a considerare cosa abbiamo ottenuto. In \(\R^2\) e \(\R^3\) l'angolo \(\theta\)
+      esisteva già: potevi misurarlo con un goniometro, e la formula ci dice che l'aritmetica lo calcola
+      per te. Bene. <strong>Ma in \(\R^{300}\)?</strong> Lì non c'è nessun goniometro, non c'è nessun
+      disegno, non c'è nessun angolo «là fuori» da misurare.
+    </p>
+    <p style="margin-bottom:0">
+      Allora <mark>rovesciamo la formula e usiamola come <em>definizione</em></mark>:
+      \[ \theta \;\stackrel{\text{def}}{=}\; \arccos\!\left( \frac{\vv{a}\T\vv{b}}{\norm{\vv{a}}\,\norm{\vv{b}}} \right) \]
+      È lecito farlo? Sì, ed è Cauchy-Schwarz a garantircelo: quella frazione sta sempre tra \(-1\) e
+      \(1\), quindi l'arcocoseno esiste sempre. <strong>Ecco come si fa geometria in 300 dimensioni:</strong>
+      si prendono le formule che in 2D <em>descrivono</em> la geometria, e in 300D le si promuove a
+      <em>definizioni</em>. L'intuizione la costruisci su un foglio; i conti girano ovunque. Questo,
+      in una riga, è il metodo dell'intera algebra lineare moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Combinazione lineare pesata</h2>
+
+  <p class="lead">
+    Se il prodotto scalare è il re delle operazioni, la combinazione lineare è la <em>grammatica</em>:
+    è la frase che l'algebra lineare pronuncia in continuazione, in tutte le sue forme.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Combinazione lineare pesata <span class="tag">scala e somma. Fine.</span></div>
+    <div class="f-body">
+      \[
+        \vv{w} \;=\; \hC{\lambda_1}\hA{\vv{v}_1} + \hC{\lambda_2}\hA{\vv{v}_2} + \cdots + \hC{\lambda_k}\hA{\vv{v}_k}
+        \;=\; \sum_{j=1}^{k} \hC{\lambda_j}\hA{\vv{v}_j}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\vv{v}_j}\)</dt>
+        <dd>i <b>vettori</b> di partenza (gli «ingredienti»). Il pedice \(j\) qui <em>non</em> indica un
+            elemento: indica <b>quale vettore</b> della collezione. Attenzione a non confonderlo con
+            \(v_j\), che invece era il \(j\)-esimo <em>numero</em> dentro un vettore. Il grassetto è
+            l'unica cosa che li distingue — ecco perché ci teniamo tanto.</dd>
+        <dt>\(\hC{\lambda_j}\)</dt>
+        <dd>i <b>pesi</b> (o coefficienti): uno scalare per ogni vettore. Dicono «quanto» di ciascun
+            ingrediente mettere nella ricetta. Possono essere positivi, negativi o nulli.</dd>
+        <dt>\(k\)</dt>
+        <dd>quanti vettori stiamo combinando. Non ha nulla a che vedere con \(n\), la dimensionalità
+            dei vettori: puoi combinare \(5\) vettori che vivono in \(\R^2\), o \(2\) vettori che vivono
+            in \(\R^{100}\).</dd>
+        <dt>il risultato</dt>
+        <dd>un <b>vettore</b>, della stessa dimensionalità degli ingredienti. Tutti i \(\vv{v}_j\) devono
+            avere la stessa dimensionalità, altrimenti non si potrebbero sommare (§2.4).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Non c'è niente di nuovo qui:</strong> è solo la moltiplicazione per scalare del §2.5
+      seguita dalla somma del §2.4. La ragione per cui merita un nome e una sezione è che
+      <mark>questa combinazione è <em>l'unica cosa</em> che l'algebra lineare sa fare</mark>.
+      Tutto il resto è un travestimento.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Tutto il libro, in una tabella</div>
+    <p>Non è retorica. Ecco dove riapparirà questa identica formula, sotto altri nomi:</p>
+    <div class="tbl-wrap" style="margin:.5rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Concetto</th><th>Dove</th><th>È una combinazione lineare di…</th></tr></thead>
+      <tbody>
+        <tr><td><b>Prodotto scalare</b></td><td>§3.1</td>
+            <td>…degli elementi di \(\vv{b}\), pesati dagli elementi di \(\vv{a}\)</td></tr>
+        <tr><td><b>Span</b></td><td>§4.5</td>
+            <td>…<em>tutte</em> le combinazioni possibili: l'insieme dei posti raggiungibili</td></tr>
+        <tr><td><b>Indipendenza lineare</b></td><td>§4.6</td>
+            <td>…la domanda: «esiste una combinazione (non banale) che fa \(\vv{0}\)?»</td></tr>
+        <tr><td><b>Base</b></td><td>§4.7</td>
+            <td>…il minimo insieme di ingredienti che genera <em>tutto</em></td></tr>
+        <tr><td><b>Prodotto matrice-vettore \(\mm{A}\vv{x}\)</b></td><td>§6.5</td>
+            <td>…<b>delle colonne di \(\mm{A}\)</b>, pesate dagli elementi di \(\vv{x}\). <em>Questa è
+                la frase più importante del libro.</em></td></tr>
+        <tr><td><b>Sistema \(\mm{A}\vv{x} = \vv{b}\)</b></td><td>Cap. 10</td>
+            <td>…la domanda: «con quali pesi le colonne di \(\mm{A}\) producono \(\vv{b}\)?»</td></tr>
+        <tr><td><b>Autovettori</b></td><td>Cap. 15</td>
+            <td>…i vettori per cui la trasformazione si riduce a un <em>singolo</em> peso: \(\mm{A}\vv{v} = \lambda\vv{v}\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Se in questo momento non capisci queste righe, va benissimo — non devi. Torna a leggerle alla fine
+      del libro: le troverai ovvie, e capirai perché ho fatto tanto rumore per una somma pesata.
+    </p>
+  </div>
+
+  <p>
+    Geometricamente, combinare due vettori significa <strong>usarli come un sistema di coordinate
+    personalizzato</strong>: invece di muoverti «tanto a destra e tanto in su», ti muovi «tanto lungo
+    \(\vv{v}_1\) e tanto lungo \(\vv{v}_2\)». I due cursori del widget sono esattamente questo.
+  </p>
+
+  <div class="widget" id="w-comb">
+    <div class="w-head">
+      <span>Combinazione lineare: usare i vettori come coordinate</span>
+      <span class="hint">muovi i pesi · trascina i vettori base</span>
+    </div>
+    <div class="w-stage">
+      <svg viewBox="0 0 560 400" role="img" aria-label="Combinazione lineare interattiva di due vettori"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>λ₁</label><input type="range" min="-3" max="3" step="0.05" value="1.6"><output>1.60</output></div>
+      <div class="w-ctrl"><label>λ₂</label><input type="range" min="-3" max="3" step="0.05" value="1.2"><output>1.20</output></div>
+      <button class="w-btn" id="wc-align">allinea v₂ a v₁ (guarda cosa succede)</button>
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Prova il pulsante «allinea», è importante</div>
+    <p style="margin-bottom:0">
+      Finché \(\vv{v}_1\) e \(\vv{v}_2\) puntano in direzioni diverse, giocando con i due pesi puoi
+      raggiungere <strong>qualunque punto del piano</strong>: hanno «coperto» tutto \(\R^2\). Ma appena li
+      allinei, il secondo non aggiunge più nessuna direzione nuova, e per quanto tu muova i cursori resti
+      intrappolato su <strong>una sola retta</strong>. Hai perso metà del mondo.
+      <br><br>
+      <mark>Quella è la differenza tra vettori <em>indipendenti</em> e <em>dipendenti</em></mark>, ed è
+      lo stesso fenomeno che nel §1.1 faceva collassare il piano quando il determinante andava a zero.
+      Tre volte, in tre capitoli diversi, hai incontrato la stessa idea travestita. Nel Cap. 4 le daremo
+      finalmente un nome.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Il prodotto esterno</h2>
+
+  <p>
+    Prendiamo gli stessi due vettori e <em>invertiamo la posizione della trasposta</em>. Sembra un
+    dettaglio da nulla. Il risultato non è un numero: è una <strong>matrice intera</strong>.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Una \(\mathsf{T}\) spostata, un universo diverso</div>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th></th><th>Prodotto <b>interno</b> (scalare)</th><th>Prodotto <b>esterno</b></th></tr></thead>
+      <tbody>
+        <tr><td><b>Si scrive</b></td><td>\(\vv{a}\T\vv{b}\)</td><td>\(\vv{a}\vv{b}\T\)</td></tr>
+        <tr><td><b>Le forme</b></td>
+            <td>\((1\times n)(n \times 1)\) → riga × colonna</td>
+            <td>\((m\times 1)(1 \times n)\) → colonna × riga</td></tr>
+        <tr><td><b>Risultato</b></td><td>uno <b>scalare</b> (\(1\times 1\))</td><td>una <b>matrice</b> \(m \times n\)</td></tr>
+        <tr><td><b>Richiede</b></td><td>stessa dimensionalità, obbligatoria</td><td><em>nessun</em> vincolo: qualunque \(m\) e \(n\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Stessi numeri di partenza, operazioni completamente diverse. <mark>Guarda <em>dove sta</em> la
+      \(\mathsf{T}\) prima di fare qualsiasi cosa.</mark>
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Prodotto esterno <span class="tag">è una tavola pitagorica</span></div>
+    <div class="f-body">
+      \[
+        \vv{a}\vv{b}\T =
+        \begin{bmatrix} a_1 \\ a_2 \\ a_3 \end{bmatrix}
+        \begin{bmatrix} b_1 &amp; b_2 \end{bmatrix}
+        =
+        \begin{bmatrix}
+          a_1b_1 &amp; a_1b_2 \\
+          a_2b_1 &amp; a_2b_2 \\
+          a_3b_1 &amp; a_3b_2
+        \end{bmatrix}
+        \qquad\text{cioè}\qquad
+        \left(\vv{a}\vv{b}\T\right)_{ij} = \hA{a_i}\,\hB{b_j}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\left(\cdot\right)_{ij}\)</dt>
+        <dd>l'elemento che sta nella <b>riga \(i\)</b> e nella <b>colonna \(j\)</b> della matrice
+            risultato. (La notazione degli elementi di matrice la formalizzeremo nel §5.2: per ora
+            basta sapere che il primo indice è la riga, il secondo la colonna. <em>Sempre</em>: righe
+            prima, colonne poi.)</dd>
+        <dt>\(\hA{a_i}\,\hB{b_j}\)</dt>
+        <dd>e la regola è: <b>ogni elemento di \(\vv{a}\) moltiplicato per ogni elemento di
+            \(\vv{b}\)</b>, in tutte le combinazioni possibili. Non ci sono somme, non c'è collasso:
+            <em>tutta</em> l'informazione viene conservata e distribuita su una griglia.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>È letteralmente la tavola pitagorica</strong> che facevi alle elementari: \(\vv{a}\) sulla
+      colonna di sinistra, \(\vv{b}\T\) sulla riga in alto, e in ogni casella il prodotto della sua riga
+      per la sua colonna. Se \(\vv{a}\) ha \(m\) elementi e \(\vv{b}\) ne ha \(n\), la tabella ha
+      \(m \times n\) caselle.
+    </div>
+  </div>
+
+  <div class="widget" id="w-outer">
+    <div class="w-head">
+      <span>Il prodotto esterno come tavola pitagorica</span>
+      <span class="hint">muovi i valori di a e di b</span>
+    </div>
+    <div class="w-stage" style="padding:1.2rem; text-align:center">
+      <div id="wo-tab"></div>
+    </div>
+    <div class="w-controls" id="wo-ctrl"></div>
+    <div class="w-readout" id="wo-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La proprietà nascosta: è una matrice «povera»</div>
+    <p>
+      Guarda le colonne della matrice risultato:
+      \(\begin{bmatrix}a_1b_1 \\ a_2b_1 \\ a_3b_1\end{bmatrix}\) e
+      \(\begin{bmatrix}a_1b_2 \\ a_2b_2 \\ a_3b_2\end{bmatrix}\).
+      La prima è \(b_1 \vv{a}\); la seconda è \(b_2 \vv{a}\). <mark>Ogni colonna è la <em>stessa</em>
+      \(\vv{a}\), semplicemente riscalata.</mark> (E simmetricamente: ogni riga è la stessa \(\vv{b}\T\)
+      riscalata.)
+    </p>
+    <p style="margin-bottom:0">
+      Significa che, per quanto grande sia, quella matrice contiene <strong>una sola direzione</strong>:
+      è fatta di copie della medesima colonna. In gergo si dice che ha <span class="termine">rango 1</span>
+      — il più povero possibile per una matrice non nulla (Cap. 7). Ed è per questo che il prodotto esterno
+      è così importante: <em>è il mattone elementare con cui si ricostruiscono le matrici</em>.
+      Nel Cap. 16 scoprirai che la SVD scompone <b>qualunque</b> matrice in una somma di prodotti esterni,
+      ordinati dal più importante al meno importante — e che buttando via gli ultimi si comprimono immagini,
+      dati e modelli. Tutto parte da questa tavola pitagorica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Moltiplicazione di Hadamard</h2>
+
+  <p>
+    La terza moltiplicazione è quella che <em>tutti</em> si aspettano di trovare per prima, e che invece
+    conta pochissimo: moltiplicare gli elementi corrispondenti e <strong>fermarsi lì</strong>, senza
+    sommare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto di Hadamard <span class="tag">elemento per elemento</span></div>
+    <div class="f-body">
+      \[
+        \vv{a} \odot \vv{b} =
+        \begin{bmatrix} a_1 \\ a_2 \\ \vdots \\ a_n \end{bmatrix} \odot
+        \begin{bmatrix} b_1 \\ b_2 \\ \vdots \\ b_n \end{bmatrix} =
+        \begin{bmatrix} a_1b_1 \\ a_2b_2 \\ \vdots \\ a_nb_n \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\odot\)</dt>
+        <dd>il simbolo dedicato (un cerchietto con un punto). Serve proprio perché non si confonda con le
+            altre moltiplicazioni. Si trova scritto anche \(\circ\) oppure \(.\!*\).</dd>
+        <dt>il risultato</dt>
+        <dd>un <b>vettore</b>, della stessa dimensionalità degli ingressi. Richiede quindi (come la somma)
+            che \(\vv{a}\) e \(\vv{b}\) abbiano la stessa forma.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>Il legame con il prodotto scalare</strong> è illuminante: il prodotto scalare è
+      <em>esattamente</em> il prodotto di Hadamard <em>seguito dalla somma di tutti gli elementi</em>.
+      Hadamard fa la prima metà del lavoro (moltiplica a coppie), il prodotto scalare fa anche la seconda
+      (somma tutto). Ecco perché uno restituisce un vettore e l'altro un numero.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Non ha alcun significato geometrico</div>
+    <p style="margin-bottom:0">
+      Il prodotto scalare ti dice un angolo. Il prodotto esterno costruisce una trasformazione. Il prodotto
+      di Hadamard… non ti dice niente. <mark>Non esiste un'interpretazione geometrica del vettore
+      \(\vv{a} \odot \vv{b}\)</mark>: non è una direzione notevole, non è una lunghezza, non è una
+      proiezione. Non c'è.
+      <br><br>
+      È una <em>comodità di calcolo</em>, non un'operazione dell'algebra lineare in senso stretto:
+      un modo compatto per dire «applica questi fattori di scala, uno per componente». Compare in
+      statistica, nell'elaborazione dei segnali e nelle reti neurali (dove serve a «spegnere»
+      selettivamente delle componenti). Sapere che esiste ti evita di confonderla con le altre; oltre a
+      questo, in questo libro non tornerà quasi mai.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">Sezione 3.8</span>Prodotto vettoriale</h2>
+
+  <p>
+    L'ultima moltiplicazione è la più esotica: esiste <strong>solo in \(\R^3\)</strong>, e restituisce un
+    vettore <em>perpendicolare a entrambi</em> gli ingressi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto vettoriale <span class="tag">solo in tre dimensioni</span></div>
+    <div class="f-body">
+      \[
+        \vv{a}\times\vv{b} =
+        \begin{bmatrix} a_1 \\ a_2 \\ a_3 \end{bmatrix} \times
+        \begin{bmatrix} b_1 \\ b_2 \\ b_3 \end{bmatrix} =
+        \begin{bmatrix}
+          \hA{a_2 b_3 - a_3 b_2} \\[2pt]
+          \hB{a_3 b_1 - a_1 b_3} \\[2pt]
+          \hC{a_1 b_2 - a_2 b_1}
+        \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\times\)</dt>
+        <dd>il simbolo del prodotto vettoriale (<em>cross product</em>). Il risultato è un <b>vettore</b>
+            di \(\R^3\), non uno scalare — nome e simbolo servono a non confonderlo con il prodotto
+            scalare.</dd>
+        <dt>lo schema</dt>
+        <dd>sembra arbitrario, ma non lo è: <b>per calcolare la riga \(i\), si «salta» la riga \(i\)</b> e
+            si incrociano le altre due. Per la prima riga (\(\hA{\text{blu}}\)) si usano le righe 2 e 3;
+            per la seconda (\(\hB{\text{rossa}}\)) le righe 3 e 1; per la terza (\(\hC{\text{verde}}\)) le
+            righe 1 e 2. L'ordine è <em>ciclico</em>: \(1 \to 2 \to 3 \to 1\). Dentro ogni riga si fa
+            «prodotto in croce meno prodotto in croce».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel Cap. 11 riconoscerai in questo schema la struttura del <strong>determinante</strong>: il prodotto
+      vettoriale si può scrivere, con un piccolo abuso di notazione, come il determinante di una matrice
+      \(3\times3\) che ha i versori nella prima riga. Per ora non serve: prendi la regola così com'è.
+    </div>
+  </div>
+
+  <h3>Che cosa fa, geometricamente</h3>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Proprietà</th><th>In formula</th><th>Significato</th></tr></thead>
+    <tbody>
+      <tr><td><b>Perpendicolarità</b></td>
+          <td>\((\vv{a}\times\vv{b}) \perp \vv{a}\) &nbsp;e&nbsp; \((\vv{a}\times\vv{b}) \perp \vv{b}\)</td>
+          <td>esce <em>fuori</em> dal piano che contiene \(\vv{a}\) e \(\vv{b}\). È il modo standard per
+              trovare la «normale» a un piano — indispensabile in grafica 3D per calcolare l'illuminazione.</td></tr>
+      <tr><td><b>Lunghezza</b></td>
+          <td>\(\norm{\vv{a}\times\vv{b}} = \norm{\vv{a}}\norm{\vv{b}}\sin\theta\)</td>
+          <td>è l'<b>area del parallelogramma</b> costruito su \(\vv{a}\) e \(\vv{b}\). Nota il
+              <em>seno</em>, dove il prodotto scalare aveva il coseno: sono complementari.</td></tr>
+      <tr><td><b>Anticommutatività</b></td>
+          <td>\(\vv{a}\times\vv{b} = -(\vv{b}\times\vv{a})\)</td>
+          <td>invertire l'ordine <b>ribalta il risultato</b>. Qui l'ordine conta eccome — al contrario
+              del prodotto scalare.</td></tr>
+      <tr><td><b>Vettori allineati</b></td>
+          <td>\(\vv{a}\times\vv{a} = \vv{0}\)</td>
+          <td>se i due vettori sono paralleli (\(\theta = 0\), \(\sin\theta = 0\)) non «tendono» nessun
+              parallelogramma: area zero.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig" id="fig-cross">
+    <svg viewBox="0 0 560 300" role="img" aria-label="Il prodotto vettoriale: un vettore perpendicolare al piano di a e b"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 3.3</span> — Il prodotto vettoriale \(\vv{a}\times\vv{b}\) punta
+      <b>perpendicolarmente</b> al piano di \(\vv{a}\) e \(\vv{b}\), e la sua <b>lunghezza è l'area</b>
+      del parallelogramma grigio. Da quale dei due lati esce? Lo decide la <em>regola della mano destra</em>:
+      punta le dita lungo \(\vv{a}\), chiudile verso \(\vv{b}\), e il pollice indica \(\vv{a}\times\vv{b}\).
+      Se scambi l'ordine, la mano si gira e il pollice punta in basso — ecco l'anticommutatività, resa
+      visibile.
+    </figcaption>
+  </figure>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Perché nel resto del libro non lo vedrai quasi mai</div>
+    <p style="margin-bottom:0">
+      Il prodotto vettoriale è prezioso in fisica (momento angolare, forza di Lorentz) e in grafica 3D
+      (normali alle superfici). Ma ha un difetto fatale per noi: <mark>funziona solo in \(\R^3\)</mark>.
+      Non esiste in \(\R^2\), non esiste in \(\R^4\), non esiste in \(\R^{300}\). E l'algebra lineare che
+      ci interessa — quella dei dati, dei modelli, delle decomposizioni — vive quasi sempre in dimensioni
+      alte. Un'operazione che smette di funzionare appena esci dalla stanza in cui abiti non può essere un
+      pilastro della teoria. Sappilo, usalo quando serve, e non aspettarlo nei prossimi capitoli.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-9"><span class="secnum">Sezione 3.9</span>Vettori unitari</h2>
+
+  <p>
+    Chiudiamo il capitolo con una famiglia di vettori speciali, quelli di <strong>lunghezza esattamente
+    1</strong>. Li abbiamo già incontrati nel §2.5 (la normalizzazione); qui capiamo <em>a cosa
+    servono</em>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Definizione — vettore unitario</div>
+    <p style="margin-bottom:0">
+      Un <span class="termine">vettore unitario</span> (o <em>versore</em>) è un vettore con
+      \(\norm{\hat{\vv{v}}} = 1\). Si segnala con il cappelletto. Da un qualunque vettore non nullo se ne
+      ottiene uno dividendo per la sua norma:
+      \[ \hat{\vv{v}} = \frac{\vv{v}}{\norm{\vv{v}}} \]
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> A cosa servono: separano la <em>direzione</em> dalla <em>grandezza</em></div>
+    <p>
+      Un vettore porta con sé due informazioni impastate: <em>dove punta</em> e <em>quanto è lungo</em>.
+      Molto spesso ce ne interessa una sola. Il versore è lo strumento che le separa:
+      \[ \vv{v} \;=\; \underbrace{\norm{\vv{v}}}_{\textstyle \substack{\text{quanto}\\ \text{(uno scalare)}}}
+                 \cdot \underbrace{\hat{\vv{v}}}_{\textstyle \substack{\text{dove}\\ \text{(pura direzione)}}} \]
+    </p>
+    <p style="margin-bottom:0">
+      È la stessa idea del «modulo e segno» di un numero, generalizzata. E ha una conseguenza deliziosa
+      sul prodotto scalare: se <em>entrambi</em> i vettori sono unitari, la formula geometrica si sfoltisce
+      da sola,
+      \[ \hat{\vv{a}}\T\hat{\vv{b}} = \underbrace{\norm{\hat{\vv{a}}}}_{=1}\underbrace{\norm{\hat{\vv{b}}}}_{=1}\cos\theta = \cos\theta \]
+      <mark>il prodotto scalare di due versori <strong>è</strong> il coseno dell'angolo tra loro.</mark>
+      Le lunghezze sono state messe a tacere, resta solo l'allineamento. Questa quantità, in scienza dei
+      dati, si chiama <span class="termine">similarità coseno</span> ed è il modo standard per misurare
+      quanto due documenti, due immagini o due parole «si somigliano».
+    </p>
+  </div>
+
+  <h3>I versori speciali: la base canonica</h3>
+
+  <p>
+    Tra tutti i vettori unitari, alcuni sono più uguali degli altri: quelli che puntano lungo gli assi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La base canonica di \(\R^n\) <span class="tag">i mattoni degli assi</span></div>
+    <div class="f-body">
+      \[
+        \vv{e}_1 = \begin{bmatrix} 1 \\ 0 \\ 0 \end{bmatrix}, \quad
+        \vv{e}_2 = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}, \quad
+        \vv{e}_3 = \begin{bmatrix} 0 \\ 0 \\ 1 \end{bmatrix}
+        \qquad\text{(in } \R^3\text{)}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{e}_i\)</dt>
+        <dd>il vettore con <b>un 1 nella posizione \(i\) e zeri ovunque</b>. In \(\R^2\) sono i due che nel
+            widget del §1.1 chiamavo «freccia blu» e «freccia rossa». In fisica si scrivono
+            \(\hat{\imath}, \hat{\jmath}, \hat{k}\): stessa cosa.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Hanno due proprietà che li rendono perfetti, e che sono la stessa proprietà scritta due volte:
+      <b>sono unitari</b> (\(\norm{\vv{e}_i} = 1\)) e <b>sono a due a due ortogonali</b>
+      (\(\vv{e}_i\T\vv{e}_j = 0\) se \(i \neq j\): prova a fare il conto, un solo termine è non nullo in
+      ciascuno, ma mai nella stessa posizione). Un insieme così si chiama <em>ortonormale</em>
+      (= ortogonale + normalizzato) ed è il Sacro Graal del Cap. 13.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il cerchio si chiude</div>
+    <p>Riscrivi un vettore qualunque usando la base canonica:</p>
+    \[
+      \begin{bmatrix} 3 \\ 1 \\ 7 \end{bmatrix}
+      = 3\begin{bmatrix}1\\0\\0\end{bmatrix} + 1\begin{bmatrix}0\\1\\0\end{bmatrix} + 7\begin{bmatrix}0\\0\\1\end{bmatrix}
+      = 3\vv{e}_1 + 1\vv{e}_2 + 7\vv{e}_3
+    \]
+    <p style="margin-bottom:0">
+      Leggi bene la riga di destra: è una <strong>combinazione lineare pesata</strong> (§3.5), in cui i
+      pesi sono <em>i numeri stessi del vettore</em>. <mark>Ogni vettore è, da sempre, una combinazione
+      lineare della base canonica</mark> — e quei numeri che chiamiamo «le sue coordinate» non sono altro
+      che i pesi di quella ricetta. Scrivere \(\begin{bmatrix}3\\1\\7\end{bmatrix}\) e scrivere
+      \(3\vv{e}_1 + \vv{e}_2 + 7\vv{e}_3\) è dire la stessa cosa.
+      <br><br>
+      E adesso la domanda che apre il Capitolo 4: <em>se la base canonica non fosse l'unica scelta
+      possibile? Se potessi descrivere lo stesso punto usando altri due vettori come riferimento?</em>
+      Potresti — ed è esattamente quello che fa la PCA quando trova le «direzioni principali» dei tuoi
+      dati.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li><b>Prodotto scalare = moltiplica a coppie e somma</b> → uno <b>scalare</b>. \(\vv{a}\T\vv{b} = \sum_i a_ib_i\).</li>
+      <li><b>La stessa cosa è anche \(\norm{\vv{a}}\norm{\vv{b}}\cos\theta\)</b>, e le due formule coincidono
+          per il teorema del coseno (§3.4). L'algebra «sa» la geometria.</li>
+      <li><b>Il segno è una bussola:</b> positivo = angolo acuto, <b>zero = perpendicolari</b>, negativo = ottuso.</li>
+      <li><b>\(\vv{a}\T\vv{b} = 0\) significa ortogonali.</b> È la riga più usata del libro.</li>
+      <li><b>\(\vv{a}\T\vv{a} = \norm{\vv{a}}^2\).</b> La lunghezza vive dentro il prodotto scalare.</li>
+      <li><b>La combinazione lineare pesata è l'unica cosa che l'algebra lineare sa fare</b> (§3.5).
+          Tutto il resto è un travestimento.</li>
+      <li><b>Prodotto esterno \(\vv{a}\vv{b}\T\) = tavola pitagorica</b> → una <b>matrice</b> di rango 1.
+          Attenzione a dove sta la \(\mathsf{T}\)!</li>
+      <li><b>Il prodotto scalare non è associativo:</b> \((\vv{a}\T\vv{b})\vv{c} \neq \vv{a}(\vv{b}\T\vv{c})\).</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-10"><span class="secnum">Sezione 3.10</span>Esercizi</h2>
+
+  <p>Usa questi vettori:</p>
+  <div style="text-align:center">
+    \[
+      \vv{a} = \begin{bmatrix} 2 \\ 3 \end{bmatrix} \qquad
+      \vv{b} = \begin{bmatrix} -3 \\ 2 \end{bmatrix} \qquad
+      \vv{c} = \begin{bmatrix} 4 \\ 6 \end{bmatrix} \qquad
+      \vv{u} = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} \qquad
+      \vv{w} = \begin{bmatrix} 0 \\ -1 \\ 4 \end{bmatrix}
+    \]
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">Calcola \(\vv{a}\T\vv{b}\), \(\vv{a}\T\vv{c}\) e \(\vv{u}\T\vv{w}\).
+       Per ciascuno, <em>prima</em> di calcolare prova a prevedere il segno guardando un disegnino.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">Che cosa noti di speciale in \(\vv{a}\) e \(\vv{b}\)? E in \(\vv{a}\) e
+       \(\vv{c}\)? Descrivi la relazione geometrica di ciascuna coppia <em>senza</em> calcolare angoli.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">Trova l'angolo \(\theta\) tra \(\vv{a}\) e \(\vv{c}\), usando la formula
+       geometrica. <span style="color:var(--ink-faint)">(Ti servirà l'esercizio 3.2 per accorgerti che
+       il conto è più facile di quanto sembri.)</span></p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">Trova <strong>tutti</strong> i vettori di \(\R^2\) ortogonali ad
+       \(\vv{a} = \begin{bmatrix}2\\3\end{bmatrix}\). Quanti sono? Che figura formano?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.5</div>
+    <p style="margin-bottom:0">Calcola il prodotto esterno \(\vv{a}\vv{u}\T\). Che forma ha la matrice
+       risultato? E \(\vv{u}\vv{a}\T\)? Sono la stessa matrice?</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.6</div>
+    <p style="margin-bottom:0">Scrivi \(\begin{bmatrix}7\\-1\end{bmatrix}\) come combinazione lineare
+       pesata di \(\vv{a}\) e \(\vv{b}\). Cioè: trova \(\lambda_1, \lambda_2\) tali che
+       \(\lambda_1\vv{a} + \lambda_2\vv{b} = \begin{bmatrix}7\\-1\end{bmatrix}\).
+       <span style="color:var(--ink-faint)">(Suggerimento: scrivi le due equazioni componente per
+       componente. Stai già risolvendo, senza saperlo, un sistema \(\mm{A}\vv{x}=\vv{b}\) — Cap. 10.)</span></p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.7</div>
+    <p style="margin-bottom:0">Normalizza \(\vv{u}\), poi calcola \(\hat{\vv{u}}\T\hat{\vv{u}}\).
+       Il risultato ti sorprende? Spiega perché era prevedibile <em>senza fare alcun conto</em>.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.8</div>
+    <p style="margin-bottom:0">Vero o falso, con motivazione:
+      <br>(a) Se \(\vv{a}\T\vv{b} = 0\), allora \(\vv{a} = \vv{0}\) oppure \(\vv{b} = \vv{0}\).
+      <br>(b) \(\vv{a}\T\vv{b} = \vv{b}\T\vv{a}\) sempre.
+      <br>(c) \(\vv{a}\vv{b}\T = \vv{b}\vv{a}\T\) sempre.
+      <br>(d) Se \(\vv{a}\T\vv{b} &gt; 0\), i due vettori formano un angolo minore di 90°.
+      <br>(e) Il prodotto scalare tra due vettori unitari può valere 3.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.9 &nbsp;<span style="color:var(--ink-faint); font-weight:400; text-transform:none; letter-spacing:0">— un po' più impegnativo</span></div>
+    <p style="margin-bottom:0">Dimostra il <strong>teorema di Pitagora vettoriale</strong>: se
+       \(\vv{a} \perp \vv{b}\), allora \(\norm{\vv{a}+\vv{b}}^2 = \norm{\vv{a}}^2 + \norm{\vv{b}}^2\).
+       <span style="color:var(--ink-faint)">(Suggerimento: parti da \(\norm{\vv{a}+\vv{b}}^2 =
+       (\vv{a}+\vv{b})\T(\vv{a}+\vv{b})\) e sviluppa, come nel §3.4.)</span></p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-11"><span class="secnum">Sezione 3.11</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p>
+      \(\vv{a}\T\vv{b} = (2)(-3) + (3)(2) = -6 + 6 = \mathbf{0}\)<br>
+      \(\vv{a}\T\vv{c} = (2)(4) + (3)(6) = 8 + 18 = \mathbf{26}\)<br>
+      \(\vv{u}\T\vv{w} = (1)(0) + (2)(-1) + (3)(4) = 0 - 2 + 12 = \mathbf{10}\)
+    </p>
+    <p style="margin-bottom:0">
+      Il primo fa <b>esattamente zero</b>: i due vettori sono <b>ortogonali</b>. Il secondo è nettamente
+      positivo: puntano quasi nella stessa direzione (in effetti, come vedremo, <em>esattamente</em> nella
+      stessa). Il terzo è positivo: angolo acuto, nonostante il \(-1\) di mezzo — perché il \(+12\) prevale
+      su tutto. Nota che il prodotto scalare è una <em>somma</em>: singoli termini negativi non bastano a
+      renderlo negativo, conta il bilancio complessivo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p>
+      <b>\(\vv{a}\) e \(\vv{b}\) sono ortogonali</b> (perpendicolari). Lo sappiamo perché il loro prodotto
+      scalare è zero (§3.3). E si vede anche a occhio nei numeri: \(\vv{b} = \begin{bmatrix}-3\\2\end{bmatrix}\)
+      si ottiene da \(\vv{a} = \begin{bmatrix}2\\3\end{bmatrix}\) <em>scambiando le due componenti e
+      cambiando segno a una</em>. <mark>È un trucco che vale sempre in \(\R^2\)</mark>: il vettore
+      \(\begin{bmatrix}-y\\x\end{bmatrix}\) è sempre perpendicolare a \(\begin{bmatrix}x\\y\end{bmatrix}\),
+      perché il prodotto scalare fa \(x(-y) + yx = 0\) qualunque siano \(x\) e \(y\). Tienilo in tasca,
+      è utilissimo.
+    </p>
+    <p style="margin-bottom:0">
+      <b>\(\vv{a}\) e \(\vv{c}\) sono allineati</b>: \(\vv{c} = \begin{bmatrix}4\\6\end{bmatrix} =
+      2\begin{bmatrix}2\\3\end{bmatrix} = 2\vv{a}\). Stessa direzione, stesso verso, lunghezza doppia
+      (§2.5). Sono <em>linearmente dipendenti</em>: \(\vv{c}\) non porta nessuna informazione direzionale
+      nuova rispetto ad \(\vv{a}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p>
+      Dall'esercizio 3.2 sappiamo già la risposta: \(\vv{c} = 2\vv{a}\), quindi puntano nella <em>stessa
+      direzione</em> e l'angolo è \(\theta = \mathbf{0°}\). Ma facciamo comunque il conto, perché è un buon
+      controllo:
+    </p>
+    <div style="text-align:center">
+      \[
+        \cos\theta = \frac{\vv{a}\T\vv{c}}{\norm{\vv{a}}\norm{\vv{c}}}
+        = \frac{26}{\sqrt{2^2+3^2}\,\cdot\,\sqrt{4^2+6^2}}
+        = \frac{26}{\sqrt{13}\,\cdot\,\sqrt{52}}
+        = \frac{26}{\sqrt{676}} = \frac{26}{26} = 1
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      \(\cos\theta = 1 \Rightarrow \theta = \arccos(1) = 0°\). ✔ Il coseno ha toccato il suo valore massimo:
+      è il caso di uguaglianza in Cauchy-Schwarz, che infatti si verifica <em>esattamente</em> quando un
+      vettore è multiplo positivo dell'altro. Ogni pezzo torna.
+      <br>
+      <span style="color:var(--ink-faint)">(Se ti chiedi da dove esce \(\sqrt{13}\cdot\sqrt{52} = \sqrt{676}\):
+      \(\sqrt{x}\sqrt{y} = \sqrt{xy}\), e \(13 \times 52 = 676 = 26^2\).)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p>
+      Cerchiamo tutti i \(\vv{x} = \begin{bmatrix}x_1\\x_2\end{bmatrix}\) tali che \(\vv{a}\T\vv{x} = 0\):
+    </p>
+    <div style="text-align:center">
+      \[ 2x_1 + 3x_2 = 0 \qquad\Longrightarrow\qquad x_2 = -\tfrac{2}{3}x_1 \]
+    </div>
+    <p>
+      Non c'è <em>una</em> soluzione: ce n'è una per ogni scelta di \(x_1\). Scegliendo \(x_1 = 3\) si
+      ottiene \(x_2 = -2\), cioè \(\begin{bmatrix}3\\-2\end{bmatrix}\) (controprova:
+      \((2)(3)+(3)(-2) = 6-6 = 0\) ✔). Ma anche \(\begin{bmatrix}6\\-4\end{bmatrix}\),
+      \(\begin{bmatrix}-3\\2\end{bmatrix}\), \(\begin{bmatrix}1.5\\-1\end{bmatrix}\)… <b>Sono infiniti</b>,
+      e sono tutti i multipli di \(\begin{bmatrix}3\\-2\end{bmatrix}\):
+    </p>
+    <div style="text-align:center">
+      \[ \left\{\; \lambda\begin{bmatrix}3\\-2\end{bmatrix} \;:\; \lambda \in \R \;\right\} \]
+    </div>
+    <p style="margin-bottom:0">
+      <b>La figura che formano è una retta passante per l'origine</b>, perpendicolare ad \(\vv{a}\).
+      Hai appena calcolato — con parole tue, senza saperlo — lo <span class="termine">spazio nullo</span>
+      di \(\vv{a}\T\) (Cap. 8), e hai visto che è lo <em>span</em> di un singolo vettore (§4.5).
+      <br>
+      <span style="color:var(--ink-faint)">Nota il legame con l'esercizio 3.2: \(\begin{bmatrix}3\\-2\end{bmatrix}\)
+      è esattamente il vettore ottenuto da \(\begin{bmatrix}2\\3\end{bmatrix}\) con la regola «scambia e
+      cambia un segno», e \(\begin{bmatrix}-3\\2\end{bmatrix} = \vv{b}\) è il suo opposto. Tutto coerente.</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.5</div>
+    <p>
+      \(\vv{a}\) è \(2\times 1\) e \(\vv{u}\T\) è \(1 \times 3\), quindi \(\vv{a}\vv{u}\T\) è una matrice
+      \(\mathbf{2\times 3}\) (righe da \(\vv{a}\), colonne da \(\vv{u}\)):
+    </p>
+    <div style="text-align:center">
+      \[
+        \vv{a}\vv{u}\T = \begin{bmatrix}2\\3\end{bmatrix}\begin{bmatrix}1 &amp; 2 &amp; 3\end{bmatrix}
+        = \begin{bmatrix}
+            (2)(1) &amp; (2)(2) &amp; (2)(3) \\
+            (3)(1) &amp; (3)(2) &amp; (3)(3)
+          \end{bmatrix}
+        = \begin{bmatrix} 2 &amp; 4 &amp; 6 \\ 3 &amp; 6 &amp; 9 \end{bmatrix}
+      \]
+    </div>
+    <p>
+      Invertendo l'ordine, \(\vv{u}\) è \(3\times1\) e \(\vv{a}\T\) è \(1\times2\), quindi
+      \(\vv{u}\vv{a}\T\) è \(\mathbf{3\times 2}\):
+    </p>
+    <div style="text-align:center">
+      \[
+        \vv{u}\vv{a}\T = \begin{bmatrix}1\\2\\3\end{bmatrix}\begin{bmatrix}2 &amp; 3\end{bmatrix}
+        = \begin{bmatrix} 2 &amp; 3 \\ 4 &amp; 6 \\ 6 &amp; 9 \end{bmatrix}
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      <b>No, non sono la stessa matrice</b>: hanno addirittura forme diverse (\(2\times3\) contro
+      \(3\times2\)). Ma guardale bene: <mark>una è la trasposta dell'altra</mark>,
+      \(\vv{u}\vv{a}\T = (\vv{a}\vv{u}\T)\T\). Non è un caso: è un'anticipazione della regola «LIVE EVIL»
+      del §6.4, che dice che trasporre un prodotto ne inverte l'ordine.
+      <br>
+      Nota anche che in entrambe <b>ogni riga è multipla delle altre</b> (nella prima: la riga 2 è
+      \(1.5\times\) la riga 1) — è la povertà strutturale del rango 1 di cui parlavamo nel §3.6.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.6</div>
+    <p>Scriviamo la richiesta e traduciamola componente per componente:</p>
+    <div style="text-align:center">
+      \[
+        \lambda_1\begin{bmatrix}2\\3\end{bmatrix} + \lambda_2\begin{bmatrix}-3\\2\end{bmatrix}
+        = \begin{bmatrix}7\\-1\end{bmatrix}
+        \qquad\Longrightarrow\qquad
+        \begin{cases} 2\lambda_1 - 3\lambda_2 = 7 \\ 3\lambda_1 + 2\lambda_2 = -1 \end{cases}
+      \]
+    </div>
+    <p>
+      È un normalissimo sistema di due equazioni in due incognite. Risolviamolo per sostituzione: dalla
+      prima, \(\lambda_1 = \frac{7 + 3\lambda_2}{2}\). Sostituendo nella seconda:
+    </p>
+    <div style="text-align:center">
+      \[
+        3\cdot\frac{7+3\lambda_2}{2} + 2\lambda_2 = -1
+        \;\Rightarrow\; \frac{21 + 9\lambda_2}{2} + 2\lambda_2 = -1
+        \;\Rightarrow\; 21 + 9\lambda_2 + 4\lambda_2 = -2
+        \;\Rightarrow\; 13\lambda_2 = -23
+        \;\Rightarrow\; \lambda_2 = -\frac{23}{13}
+      \]
+    </div>
+    <p>
+      E quindi \(\lambda_1 = \dfrac{7 + 3(-23/13)}{2} = \dfrac{7 - 69/13}{2} = \dfrac{(91-69)/13}{2}
+      = \dfrac{22/13}{2} = \dfrac{11}{13}\).
+    </p>
+    <p>
+      <b>Verifica</b> (sempre): \(\frac{11}{13}\begin{bmatrix}2\\3\end{bmatrix} - \frac{23}{13}\begin{bmatrix}-3\\2\end{bmatrix}
+      = \frac{1}{13}\begin{bmatrix}22 + 69 \\ 33 - 46\end{bmatrix} = \frac{1}{13}\begin{bmatrix}91\\-13\end{bmatrix}
+      = \begin{bmatrix}7\\-1\end{bmatrix}\) ✔
+    </p>
+    <p style="margin-bottom:0">
+      <b>Due osservazioni che valgono più della soluzione.</b> (1) Il fatto che una soluzione <em>esista</em>
+      non era scontato: dipende dal fatto che \(\vv{a}\) e \(\vv{b}\) puntino in direzioni diverse. Se
+      avessi usato \(\vv{a}\) e \(\vv{c}\) (che sono allineati) non avresti potuto raggiungere
+      \(\begin{bmatrix}7\\-1\end{bmatrix}\) in <em>nessun</em> modo — proprio come nel widget del §3.5 con
+      il pulsante «allinea». (2) Quel sistema di due equazioni, scritto in forma compatta, è
+      \(\mm{A}\vv{\lambda} = \vv{b}\) con \(\mm{A} = \begin{bmatrix}2 &amp; -3\\3 &amp; 2\end{bmatrix}\):
+      <mark>hai appena risolto a mano il problema centrale del Capitolo 10</mark>, e le colonne di
+      \(\mm{A}\) erano \(\vv{a}\) e \(\vv{b}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.7</div>
+    <p>
+      \(\norm{\vv{u}} = \sqrt{1^2+2^2+3^2} = \sqrt{14}\), quindi
+      \(\hat{\vv{u}} = \dfrac{1}{\sqrt{14}}\begin{bmatrix}1\\2\\3\end{bmatrix}\).
+    </p>
+    <div style="text-align:center">
+      \[
+        \hat{\vv{u}}\T\hat{\vv{u}}
+        = \left(\tfrac{1}{\sqrt{14}}\right)^2 \left(1^2 + 2^2 + 3^2\right)
+        = \tfrac{1}{14} \cdot 14 = \mathbf{1}
+      \]
+    </div>
+    <p style="margin-bottom:0">
+      <b>Non è una sorpresa, ed era prevedibile senza toccare un numero.</b> Sappiamo che
+      \(\vv{x}\T\vv{x} = \norm{\vv{x}}^2\) per ogni vettore (§3.1). Ma \(\hat{\vv{u}}\) è per costruzione
+      un vettore <em>unitario</em>, cioè \(\norm{\hat{\vv{u}}} = 1\). Quindi
+      \(\hat{\vv{u}}\T\hat{\vv{u}} = 1^2 = 1\). Punto.
+      <br>
+      Detto in un altro modo, altrettanto valido: il prodotto scalare di un versore con sé stesso è il
+      coseno dell'angolo tra lui e sé stesso, cioè \(\cos 0° = 1\) (§3.9). Due strade, stessa risposta —
+      e questo è un buon segno che hai capito il capitolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.8</div>
+    <p>
+      <b>(a) FALSO.</b> È la trappola più classica sul prodotto scalare. Tra i <em>numeri</em>, se
+      \(xy = 0\) allora almeno uno dei due è zero. Tra i <em>vettori</em> no: \(\vv{a}\T\vv{b} = 0\)
+      significa <b>ortogonali</b>, non «uno dei due è nullo». Controesempio: gli \(\vv{a}\) e \(\vv{b}\) di
+      questo esercizio! \(\begin{bmatrix}2\\3\end{bmatrix}\T\begin{bmatrix}-3\\2\end{bmatrix} = 0\), eppure
+      nessuno dei due è il vettore nullo. <em>Il prodotto scalare può annullarsi per «cancellazione»</em>:
+      i contributi positivi e negativi si bilanciano esattamente.
+    </p>
+    <p>
+      <b>(b) VERO.</b> È la proprietà commutativa (§3.2), e discende dal fatto che \(a_ib_i = b_ia_i\)
+      per ogni singolo \(i\).
+    </p>
+    <p>
+      <b>(c) FALSO.</b> Attenzione: qui il prodotto è <em>esterno</em>, non scalare — la \(\mathsf{T}\) sta
+      dall'altra parte. Come visto nell'esercizio 3.5, \(\vv{a}\vv{b}\T\) e \(\vv{b}\vv{a}\T\) sono
+      <em>trasposte</em> l'una dell'altra, e coincidono solo in casi particolari. Esempio con
+      \(\vv{a} = \begin{bmatrix}1\\0\end{bmatrix}\), \(\vv{b} = \begin{bmatrix}0\\1\end{bmatrix}\):
+      \(\vv{a}\vv{b}\T = \begin{bmatrix}0 &amp; 1\\0 &amp; 0\end{bmatrix}\) mentre
+      \(\vv{b}\vv{a}\T = \begin{bmatrix}0 &amp; 0\\1 &amp; 0\end{bmatrix}\). Diverse.
+      <mark>Il prodotto scalare è commutativo, il prodotto esterno no.</mark>
+    </p>
+    <p>
+      <b>(d) VERO.</b> Dalla formula geometrica, \(\vv{a}\T\vv{b} = \norm{\vv{a}}\norm{\vv{b}}\cos\theta\).
+      Le due norme sono \(\ge 0\), quindi se il prodotto è positivo dev'essere \(\cos\theta &gt; 0\), il che
+      per \(\theta \in [0°, 180°]\) accade esattamente quando \(\theta &lt; 90°\). (Sottinteso: nessuno dei
+      due vettori è nullo, altrimenti il prodotto farebbe zero e non sarebbe positivo.)
+    </p>
+    <p style="margin-bottom:0">
+      <b>(e) FALSO</b>, ed è Cauchy-Schwarz a vietarlo: \(\abs{\hat{\vv{a}}\T\hat{\vv{b}}} \le
+      \norm{\hat{\vv{a}}}\norm{\hat{\vv{b}}} = 1 \cdot 1 = 1\). Il prodotto scalare di due versori è un
+      coseno, e un coseno non può valere 3. Il massimo assoluto è \(1\) (vettori identici), il minimo
+      \(-1\) (vettori opposti).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.9</div>
+    <p>La dimostrazione è di tre righe, ed è la stessa danza del §3.4.</p>
+    <ol class="passi" style="margin-top:1rem">
+      <li>Trasforma la norma al quadrato in un prodotto scalare (§3.1):
+          \[ \norm{\vv{a}+\vv{b}}^2 = (\vv{a}+\vv{b})\T(\vv{a}+\vv{b}) \]</li>
+      <li>Sviluppa con la distributiva (§3.2), come faresti con \((x+y)^2\) tra numeri:
+          \[ = \vv{a}\T\vv{a} + \vv{a}\T\vv{b} + \vv{b}\T\vv{a} + \vv{b}\T\vv{b} \]</li>
+      <li>Usa la commutativa (\(\vv{b}\T\vv{a} = \vv{a}\T\vv{b}\)) e riconosci le norme:
+          \[ = \norm{\vv{a}}^2 + 2\,\vv{a}\T\vv{b} + \norm{\vv{b}}^2 \]</li>
+      <li><b>Adesso entra l'ipotesi.</b> Se \(\vv{a} \perp \vv{b}\), allora per definizione
+          \(\vv{a}\T\vv{b} = 0\) (§3.3), e quel termine di mezzo <em>svanisce</em>:
+          \[ \norm{\vv{a}+\vv{b}}^2 = \norm{\vv{a}}^2 + \norm{\vv{b}}^2 \qquad \blacksquare \]</li>
+    </ol>
+    <p style="margin-bottom:0">
+      <b>Che cosa hai davvero dimostrato.</b> Il teorema di Pitagora — quello vero, dei triangoli — vale
+      per <em>qualunque</em> coppia di vettori ortogonali, <em>in qualunque dimensione</em>. In \(\R^2\)
+      è il Pitagora che conosci. In \(\R^{300}\) è un teorema che nessuno può disegnare, ma che è vero
+      esattamente per la stessa ragione algebrica.
+      <br><br>
+      E nota il <em>meccanismo</em>: l'ortogonalità è servita a <strong>far sparire il termine
+      incrociato</strong> \(2\vv{a}\T\vv{b}\). <mark>È questo il motivo per cui in tutto il libro
+      cercheremo ossessivamente basi ortogonali</mark>: quando i pezzi sono perpendicolari, i termini
+      misti si annullano e i conti — che siano proiezioni (Cap. 13), minimi quadrati (Cap. 14) o PCA
+      (Cap. 19) — si scompongono in problemi indipendenti, uno per direzione. L'ortogonalità non è
+      un'eleganza: è ciò che rende i problemi risolvibili.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* =========================================================================
+   FIGURA 3.1 — i tre segni del prodotto scalare
+   ====================================================================== */
+(function () {
+  const svg = document.querySelector('#fig-segni svg');
+  const casi = [
+    { ox: 10,  b: [2.0, 1.8],  col: 'var(--green)',  tit: 'angolo acuto',        val: 'aᵀb > 0' },
+    { ox: 230, b: [-1.2, 2.4], col: 'var(--accent)', tit: 'angolo retto (90°)',  val: 'aᵀb = 0' },
+    { ox: 450, b: [-2.4, 0.9], col: 'var(--warm)',   tit: 'angolo ottuso',       val: 'aᵀb < 0' }
+  ];
+  const a = [2.4, 1.2];
+
+  casi.forEach(c => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    g.setAttribute('x', c.ox); g.setAttribute('y', 30);
+    g.setAttribute('width', 200); g.setAttribute('height', 165);
+    g.setAttribute('viewBox', '0 0 200 165');
+    svg.appendChild(g);
+
+    const p = new Plot(g, { xmin: -3.2, xmax: 3.2, ymin: -1.4, ymax: 3.2 });
+    p.grid(); p.axes({ numbers: false, names: false });
+
+    // la retta di confine dei 90°: perpendicolare ad a
+    const perp = [-a[1], a[0]], k = 3;
+    p.line(-k * perp[0], -k * perp[1], k * perp[0], k * perp[1],
+           { color: 'var(--ink-faint)', dash: '5 4', width: 1.2, opacity: .7 });
+
+    p.arrow(0, 0, a[0], a[1], { color: 'var(--ink-soft)', width: 2.6, label: 'a', lx: 0, ly: 14 });
+    p.arrow(0, 0, c.b[0], c.b[1], { color: c.col, width: 3, label: 'b', lx: 0, ly: -13 });
+
+    const ang = (v) => Math.atan2(v[1], v[0]);
+    p.angle(0, 0, ang(a), ang(c.b), { r: .75, color: c.col, width: 1.6 });
+
+    // titoli, nel sistema di coordinate del pannello grande
+    const NS = 'http://www.w3.org/2000/svg';
+    const t1 = document.createElementNS(NS, 'text');
+    t1.setAttribute('x', c.ox + 100); t1.setAttribute('y', 20);
+    t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('class', 'lbl-b');
+    t1.textContent = c.tit;
+    const t2 = document.createElementNS(NS, 'text');
+    t2.setAttribute('x', c.ox + 100); t2.setAttribute('y', 219);
+    t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('class', 'lbl-b');
+    t2.setAttribute('fill', c.col); t2.setAttribute('font-size', '15');
+    t2.textContent = c.val;
+    svg.append(t1, t2);
+  });
+})();
+
+
+/* =========================================================================
+   WIDGET — prodotto scalare: algebra vs geometria
+   ====================================================================== */
+(function () {
+  const root = document.getElementById('w-dot');
+  const p = new Plot(root.querySelector('svg'), { xmin: -5.5, xmax: 5.5, ymin: -3.6, ymax: 3.6 });
+  const out = document.getElementById('wd-out');
+  let a = [3, 1], b = [1, 2.5];
+
+  root.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => {
+    const [pa, pb] = btn.dataset.preset.split('|').map(s => s.split(',').map(Number));
+    a = pa; b = pb; draw();
+  });
+
+  function draw() {
+    p.clear(); p.grid(); p.axes();
+
+    const dot = a[0] * b[0] + a[1] * b[1];
+    const na = Math.hypot(...a), nb = Math.hypot(...b);
+    const cos = (na * nb) < 1e-9 ? 0 : dot / (na * nb);
+    const th = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+    const col = Math.abs(dot) < 0.05 ? 'var(--accent)' : (dot > 0 ? 'var(--green)' : 'var(--warm)');
+
+    // la retta di confine dei 90° rispetto ad a
+    const perp = [-a[1], a[0]], k = 12 / (Math.hypot(...perp) || 1);
+    p.line(-k * perp[0], -k * perp[1], k * perp[0], k * perp[1],
+           { color: 'var(--ink-faint)', dash: '5 4', width: 1.1, opacity: .55 });
+
+    p.angle(0, 0, Math.atan2(a[1], a[0]), Math.atan2(b[1], b[0]), { r: .85, color: col, width: 2 });
+    p.arrow(0, 0, a[0], a[1], { color: 'var(--accent)', width: 3, label: 'a', lx: 0, ly: -15 });
+    p.arrow(0, 0, b[0], b[1], { color: 'var(--warm)', width: 3, label: 'b', lx: 0, ly: -15 });
+    p.handle(a[0], a[1], { color: 'var(--accent)' }, (X, Y) => { a = [X, Y]; draw(); });
+    p.handle(b[0], b[1], { color: 'var(--warm)' }, (X, Y) => { b = [X, Y]; draw(); });
+
+    const f = (x, d = 2) => (Math.abs(x) < 5e-3 ? 0 : x).toFixed(d);
+    out.innerHTML = `
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; align-items:stretch">
+        <div style="flex:1 1 220px; padding:.5rem .7rem; border-right:1px dashed var(--rule)">
+          <div style="font-family:var(--sans); font-size:11px; font-weight:750; letter-spacing:.1em;
+                      text-transform:uppercase; color:var(--ink-faint); margin-bottom:.3rem">
+            §3.1 — l'algebra</div>
+          <div style="font-size:.92rem">
+            (${f(a[0], 1)})(${f(b[0], 1)}) + (${f(a[1], 1)})(${f(b[1], 1)})<br>
+            = ${f(a[0] * b[0])} + ${f(a[1] * b[1])}
+          </div>
+          <div style="margin-top:.35rem; font-size:1.15rem; color:${col}"><b>= ${f(dot)}</b></div>
+        </div>
+        <div style="flex:1 1 220px; padding:.5rem .7rem">
+          <div style="font-family:var(--sans); font-size:11px; font-weight:750; letter-spacing:.1em;
+                      text-transform:uppercase; color:var(--ink-faint); margin-bottom:.3rem">
+            §3.3 — la geometria</div>
+          <div style="font-size:.92rem">
+            ‖a‖·‖b‖·cos θ = ${f(na)} · ${f(nb)} · ${f(cos)}<br>
+            <span style="color:var(--ink-faint)">θ = ${th.toFixed(1)}°</span>
+          </div>
+          <div style="margin-top:.35rem; font-size:1.15rem; color:${col}"><b>= ${f(na * nb * cos)}</b></div>
+        </div>
+      </div>
+      <div style="margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--rule);
+                  color:var(--ink-soft); font-size:.9rem">
+        ${Math.abs(dot) < 0.05
+          ? '⟂ <b style="color:var(--accent)">Ortogonali!</b> L\'angolo è 90°, il prodotto scalare è zero. È la condizione più usata del libro.'
+          : (dot > 0
+             ? '<b style="color:var(--green)">Angolo acuto</b>: i due vettori sono «d\'accordo».'
+             : '<b style="color:var(--warm)">Angolo ottuso</b>: i due vettori si «contrastano».')}
+        &nbsp;— e i due numeri qui sopra <b>coincidono sempre</b> (§3.4).
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* =========================================================================
+   FIGURA 3.2 — il triangolo del teorema del coseno
+   ====================================================================== */
+(function () {
+  const p = new Plot(document.querySelector('#fig-coseno svg'),
+                     { xmin: -1.2, xmax: 5.6, ymin: -0.9, ymax: 3.9 });
+  p.grid(); p.axes({ numbers: false });
+
+  const a = [4.2, 1.1], b = [1.3, 3.1];
+  p.poly([[0, 0], a, b], { fill: 'color-mix(in srgb, var(--accent) 8%, transparent)' });
+
+  p.arrow(0, 0, a[0], a[1], { color: 'var(--accent)', width: 3, label: 'a', lx: 0, ly: 16 });
+  p.arrow(0, 0, b[0], b[1], { color: 'var(--warm)', width: 3, label: 'b', lx: 0, ly: -14 });
+  p.arrow(b[0], b[1], a[0], a[1], { color: 'var(--green)', width: 3, dash: '7 3' });
+  p.text((a[0] + b[0]) / 2 + .35, (a[1] + b[1]) / 2 + .35, 'a − b',
+         { color: 'var(--green)', bold: true, size: 14 });
+
+  p.angle(0, 0, Math.atan2(a[1], a[0]), Math.atan2(b[1], b[0]), { r: .8, color: 'var(--ink-soft)', width: 1.8 });
+  p.text(.95, .62, 'θ', { bold: true, size: 15 });
+
+  p.text(2.7, 3.5, 'terzo lato = ‖a − b‖ : lo misureremo in due modi', { size: 12.5, italic: true });
+})();
+
+
+/* =========================================================================
+   WIDGET — combinazione lineare
+   ====================================================================== */
+(function () {
+  const root = document.getElementById('w-comb');
+  const p = new Plot(root.querySelector('svg'), { xmin: -6, xmax: 6, ymin: -4.2, ymax: 4.2 });
+  const out = document.getElementById('wc-out');
+  const [s1, s2] = root.querySelectorAll('input[type=range]');
+  const [o1, o2] = root.querySelectorAll('output');
+  let v1 = [2, 0.6], v2 = [0.8, 2.2];
+
+  s1.oninput = s2.oninput = draw;
+  document.getElementById('wc-align').onclick = () => {
+    v2 = [v1[0] * 1.4, v1[1] * 1.4];      // rende v2 un multiplo di v1
+    draw();
+  };
+
+  function draw() {
+    const L1 = parseFloat(s1.value), L2 = parseFloat(s2.value);
+    o1.textContent = L1.toFixed(2); o2.textContent = L2.toFixed(2);
+    p.clear(); p.grid(); p.axes();
+
+    const c1 = [L1 * v1[0], L1 * v1[1]];
+    const c2 = [L2 * v2[0], L2 * v2[1]];
+    const w  = [c1[0] + c2[0], c1[1] + c2[1]];
+
+    // i due pezzi della ricetta, punta-coda
+    p.arrow(0, 0, c1[0], c1[1], { color: 'var(--accent)', width: 2.4, dash: '6 3', opacity: .9 });
+    p.arrow(c1[0], c1[1], w[0], w[1], { color: 'var(--warm)', width: 2.4, dash: '6 3', opacity: .9 });
+
+    // i vettori base (trascinabili)
+    p.arrow(0, 0, v1[0], v1[1], { color: 'var(--accent)', width: 3.4, label: 'v₁', lx: 0, ly: -15 });
+    p.arrow(0, 0, v2[0], v2[1], { color: 'var(--warm)', width: 3.4, label: 'v₂', lx: 0, ly: -15 });
+
+    // il risultato
+    p.arrow(0, 0, w[0], w[1], { color: 'var(--green)', width: 3.6, label: 'w', lx: 0, ly: 18 });
+
+    p.handle(v1[0], v1[1], { color: 'var(--accent)', r: 5 }, (X, Y) => { v1 = [X, Y]; draw(); });
+    p.handle(v2[0], v2[1], { color: 'var(--warm)', r: 5 }, (X, Y) => { v2 = [X, Y]; draw(); });
+
+    // det = 0 → i due vettori sono allineati → span degenere
+    const det = v1[0] * v2[1] - v1[1] * v2[0];
+    const degen = Math.abs(det) < 0.08;
+    if (degen) {
+      const k = 20 / (Math.hypot(...v1) || 1);
+      p.line(-k * v1[0], -k * v1[1], k * v1[0], k * v1[1],
+             { color: 'var(--warm)', dash: '4 4', width: 1.5, opacity: .8 });
+    }
+
+    const f = (x) => (Math.abs(x) < 5e-3 ? 0 : x).toFixed(2);
+    out.innerHTML = `
+      <b>w</b> = ${f(L1)}·<span style="color:var(--accent)"><b>v₁</b></span>
+              + ${f(L2)}·<span style="color:var(--warm)"><b>v₂</b></span>
+      &nbsp;=&nbsp;
+      <span class="minimat c2" style="grid-template-columns:3.4em">
+        <span>${f(w[0])}</span><span>${f(w[1])}</span>
+      </span>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.88rem">
+        ${degen
+          ? '⚠ <b style="color:var(--warm)">v₁ e v₂ sono allineati.</b> Qualunque coppia di pesi tu scelga, <b>w resta su quella retta</b>: metà del piano è diventata irraggiungibile. Sono <em>linearmente dipendenti</em> (§4.6).'
+          : 'v₁ e v₂ puntano in direzioni diverse: giocando con i due pesi puoi raggiungere <b>qualunque punto del piano</b>. Il loro <em>span</em> è tutto ℝ² (§4.5).'}
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* =========================================================================
+   WIDGET — prodotto esterno (tavola pitagorica)
+   ====================================================================== */
+(function () {
+  const tab  = document.getElementById('wo-tab');
+  const ctrl = document.getElementById('wo-ctrl');
+  const out  = document.getElementById('wo-out');
+  const a = [2, -1, 3], b = [4, -2];
+
+  ctrl.innerHTML =
+    a.map((v, i) => `<div class="w-ctrl"><label style="color:var(--accent)">a${'₁₂₃'[i]}</label>
+      <input type="range" min="-5" max="5" step="1" value="${v}" data-k="a" data-i="${i}"><output>${v}</output></div>`).join('') +
+    b.map((v, j) => `<div class="w-ctrl"><label style="color:var(--warm)">b${'₁₂'[j]}</label>
+      <input type="range" min="-5" max="5" step="1" value="${v}" data-k="b" data-i="${j}"><output>${v}</output></div>`).join('');
+
+  ctrl.querySelectorAll('input').forEach(inp => inp.oninput = () => {
+    const arr = inp.dataset.k === 'a' ? a : b;
+    arr[+inp.dataset.i] = parseInt(inp.value, 10);
+    inp.nextElementSibling.textContent = inp.value;
+    draw();
+  });
+
+  function draw() {
+    let html = `<div class="mtab" style="grid-template-columns: repeat(${b.length + 1}, auto)">`;
+    html += `<div class="c corner"></div>`;
+    b.forEach(v => html += `<div class="c h b">${v}</div>`);
+    a.forEach(av => {
+      html += `<div class="c h a">${av}</div>`;
+      b.forEach(bv => html += `<div class="c p">${av * bv}</div>`);
+    });
+    html += `</div>`;
+    tab.innerHTML = `
+      <div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.5rem">
+        <span style="color:var(--warm); font-weight:700">bᵀ</span> in alto ·
+        <span style="color:var(--accent); font-weight:700">a</span> a sinistra ·
+        <span style="color:var(--violet); font-weight:700">abᵀ</span> nelle caselle
+      </div>${html}`;
+
+    // ogni colonna è un multiplo di a → rango 1
+    out.innerHTML = `
+      <b>a</b> è 3×1, &nbsp;<b>bᵀ</b> è 1×2 &nbsp;→&nbsp; <b>abᵀ</b> è
+      <b style="color:var(--violet)">3×2</b> (righe da a, colonne da b)
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.88rem">
+        Guarda le colonne: la prima è <b>${b[0]}·a</b>, la seconda è <b>${b[1]}·a</b>.
+        Sono <b>la stessa a, riscalata</b> — la matrice contiene una sola direzione: è di
+        <b>rango 1</b> (§3.6). Confronto: il prodotto <em>scalare</em> aᵀb non esisterebbe nemmeno,
+        perché a e b hanno dimensionalità diverse (3 e 2).
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* =========================================================================
+   FIGURA 3.3 — il prodotto vettoriale in 3D
+   ====================================================================== */
+(function () {
+  const svg = document.querySelector('#fig-cross svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n);
+                          for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const T = (x, y, s, o = {}) => {
+    const t = el('text', { x, y, class: o.bold ? 'lbl-b' : 'lbl', fill: o.color || null,
+                           'text-anchor': o.anchor || 'middle', 'font-size': o.size || null,
+                           'font-style': o.italic ? 'italic' : null });
+    t.textContent = s; return t;
+  };
+  const defs = el('defs', {});
+  [['x-a', 'var(--accent)'], ['x-b', 'var(--warm)'], ['x-c', 'var(--green)']].forEach(([id, c]) => {
+    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 5,
+                             markerHeight: 5, orient: 'auto-start-reverse', markerUnits: 'strokeWidth' });
+    m.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: c }));
+    defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+
+  const O = [230, 200], S = 40;
+  const P = (x, y, z) => [O[0] + S * (x + 0.55 * y), O[1] - S * (0.38 * y + z)];  // assonometria
+
+  const a = [2.6, 0.4, 0], b = [0.7, 2.6, 0];         // due vettori nel piano z = 0
+  const c = [0, 0, 2.7];                               // a × b : esce perpendicolare
+
+  const pa = P(...a), pb = P(...b), pc = P(...c), o = P(0, 0, 0);
+  const pab = P(a[0] + b[0], a[1] + b[1], 0);
+
+  // il parallelogramma (= l'area)
+  svg.appendChild(el('path', { d: `M${o} L${pa} L${pab} L${pb} Z`,
+                               fill: 'color-mix(in srgb, var(--ink-faint) 18%, transparent)',
+                               stroke: 'var(--ink-faint)', 'stroke-width': 1, 'stroke-dasharray': '4 3' }));
+
+  svg.appendChild(el('line', { x1: o[0], y1: o[1], x2: pa[0], y2: pa[1],
+                               stroke: 'var(--accent)', 'stroke-width': 3, 'marker-end': 'url(#x-a)' }));
+  svg.appendChild(el('line', { x1: o[0], y1: o[1], x2: pb[0], y2: pb[1],
+                               stroke: 'var(--warm)', 'stroke-width': 3, 'marker-end': 'url(#x-b)' }));
+  svg.appendChild(el('line', { x1: o[0], y1: o[1], x2: pc[0], y2: pc[1],
+                               stroke: 'var(--green)', 'stroke-width': 3.5, 'marker-end': 'url(#x-c)' }));
+
+  // squadretta: c è perpendicolare al piano
+  svg.appendChild(el('path', { d: `M${o[0] + 12},${o[1]} L${o[0] + 12},${o[1] - 12} L${o[0]},${o[1] - 12}`,
+                               fill: 'none', stroke: 'var(--green)', 'stroke-width': 1.2, opacity: .7 }));
+
+  svg.appendChild(T(pa[0] + 16, pa[1] + 14, 'a', { bold: true, color: 'var(--accent)', size: 15 }));
+  svg.appendChild(T(pb[0] + 18, pb[1] + 2, 'b', { bold: true, color: 'var(--warm)', size: 15 }));
+  svg.appendChild(T(pc[0], pc[1] - 12, 'a × b', { bold: true, color: 'var(--green)', size: 15 }));
+  svg.appendChild(T(pab[0] - 30, pab[1] + 22, 'area = ‖a × b‖ = ‖a‖‖b‖ sin θ', { size: 11.5, italic: true }));
+  svg.appendChild(T(430, 60, 'a × b è perpendicolare', { bold: true }));
+  svg.appendChild(T(430, 78, 'sia ad a sia a b', { bold: true }));
+  svg.appendChild(T(430, 104, '(a × b)ᵀa = 0', { size: 12, color: 'var(--green)' }));
+  svg.appendChild(T(430, 122, '(a × b)ᵀb = 0', { size: 12, color: 'var(--green)' }));
+  svg.appendChild(T(430, 152, 'esiste SOLO in ℝ³', { size: 12, italic: true, color: 'var(--warm)' }));
+})();
+</script>
+</body>
+</html>
