@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Rango — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Rango</h1>
+    <p class="standfirst">
+      Una matrice \(100\times100\) contiene diecimila numeri. Ma quante <em>informazioni</em> contiene
+      davvero? Potrebbero essere diecimila, o potrebbe essere <strong>una sola</strong>, ripetuta in
+      diecimila modi. Il rango è il numero che risponde a questa domanda — e una volta che sai leggerlo,
+      guardi una matrice e vedi <em>quanta sostanza c'è dentro la griglia</em>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Questo capitolo <strong>non introduce niente di nuovo</strong>, e lo dico come un complimento: prende
+      un'idea che hai già incontrato <em>quattro volte</em> — il collasso del piano nel §1.1, la zavorra del
+      §4.6, il pulsante «allinea» del §3.5, le colonne che si allineavano nel widget del §6.5 — e finalmente
+      le <b>mette un numero accanto</b>. Nel §4.6 ti avevo promesso proprio questo: <em>«adesso ha un nome, e
+      nel Cap. 7 avrà anche un numero»</em>. Eccolo.
+      <br>
+      Attenzione a una cosa, perché è la difficoltà nascosta del capitolo: <mark>il rango è facile da
+      <em>capire</em> e sorprendentemente difficile da <em>calcolare</em></mark>. Gli attrezzi buoni per
+      calcolarlo (l'eliminazione di Gauss, Cap. 10; la SVD, Cap. 16) non li hai ancora. Non fa niente: la
+      definizione la puoi eseguire a mano, ed è quello che faremo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Sei cose da sapere sul rango</h2>
+
+  <p class="lead">
+    Cominciamo dalla definizione, che è di una semplicità quasi offensiva rispetto a quanto è potente.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Definizione — rango</div>
+    <p>
+      Il <span class="termine">rango</span> di una matrice \(\mm{A}\), scritto \(\rank(\mm{A})\), è
+      <strong>il numero di colonne linearmente indipendenti</strong> (§4.6) che contiene.
+    </p>
+    <p style="margin-bottom:0">
+      Detto in italiano: <mark>quante colonne portano davvero una direzione nuova, e quante sono
+      zavorra.</mark> È un <b>singolo numero intero</b>, non negativo — non uno per riga e uno per colonna,
+      non una proprietà «vero/falso»: <em>un numero</em>. È esattamente ciò che il §4.6 ti aveva promesso:
+      «conterà quanti vettori indipendenti ci sono in un mucchio».
+    </p>
+  </div>
+
+  <p>
+    E adesso le sei cose. Le prime cinque le dimostriamo qui in mezza riga l'una; la sesta è un teorema
+    vero e proprio, e la dimostreremo alla fine del capitolo (§7.11) — ma va detta subito, perché è quella
+    che rende tutto il resto possibile.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le sei cose</div>
+    <ol style="margin-bottom:0">
+      <li><b>Il rango è un solo numero, per tutta la matrice.</b> Non esiste «il rango della terza riga».
+          Esiste \(\rank(\mm{A})\), e basta.</li>
+      <li><b>\(\rank(\mm{A}) \le n\)</b> (il numero di <em>colonne</em>). Ovvio: stai contando quante, fra
+          \(n\) cose, sono indipendenti — non possono essere più di \(n\).</li>
+      <li><b>\(\rank(\mm{A}) \le m\)</b> (il numero di <em>righe</em>). Meno ovvio, ma è il <b>fatto 3 del
+          §4.6</b>: le colonne sono vettori di \(\R^m\), e <em>in \(\R^m\) più di \(m\) vettori sono sempre
+          dipendenti</em>. Non c'è abbastanza spazio.</li>
+      <li><b>Quindi \(\rank(\mm{A}) \le \min(m, n)\)</b>, e questa è la disuguaglianza che userai ogni
+          giorno. <mark>Una matrice \(3\times100\) ha rango al massimo 3 — e lo sai <em>prima</em> di
+          guardarla.</mark></li>
+      <li><b>\(\rank(\mm{A}) = 0\)</b> se e solo se \(\mm{A}\) è la <b>matrice nulla</b>. Nessuna direzione,
+          nessuna informazione. E \(\rank(\mm{A}) = 1\) significa che <em>tutte</em> le colonne sono multiple
+          di una sola: è il <b>prodotto esterno</b> del §3.6, la matrice più povera che possa esistere senza
+          essere nulla.</li>
+      <li><b>Il rango delle righe è uguale al rango delle colonne.</b> <em>Sempre.</em> Puoi contare le
+          colonne indipendenti o le righe indipendenti: <mark>ti verrà lo stesso numero</mark>. È
+          sbalorditivo, non è affatto ovvio, e lo dimostreremo nel §7.11.</li>
+    </ol>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Perché la sesta è sbalorditiva (fermati un attimo)</div>
+    <p style="margin-bottom:0">
+      Rileggila. Le <b>colonne</b> di una matrice \(3\times100\) sono cento vettori che vivono in \(\R^3\).
+      Le <b>righe</b> sono tre vettori che vivono in \(\R^{100}\). Sono oggetti di <em>spazi diversi</em>, di
+      <em>lunghezze diverse</em>, in <em>quantità diverse</em>, e li conti con due procedimenti separati che
+      non si parlano.
+      <mark>Non c'è <em>nessuna</em> ragione ovvia perché i due conti finiscano sullo stesso numero.</mark>
+      E invece ci finiscono, sempre, per qualunque matrice. Quando nel §7.11 vedrai perché, capirai anche
+      che cos'è davvero il rango — perché la risposta è che <em>non stava contando né le righe né le
+      colonne</em>.
+    </p>
+  </div>
+
+  <h3>Quattro matrici, per prendere le misure</h3>
+
+  <p>
+    Guardiamole. E soprattutto: guarda come si <em>giustifica</em> ogni risposta, perché il rango non si
+    dichiara, si <strong>esibisce</strong>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Quattro ranghi, quattro ragionamenti <span class="tag">esibisci la dipendenza, sempre</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{\begin{bmatrix} 1 &amp; 2 &amp; 0 \\ 3 &amp; -1 &amp; 1 \\ 0 &amp; 1 &amp; 4 \end{bmatrix}}_{\rank = \hC{3}}
+        \qquad
+        \underbrace{\begin{bmatrix} 1 &amp; 2 &amp; 0 \\ 0 &amp; 1 &amp; -1 \\ 2 &amp; -1 &amp; 5 \end{bmatrix}}_{\rank = \hD{2}}
+        \qquad
+        \underbrace{\begin{bmatrix} 2 &amp; 1 &amp; -1 \\ -4 &amp; -2 &amp; 2 \\ 6 &amp; 3 &amp; -3 \end{bmatrix}}_{\rank = \hB{1}}
+        \qquad
+        \underbrace{\begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 0 \end{bmatrix}}_{\rank = 0}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\rank = \hC{3}\)</dt>
+        <dd><b>rango pieno.</b> Nessuna colonna si ottiene dalle altre: tre direzioni indipendenti in
+            \(\R^3\), cioè una <b>base</b> di \(\R^3\) (§4.7). Questa matrice non butta via niente.</dd>
+        <dt>\(\rank = \hD{2}\)</dt>
+        <dd><b>deficiente</b> (o «di rango ridotto»). La prova non è un'opinione, è un conto:
+            <mark>\(\vv{c}_3 = 2\vv{c}_1 - \vv{c}_2\)</mark>, cioè
+            \(2\begin{bmatrix}1\\0\\2\end{bmatrix} - \begin{bmatrix}2\\1\\-1\end{bmatrix} = \begin{bmatrix}0\\-1\\5\end{bmatrix}\) ✔.
+            La terza colonna è <em>zavorra</em>: non aggiunge nessuna direzione. Restano 2.</dd>
+        <dt>\(\rank = \hB{1}\)</dt>
+        <dd>tutte le colonne sono multiple della stessa: \(\vv{c}_1 = 2\vv{a}\), \(\vv{c}_2 = 1\vv{a}\),
+            \(\vv{c}_3 = -1\vv{a}\), con \(\vv{a} = \begin{bmatrix}1\\-2\\3\end{bmatrix}\). È il
+            <b>prodotto esterno</b> \(\vv{a}\vv{b}\T\) del §3.6, con \(\vv{b} = \begin{bmatrix}2\\1\\-1\end{bmatrix}\):
+            nove numeri, <em>una</em> direzione. Il §3.6 lo chiamava «il più povero possibile per una matrice
+            non nulla», e adesso sai perché.</dd>
+        <dt>\(\rank = 0\)</dt>
+        <dd>solo la matrice <b>nulla</b>. Zero direzioni: schiaccia ogni cosa nell'origine.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>La regola d'oro di tutto il capitolo:</strong> per affermare che il rango è <em>almeno</em>
+      \(k\), esibisci \(k\) colonne indipendenti. Per affermare che è <em>al più</em> \(k\), esibisci le
+      <b>ricette</b> che rendono superflue le altre. <mark>Il rango si dimostra da due lati, come un
+      panino.</mark> Quando i due lati coincidono, hai finito — e hai una prova, non un'impressione.
+    </div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Rango pieno, rango deficiente</div>
+    <p style="margin-bottom:0">
+      Una matrice ha <span class="termine">rango pieno</span> se \(\rank(\mm{A}) = \min(m,n)\), cioè se è
+      grande quanto è <em>possibile</em> che sia. Altrimenti è <span class="termine">deficiente</span>
+      (o <em>rank-deficient</em>, o «singolare» quando è quadrata — è la specie dello zoo del §5.5).
+      <br><br>
+      Nota che «pieno» dipende dalla forma: una matrice \(5\times2\) ha rango pieno se il rango è
+      <b>2</b>, non 5. <mark>«Pieno» non vuol dire «grande»: vuol dire «il massimo consentito dalla sua
+      forma».</mark>
+    </p>
+  </div>
+
+  <h3>La traduzione che useremo tre volte</h3>
+
+  <p>
+    Prima di andare avanti, incassiamo il §6.5, perché ci serve una frase che collega il rango alle
+    <em>equazioni</em>. Non è un teorema: è una <strong>traduzione</strong>, e sono due righe.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Colonne dipendenti = la matrice annienta qualcuno <span class="tag">il §6.5, riletto</span></div>
+    <div class="f-body">
+      \[
+        \text{le colonne di } \mm{A} \text{ sono dipendenti}
+        \qquad\Longleftrightarrow\qquad
+        \exists\, \vv{x} \neq \vv{0} \;:\; \mm{A}\vv{x} = \vv{0}
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Perché è vera, senza fare niente.</strong> Il §6.5 dice che
+      \(\mm{A}\vv{x} = x_1\vv{a}_1 + x_2\vv{a}_2 + \cdots + x_n\vv{a}_n\). Quindi la scrittura
+      «\(\mm{A}\vv{x} = \vv{0}\) con \(\vv{x} \neq \vv{0}\)» significa, <em>parola per parola</em>: «esiste
+      una combinazione lineare delle colonne, con pesi non tutti nulli, che dà il vettore zero».
+      Ma quella <b>è la definizione di dipendenza lineare</b> del §4.6.
+      <br><br>
+      <mark>Rango non pieno (nelle colonne) = esiste un vettore non nullo che la matrice annienta.</mark>
+      Tienila stretta: la useremo per lo shifting (§7.9), per \(\mm{A}\T\mm{A}\) (§7.7), e nel Cap. 8 quei
+      vettori annientati avranno un nome tutto loro (lo <em>spazio nullo</em>).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Interpretazioni del rango</h2>
+
+  <p class="lead">
+    Come per le matrici (§5.1), anche il rango si può leggere in più modi — e sono tutti lo stesso numero
+    visto da angoli diversi. Impararli tutti è la differenza tra sapere una definizione e <em>capire</em>.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Cinque modi di dire «rango \(r\)»</div>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Il rango è…</th><th>Cioè</th><th>Dove</th></tr></thead>
+      <tbody>
+        <tr><td><b>① Colonne indipendenti</b></td>
+            <td>quante colonne portano una direzione nuova. È la definizione (§7.1)</td>
+            <td>§4.6</td></tr>
+        <tr><td><b>② Dimensione dello span</b> <span style="color:var(--green)">★</span></td>
+            <td>la dimensione dello spazio che le colonne riescono a coprire: \(r=1\) una retta, \(r=2\) un
+                piano, \(r=3\) tutto \(\R^3\). <em>Quanto mondo puoi raggiungere</em></td>
+            <td>§4.5, §4.7 → §7.11</td></tr>
+        <tr><td><b>③ Direzioni che sopravvivono</b></td>
+            <td>quante dimensioni restano <em>dopo</em> che la matrice ha deformato lo spazio. Rango
+                deficiente = la trasformazione <b>schiaccia</b>: il piano collassa su una retta</td>
+            <td>§1.1, §6.5</td></tr>
+        <tr><td><b>④ Numero di strati</b> <span style="color:var(--green)">★★</span></td>
+            <td>quanti «lucidi» di rango 1 servono per ricostruire la matrice (§6.1, lettura ④):
+                \(\mm{A} = \vv{c}_1\vv{\rho}_1\T + \cdots + \vv{c}_r\vv{\rho}_r\T\)</td>
+            <td>§3.6, §6.1 → §7.11, Cap. 16</td></tr>
+        <tr><td><b>⑤ Informazione vera</b></td>
+            <td>quanti «ingredienti» indipendenti ci sono davvero nei dati. È la lettura del pratico: rango
+                basso = ridondanza = <b>comprimibile</b></td>
+            <td>Cap. 16, 19</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Le due stelle non sono decorazione. La ② è quella che userai per <em>pensare</em>; la ④ è quella che
+      ti spiegherà, nel §7.11, perché righe e colonne danno lo stesso numero — e sarà anche il motivo per cui
+      esiste la compressione delle immagini (Cap. 16).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'immagine da tenere: la griglia e la sostanza</div>
+    <p>
+      Nel §5.3 ti avevo avvertito: <em>«la forma \(m\times n\) ti dice quanto è grande la griglia, ma non
+      quante direzioni indipendenti contengono le sue colonne»</em>. Il rango è esattamente questo secondo
+      numero. <mark>La forma è il <b>contenitore</b>; il rango è il <b>contenuto</b>.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Una matrice \(100\times100\) di rango 1 è una griglia enorme con dentro <em>una sola idea</em>: diecimila
+      numeri che si possono ricostruire tutti a partire da 200 (le due liste \(\vv{a}\) e \(\vv{b}\) del
+      prodotto esterno, §3.6). È l'idea che sta dietro alla compressione: se il rango è basso, quasi tutti
+      quei numeri sono <em>bugie ripetute</em>, e si possono buttare senza perdere niente.
+    </p>
+  </div>
+
+  <p>
+    Ed eccoci a un debito antico. Nel §1.1, sotto il primo widget del libro, quando il determinante andava a
+    zero e il piano collassava su una retta, avevo scritto che quell'osservazione era <em>«il cuore dei
+    capitoli 7 (rango), 11 (determinante) e 12 (inversa)»</em>. Il rango è <strong>la prima delle tre
+    risposte</strong>, ed è quella che conta <em>quante dimensioni sopravvivono</em>: prima del collasso
+    erano 2, dopo è 1. Il determinante misurerà <em>di quanto</em> si è ristretta l'area; l'inversa si
+    chiederà <em>se</em> si può tornare indietro (e la risposta sarà: solo se non hai perso dimensioni,
+    cioè solo a rango pieno).
+  </p>
+
+  <div class="widget" id="w-span">
+    <div class="w-head">
+      <span>Il rango è quante direzioni ci sono davvero</span>
+      <span class="hint">trascina le punte delle tre colonne</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsp-svg" viewBox="0 0 560 400" role="img" aria-label="Tre colonne nel piano: il rango e lo span"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wsp-2">rango 2 (un piano)</button>
+      <button class="w-btn" id="wsp-1">rango 1 (una retta)</button>
+      <button class="w-btn" id="wsp-0">rango 0 (un punto)</button>
+    </div>
+    <div class="w-readout" id="wsp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Calcolare il rango</h2>
+
+  <p class="lead">
+    E adesso il momento imbarazzante. Il rango è definito benissimo, ma <strong>come lo calcoli</strong>?
+    Ti dico subito la verità: gli attrezzi elettrici per farlo non li hai ancora. Ma il cacciavite a mano
+    sì — e non è un ripiego: <mark>è la definizione, eseguita.</mark>
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il setaccio delle colonne</div>
+    <p>
+      Prendi un <b>cesto</b> vuoto. Scorri le colonne <b>da sinistra a destra</b> e, per ognuna, chiediti:
+    </p>
+    <ul style="margin:.5rem 0">
+      <li>è la colonna <b>nulla</b>? → <b>scartala</b> (§4.6: lo zero è zavorra suprema);</li>
+      <li>è <b>raggiungibile</b> combinando quelle che sono già nel cesto (§4.5)? → <b>scartala</b>, ma
+          <em>scrivi la ricevuta</em>: cioè i pesi che la ricostruiscono;</li>
+      <li><b>no</b>? → <b>mettila nel cesto</b>: porta una direzione nuova.</li>
+    </ul>
+    <p style="margin-bottom:0">
+      Alla fine: <mark>\(\rank(\mm{A})\) = quante colonne sono finite nel cesto.</mark>
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché il setaccio è onesto (e non un trucco)</div>
+    <p>
+      Due domande, due risposte — e le hai già tutte e due in tasca dal Capitolo 4.
+    </p>
+    <p>
+      <b>«Le colonne nel cesto sono davvero indipendenti?»</b> Sì. Supponi che una loro combinazione dia
+      zero, con pesi non tutti nulli, e guarda <em>l'ultima</em> colonna entrata con peso non nullo: puoi
+      isolarla e scriverla come combinazione delle precedenti (è lo stesso gesto del §4.6: si divide per un
+      peso diverso da zero). Ma allora, quando il setaccio l'ha esaminata, l'avrebbe <em>scartata</em>. E
+      invece è nel cesto. Assurdo. \(\blacksquare\)
+    </p>
+    <p style="margin-bottom:0">
+      <b>«E se avessi scandito le colonne in un altro ordine, otterrei un altro numero?»</b> No — ed è una
+      domanda ottima. Il cesto è una <b>base</b> dello span delle colonne (genera tutto, ed è indipendente:
+      §4.7). E il §4.7 ha già stabilito il fatto decisivo: <mark>tutte le basi di uno stesso spazio hanno lo
+      <em>stesso numero</em> di vettori</mark>. Cambiare ordine cambia <em>quali</em> colonne finiscono nel
+      cesto, mai <em>quante</em>. <strong>È questo che rende il rango un numero ben definito</strong>, e
+      quasi tutti i libri lo danno per scontato.
+    </p>
+  </div>
+
+  <h3>Un setaccio svolto, senza saltare niente</h3>
+
+  <div class="formula">
+    <div class="f-head">Una \(3\times3\) che sembra piena e non lo è <span class="tag">a occhio nudo non si vede</span></div>
+    <div class="f-body">
+      \[ \mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 2 &amp; 1 &amp; 3 \\ 3 &amp; 1 &amp; 4 \end{bmatrix} \]
+    </div>
+    <div class="f-note">
+      Nessuna colonna è multipla di un'altra, non ci sono zeri sospetti, niente si ripete.
+      <strong>Sembra a rango pieno.</strong> Non lo è.
+    </div>
+  </div>
+
+  <ol class="passi">
+    <li><b>Colonna 1</b> \(= \begin{bmatrix}1\\2\\3\end{bmatrix}\). Non è nulla → <b>nel cesto</b>.
+      Cesto: \(\{\vv{c}_1\}\).</li>
+    <li><b>Colonna 2</b> \(= \begin{bmatrix}2\\1\\1\end{bmatrix}\). È un multiplo di \(\vv{c}_1\)? Il primo
+      elemento vorrebbe un fattore \(2/1 = 2\), il secondo un fattore \(1/2\). <b>Non coincidono</b> → non è
+      un multiplo → (§4.6, fatto 1) è indipendente → <b>nel cesto</b>.
+      <br>Cesto: \(\{\vv{c}_1, \vv{c}_2\}\). <em>Adesso so già che \(\rank \ge 2\)</em>: è la prima metà del
+      panino.</li>
+    <li><b>Colonna 3</b> \(= \begin{bmatrix}3\\3\\4\end{bmatrix}\). Cerco due pesi \(\alpha, \beta\) tali che
+      \(\vv{c}_3 = \alpha\vv{c}_1 + \beta\vv{c}_2\). Ho <em>tre</em> equazioni (una per riga) e <em>due</em>
+      incognite: <mark>uso due righe per <b>trovare</b> i pesi, e la terza per <b>verificare</b></mark>.
+      \[
+        \begin{aligned}
+          \text{riga 1:}&amp;\quad \alpha + 2\beta = 3 \\
+          \text{riga 2:}&amp;\quad 2\alpha + \beta = 3
+        \end{aligned}
+        \qquad\Longrightarrow\qquad
+        \alpha = 1, \;\; \beta = 1
+      \]
+      <b>Verifica sulla riga 3</b>, che non ho usato: \(1\cdot 3 + 1\cdot 1 = 4\) ✔ — ed è proprio il 4 che
+      serviva. Quindi \(\vv{c}_3\) è <b>dipendente</b> → <b>scartata</b>.</li>
+    <li><b>La ricevuta.</b> \(\vv{c}_3 = \vv{c}_1 + \vv{c}_2\), cioè
+      \[ \vv{c}_1 + \vv{c}_2 - \vv{c}_3 = \vv{0} \qquad\text{pesi } (1, 1, -1) \text{, non tutti nulli} \]
+      che è la definizione di dipendenza del §4.6, alla lettera. Ed è anche — per la traduzione del §7.1 —
+      il vettore che la matrice annienta: \(\mm{A}\begin{bmatrix}1\\1\\-1\end{bmatrix} = \vv{0}\).
+      <br><br>
+      <b>Panino chiuso:</b> \(\rank \ge 2\) (passo 2) e \(\rank \le 2\) (passo 4).
+      <mark>\(\rank(\mm{A}) = 2\).</mark> \(\blacksquare\)</li>
+  </ol>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Nota il punto in cui sei stato fortunato</div>
+    <p style="margin-bottom:0">
+      Al passo 3 hai scelto <em>due righe comode</em> per ricavare \(\alpha\) e \(\beta\). Con matrici più
+      grandi quella scelta diventa un sistema da risolvere — e risolvere sistemi è il <b>Capitolo 10</b>.
+      Anzi: l'eliminazione di Gauss (§10.4) farà esattamente questo mestiere, ma <em>smetterà di sperare in
+      una riga comoda</em> e comincerà a <strong>fabbricarsela</strong>, creando zeri dove servono.
+      È il ponte tra questo capitolo e quello.
+    </p>
+  </div>
+
+  <div class="widget" id="w-setaccio">
+    <div class="w-head">
+      <span>Il setaccio, un passo alla volta</span>
+      <span class="hint">premi «prossima colonna»</span>
+    </div>
+    <div class="w-stage" style="padding:1.2rem; overflow-x:auto">
+      <div id="wse-body"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wse-next">▶ prossima colonna</button>
+      <button class="w-btn" id="wse-reset">↺ ricomincia</button>
+      <button class="w-btn" id="wse-m0">matrice 3×3</button>
+      <button class="w-btn" id="wse-m1">matrice 3×4</button>
+    </div>
+    <div class="w-readout" id="wse-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La forma parla per prima (usa questa scorciatoia)</div>
+    <p style="margin-bottom:0">
+      Nel widget, prova la matrice \(3\times4\). <strong>Prima ancora di guardare i numeri</strong> sai già
+      qualcosa: sono <b>quattro</b> colonne che vivono in \(\R^3\), e il fatto 3 del §4.6 dice che
+      <em>più di 3 vettori in \(\R^3\) sono sempre dipendenti</em>. <mark>Almeno una colonna è zavorra,
+      garantito, senza fare un solo conto.</mark> Il rango sarà al massimo 3.
+      <br><br>
+      È la disuguaglianza \(\rank \le \min(m,n)\) usata come si deve: non come una formula da ricordare, ma
+      come un <em>risparmio di lavoro</em>.
+    </p>
+  </div>
+
+  <h3>Dove il setaccio si rompe (e perché non ti sto nascondendo niente)</h3>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Tre limiti, detti apertamente</div>
+    <ol style="margin-bottom:0">
+      <li><b>Il costo esplode.</b> Con un cesto di \(k\) colonne, ogni nuova colonna richiede di risolvere un
+          sistema di \(k\) incognite. Per \(k \le 2\) è aritmetica mentale; per \(k = 3\) comincia a fare
+          male; per \(k = 10\) è una giornata di lavoro.</li>
+      <li><b>Dipende dalla fortuna.</b> Il trucco «uso le righe comode» funziona finché ci sono righe comode.
+          Non è un metodo, è un'abitudine.</li>
+      <li><b>Sui dati veri non funziona affatto.</b> Con numeri decimali, la domanda «è <em>esattamente</em>
+          un multiplo?» non ha risposta. È il §7.10, e ci arriviamo tra poche pagine.</li>
+    </ol>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> I tuoi tre appuntamenti col rango</div>
+    <p>
+      <strong>Non ti sto nascondendo il metodo buono per farti soffrire.</strong> Quello che hai appena
+      imparato non è un ripiego: è <em>la definizione, eseguita a mano</em>. E i metodi che verranno
+      <mark>non cambieranno la definizione</mark> — la renderanno soltanto più comoda.
+    </p>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Quando</th><th>Che cosa ottieni</th><th>Perché non adesso</th></tr></thead>
+      <tbody>
+        <tr><td><b>Cap. 10</b> — eliminazione di Gauss</td>
+            <td>il metodo <b>meccanico</b>: riduci la matrice a scala e <em>conta i gradini</em>. Nessun
+                ingegno richiesto, nessuna riga fortunata da cercare</td>
+            <td>servono prima i sistemi lineari: le mosse sulle righe <em>sono</em> moltiplicazioni a
+                sinistra (§6.1, lettura ③)</td></tr>
+        <tr><td><b>Cap. 16</b> — la SVD</td>
+            <td>il metodo <b>vero</b>, quello che usa il computer. (Curiosità: quando un programma calcola
+                il rango, <em>non</em> usa Gauss — usa la SVD, perché Gauss sui dati sporchi mente)</td>
+            <td>serve tutta la seconda metà del libro</td></tr>
+        <tr><td><b>§7.10</b> — tra tre pagine</td>
+            <td><b>perché</b> serve un metodo «vero», e perché nemmeno Gauss basta</td>
+            <td>è già qui</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Il rango è, era e resterà «quante colonne indipendenti ci sono». <mark>La parte difficile — capire
+      <em>che cosa</em> stai contando — la possiedi già.</mark> Quello che ti manca non è un concetto: è un
+      cacciavite elettrico. E per ogni matrice piccola a numeri interi — cioè per tutto questo capitolo —
+      il setaccio basta e avanza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Rango e moltiplicazione scalare</h2>
+
+  <p>
+    La sezione più facile del libro, e ne approfittiamo per imparare qualcosa di profondo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il rango ignora la scala <span class="tag">purché λ non sia zero</span></div>
+    <div class="f-body">
+      \[
+        \rank(\hC{\lambda}\mm{A}) = \rank(\mm{A}) \quad \text{per ogni } \hC{\lambda} \neq 0
+        \qquad\qquad
+        \rank(0 \cdot \mm{A}) = 0
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Perché.</strong> Moltiplicare per \(\lambda\) riscala <em>tutte</em> le colonne dello stesso
+      fattore (§5.7), e questo non crea né distrugge dipendenze: se
+      \(\vv{c}_3 = 2\vv{c}_1 - \vv{c}_2\), allora anche
+      \(\lambda\vv{c}_3 = 2(\lambda\vv{c}_1) - (\lambda\vv{c}_2)\). Le stesse ricette, con gli stessi pesi,
+      continuano a funzionare. L'unico \(\lambda\) che cambia le carte è <b>zero</b>, che azzera tutto e
+      manda il rango a 0.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il rango <em>conta</em>, non <em>misura</em></div>
+    <p style="margin-bottom:0">
+      Guarda bene che cosa sta dicendo quella formula, perché è più insidiosa di quanto sembri:
+      \[ \rank(\mm{A}) = \rank\!\left(10^{-9}\,\mm{A}\right) = \rank\!\left(10^{9}\,\mm{A}\right) \]
+      Una matrice fatta di numeri microscopici ha <em>esattamente</em> lo stesso rango della stessa matrice
+      moltiplicata per un miliardo. <mark>Il rango non ha la minima idea di quanto siano grandi i tuoi
+      numeri: conta le direzioni, non le misura.</mark>
+      <br><br>
+      Sembra un'innocua curiosità. È invece la radice di tutti i guai del §7.10: una direzione che c'è «per
+      un miliardesimo» conta <b>esattamente quanto</b> una direzione grande come una casa. Il rango non
+      distingue tra un'informazione vera e un granello di polvere — <em>li conta entrambi come 1</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Rango di matrici sommate</h2>
+
+  <p class="lead">
+    Domanda naturale: se conosco \(\rank(\mm{A})\) e \(\rank(\mm{B})\), quanto vale \(\rank(\mm{A}+\mm{B})\)?
+    Risposta: <strong>non lo sai</strong>. E non è una lacuna della teoria — è proprio la verità.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'unica cosa che si può dire <span class="tag">una disuguaglianza, e nient'altro</span></div>
+    <div class="f-body">
+      \[ \rank(\mm{A} + \mm{B}) \;\le\; \rank(\mm{A}) + \rank(\mm{B}) \]
+    </div>
+    <div class="f-note">
+      <strong>Perché è vera</strong> (con la lettura ④ del §6.1, e in una riga): se \(\mm{A}\) è una pila di
+      \(\rank(\mm{A})\) strati e \(\mm{B}\) è una pila di \(\rank(\mm{B})\) strati, allora
+      \(\mm{A}+\mm{B}\) è la pila di <em>tutti</em> quegli strati messi insieme — al massimo
+      \(\rank(\mm{A}) + \rank(\mm{B})\). Non può servirne di più. Ma <b>può servirne di meno</b>: alcuni
+      strati potrebbero essere ridondanti fra loro, o addirittura cancellarsi a vicenda.
+      <br>
+      <span style="color:var(--ink-faint)">(Sto usando qui due fatti che dimostrerò nel §7.11: che una
+      matrice di rango \(r\) è una pila di \(r\) strati, e che una pila di \(k\) strati ha rango al più
+      \(k\). Come per il §7.6, non è un cerchio: la dimostrazione del §7.11 non usa questa sezione.)</span>
+      <br><br>
+      <strong>E questo è tutto.</strong> Non esiste una formula per \(\rank(\mm{A}+\mm{B})\): <mark>il rango
+      di una somma non è una funzione dei ranghi degli addendi</mark>. Dipende da <em>come sono fatte</em>,
+      non da quanto valgono i loro ranghi.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Due matrici di rango 1: la somma può fare 2, 1 oppure 0</div>
+    <p>
+      Tre coppie, tutte di rango 1 + rango 1, e tre risultati diversi. Se ti serve una prova che il rango
+      della somma è imprevedibile, eccola:
+    </p>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>\(\mm{A}\) (rango 1)</th><th>\(\mm{B}\) (rango 1)</th><th>\(\mm{A}+\mm{B}\)</th><th>Perché</th></tr></thead>
+      <tbody>
+        <tr><td>\(\begin{bmatrix}1&amp;2\\2&amp;4\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}1&amp;-1\\-1&amp;1\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}2&amp;1\\1&amp;5\end{bmatrix}\) &nbsp;<b style="color:var(--green)">rango 2</b></td>
+            <td>le due matrici puntano in direzioni <em>diverse</em>: sommandole, le direzioni si
+                <b>accumulano</b></td></tr>
+        <tr><td>\(\begin{bmatrix}1&amp;0\\2&amp;0\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}0&amp;1\\0&amp;2\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}1&amp;1\\2&amp;2\end{bmatrix}\) &nbsp;<b style="color:var(--gold)">rango 1</b></td>
+            <td>entrambe hanno le colonne lungo <b>la stessa</b> direzione \(\begin{bmatrix}1\\2\end{bmatrix}\):
+                sommandole non nasce niente di nuovo</td></tr>
+        <tr><td>\(\begin{bmatrix}1&amp;2\\2&amp;4\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}-1&amp;-2\\-2&amp;-4\end{bmatrix}\)</td>
+            <td>\(\begin{bmatrix}0&amp;0\\0&amp;0\end{bmatrix}\) &nbsp;<b style="color:var(--warm)">rango 0</b></td>
+            <td>\(\mm{B} = -\mm{A}\): si <b>annientano</b>. Due matrici non nulle, somma nulla</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      E può anche <em>crollare</em> partendo dall'alto: \(\begin{bmatrix}1&amp;0\\0&amp;1\end{bmatrix}\)
+      (rango 2) più \(\begin{bmatrix}-1&amp;1\\0&amp;-1\end{bmatrix}\) (rango 2) fa
+      \(\begin{bmatrix}0&amp;1\\0&amp;0\end{bmatrix}\), che ha <b>rango 1</b>.
+      <mark>Rango 2 più rango 2 può fare 1.</mark> La disuguaglianza \(\le 2+2 = 4\) è rispettata, e non
+      serve a niente.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Rango di matrici moltiplicate</h2>
+
+  <p class="lead">
+    Qui invece si può dire qualcosa di forte — e il Capitolo 6 te l'ha già fatto <em>vedere</em>, con i
+    lucidi. Nel §6.1 ti avevo scritto: «hai appena visto che \(\rank(\mm{A}\mm{B}) \le n\); nel §7.6 la lima
+    diventerà più fine». È il momento di affilarla.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il prodotto non può arricchire <span class="tag">il teorema più utile del capitolo</span></div>
+    <div class="f-body">
+      \[ \rank(\mm{A}\mm{B}) \;\le\; \min\big(\rank(\mm{A}),\, \rank(\mm{B})\big) \]
+    </div>
+    <div class="f-note">
+      In parole: <mark>moltiplicare due matrici non può <em>creare</em> direzioni che non c'erano.</mark>
+      Il prodotto è povero almeno quanto il più povero dei due fattori. Un'informazione persa non torna
+      indietro — e questo è il seme di metà dei guai (e di metà delle soluzioni) della seconda parte del
+      libro.
+    </div>
+  </div>
+
+  <h3>La dimostrazione, in due metà</h3>
+
+  <p>
+    Ed è bello perché le due metà usano le <em>due letture</em> del prodotto che il §6.1 ti ha dato. Prima
+    quella per colonne, poi quella per righe.
+  </p>
+
+  <ol class="passi">
+    <li><b>Metà 1: \(\rank(\mm{A}\mm{B}) \le \rank(\mm{A})\).</b>
+      <br>Il §6.1 (lettura ②) dice che <em>la colonna \(j\) di \(\mm{A}\mm{B}\) è \(\mm{A}\) applicata alla
+      colonna \(j\) di \(\mm{B}\)</em>. E il §6.5 dice che \(\mm{A}\) applicata a un vettore produce una
+      <b>combinazione lineare delle colonne di \(\mm{A}\)</b>. Mettili insieme:
+      \[ \text{ogni colonna di } \mm{A}\mm{B} \;\text{è una combinazione delle colonne di } \mm{A} \]
+      Quindi <em>tutte</em> le colonne del prodotto vivono dentro lo span delle colonne di \(\mm{A}\)
+      (§4.5). Ma dentro uno span generato da \(\rank(\mm{A})\) vettori non ce ne possono stare più di
+      \(\rank(\mm{A})\) indipendenti — è il fatto 3 del §4.6 («non c'è abbastanza spazio»), applicato a uno
+      span qualunque anziché a \(\R^m\). <em>(Che sia lecito lo si vede nel §7.11: \(\R^m\) era esso stesso
+      lo span di \(m\) versori, e l'argomento non usava affatto quali fossero.)</em>
+      <br>\(\Longrightarrow \rank(\mm{A}\mm{B}) \le \rank(\mm{A})\). ✔</li>
+    <li><b>Metà 2: \(\rank(\mm{A}\mm{B}) \le \rank(\mm{B})\).</b>
+      <br>Stessa identica mossa, ma con la lettura ③ (per righe): <em>la riga \(i\) di \(\mm{A}\mm{B}\) è la
+      riga \(i\) di \(\mm{A}\) applicata a tutta \(\mm{B}\)</em>, cioè una <b>combinazione delle righe di
+      \(\mm{B}\)</b>. Quindi tutte le righe del prodotto stanno nello span delle righe di \(\mm{B}\), e
+      <em>il rango delle righe è il rango</em> (la sesta cosa del §7.1, §7.11).
+      <br>\(\Longrightarrow \rank(\mm{A}\mm{B}) \le \rank(\mm{B})\). ✔</li>
+    <li><b>Il minimo.</b> Se un numero è \(\le\) due cose, è \(\le\) alla più piccola delle due:
+      \[ \rank(\mm{A}\mm{B}) \le \min\big(\rank(\mm{A}), \rank(\mm{B})\big) \qquad\blacksquare \]
+      Nota che <mark>la seconda metà si appoggia alla sesta cosa</mark> — «rango righe = rango colonne».
+      Senza quel teorema questa dimostrazione zoppicherebbe. Ecco perché nel §7.1 ti ho detto che è la
+      proprietà che rende possibile tutto il resto.</li>
+  </ol>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> «Ma la sesta cosa la dimostri <em>dopo</em>! Non è un cerchio?»</div>
+    <p style="margin-bottom:0">
+      Domanda giusta, e la risposta è <b>no</b>, ma va detta esplicitamente perché il sospetto è legittimo.
+      Qui (§7.6) sto <em>usando</em> il teorema «rango righe = rango colonne», che dimostrerò solo nel §7.11.
+      Sarebbe circolare <em>se</em> la dimostrazione del §7.11 usasse a sua volta questo §7.6 — e non lo fa:
+      <mark>là si usano soltanto il setaccio (§7.3), la moltiplicazione (§6.1) e il prodotto esterno (§3.6),
+      mai il teorema del prodotto</mark>. Puoi verificarlo: vai a leggere il §7.11 e cerca un rimando al
+      §7.6. Non c'è.
+      <br>
+      L'ordine di <em>esposizione</em> non è l'ordine delle <em>dipendenze</em>: ho messo la sesta cosa in
+      cima al capitolo perché serve subito, e la sua dimostrazione in fondo perché richiede strumenti che
+      volevo introdurre prima. È una scelta di narrazione, non un imbroglio.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La strozzatura</div>
+    <p>
+      C'è un modo di vederlo che vale più della dimostrazione. Guarda le forme:
+      \[ \underbrace{(3 \times \hB{2})}_{\mm{A}} \; \underbrace{(\hB{2} \times 3)}_{\mm{B}} \;=\; (3\times3) \]
+      Il risultato è una \(3\times3\), quindi <em>potrebbe</em> avere rango 3. Ma non può:
+      <mark>tutta l'informazione è dovuta passare attraverso una strozzatura larga \(\hB{2}\)</mark>.
+      Qualunque cosa entri da destra, per arrivare a sinistra deve schiacciarsi in due sole colonne — e
+      quello che esce non può avere più di 2 direzioni indipendenti.
+    </p>
+    <p style="margin-bottom:0">
+      È esattamente l'immagine dei <b>lucidi</b> del §6.1: il numero di strati è la dimensione interna, e
+      una pila di 2 lucidi non può disegnare qualcosa di più ricco di 2. Il prodotto è una <em>clessidra</em>:
+      per quanto siano grandi le due ampolle, passa solo ciò che sta nella strozzatura.
+    </p>
+  </div>
+
+  <figure class="fig wide" id="fig-strozzatura">
+    <svg viewBox="0 0 620 240" role="img" aria-label="La strozzatura: il rango del prodotto è limitato dalla dimensione interna"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 7.1</span> — <b>La clessidra.</b> Una matrice \(3\times2\) moltiplicata per una
+      \(2\times3\) dà una \(3\times3\) — che ha tutta l'aria di poter avere rango 3, e invece ha rango
+      <b>al massimo 2</b>. L'informazione deve attraversare la <b style="color:var(--warm)">strozzatura</b>
+      della dimensione interna, e quello che passa di là non può essere più ricco di quanto la strozzatura
+      consenta.
+    </figcaption>
+  </figure>
+
+  <div class="formula">
+    <div class="f-head">La verifica: una \(3\times3\) di rango 2 <span class="tag">nata già singolare</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{\begin{bmatrix} 1 &amp; 2 \\ 0 &amp; -1 \\ 3 &amp; 1 \end{bmatrix}}_{\rank = 2}
+        \underbrace{\begin{bmatrix} 2 &amp; 0 &amp; 2 \\ 1 &amp; 3 &amp; 4 \end{bmatrix}}_{\rank = 2}
+        =
+        \begin{bmatrix} 4 &amp; 6 &amp; 10 \\ -1 &amp; -3 &amp; -4 \\ 7 &amp; 3 &amp; 10 \end{bmatrix}
+        \qquad \rank = \hB{2}
+      \]
+    </div>
+    <div class="f-note">
+      La dipendenza si esibisce subito: <mark>\(\vv{c}_3 = \vv{c}_1 + \vv{c}_2\)</mark> ✔
+      (\(\begin{bmatrix}4\\-1\\7\end{bmatrix} + \begin{bmatrix}6\\-3\\3\end{bmatrix} = \begin{bmatrix}10\\-4\\10\end{bmatrix}\)).
+      E non è un caso: guarda la matrice di destra, dove <em>la terza colonna è la somma delle prime due</em>.
+      Il prodotto ha <b>ereditato</b> quella relazione — per il §6.1, ogni colonna del prodotto è la
+      combinazione delle colonne di \(\mm{A}\) pesata da una colonna di \(\mm{B}\).
+      <br><br>
+      <strong>Conseguenza da tenere a mente per il Cap. 12:</strong> quella \(3\times3\) è <b>singolare</b> —
+      non ha inversa — <em>e lo era già prima di essere calcolata</em>. Bastava guardare le forme.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il rango può crollare, non solo restare limitato</div>
+    <p>
+      La disuguaglianza dice «al più il minimo». Non dice «uguale al minimo» — e la differenza è enorme.
+      Ecco due matrici di rango 2 il cui prodotto ha rango <b>1</b>:
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; -3 \\ 0 &amp; -1 &amp; 1 \\ 2 &amp; 1 &amp; -3 \end{bmatrix}
+        \qquad
+        \mm{B} = \begin{bmatrix} 1 &amp; 1 &amp; 2 \\ 1 &amp; 0 &amp; 1 \\ 1 &amp; -1 &amp; 0 \end{bmatrix}
+        \qquad
+        \mm{A}\mm{B} = \begin{bmatrix} \hB{0} &amp; 4 &amp; 4 \\ \hB{0} &amp; -1 &amp; -1 \\ \hB{0} &amp; 5 &amp; 5 \end{bmatrix}
+      \]
+    </p>
+    <p style="margin-bottom:0">
+      <strong>E si capisce <em>perché</em>, il che è molto meglio che verificarlo.</strong> Le colonne di
+      \(\mm{A}\) <b>sommano a zero</b> (guarda: \(1+2-3 = 0\), \(0-1+1 = 0\), \(2+1-3 = 0\)), cioè
+      \(\mm{A}\begin{bmatrix}1\\1\\1\end{bmatrix} = \vv{0}\): la matrice annienta il vettore
+      \(\begin{bmatrix}1\\1\\1\end{bmatrix}\). E la <b>prima colonna di \(\mm{B}\)</b> è
+      <em>proprio</em> \(\begin{bmatrix}1\\1\\1\end{bmatrix}\).
+      <mark>\(\mm{B}\) chiede ad \(\mm{A}\) esattamente la combinazione che \(\mm{A}\) annulla</mark> — e la
+      prima colonna del prodotto viene zero. È la «collisione di geometrie» del §6.2, adesso con un nome e
+      un numero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Rango di \(\mm{A}\), \(\mm{A}\T\), \(\mm{A}\T\mm{A}\) e \(\mm{A}\mm{A}\T\)</h2>
+
+  <p class="lead">
+    Il §6.7 ti ha insegnato a fabbricare matrici simmetriche con \(\mm{A}\T\mm{A}\), e ti ha detto che da lì
+    nascono i minimi quadrati e la PCA. Adesso la domanda che decide se quei metodi <em>funzionano</em>:
+    quel prodotto, quanto rango ha?
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Tutti e quattro lo stesso <span class="tag">e non è affatto ovvio</span></div>
+    <div class="f-body">
+      \[
+        \rank(\mm{A}) \;=\; \rank(\mm{A}\T) \;=\; \rank(\mm{A}\T\mm{A}) \;=\; \rank(\mm{A}\mm{A}\T)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\rank(\mm{A}) = \rank(\mm{A}\T)\)</dt>
+        <dd><b>gratis</b>: la trasposta scambia righe e colonne (§5.4), e il rango delle righe è uguale al
+            rango delle colonne (la sesta cosa, §7.1). Non c'è niente da dimostrare — è la stessa
+            affermazione, detta due volte.</dd>
+        <dt>\(\rank(\mm{A}\T\mm{A}) = \rank(\mm{A})\)</dt>
+        <dd>questa <b>non</b> è gratis, e la dimostriamo qui sotto. Nota che il §7.6 da solo darebbe
+            \(\le\): il bello è che vale l'<b>uguaglianza</b>. Moltiplicare per \(\mm{A}\T\) non perde
+            niente.</dd>
+        <dt>le forme</dt>
+        <dd>attenzione, perché è il punto in cui tutti scivolano: \(\mm{A}\T\mm{A}\) è \(n\times n\) e
+            \(\mm{A}\mm{A}\T\) è \(m\times m\). <b>Hanno lo stesso rango ma dimensioni diverse</b>: una delle
+            due, quasi sempre, è <em>obbligata</em> a essere singolare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <strong>La dimostrazione</strong>, e usa esattamente due cose che hai: la traduzione del §7.1
+      («dipendenti \(\iff\) esiste \(\vv{x} \neq \vv{0}\) annientato») e il ponte con la norma del §3.1
+      (\(\vv{v}\T\vv{v} = \norm{\vv{v}}^2\)).
+      <br><br>
+      <b>Primo passo.</b> Mostriamo che <mark>\(\mm{A}\) e \(\mm{A}\T\mm{A}\) annientano <em>esattamente gli
+      stessi</em> vettori</mark>.
+      <br>
+      • Se \(\mm{A}\vv{x} = \vv{0}\), allora ovviamente \(\mm{A}\T(\mm{A}\vv{x}) = \mm{A}\T\vv{0} = \vv{0}\).
+      Facile.
+      <br>
+      • Il verso interessante è l'altro. Supponi \(\mm{A}\T\mm{A}\vv{x} = \vv{0}\). Moltiplica a sinistra per
+      \(\vv{x}\T\) (è lecito: stesso lato su entrambi i membri, §6.2):
+      \[ \vv{x}\T\mm{A}\T\mm{A}\vv{x} = 0 \]
+      Adesso guarda quell'espressione con gli occhi giusti. Per LIVE EVIL (§6.4),
+      \(\vv{x}\T\mm{A}\T = (\mm{A}\vv{x})\T\). Quindi, chiamando \(\vv{v} = \mm{A}\vv{x}\):
+      \[ \vv{v}\T\vv{v} = 0 \qquad\text{cioè}\qquad \norm{\vv{v}}^2 = 0 \qquad\text{cioè}\qquad \vv{v} = \vv{0} \]
+      perché \(\vv{v}\T\vv{v} = 0\) se e solo se \(\vv{v} = \vv{0}\) (§3.2: la norma è nulla solo per il
+      vettore nullo). Ma \(\vv{v} = \mm{A}\vv{x}\), quindi \(\mm{A}\vv{x} = \vv{0}\). ✔
+      <br><br>
+      <b>Secondo passo — e qui bisogna stare attenti.</b> Sapere che le due matrici annientano gli stessi
+      vettori <em>non basta</em> ancora: quella è una domanda sì/no, e a noi serve un <b>numero</b>.
+      Il ponte è il <b>setaccio</b> (§7.3), e funziona così.
+      <br>
+      Il setaccio, sulla colonna \(j\), fa <em>una sola</em> domanda: «è una combinazione di quelle già nel
+      cesto?». Che, riscritta con la traduzione del §7.1, diventa: <mark>«esiste un vettore \(\vv{x}\) non
+      nullo, con peso su \(j\) e pesi nulli fuori dal cesto, che la matrice annienta?»</mark>
+      <br>
+      Ma <em>questa domanda dipende solo da quali vettori la matrice annienta</em> — e \(\mm{A}\) e
+      \(\mm{A}\T\mm{A}\) annientano gli stessi. Quindi il setaccio, passo dopo passo, prende
+      <b>esattamente le stesse decisioni</b> sulle due matrici: scarta le stesse colonne, mette nel cesto le
+      stesse colonne, e finisce con un cesto della <b>stessa taglia</b>.
+      <br>
+      Stesse decisioni ⟹ stesso cesto ⟹ <b>stesso rango</b>. \(\blacksquare\)
+      <br><br>
+      <em>(Nota che le colonne delle due matrici sono oggetti diversi — quelle di \(\mm{A}\) vivono in
+      \(\R^m\), quelle di \(\mm{A}\T\mm{A}\) in \(\R^n\). Non stiamo confrontando le colonne: stiamo
+      confrontando le <b>decisioni</b> del setaccio, che dipendono solo dai vettori annientati.)</em>
+      E per \(\mm{A}\mm{A}\T\) si ripete tutto scambiando \(\mm{A}\) con \(\mm{A}\T\).
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Verifica, e una sorpresa <span class="tag">una 3×3 nata singolare</span></div>
+    <div class="f-body">
+      \[ \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 0 &amp; -1 \\ 3 &amp; 1 \end{bmatrix} \quad (3\times2,\; \rank = 2) \]
+      \[
+        \mm{A}\T\mm{A} = \begin{bmatrix} 10 &amp; 5 \\ 5 &amp; 6 \end{bmatrix} \;(2\times2)
+        \qquad\qquad
+        \mm{A}\mm{A}\T = \begin{bmatrix} 5 &amp; -2 &amp; 5 \\ -2 &amp; 1 &amp; -1 \\ 5 &amp; -1 &amp; 10 \end{bmatrix} \;(3\times3)
+      \]
+    </div>
+    <div class="f-note">
+      Entrambe hanno rango <b>2</b>, come \(\mm{A}\). Ma guarda che cosa significa:
+      <br>• \(\mm{A}\T\mm{A}\) è \(2\times2\) di rango 2 → <b style="color:var(--green)">rango pieno</b>,
+      invertibile (Cap. 12). <em>È la matrice su cui si reggono i minimi quadrati.</em>
+      <br>• \(\mm{A}\mm{A}\T\) è \(3\times3\) di rango 2 → <mark><b style="color:var(--warm)">SINGOLARE</b>,
+      e non poteva essere altrimenti</mark>. La dipendenza si esibisce:
+      \(\vv{c}_3 = 3\vv{c}_1 + 5\vv{c}_2\) ✔.
+      <br><br>
+      <strong>Il perché è una riga di §7.6</strong>, e vale la pena dirlo ad alta voce:
+      \(\rank(\mm{A}\mm{A}\T) \le \rank(\mm{A}) = 2\), ma la matrice è \(3\times3\). Una matrice
+      \(3\times3\) con rango 2 <em>è</em> singolare, punto. <mark>\(\mm{A}\) aveva solo 2 colonne: non può
+      inventare una terza direzione dal nulla.</mark>
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La regola che ti salverà nel Cap. 14 e nel Cap. 19</div>
+    <p>
+      Se \(\mm{A}\) è \(m\times n\) con <b>più righe che colonne</b> (\(m > n\)) — cioè la forma tipica dei
+      <em>dati</em>: tante osservazioni, poche variabili (§5.3) — allora:
+    </p>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th></th><th>Forma</th><th>Rango massimo possibile</th><th>Verdetto</th></tr></thead>
+      <tbody>
+        <tr><td>\(\mm{A}\T\mm{A}\)</td><td>\(n \times n\)</td><td>\(\rank(\mm{A}) \le n\)</td>
+            <td><b style="color:var(--green)">può essere invertibile</b> — e lo è se \(\mm{A}\) ha rango
+                pieno</td></tr>
+        <tr><td>\(\mm{A}\mm{A}\T\)</td><td>\(m \times m\)</td><td>\(\rank(\mm{A}) \le n &lt; m\)</td>
+            <td><b style="color:var(--warm)">SEMPRE singolare</b>: il rango non arriva mai a \(m\)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      <mark>Con dati «alti», \(\mm{A}\mm{A}\T\) è <em>garantito</em> singolare, e \(\mm{A}\T\mm{A}\) no.</mark>
+      Ecco perché la formula famosa dei minimi quadrati (Cap. 14) è
+      \(\mm{X}\T\mm{X}\vv{\beta} = \mm{X}\T\vv{y}\) e <em>non</em> l'altra: scegliere il prodotto sbagliato
+      significa cercare l'inversa di una matrice che non ce l'ha. Non è un dettaglio di notazione: è la
+      differenza tra un metodo che funziona e uno che esplode.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Rango di matrici casuali</h2>
+
+  <p class="lead">
+    Domanda apparentemente oziosa: se riempio una matrice di numeri a caso, che rango viene fuori?
+    La risposta è netta, un po' inquietante, e prepara il terreno alla sezione più importante del capitolo.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Una matrice casuale ha (quasi) sempre rango pieno</div>
+    <p>
+      Non è un'impressione: l'ho misurato. <b>Centomila</b> matrici \(4\times4\) generate a caso, e conto
+      quante sono deficienti (cioè rango \(&lt; 4\)):
+    </p>
+    <div class="tbl-wrap" style="margin:.4rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Numeri presi da…</th><th>Matrici deficienti</th><th>Percentuale</th></tr></thead>
+      <tbody>
+        <tr><td><b>decimali</b> a caso fra 0 e 1</td>
+            <td><b style="color:var(--green)">0</b> su 100 000</td>
+            <td><b>0,000 %</b> — mai, nemmeno una volta</td></tr>
+        <tr><td><b>interi</b> fra −5 e 5</td>
+            <td>727 su 100 000</td>
+            <td>0,73 %</td></tr>
+        <tr><td><b>interi</b> fra −1 e 1 <em>(alfabeto povero)</em></td>
+            <td><b style="color:var(--warm)">35 037</b> su 100 000</td>
+            <td><b>35 %</b> — una su tre!</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.7rem 0 0">
+      <strong>Come si legge questa tabella.</strong> Perché una matrice sia deficiente serve una relazione
+      <em>esatta</em> tra le colonne: una combinazione che dia zero <b>fino all'ultimo decimale</b>. Con i
+      numeri decimali, una coincidenza del genere <mark>semplicemente non capita</mark>: dovrebbero
+      allinearsi infinite cifre. Con gli interi diventa possibile — sono pochi valori, le coincidenze
+      esistono — e più l'alfabeto è povero, più diventa facile inciampare in una ripetizione.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La morale, che è più profonda di quanto sembri</div>
+    <p style="margin-bottom:0">
+      <mark>Il rango deficiente non capita per caso: capita perché c'è una <b>struttura</b>.</mark> Se i tuoi
+      dati hanno rango deficiente, non è sfortuna — è un <em>messaggio</em>: una colonna è la copia di
+      un'altra, una variabile è la somma di due variabili, hai misurato la stessa cosa in due unità diverse,
+      qualcuno ha inserito due volte la stessa colonna nel foglio di calcolo. <strong>La deficienza è
+      informazione</strong>: ti sta dicendo che nei tuoi dati c'è una ridondanza esatta.
+      <br><br>
+      Il che porta a una conclusione scomoda, e ci arriviamo tra due pagine. Il rango deficiente è una
+      relazione <b>esatta</b> fra le colonne. E una relazione esatta <mark>non sopravvive a una
+      perturbazione casuale</mark>: basta un miliardesimo fuori posto e la somma non fa più <em>esattamente</em>
+      zero. I tuoi dati sono segnale <em>più rumore</em>, e il rumore è quanto di più «a caso» esista.
+      <em>Indovina, allora, che rango misurerai sui tuoi dati.</em>
+      <br>
+      <span style="color:var(--ink-faint)">(Attenzione a non prendere la scorciatoia sbagliata: non sto
+      dicendo «sommo una matrice di rango pieno, quindi il risultato ha rango pieno» — il §7.5 ha appena
+      dimostrato che <em>quel</em> ragionamento non vale. Sto dicendo un'altra cosa, più modesta e più
+      vera: il rumore <b>rompe le dipendenze esatte</b>, e senza dipendenze esatte non c'è deficienza.)</span>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-9"><span class="secnum">Sezione 7.9</span>Aumentare il rango con lo shifting</h2>
+
+  <p class="lead">
+    Nel §5.8 ti avevo presentato lo <em>shifting</em> — \(\tilde{\mm{A}} = \mm{A} + \lambda\mm{I}\), «aggiungi
+    un pizzico di identità alla diagonale» — e ti avevo detto che serviva a «staccare una matrice dal
+    baratro». Adesso possiamo dire con precisione qual era il baratro: <mark>il rango deficiente</mark>.
+    E possiamo dimostrare che lo shifting funziona <strong>senza usare una sola parola del Capitolo 15</strong>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Perché lo shifting resuscita il rango <span class="tag">tre righe, e nessun autovalore</span></div>
+    <div class="f-body">
+      \[
+        (\mm{A} + \hC{\lambda}\mm{I})\,\vv{x}
+        \;=\; \mm{A}\vv{x} + \hC{\lambda}\mm{I}\vv{x}
+        \;=\; \underbrace{\vv{0}}_{\text{A lo annienta}} + \;\hC{\lambda}\vv{x}
+        \;=\; \hC{\lambda}\vv{x} \;\;\neq\; \vv{0}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{x}\)</dt>
+        <dd>il vettore che \(\mm{A}\) <b>annienta</b> (\(\mm{A}\vv{x} = \vv{0}\), con \(\vv{x} \neq \vv{0}\)).
+            Ne esiste uno <em>proprio perché</em> \(\mm{A}\) è deficiente: è la traduzione del §7.1.</dd>
+        <dt>il conto</dt>
+        <dd>usa solo la distributività (§6.2) e \(\mm{I}\vv{x} = \vv{x}\) (§5.5). Nient'altro.</dd>
+        <dt>il risultato</dt>
+        <dd>\(\hC{\lambda}\vv{x}\), che <b>non è il vettore nullo</b> (purché \(\lambda \neq 0\) e
+            \(\vv{x} \neq \vv{0}\)).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>Lo shifting resuscita esattamente i vettori che \(\mm{A}\) uccideva.</mark> La combinazione di
+      colonne che dava zero in \(\mm{A}\) <em>non dà più zero</em> in \(\mm{A} + \lambda\mm{I}\): quella
+      dipendenza è stata rotta. La direzione che collassava non collassa più.
+      <br><br>
+      Ed è tutto qui il meccanismo che nel §5.8 avevi visto solo come un cursore da muovere. Il conto è di
+      tre righe, e le tre righe le avevi già tutte.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Onestà: esistono λ <em>sfortunati</em></div>
+    <p>
+      Il conto qui sopra dimostra che <em>quel</em> vettore è salvo. <strong>Non</strong> dimostra che lo
+      shift non ne uccida un <em>altro</em>. E infatti può succedere: potrebbe esistere un
+      \(\vv{y} \neq \vv{0}\) con \((\mm{A} + \lambda\mm{I})\vv{y} = \vv{0}\), cioè
+      \[ \mm{A}\vv{y} = -\lambda\,\vv{y} \]
+      <b>Tieni a mente questa equazione</b>: dice «esiste un vettore che \(\mm{A}\) si limita a
+      <em>riscalare</em>, senza cambiargli direzione». Nel <b>Capitolo 15</b> quei vettori e quei numeri
+      avranno un nome, e sarà il concetto più importante della seconda metà del libro. Per ora ti basta
+      sapere che <mark>i \(\lambda\) sfortunati sono in numero <em>finito</em></mark> — <b>al più</b> \(n\),
+      e a volte meno — e che quindi, su infiniti valori possibili, quasi tutti vanno bene.
+    </p>
+    <p style="margin-bottom:0">
+      Il §5.8 te l'aveva già sussurrato: <em>«gli autovalori <b>sono</b> gli shift che rendono \(\mm{A}\)
+      singolare»</em>. Adesso sai perché quella frase era lì.
+    </p>
+  </div>
+
+  <h3>La lista finita, vista con i tuoi occhi</h3>
+
+  <p>
+    Non ti chiedo di credermi. Prendiamo la matrice singolare del widget del §5.8 — la stessa che nel §1.1
+    faceva collassare il piano, per la terza volta in questo libro — e troviamo <em>tutti</em> i \(\lambda\)
+    cattivi. Ci serve un solo strumento: «due vettori sono dipendenti se e solo se uno è multiplo
+    dell'altro» (§4.6).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Tutti i λ cattivi di una \(2\times2\) <span class="tag">sono due, e li troviamo</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 0.5 &amp; 1 \end{bmatrix}
+        \qquad \vv{c}_2 = 2\,\vv{c}_1 \qquad \rank(\mm{A}) = 1 \;\text{(deficiente)}
+      \]
+      \[
+        \mm{A} + \lambda\mm{I} = \begin{bmatrix} 1+\lambda &amp; 2 \\ 0.5 &amp; 1+\lambda \end{bmatrix}
+        \qquad
+        \vv{c}_1 = \begin{bmatrix} 1+\lambda \\ 0.5 \end{bmatrix}, \quad
+        \vv{c}_2 = \begin{bmatrix} 2 \\ 1+\lambda \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Quando tornano dipendenti? Quando \(\vv{c}_2\) è un multiplo di \(\vv{c}_1\), cioè quando i due
+      rapporti coincidono:
+      \[
+        \frac{2}{1+\lambda} = \frac{1+\lambda}{0.5}
+        \qquad\Longrightarrow\qquad
+        (1+\lambda)^2 = 1
+        \qquad\Longrightarrow\qquad
+        \hB{\lambda = 0} \;\;\text{oppure}\;\; \hB{\lambda = -2}
+      \]
+      <em>(Un caso va guardato a parte, perché lì non si può dividere: \(\lambda = -1\), che annulla
+      \(1+\lambda\). Ma allora la matrice è \(\begin{bmatrix}0 &amp; 2\\ 0.5 &amp; 0\end{bmatrix}\), le cui
+      colonne non sono certo una multipla dell'altra → rango 2, pieno. Non è un \(\lambda\) cattivo.
+      Un capitolo che promette di non saltare passaggi non salta nemmeno questo.)</em>
+      <mark>Due soli valori cattivi, su infiniti.</mark> Per <em>ogni altro</em> \(\lambda\) — 0.01, 1, −7,
+      un miliardo — la matrice shiftata ha rango <b>2</b>, cioè pieno. Hai appena visto con i tuoi occhi la
+      «lista finita di eccezioni», e sono esattamente \(n = 2\), come promesso. Senza pronunciare la parola
+      autovalore. <em>(E nel Cap. 15 scoprirai che 0 e −2 non erano affatto numeri a caso.)</em>
+    </div>
+  </div>
+
+  <div class="widget" id="w-shift">
+    <div class="w-head">
+      <span>Lo shifting e il rango</span>
+      <span class="hint">muovi λ — e cerca i valori sfortunati</span>
+    </div>
+    <div class="w-stage" style="padding:1.2rem">
+      <div id="wsh-body" style="display:flex; flex-wrap:wrap; gap:1.5rem; justify-content:center; align-items:center"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>λ</label><input type="range" id="wsh-l" min="-5" max="5" step="0.25" value="0"><output>0.00</output></div>
+      <button class="w-btn on" id="wsh-m0">S (3×3, rango 2)</button>
+      <button class="w-btn" id="wsh-m1">la 2×2 del §5.8</button>
+    </div>
+    <div class="w-readout" id="wsh-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il prezzo del rango comprato</div>
+    <p>
+      Prima di usare lo shifting con leggerezza, fermati su una cosa che il §5.8 aveva già detto e che
+      adesso puoi capire fino in fondo: <mark>\(\tilde{\mm{A}} \neq \mm{A}\)</mark>.
+    </p>
+    <p style="margin-bottom:0">
+      <strong>Il rango che hai comprato non era nei tuoi dati.</strong> Hai fabbricato una matrice
+      <em>nuova</em>, che assomiglia alla tua e ha rango pieno. Più \(\lambda\) è piccolo, più la matrice
+      nuova somiglia a quella vera — e più il rango che hai comprato è <em>fragile</em>: sta in piedi per un
+      soffio. Più \(\lambda\) è grande, più il rango è solido — e più stai lavorando su una matrice che non è
+      la tua.
+      <br><br>
+      Questo compromesso ha un nome, si chiama <span class="termine">regolarizzazione</span>, ed è uno degli
+      attrezzi più usati della statistica e del machine learning (Cap. 19). <em>Tutto il mestiere sta nello
+      scegliere \(\lambda\).</em> E adesso sai esattamente che cosa stai comprando e che cosa stai pagando.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-10"><span class="secnum">Sezione 7.10</span>Le insidie del rango</h2>
+
+  <p class="lead">
+    Questa è la sezione che separa chi ha studiato il rango da chi lo sa <em>usare</em>. Tutto quello che
+    hai letto finora è vero — in matematica. Sui dati veri, il rango è una delle quantità più
+    <strong>traditrici</strong> che esistano.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Insidia 1 — Il rango è un interruttore, non una manopola</div>
+    <p style="margin-bottom:0">
+      \[
+        \begin{bmatrix} 1 &amp; 2 \\ 2 &amp; 4 \end{bmatrix} \;\;\rank = \hB{1}
+        \qquad\longrightarrow\qquad
+        \begin{bmatrix} 1 &amp; 2 \\ 2 &amp; 4.000001 \end{bmatrix} \;\;\rank = \hC{2}
+      \]
+      Controlla tu stesso con il fatto 1 del §4.6: i rapporti fra le due colonne sono \(2\) e
+      \(2.0000005\) — <em>non</em> coincidono, quindi non è un multiplo, quindi sono indipendenti, quindi il
+      rango è 2. <mark>Una modifica invisibile a occhio nudo ha cambiato il rango.</mark>
+      <br><br>
+      Il rango <strong>non è una quantità continua</strong>: è un salto. Non esiste «quasi rango 1». Una
+      grandezza che si comporta così è, per definizione, <em>pericolosa</em> da calcolare su numeri
+      misurati.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Insidia 2 — Sui dati veri, <em>tutto</em> ha rango pieno</div>
+    <p>
+      E questa è la conseguenza vera del §7.8. Perché una matrice sia deficiente serve una relazione
+      <b>esatta</b> fra le colonne: \(\sum_j x_j \vv{a}_j = \vv{0}\) fino all'ultimo decimale. Non
+      \(10^{-12}\). <b>Zero.</b>
+    </p>
+    <p style="margin-bottom:0">
+      <strong>Un esempio che capita davvero.</strong> Nel tuo foglio di dati hai due colonne: l'altezza in
+      <b>pollici</b> (\(\vv{c}_1\)) e l'altezza in <b>centimetri</b> (\(\vv{c}_2\)). In teoria
+      \(\vv{c}_2 = 2.54\,\vv{c}_1\): dipendenza perfetta, rango deficiente, ridondanza pura. In pratica i
+      dati sono arrotondati al millimetro, quindi il rapporto fra le due colonne è \(2.5400\) su una riga e
+      \(2.5397\) su un'altra — <em>non costante</em> → colonne indipendenti →
+      <mark>rango pieno</mark>.
+      <br>
+      Il rango ha detto la verità, e la verità <strong>non serviva a niente</strong>: hai due colonne che
+      dicono la stessissima cosa, e il rango ti risponde che sono indipendenti. Perché il rango risponde a
+      una domanda di <em>aritmetica esatta</em>, e i tuoi dati non sono esatti.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Insidia 3 — Il rango <em>conta</em>, non <em>misura</em></div>
+    <p style="margin-bottom:0">
+      \[
+        \rank\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \end{bmatrix} = 2
+        \qquad\qquad
+        \rank\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 10^{-12} \end{bmatrix} = 2
+      \]
+      Le due matrici hanno lo stesso rango. Ma la seconda è, per qualunque scopo pratico, <em>quasi</em> di
+      rango 1: la sua seconda direzione esiste, sì, ma è grande un millesimo di miliardesimo.
+      <mark>Il rango la conta come una direzione a pieno titolo, esattamente come la prima.</mark>
+      <br><br>
+      È la stessa cecità che avevi visto nel §7.4 (\(\rank(10^{-9}\mm{A}) = \rank(\mm{A})\)), e adesso
+      capisci che non era una curiosità: <strong>il rango è una domanda mal posta, sui dati reali</strong>.
+      La domanda giusta non è «il rango è pieno?» ma <em>«quanto è lontana dall'essere deficiente?»</em> —
+      e quella domanda ha una risposta <b>quantitativa</b>, che però richiede tutta la seconda metà del
+      libro (Cap. 16: valori singolari e numero di condizionamento).
+    </p>
+  </div>
+
+  <h3>Guardalo succedere</h3>
+
+  <p>
+    Prendo una matrice di <b>rango 1</b> — un prodotto esterno, il più povero degli oggetti (§3.6) — e le
+    aggiungo un rumore ridicolo, dell'ordine di \(10^{-10}\). Poi chiedo il rango al computer.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il computer sbaglia (e ha ragione lui) <span class="tag">rango vero 1, rango detto 3</span></div>
+    <div class="f-body">
+      \[
+        \mm{M} = \begin{bmatrix}1\\2\\3\end{bmatrix}\begin{bmatrix}1 &amp; -1 &amp; 2\end{bmatrix}
+        = \begin{bmatrix} 1 &amp; -1 &amp; 2 \\ 2 &amp; -2 &amp; 4 \\ 3 &amp; -3 &amp; 6 \end{bmatrix}
+        \qquad \rank(\mm{M}) = \hB{1}
+      \]
+      \[
+        \mm{M} + \text{rumore di } 10^{-10}
+        \qquad\Longrightarrow\qquad
+        \text{il computer risponde: } \rank = \hC{3}
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Rango pieno.</strong> Su una matrice che è, per ogni scopo umano, ancora di rango 1: le sue
+      colonne sono ancora tutte multiple di \(\begin{bmatrix}1\\2\\3\end{bmatrix}\), a meno della decima
+      cifra decimale.
+      <br><br>
+      E il computer non ha sbagliato: ha risposto <em>esattamente</em> alla domanda che gli è stata fatta.
+      Il rumore ha reso le colonne indipendenti — «indipendenti» nel senso rigoroso del §4.6 — e quindi il
+      rango <em>è</em> 3. <mark>Il difetto non è nel calcolo: è nella domanda.</mark>
+      <br><br>
+      Dietro le quinte il computer guarda <b>tre numeri</b> che misurano «quanto è forte» ciascuna delle tre
+      direzioni. Qui valgono \(9.17\), \(2.5 \cdot 10^{-10}\) e \(2.6 \cdot 10^{-11}\): il primo è una
+      direzione vera, gli altri due sono polvere. Ma non essendo <em>esattamente</em> zero, vengono contati.
+      Quei tre numeri hanno un nome — si chiamano <b>valori singolari</b> — e sono il cuore del Capitolo 16.
+      Sono loro la risposta quantitativa che il rango, da solo, non sa dare.
+    </div>
+  </div>
+
+  <div class="widget" id="w-rumore">
+    <div class="w-head">
+      <span>Il rumore e il rango</span>
+      <span class="hint">alza il rumore e guarda il verdetto del computer</span>
+    </div>
+    <div class="w-stage" style="padding:1.2rem; text-align:center; overflow-x:auto">
+      <div id="wr-body"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>rumore</label><input type="range" id="wr-e" min="-14" max="-4" step="1" value="-14"><output>0</output></div>
+      <div class="w-ctrl"><label>tolleranza</label><input type="range" id="wr-t" min="-14" max="-2" step="1" value="-12"><output>1e-12</output></div>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Che cosa fare, allora (la risposta onesta)</div>
+    <p style="margin-bottom:0">
+      <b>1. Non chiedere «qual è il rango?» a dei dati misurati.</b> Otterrai «pieno», sempre, e non avrai
+      imparato niente.
+      <br>
+      <b>2. Chiedi invece: «quanto è <em>vicina</em> a essere deficiente?»</b> Cioè: ci sono direzioni la cui
+      «forza» è ridicola rispetto alle altre? Quella è la domanda che ha una risposta utile, ed è la domanda
+      che risolve il Cap. 16.
+      <br>
+      <b>3. Se devi proprio decidere, decidi con una <em>tolleranza</em></b> — «considero nulla ogni
+      direzione più debole di questa soglia» — e <mark>dichiara la soglia che hai usato</mark>. È quello che
+      fa il tuo software (di nascosto, con una soglia di default che <em>tu</em> non hai scelto). Nel widget
+      qui sopra la puoi muovere a mano: guarda come il rango «vero» cambia a seconda di dove metti l'asticella.
+      <br><br>
+      Questa non è una resa. È il passaggio dall'algebra lineare della lavagna a quella che funziona sui
+      dati — ed è, in fondo, il motivo per cui questo libro non finisce al Capitolo 12.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-11"><span class="secnum">Sezione 7.11</span>Rango e span</h2>
+
+  <p class="lead">
+    Chiudiamo il cerchio. Il rango l'abbiamo definito contando <em>colonne indipendenti</em>; adesso vediamo
+    che cosa <strong>significa</strong> geometricamente — e paghiamo il debito più grosso del capitolo: la
+    sesta cosa del §7.1.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Rango = dimensione dello span <span class="tag">la lettura ② del §7.2</span></div>
+    <div class="f-body">
+      \[ \rank(\mm{A}) \;=\; \dim\Big( \span(\vv{a}_1, \vv{a}_2, \dots, \vv{a}_n) \Big) \]
+    </div>
+    <div class="f-note">
+      <strong>Non c'è niente da dimostrare</strong>, ed è bello così: il setaccio del §7.3 produce un cesto
+      di colonne che (i) sono indipendenti e (ii) generano tutte le altre — cioè, parola per parola, una
+      <b>base</b> dello span delle colonne (§4.7). E la <em>dimensione</em> di uno spazio è, per definizione
+      (§4.7), il numero di vettori di una sua base.
+      <br><br>
+      <mark>Il rango è la dimensione dello spazio che le colonne riescono a coprire.</mark> Rango 1 = una
+      retta. Rango 2 = un piano. Rango 3 = tutto \(\R^3\). È il numero di dimensioni del <em>mondo
+      raggiungibile</em> — e nel <b>Capitolo 8</b> quel mondo avrà un nome: <b>spazio delle colonne</b>,
+      \(\Col(\mm{A})\).
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Quattro colonne, un piano <span class="tag">tanta griglia, poca sostanza</span></div>
+    <div class="f-body">
+      \[
+        \mm{P} = \begin{bmatrix} 1 &amp; 0 &amp; 1 &amp; 2 \\ -1 &amp; 1 &amp; 0 &amp; -3 \\ 0 &amp; -1 &amp; -1 &amp; 1 \end{bmatrix}
+        \qquad \rank(\mm{P}) = 2
+      \]
+    </div>
+    <div class="f-note">
+      Le ricevute: \(\vv{c}_3 = \vv{c}_1 + \vv{c}_2\) ✔ e \(\vv{c}_4 = 2\vv{c}_1 - \vv{c}_2\) ✔.
+      Quattro colonne, ma solo due portano una direzione — e infatti, guarda: <b>in ogni colonna la somma
+      delle tre componenti fa zero</b>. Tutte e quattro vivono nel <em>piano</em> \(x+y+z=0\) di \(\R^3\).
+      <br><br>
+      <mark>Quattro frecce, e coprono solo un piano.</mark> Il vettore \(\begin{bmatrix}2\\-1\\-1\end{bmatrix}\)
+      (somma zero) è raggiungibile — è \(2\vv{c}_1 + \vv{c}_2\) ✔. Il vettore
+      \(\begin{bmatrix}1\\0\\0\end{bmatrix}\) (somma 1) <b>non lo è</b>, e non lo sarà mai, per quanti pesi
+      tu provi. <em>Metà del mondo resta fuori portata.</em> È il pulsante «allinea» del §3.5, cresciuto — e
+      nel Cap. 10 sarà la ragione per cui certi sistemi non hanno soluzione.
+    </div>
+  </div>
+
+  <h3>Il teorema: rango delle righe = rango delle colonne</h3>
+
+  <p>
+    E adesso il pezzo grosso. Ti ricordo perché non è ovvio: le colonne di \(\mm{P}\) sono quattro vettori di
+    \(\R^3\); le righe sono tre vettori di \(\R^4\). Spazi diversi, quantità diverse, conti separati.
+    <strong>Non c'è ragione perché diano lo stesso numero.</strong> E invece.
+  </p>
+
+  <p>
+    La dimostrazione usa la lettura <b>④</b> del §6.1 — gli <em>strati</em>, quella che avevo marcato con due
+    stelle e di cui avevo detto «è uno dei due punti da cui si vede metà del libro». Questa è la prima
+    riscossione.
+  </p>
+
+  <ol class="passi">
+    <li><b>Il setaccio produce una fattorizzazione.</b> Sia \(r = \rank(\mm{A})\). Il setaccio (§7.3) ti
+      lascia in mano due cose: il <b>cesto</b> \(\vv{b}_1, \dots, \vv{b}_r\) (colonne indipendenti che
+      generano tutte le altre), e per <em>ogni</em> colonna di \(\mm{A}\) una <b>ricetta</b> che la
+      ricostruisce a partire dal cesto. Cioè:
+      \[ \text{tutte le colonne di } \mm{A} \text{ sono combinazioni delle stesse } r \text{ cose.} \]
+      Questo <em>è</em> il contenuto di «rango \(r\)», detto per esteso.</li>
+    <li><b>Quella frase è una moltiplicazione di matrici.</b> Impila il cesto nelle colonne di una matrice
+      \(\mm{C}\) (\(m \times r\)) e le ricette nelle colonne di una matrice \(\mm{R}\) (\(r \times n\)).
+      Per la lettura ② del §6.1, la colonna \(j\) di \(\mm{C}\mm{R}\) è \(\mm{C}\) applicata alla colonna
+      \(j\) di \(\mm{R}\), cioè la combinazione delle colonne del cesto con quei pesi — cioè
+      <em>esattamente</em> la colonna \(j\) di \(\mm{A}\). Vale per ogni \(j\), quindi:
+      \[ \mm{A} = \mm{C}\,\mm{R} \qquad \mm{C}\;(m\times \hC{r}), \quad \mm{R}\;(\hC{r} \times n) \]
+      Nessun attrezzo nuovo: è il §6.5, applicato colonna per colonna.</li>
+    <li><b>Rileggi lo stesso prodotto come strati</b> (§6.1, lettura ④). La dimensione interna è \(\hC{r}\),
+      quindi gli strati sono \(\hC{r}\):
+      \[ \mm{A} = \mm{C}\mm{R} = \sum_{k=1}^{\hC{r}} \hA{\vv{c}_k}\,\hB{\vv{\rho}_k\T}
+         = \hA{\vv{c}_1}\hB{\vv{\rho}_1\T} + \cdots + \hA{\vv{c}_r}\hB{\vv{\rho}_r\T} \]
+      <mark>Una matrice di rango \(r\) è una pila di \(r\) lucidi.</mark> Il numero di strati <em>è</em> il
+      rango.</li>
+    <li><b>E adesso il colpo: un prodotto esterno non ha un lato preferito.</b> Guarda un solo strato,
+      \(\hA{\vv{c}_k}\hB{\vv{\rho}_k\T}\). Il §3.6 dice che <em>ogni sua colonna è \(\vv{c}_k\)
+      riscalata</em> — ed è la metà che tutti leggono. Ma diceva anche l'altra metà: <em>ogni sua
+      <b>riga</b> è \(\vv{\rho}_k\T\) riscalata</em>. Quindi, sommando gli \(r\) strati, la riga \(i\) di
+      \(\mm{A}\) è:
+      \[ \text{riga } i \text{ di } \mm{A} \;=\; \sum_{k=1}^{r} (\hA{c_k})_i \; \hB{\vv{\rho}_k\T} \]
+      <mark>Ogni riga di \(\mm{A}\) è una combinazione lineare delle stesse \(r\) righe
+      \(\vv{\rho}_1\T, \dots, \vv{\rho}_r\T\).</mark> (E i pesi sono, letteralmente, la riga \(i\) di
+      \(\mm{C}\): il cesto conteneva anche le ricette delle righe, e non lo sapevamo.)</li>
+    <li><b>Conta.</b> Tutte le \(m\) righe di \(\mm{A}\) vivono nello span di \(r\) vettori. E
+      <em>in uno span generato da \(r\) vettori non ce ne stanno più di \(r\) indipendenti</em>. Quindi:
+      \[ (\text{rango delle righe}) \;\le\; r \;=\; (\text{rango delle colonne}) \]
+      <span style="color:var(--ink-soft); font-size:.94em">(Il fatto usato è il <b>fatto 3 del §4.6</b> —
+      «in \(\R^n\) più di \(n\) vettori sono sempre dipendenti» — applicato però a uno span qualunque, non a
+      \(\R^n\). È lecito, e vale la pena vedere perché: <mark>\(\R^n\) non era altro che lo span degli
+      \(n\) versori \(\vv{e}_1, \dots, \vv{e}_n\)</mark> (§3.9), e l'argomento del §4.6 — «non c'è abbastanza
+      spazio» — non usava mai il fatto che fossero <em>proprio quelli</em>. Funziona identico per lo span di
+      \(r\) vettori qualsiasi, che ha dimensione al più \(r\), §4.7.)</span></li>
+    <li><b>La trappola si chiude.</b> Nei passi 1–5 non abbiamo usato <em>niente</em> di speciale su
+      \(\mm{A}\). Applichiamoli allora ad \(\mm{A}\T\) — le cui colonne sono le righe di \(\mm{A}\) e
+      viceversa (§5.4). La stessa disuguaglianza, tradotta, diventa:
+      \[ (\text{rango delle colonne}) \;\le\; (\text{rango delle righe}) \]
+      Due disuguaglianze opposte danno un'uguaglianza. \(\blacksquare\)</li>
+  </ol>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Che cosa contava davvero il rango</div>
+    <p>
+      Rileggi la dimostrazione: <strong>non c'è dentro un solo conto</strong>. Il perno è una frase sola —
+      <mark>una matrice di rango \(r\) è una pila di \(r\) prodotti esterni, e un prodotto esterno non ha
+      un lato preferito.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Ed ecco la risposta alla domanda che ti avevo lasciato in sospeso nel §7.1. <strong>Il rango non conta
+      le righe e non conta le colonne: conta gli <em>strati</em>.</strong> Righe e colonne sono soltanto i
+      due modi di guardare la stessa pila di lucidi — e la pila se ne infischia da che parte la guardi. I due
+      conti danno lo stesso numero perché <em>stavano contando la stessa cosa</em>, e nessuno dei due
+      guardava la cosa giusta.
+      <br><br>
+      Nel <b>Capitolo 16</b> la SVD prenderà questa pila e la renderà <em>canonica</em>: fra le infinite
+      scomposizioni a strati di una matrice, ne sceglierà una — la migliore, quella ordinata dal lucido più
+      importante al meno importante. Il ★★ del §6.1 era per questo.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Coincide il <em>conteggio</em>, non la <em>ricetta</em></div>
+    <p style="margin-bottom:0">
+      Attenzione a non capire troppo. Il teorema dice che il <b>numero</b> di righe indipendenti è uguale al
+      <b>numero</b> di colonne indipendenti. <mark>Non dice che le relazioni fra le righe somigliano a quelle
+      fra le colonne.</mark> Riprendi la \(3\times3\) del §7.3:
+      \[ \mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 2 &amp; 1 &amp; 3 \\ 3 &amp; 1 &amp; 4 \end{bmatrix} \]
+      • fra le <b>colonne</b>: \(\vv{c}_3 = \vv{c}_1 + \vv{c}_2\) — pesi \((1, 1, -1)\), puliti;
+      <br>
+      • fra le <b>righe</b>: \(\vv{r}_3 = -\tfrac{1}{3}\vv{r}_1 + \tfrac{5}{3}\vv{r}_2\) — pesi
+      \(\left(-\tfrac13, \tfrac53, -1\right)\), orribili.
+      <br><br>
+      Il teorema garantisce che una relazione fra le righe <em>esiste</em> (perché il rango è 2, e le righe
+      sono 3). Non ti dice <em>quale</em>, e non somiglia per niente a quella fra le colonne.
+      <strong>Coincide il conteggio, non la ricetta</strong> — il che rende il teorema molto più strano, e
+      molto più profondo, di quanto sembri a prima vista.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>Il rango è quante colonne indipendenti ci sono</b> — un numero solo, per tutta la matrice. È
+          la «dimensione della sostanza», non della griglia.</li>
+      <li><b>\(\rank(\mm{A}) \le \min(m,n)\)</b>, e lo sai <em>prima</em> di guardare i numeri. «Pieno»
+          significa «il massimo consentito dalla forma», non «grande».</li>
+      <li><b>Rango delle righe = rango delle colonne.</b> Sempre. Perché il rango conta gli
+          <b>strati</b> (§7.11), e uno strato non ha un lato preferito.</li>
+      <li><b>Il rango si esibisce, non si dichiara</b>: «almeno \(k\)» mostrando \(k\) colonne indipendenti,
+          «al più \(k\)» mostrando le ricette che rendono superflue le altre. È il <em>panino</em>.</li>
+      <li><b>\(\rank(\lambda\mm{A}) = \rank(\mm{A})\)</b> per \(\lambda \neq 0\): il rango <b>conta</b>, non
+          <b>misura</b>. È cieco alle grandezze — ed è la radice di tutti i guai numerici.</li>
+      <li><b>\(\rank(\mm{A}+\mm{B}) \le \rank(\mm{A}) + \rank(\mm{B})\)</b>, e null'altro si può dire: il
+          rango di una somma <em>non è una funzione</em> dei ranghi degli addendi.</li>
+      <li><b>\(\rank(\mm{A}\mm{B}) \le \min(\rank\mm{A}, \rank\mm{B})\)</b>: <b>il prodotto non può
+          arricchire.</b> La <em>strozzatura</em> decide tutto, e il rango può anche crollare.</li>
+      <li><b>\(\rank(\mm{A}) = \rank(\mm{A}\T) = \rank(\mm{A}\T\mm{A}) = \rank(\mm{A}\mm{A}\T)\)</b>. Con
+          dati «alti» (\(m > n\)), <mark>\(\mm{A}\mm{A}\T\) è <em>sempre</em> singolare</mark> e
+          \(\mm{A}\T\mm{A}\) no: è per questo che i minimi quadrati usano quest'ultima.</li>
+      <li><b>Lo shifting \(\mm{A} + \lambda\mm{I}\) resuscita il rango</b>, perché resuscita esattamente i
+          vettori che \(\mm{A}\) annientava. Esiste una lista <em>finita</em> di \(\lambda\) sfortunati (li
+          incontrerai nel Cap. 15). Ma il rango comprato <b>non era nei dati</b>.</li>
+      <li><b>Sui dati veri il rango è un traditore</b>: è un interruttore, non una manopola; il rumore lo
+          porta sempre a pieno; conta le direzioni senza misurarle. La domanda giusta non è «è pieno?» ma
+          «<em>quanto</em> è lontano dall'esserlo?» — e la risposta è il Cap. 16.</li>
+    </ol>
+  </div>
+
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-12"><span class="secnum">Sezione 7.12</span>Esercizi</h2>
+
+  <p>
+    Regola della casa: <strong>non basta dire il numero</strong>. Per ogni rango che dichiari, esibisci le
+    due metà del panino — le colonne indipendenti che hai trovato, e le ricette che rendono superflue le
+    altre.
+  </p>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">Dai il rango di ciascuna, <strong>e mostra la dipendenza</strong> quando c'è:
+      \[
+        \text{(a)}\; \begin{bmatrix} 2 &amp; -6 \\ -3 &amp; 9 \end{bmatrix} \quad
+        \text{(b)}\; \begin{bmatrix} 1 &amp; 0 &amp; 2 \\ 2 &amp; 1 &amp; 5 \\ 0 &amp; 3 &amp; 3 \end{bmatrix} \quad
+        \text{(c)}\; \begin{bmatrix} 0 &amp; 0 \\ 0 &amp; 0 \end{bmatrix} \quad
+        \text{(d)}\; \begin{bmatrix} 1 &amp; -2 \\ 3 &amp; 1 \\ 0 &amp; 4 \\ -1 &amp; 2 \\ 2 &amp; 2 \end{bmatrix} \quad
+        \text{(e)}\; \begin{bmatrix} 4 &amp; 8 &amp; -4 \\ 1 &amp; 2 &amp; -1 \\ -3 &amp; -6 &amp; 3 \end{bmatrix}
+      \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      \(\mm{X}\) è \(5\times3\) di rango 3. \(\mm{Y}\) è \(3\times7\), e la sua terza riga è la somma delle
+      prime due.
+      <br>(a) Quanto vale \(\rank(\mm{Y})\)? &nbsp;(b) Che forma ha \(\mm{X}\mm{Y}\)? &nbsp;(c) Che cosa puoi
+      dire di \(\rank(\mm{X}\mm{Y})\) <strong>senza calcolare il prodotto</strong>?
+      <br>(d) \(\mm{X}\mm{Y}\) ha 35 elementi. Quanta «sostanza» c'è davvero lì dentro?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Siano \(\vv{a} = \begin{bmatrix}2\\-1\\3\end{bmatrix}\), \(\vv{b} = \begin{bmatrix}1\\4\end{bmatrix}\),
+      \(\vv{c} = \begin{bmatrix}0\\1\\1\end{bmatrix}\), \(\vv{d} = \begin{bmatrix}2\\-2\end{bmatrix}\).
+      <br>(a) Quanto vale \(\rank(\vv{a}\vv{b}\T)\)? E \(\rank(\vv{c}\vv{d}\T)\)?
+      <br>(b) Quanto vale \(\rank(\vv{a}\vv{b}\T + \vv{c}\vv{d}\T)\)?
+      <br>(c) E \(\rank(\vv{a}\vv{b}\T + \vv{a}\vv{d}\T)\)? <span style="color:var(--ink-faint)">(Attenzione:
+      guarda bene <em>chi</em> è cambiato. Non è una domanda uguale alla precedente.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      \(\mm{A} = \begin{bmatrix}1&amp;3\\2&amp;6\end{bmatrix}\),
+      \(\mm{B} = \begin{bmatrix}2&amp;-1\\0&amp;1\end{bmatrix}\).
+      Trova \(\rank(\mm{A})\), \(\rank(\mm{B})\) e \(\rank(\mm{A}+\mm{B})\). La disuguaglianza del §7.5 è
+      rispettata? È <em>utile</em>? Poi calcola \(\rank(\mm{A} + (-\mm{A}))\) e commenta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.5</div>
+    <p style="margin-bottom:0">
+      \(\mm{A} = \begin{bmatrix} 1 &amp; 1 &amp; -2 \\ 2 &amp; -1 &amp; -1 \\ 3 &amp; 0 &amp; -3 \end{bmatrix}\),
+      \(\mm{B} = \begin{bmatrix} 1 &amp; 2 \\ 1 &amp; 0 \\ 1 &amp; -1 \end{bmatrix}\).
+      <br>(a) Verifica che \(\rank(\mm{A}) = 2\) e \(\rank(\mm{B}) = 2\).
+      <br>(b) Calcola \(\mm{A}\mm{B}\) e il suo rango. Il §7.6 è rispettato?
+      <br>(c) <strong>La domanda vera:</strong> perché il rango è <em>crollato</em>? Guarda la somma delle
+      colonne di \(\mm{A}\) e la prima colonna di \(\mm{B}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.6</div>
+    <p style="margin-bottom:0">
+      \(\mm{A} = \begin{bmatrix} 1 &amp; 0 \\ 2 &amp; 1 \\ 0 &amp; -1 \\ 1 &amp; 1 \end{bmatrix}\) (\(4\times2\)).
+      Calcola \(\mm{A}\T\mm{A}\) e \(\mm{A}\mm{A}\T\), con le loro forme e i loro ranghi. Una delle due è
+      <strong>certamente singolare</strong>: quale, e <em>perché lo sapevi già prima di calcolarla</em>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.7</div>
+    <p style="margin-bottom:0">
+      \(\mm{A} = \begin{bmatrix}1&amp;2\\2&amp;4\end{bmatrix}\), che ha rango 1.
+      Lo shift \(\mm{A} + \lambda\mm{I}\) la porta a rango pieno… <strong>per quali \(\lambda\)?</strong>
+      Trova <em>tutti</em> i valori sfortunati. <span style="color:var(--ink-faint)">(Ti serve un solo
+      strumento: due vettori sono dipendenti se e solo se uno è multiplo dell'altro, §4.6.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.8 &nbsp;<span style="color:var(--ink-faint); font-weight:400; text-transform:none; letter-spacing:0">— un po' più impegnativo</span></div>
+    <p style="margin-bottom:0">
+      \(\mm{A} = \begin{bmatrix} 1 &amp; 0 &amp; 1 &amp; 2 \\ 0 &amp; 1 &amp; 1 &amp; -1 \\ 1 &amp; 1 &amp; 2 &amp; 1 \end{bmatrix}\).
+      <br>(a) Trova il rango col setaccio, esibendo le ricevute.
+      <br>(b) Le colonne coprono un <em>piano</em> di \(\R^3\). <strong>Quale?</strong> (Suggerimento: cerca
+      una relazione della forma \(\alpha x + \beta y + \gamma z = 0\) soddisfatta da <em>tutte</em> le
+      colonne.)
+      <br>(c) Il vettore \(\begin{bmatrix}3\\1\\4\end{bmatrix}\) è raggiungibile, cioè esiste \(\vv{x}\) con
+      \(\mm{A}\vv{x} = \begin{bmatrix}3\\1\\4\end{bmatrix}\)? E \(\begin{bmatrix}1\\1\\1\end{bmatrix}\)?
+      <br>(d) Senza fare conti: quanto vale \(\rank(\mm{A}\T)\)? E \(\rank(\mm{A}\T\mm{A})\)? Che forma ha
+      quest'ultima, ed è invertibile?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-13"><span class="secnum">Sezione 7.13</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p>
+      <b>(a) rango 1.</b> \(\vv{c}_2 = -3\vv{c}_1\): \(-3\begin{bmatrix}2\\-3\end{bmatrix} = \begin{bmatrix}-6\\9\end{bmatrix}\) ✔.
+      Due colonne, una è multiplo dell'altra (§4.6, fatto 1) → una sola direzione.
+    </p>
+    <p>
+      <b>(b) rango 2.</b> \(\vv{c}_1\) e \(\vv{c}_2\) non sono multiple (la prima ha uno 0 in fondo, la
+      seconda no) → almeno 2. E la terza è zavorra:
+      <mark>\(\vv{c}_3 = 2\vv{c}_1 + \vv{c}_2\)</mark> —
+      \(2\begin{bmatrix}1\\2\\0\end{bmatrix} + \begin{bmatrix}0\\1\\3\end{bmatrix} = \begin{bmatrix}2\\5\\3\end{bmatrix}\) ✔.
+      Panino chiuso: \(\rank = 2\).
+    </p>
+    <p>
+      <b>(c) rango 0.</b> La matrice nulla, e solo lei, ha rango zero.
+    </p>
+    <p>
+      <b>(d) rango 2.</b> È \(5\times2\): il §7.1 dice \(\rank \le \min(5,2) = \mathbf{2}\)
+      <em>prima di guardare i numeri</em>. E le due colonne non sono multiple → il rango è esattamente 2,
+      cioè <b>pieno</b>. <mark>Nota bene: «rango pieno» qui vuol dire 2, non 5.</mark> Una matrice alta e
+      magra non può avere più rango di quante colonne ha.
+    </p>
+    <p style="margin-bottom:0">
+      <b>(e) rango 1.</b> Tutte e tre le colonne sono multiple di \(\begin{bmatrix}4\\1\\-3\end{bmatrix}\):
+      \(\vv{c}_2 = 2\vv{c}_1\) e \(\vv{c}_3 = -\vv{c}_1\) ✔. Nove numeri, <em>una</em> direzione.
+      È un prodotto esterno travestito (§3.6):
+      \(\begin{bmatrix}4\\1\\-3\end{bmatrix}\begin{bmatrix}1 &amp; 2 &amp; -1\end{bmatrix}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p>
+      <b>(a) \(\rank(\mm{Y}) = 2\).</b> \(\mm{Y}\) è \(3\times7\), quindi \(\rank \le \min(3,7) = 3\). Ma la
+      terza riga è la somma delle prime due: è zavorra. Restano 2 righe indipendenti → il <em>rango delle
+      righe</em> è 2 → e per la sesta cosa del §7.1, <b>il rango è 2</b>.
+      <br>
+      <em>(Osserva che il ragionamento è passato per le <b>righe</b>. Poter scegliere il lato più comodo è
+      esattamente il regalo del teorema del §7.11.)</em>
+    </p>
+    <p>
+      <b>(b) \(\mm{X}\mm{Y}\) è \(5\times7\)</b>: \((5\times\hC{3})(\hC{3}\times7)\), le interne combaciano
+      (§6.1).
+    </p>
+    <p>
+      <b>(c) \(\rank(\mm{X}\mm{Y}) \le \min(3, 2) = \mathbf{2}\)</b>, per il §7.6. Nessun conto necessario.
+      <mark>Una matrice \(5\times7\) — 35 numeri — con rango al massimo 2.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      <b>(d) Ecco la sostanza.</b> Rango 2 significa (§7.11) che \(\mm{X}\mm{Y}\) è una pila di <b>due</b>
+      lucidi: \(\vv{c}_1\vv{\rho}_1\T + \vv{c}_2\vv{\rho}_2\T\). Per ricostruirla tutta bastano due colonne
+      di 5 numeri e due righe di 7 numeri: \(2 \times (5+7) = \mathbf{24}\) numeri invece di 35.
+      <br>
+      Il risparmio qui è modesto. Ma prova a rifare il conto con \(\mm{X}\) di forma \(1000\times3\) e
+      \(\mm{Y}\) di forma \(3\times1000\): il prodotto ha <b>un milione</b> di numeri e rango al massimo 3 —
+      cioè si ricostruisce da \(3 \times 2000 = 6000\). <mark>Hai appena inventato la compressione</mark>
+      (Cap. 16), e ti è bastata la disuguaglianza del §7.6.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p>
+      <b>(a) Entrambi 1.</b> Un prodotto esterno ha <em>sempre</em> rango 1 (se i due vettori non sono
+      nulli): tutte le sue colonne sono multiple dello stesso vettore di sinistra (§3.6, §7.1).
+      \(\vv{a}\vv{b}\T = \begin{bmatrix}2&amp;8\\-1&amp;-4\\3&amp;12\end{bmatrix}\),
+      \(\vv{c}\vv{d}\T = \begin{bmatrix}0&amp;0\\2&amp;-2\\2&amp;-2\end{bmatrix}\).
+    </p>
+    <p>
+      <b>(b) 2.</b> \(\vv{a}\vv{b}\T + \vv{c}\vv{d}\T = \begin{bmatrix}2&amp;8\\1&amp;-6\\5&amp;10\end{bmatrix}\),
+      e le due colonne non sono multiple → rango 2. È il caso «le direzioni si accumulano» del §7.5: i due
+      strati aggiungono ciascuno la sua.
+      <br>
+      <b>Ma attenzione a non ricavarne una regola falsa.</b> Non basta che \(\vv{a}\) e \(\vv{c}\) siano
+      diversi: servono <em>entrambe</em> le cose, cioè che siano indipendenti <b>anche</b> \(\vv{b}\) e
+      \(\vv{d}\) (qui lo sono). Se fosse \(\vv{b} = \vv{d}\), i due strati si raccoglierebbero —
+      \(\vv{a}\vv{b}\T + \vv{c}\vv{b}\T = (\vv{a}+\vv{c})\vv{b}\T\) — e il rango tornerebbe <b>1</b>: è il
+      punto (c), visto dall'altro lato. <mark>Uno strato si può «riassorbire» sia da sinistra sia da
+      destra.</mark>
+      (E il §7.5 lo prevedeva comunque: \(\le 1 + 1 = 2\); qui il massimo è raggiunto.)
+    </p>
+    <p style="margin-bottom:0">
+      <b>(c) 1, ed è il punto dell'esercizio.</b> Guarda chi è cambiato: adesso <em>entrambi</em> gli strati
+      hanno la <b>stessa \(\vv{a}\)</b> a sinistra. Raccogliendola:
+      \[ \vv{a}\vv{b}\T + \vv{a}\vv{d}\T = \vv{a}\left(\vv{b} + \vv{d}\right)\T
+         = \begin{bmatrix}2\\-1\\3\end{bmatrix}\begin{bmatrix}3 &amp; 2\end{bmatrix}
+         = \begin{bmatrix}6&amp;4\\-3&amp;-2\\9&amp;6\end{bmatrix} \]
+      È di nuovo <em>un solo</em> prodotto esterno → <b>rango 1</b>. <mark>Due strati che condividono la
+      stessa direzione non ne fanno due: ne fanno uno.</mark> Ed è il caso «stessa direzione» del §7.5, visto
+      dal lato degli strati — la conferma che le due letture sono la stessa cosa.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p>
+      \(\rank(\mm{A}) = \mathbf{1}\) (\(\vv{c}_2 = 3\vv{c}_1\)). \(\rank(\mm{B}) = \mathbf{2}\) (le colonne
+      non sono multiple). E
+      \(\mm{A} + \mm{B} = \begin{bmatrix}3&amp;2\\2&amp;7\end{bmatrix}\), le cui colonne non sono multiple →
+      \(\rank(\mm{A}+\mm{B}) = \mathbf{2}\).
+    </p>
+    <p>
+      <b>La disuguaglianza è rispettata:</b> \(2 \le 1 + 2 = 3\) ✔. <b>È utile?</b> Non particolarmente: ti
+      dice che il rango è al massimo 3, cosa che sapevi già, perché una \(2\times2\) non può avere rango più
+      di 2. <mark>Spesso il limite del §7.5 è vero e inutile</mark> — ed è onesto saperlo.
+    </p>
+    <p style="margin-bottom:0">
+      <b>E il colpo finale:</b> \(\mm{A} + (-\mm{A}) = \mm{0}\), che ha rango <b>0</b>. Due matrici di rango
+      1, somma di rango 0. Insieme all'esercizio 7.3(b) (1 + 1 → 2) e alla tabella del §7.5 (1 + 1 → 1), hai
+      visto tutti e tre gli esiti possibili con gli <em>stessi</em> ranghi di partenza.
+      <strong>Conferma definitiva che una formula per \(\rank(\mm{A}+\mm{B})\) non può esistere.</strong>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.5</div>
+    <p>
+      <b>(a)</b> In \(\mm{A}\): \(\vv{c}_1\) e \(\vv{c}_2\) non sono multiple → almeno 2; e
+      \(\vv{c}_3 = -\vv{c}_1 - \vv{c}_2\) ✔ → esattamente <b>2</b>.
+      In \(\mm{B}\): due colonne non multiple → <b>2</b> (ed è il massimo, essendo \(3\times2\)).
+    </p>
+    <p>
+      <b>(b)</b> Il prodotto è \((3\times\hC{3})(\hC{3}\times2) = 3\times2\):
+      \[
+        \mm{A}\mm{B} = \begin{bmatrix} \hB{0} &amp; 4 \\ \hB{0} &amp; 5 \\ \hB{0} &amp; 9 \end{bmatrix}
+        \qquad \rank = \mathbf{1}
+      \]
+      La prima colonna è <b>nulla</b> (zavorra suprema, §4.6), resta una sola direzione.
+      Il §7.6 è rispettato — \(1 \le \min(2,2) = 2\) — e mostra la sua vera natura:
+      <mark>è una disuguaglianza, non un'uguaglianza</mark>. Il rango è <em>crollato</em> sotto il minimo.
+    </p>
+    <p style="margin-bottom:0">
+      <b>(c) Il perché, che è tutto l'esercizio.</b> Le colonne di \(\mm{A}\) <b>sommano a zero</b>:
+      \(\vv{c}_1 + \vv{c}_2 + \vv{c}_3 = \vv{0}\). Per il §6.5, questo significa esattamente
+      \[ \mm{A}\begin{bmatrix}1\\1\\1\end{bmatrix} = 1\vv{c}_1 + 1\vv{c}_2 + 1\vv{c}_3 = \vv{0} \]
+      cioè: <b>\(\mm{A}\) annienta il vettore \(\begin{bmatrix}1\\1\\1\end{bmatrix}\)</b>. E adesso guarda la
+      prima colonna di \(\mm{B}\): è <em>proprio</em> \(\begin{bmatrix}1\\1\\1\end{bmatrix}\).
+      <br>
+      Per la lettura ② del §6.1, la prima colonna del prodotto è «\(\mm{A}\) applicata alla prima colonna di
+      \(\mm{B}\)» — cioè \(\mm{A}\) applicata esattamente al vettore che uccide.
+      <mark>\(\mm{B}\) ha chiesto ad \(\mm{A}\) l'unica combinazione che \(\mm{A}\) non sa produrre.</mark>
+      Il rango non è crollato per caso: è crollato per <em>collisione</em>. (È la stessa scena del §6.2,
+      quando \(\mm{P}\mm{Q} = \mm{0}\) con \(\mm{P}\) e \(\mm{Q}\) non nulle — ma adesso hai il numero per
+      raccontarla.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.6</div>
+    <p>
+      \(\mm{A}\) è \(4\times2\) con colonne non multiple → \(\rank(\mm{A}) = \mathbf{2}\) (pieno, perché
+      \(\min(4,2) = 2\)).
+    </p>
+    <div style="text-align:center">
+      \[
+        \mm{A}\T\mm{A} = \begin{bmatrix} 6 &amp; 3 \\ 3 &amp; 3 \end{bmatrix} \;(2\times2)
+        \qquad\qquad
+        \mm{A}\mm{A}\T = \begin{bmatrix}
+          1 &amp; 2 &amp; 0 &amp; 1 \\
+          2 &amp; 5 &amp; -1 &amp; 3 \\
+          0 &amp; -1 &amp; 1 &amp; -1 \\
+          1 &amp; 3 &amp; -1 &amp; 2 \end{bmatrix} \;(4\times4)
+      \]
+    </div>
+    <p>
+      Per il §7.7 <strong>entrambe hanno rango 2</strong>, come \(\mm{A}\). Ma le forme sono diverse, e qui
+      sta tutto:
+      <br>• \(\mm{A}\T\mm{A}\) è \(2\times2\) di rango 2 → <b style="color:var(--green)">rango pieno,
+      invertibile</b>;
+      <br>• \(\mm{A}\mm{A}\T\) è \(4\times4\) di rango 2 → <b style="color:var(--warm)">SINGOLARE</b>.
+    </p>
+    <p style="margin-bottom:0">
+      <b>E lo sapevi prima di calcolarla.</b> Per il §7.6, \(\rank(\mm{A}\mm{A}\T) \le \rank(\mm{A}) = 2\).
+      Ma la matrice è \(4\times4\): per essere invertibile le servirebbe rango 4. <mark>\(\mm{A}\) aveva solo
+      <em>due</em> colonne — non può generare quattro direzioni indipendenti dal nulla.</mark>
+      <br>
+      Questo è il motivo, e non un altro, per cui i minimi quadrati (Cap. 14) invertono \(\mm{X}\T\mm{X}\) e
+      non \(\mm{X}\mm{X}\T\): con dati «alti» (tante osservazioni, poche variabili) la seconda è
+      <em>garantita</em> singolare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.7</div>
+    <p>Scriviamo lo shift e guardiamo le due colonne:</p>
+    <div style="text-align:center">
+      \[
+        \mm{A} + \lambda\mm{I} = \begin{bmatrix} 1+\lambda &amp; 2 \\ 2 &amp; 4+\lambda \end{bmatrix}
+        \qquad
+        \vv{c}_1 = \begin{bmatrix} 1+\lambda \\ 2 \end{bmatrix}, \quad
+        \vv{c}_2 = \begin{bmatrix} 2 \\ 4+\lambda \end{bmatrix}
+      \]
+    </div>
+    <p>
+      Con <em>due</em> colonne, dipendenti significa «una è multipla dell'altra» (§4.6, fatto 1), cioè i
+      rapporti coincidono:
+    </p>
+    <div style="text-align:center">
+      \[
+        \begin{aligned}
+          \frac{2}{1+\lambda} &amp;= \frac{4+\lambda}{2} \\[4pt]
+          (1+\lambda)(4+\lambda) &amp;= 4 \\[2pt]
+          4 + \lambda + 4\lambda + \lambda^2 &amp;= 4 \\[2pt]
+          \lambda^2 + 5\lambda &amp;= 0 \\[2pt]
+          \lambda(\lambda + 5) &amp;= 0
+        \end{aligned}
+      \]
+    </div>
+    <p>
+      <b>I \(\lambda\) sfortunati sono esattamente due: \(\lambda = 0\) e \(\lambda = -5\).</b>
+      Per <em>ogni altro</em> \(\lambda\) la matrice shiftata ha rango <b>2</b>, cioè pieno.
+    </p>
+    <p style="margin-bottom:0">
+      <b>Verifica</b> con \(\lambda = -5\):
+      \(\mm{A} - 5\mm{I} = \begin{bmatrix}-4 &amp; 2\\ 2 &amp; -1\end{bmatrix}\), e infatti
+      \(\vv{c}_2 = -\tfrac12 \vv{c}_1\) ✔ → rango 1, ancora deficiente.
+      <br><br>
+      <b>Due valori su infiniti</b>, esattamente come nel §7.9 — e ancora una volta sono \(n = 2\).
+      <mark>Uno \(\lambda\) preso a caso funziona quasi sempre</mark>: per sbagliare dovresti centrare
+      <em>esattamente</em> uno di due numeri. Shifta di \(0.01\) e vai.
+      <br>
+      <span style="color:var(--ink-faint)">(Quell'equazione di secondo grado in \(\lambda\) ti ricorda
+      qualcosa? È il conto dell'Esercizio 5.6 — <em>rifatto su un'altra matrice</em>, e quindi con altri
+      numeri: là cercavi i \(\lambda\) che rendevano \(\mm{A}+\lambda\mm{I}\) singolare, e le radici
+      venivano irrazionali. Qui la matrice è <em>già</em> deficiente, e infatti una delle due radici è
+      proprio \(\lambda = 0\). Allora era un esercizio sul determinante, adesso è un esercizio sul rango:
+      nel Cap. 15 scoprirai che era sempre la stessa domanda, e che quei numeri hanno un nome.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.8</div>
+    <p>
+      <b>(a) Il setaccio.</b> \(\vv{c}_1 = \begin{bmatrix}1\\0\\1\end{bmatrix}\) → nel cesto.
+      \(\vv{c}_2 = \begin{bmatrix}0\\1\\1\end{bmatrix}\): non è multiplo di \(\vv{c}_1\) (uno ha 0 dove
+      l'altro ha 1) → nel cesto. <em>Rango ≥ 2.</em>
+      <br>
+      \(\vv{c}_3 = \begin{bmatrix}1\\1\\2\end{bmatrix}\): cerco \(\alpha\vv{c}_1 + \beta\vv{c}_2\); le prime
+      due righe regalano \(\alpha = 1, \beta = 1\); la terza verifica: \(1 + 1 = 2\) ✔ → <b>scartata</b>.
+      Ricevuta: \(\vv{c}_3 = \vv{c}_1 + \vv{c}_2\).
+      <br>
+      \(\vv{c}_4 = \begin{bmatrix}2\\-1\\1\end{bmatrix}\): \(\alpha = 2, \beta = -1\); verifica:
+      \(2 - 1 = 1\) ✔ → <b>scartata</b>. Ricevuta: \(\vv{c}_4 = 2\vv{c}_1 - \vv{c}_2\).
+      <br>
+      <mark>\(\rank(\mm{A}) = 2\).</mark> (E la forma lo aveva già annunciato: 4 colonne in \(\R^3\) →
+      almeno una è zavorra, §4.6.)
+    </p>
+    <p>
+      <b>(b) Il piano.</b> Cerchiamo \(\alpha x + \beta y + \gamma z = 0\) valida per tutte le colonne.
+      Basta imporla sulle due del cesto:
+      \[
+        \vv{c}_1: \; \alpha + \gamma = 0 \qquad \vv{c}_2: \; \beta + \gamma = 0
+      \]
+      da cui \(\alpha = \beta = -\gamma\). Scegliendo \(\gamma = -1\): \(\alpha = \beta = 1\).
+      <mark>Il piano è \(x + y - z = 0\).</mark> Verifica sulle altre due colonne:
+      \(1+1-2 = 0\) ✔ e \(2-1-1 = 0\) ✔.
+      <br>
+      <em>(Non è un caso che sia bastato imporlo sul cesto: tutte le altre colonne sono combinazioni di
+      quelle, e una combinazione di vettori che stanno su un piano per l'origine sta ancora su quel piano —
+      §4.3, i sottospazi sono chiusi.)</em>
+    </p>
+    <p>
+      <b>(c) Raggiungibile o no?</b> Adesso è una domanda facilissima: basta chiedersi se il vettore sta nel
+      piano.
+      <br>
+      • \(\begin{bmatrix}3\\1\\4\end{bmatrix}\): \(3 + 1 - 4 = 0\) → <b style="color:var(--green)">sì, è
+      raggiungibile</b>. E la ricetta si trova come sempre: \(3\vv{c}_1 + 1\vv{c}_2\) ✔ (cioè
+      \(\vv{x} = \begin{bmatrix}3\\1\\0\\0\end{bmatrix}\), fra le tante possibili).
+      <br>
+      • \(\begin{bmatrix}1\\1\\1\end{bmatrix}\): \(1 + 1 - 1 = 1 \neq 0\) → <b style="color:var(--warm)">no,
+      è fuori dal piano</b>. <mark>Nessun \(\vv{x}\), per quanto tu lo scelga bene, potrà mai produrlo.</mark>
+      Il sistema \(\mm{A}\vv{x} = \begin{bmatrix}1\\1\\1\end{bmatrix}\) <em>non ha soluzione</em>, e hai
+      appena capito perché — con tre capitoli di anticipo sul Cap. 10.
+    </p>
+    <p style="margin-bottom:0">
+      <b>(d) Senza conti.</b>
+      \(\rank(\mm{A}\T) = \rank(\mm{A}) = \mathbf{2}\) (§7.1, sesta cosa) — e infatti la riga 3 di \(\mm{A}\)
+      è la somma delle prime due: 3 righe, 2 indipendenti ✔ <em>lo stesso numero</em>.
+      <br>
+      \(\rank(\mm{A}\T\mm{A}) = \rank(\mm{A}) = \mathbf{2}\) (§7.7). E la forma: \(\mm{A}\) è \(3\times4\),
+      quindi \(\mm{A}\T\mm{A}\) è \(\mathbf{4\times4}\).
+      <br>
+      <b>Quindi: \(4\times4\) di rango 2 → NON invertibile</b>, singolare.
+      <br>
+      Qui, a differenza dell'Esercizio 7.6, sono singolari <em>tutte e due</em>: \(\mm{A}\T\mm{A}\) è
+      \(4\times4\) di rango 2, e \(\mm{A}\mm{A}\T\) è \(3\times3\) di rango 2. Il motivo è che questa
+      \(\mm{A}\) <b>non ha rango pieno</b> (2 invece di 3): quando il rango è deficiente, <em>nessuno</em>
+      dei due prodotti si salva. <mark>La regola del §7.7 dice che una delle due <b>può</b> essere
+      invertibile — non che lo sia.</mark> Perché lo sia davvero, serve che \(\mm{A}\) abbia rango pieno.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* utilità condivise (le stesse dei capitoli 5 e 6) */
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => (Number.isInteger(v) ? v : v.toFixed(1)));
+  let h = `<div class="mtab brk" style="grid-template-columns: repeat(${cols}, auto)">`;
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      h += `<div class="c ${cls(i, j, M[i][j])}" data-i="${i}" data-j="${j}">${fmt(M[i][j])}</div>`;
+  return h + '</div>';
+}
+function lab(t) {
+  return `<div style="font-family:var(--sans); font-size:12px; color:var(--ink-faint); margin-bottom:.35rem">${t}</div>`;
+}
+
+/* ---------------------------------------------------------------------------
+   Il rango, calcolato numericamente: eliminazione con pivot e TOLLERANZA.
+   La tolleranza non è un dettaglio implementativo — è il tema del §7.10:
+   «considero nulla ogni direzione più debole di questa soglia».
+   ------------------------------------------------------------------------ */
+function rango(M, tol = 1e-9) {
+  const A = M.map(r => r.slice());
+  const m = A.length, n = A[0].length;
+  let r = 0;
+  for (let j = 0; j < n && r < m; j++) {
+    let p = r;
+    for (let i = r + 1; i < m; i++) if (Math.abs(A[i][j]) > Math.abs(A[p][j])) p = i;
+    if (Math.abs(A[p][j]) <= tol) continue;          // colonna «vuota»: nessuna direzione nuova
+    [A[r], A[p]] = [A[p], A[r]];
+    for (let i = r + 1; i < m; i++) {
+      const f = A[i][j] / A[r][j];
+      for (let k = j; k < n; k++) A[i][k] -= f * A[r][k];
+    }
+    r++;
+  }
+  return r;
+}
+
+/* c è combinazione delle colonne in B? Restituisce i pesi, oppure null.
+   (È il gesto del setaccio: risolvo con alcune righe e VERIFICO con le altre.) */
+function ricetta(B, c, tol = 1e-9) {
+  const k = B.length;                                  // quante colonne nel cesto
+  if (k === 0) return c.every(v => Math.abs(v) <= tol) ? [] : null;
+  /* equazioni normali: (BᵀB) x = Bᵀc  — piccolo e sufficiente per il nostro uso */
+  const G = Array.from({ length: k }, (_, i) =>
+    Array.from({ length: k }, (_, j) => B[i].reduce((s, v, t) => s + v * B[j][t], 0)));
+  const y = B.map(b => b.reduce((s, v, t) => s + v * c[t], 0));
+  /* Gauss su G x = y */
+  const A = G.map((row, i) => row.concat([y[i]]));
+  for (let i = 0; i < k; i++) {
+    let p = i;
+    for (let q = i + 1; q < k; q++) if (Math.abs(A[q][i]) > Math.abs(A[p][i])) p = q;
+    if (Math.abs(A[p][i]) <= 1e-12) return null;
+    [A[i], A[p]] = [A[p], A[i]];
+    for (let q = i + 1; q < k; q++) {
+      const f = A[q][i] / A[i][i];
+      for (let t = i; t <= k; t++) A[q][t] -= f * A[i][t];
+    }
+  }
+  const x = new Array(k).fill(0);
+  for (let i = k - 1; i >= 0; i--) {
+    let s = A[i][k];
+    for (let t = i + 1; t < k; t++) s -= A[i][t] * x[t];
+    x[i] = s / A[i][i];
+  }
+  /* VERIFICA: la ricetta ricostruisce davvero c? */
+  const ok = c.every((v, t) => Math.abs(B.reduce((s, b, i) => s + x[i] * b[t], 0) - v) < 1e-7);
+  return ok ? x : null;
+}
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+/* scrive una combinazione lineare come la scriverebbe il libro:
+   «c₁ − c₂», «2c₁ + 3c₂», «−½c₂» — e MAI «+ -1·c₂». */
+const pedice = k => '₁₂₃₄₅₆₇₈'[k] || String(k + 1);
+function combo(pesi, indici) {
+  let s = '';
+  pesi.forEach((p, t) => {
+    if (Math.abs(p) < 1e-9) return;                    // peso nullo: il termine non c'è
+    const a = Math.abs(p);
+    const coef = Math.abs(a - 1) < 1e-9 ? '' : nfmt(a);
+    s += s === ''
+      ? (p < 0 ? '−' : '') + coef + 'c' + pedice(indici[t])
+      : (p < 0 ? ' − ' : ' + ') + coef + 'c' + pedice(indici[t]);
+  });
+  return s === '' ? '0' : s;
+}
+
+
+/* =========================================================================
+   FIGURA 7.1 — la clessidra (la strozzatura del prodotto)
+   ====================================================================== */
+(function () {
+  const svg = document.querySelector('#fig-strozzatura svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n);
+                          for (const k in at) if (at[k] != null) e.setAttribute(k, at[k]); return e; };
+  const T = (x, y, s, o = {}) => {
+    const t = el('text', { x, y, class: o.bold ? 'lbl-b' : 'lbl', fill: o.color || null,
+                           'text-anchor': o.anchor || 'middle', 'font-size': o.size || null,
+                           'font-style': o.italic ? 'italic' : null });
+    t.textContent = s; return t;
+  };
+  /* una matrice disegnata come rettangolo di caselle */
+  function blocco(x, y, righe, cols, colore, etichetta) {
+    const g = el('g', {});
+    const s = 22;
+    for (let i = 0; i < righe; i++)
+      for (let j = 0; j < cols; j++)
+        g.appendChild(el('rect', {
+          x: x + j * s, y: y + i * s, width: s - 3, height: s - 3, rx: 3,
+          fill: `color-mix(in srgb, ${colore} 16%, transparent)`, stroke: colore, 'stroke-width': 1
+        }));
+    g.appendChild(T(x + (cols * s - 3) / 2, y - 10, etichetta, { bold: true, size: 12.5, color: colore }));
+    return g;
+  }
+
+  /* --- a sinistra: il prodotto, disegnato come tre blocchi --- */
+  svg.appendChild(blocco(40, 62, 3, 2, 'var(--accent)', 'A  (3×2)'));
+  svg.appendChild(T(105, 102, '·', { size: 22 }));
+  svg.appendChild(blocco(120, 84, 2, 3, 'var(--green)', 'B  (2×3)'));
+  svg.appendChild(T(212, 102, '=', { size: 18 }));
+  svg.appendChild(blocco(232, 62, 3, 3, 'var(--violet)', 'AB  (3×3)'));
+  /* didascalia SOTTO il blocco AB, ben staccata */
+  svg.appendChild(T(265, 158, '3×3: sembra ricca…', { size: 12, italic: true }));
+  svg.appendChild(T(265, 178, '…e invece ha rango ≤ 2', { size: 12.5, bold: true, color: 'var(--warm)' }));
+
+  /* --- a destra: la clessidra, ben separata --- */
+  const cx = 480, cy = 100, W = 58, H = 42;
+  svg.appendChild(el('path', {
+    d: `M ${cx - W},${cy - H} L ${cx + W},${cy - H} L ${cx + 7},${cy} L ${cx + W},${cy + H}
+        L ${cx - W},${cy + H} L ${cx - 7},${cy} Z`,
+    fill: 'color-mix(in srgb, var(--warm) 10%, transparent)',
+    stroke: 'var(--warm)', 'stroke-width': 1.6
+  }));
+  /* la strozzatura vera e propria, e la freccia che ci passa dentro */
+  svg.appendChild(el('line', { x1: cx - 7, y1: cy, x2: cx + 7, y2: cy,
+                               stroke: 'var(--warm)', 'stroke-width': 4 }));
+  const mk = el('marker', { id: 'fr7', viewBox: '0 0 10 10', refX: 8, refY: 5,
+                            markerWidth: 5, markerHeight: 5, orient: 'auto' });
+  mk.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--ink-faint)' }));
+  const defs = el('defs', {}); defs.appendChild(mk); svg.appendChild(defs);
+  svg.appendChild(el('line', { x1: cx - W - 18, y1: cy, x2: cx + W + 18, y2: cy,
+                               stroke: 'var(--ink-faint)', 'stroke-width': 1.4,
+                               'stroke-dasharray': '4 3', 'marker-end': 'url(#fr7)' }));
+
+  svg.appendChild(T(cx, cy - H - 14, 'la strozzatura', { bold: true, color: 'var(--warm)', size: 12.5 }));
+  svg.appendChild(T(cx, cy + H + 24, 'dimensione interna = 2', { size: 12, color: 'var(--warm)' }));
+  svg.appendChild(T(cx, cy + H + 44, '⟹  rango ≤ 2', { bold: true, size: 13 }));
+})();
+
+
+/* =========================================================================
+   WIDGET §7.2 — il rango è quante direzioni ci sono davvero
+   ====================================================================== */
+(function () {
+  const out = document.getElementById('wsp-out');
+  const p = new Plot(document.getElementById('wsp-svg'),
+                     { xmin: -6.2, xmax: 6.2, ymin: -4.4, ymax: 4.4 });
+  let cols = [[3, 1], [-1, 2], [2, 3]];      // tre colonne di una matrice 2×3
+
+  const COLORI = ['var(--accent)', 'var(--warm)', 'var(--green)'];
+
+  /* In ℝ² il rango si può decidere in modo ESATTO (le punte sono agganciate a multipli di 0.5,
+     quindi non c'è nessun errore di arrotondamento da temere): due vettori sono dipendenti se e solo
+     se il loro «prodotto incrociato» è nullo. Niente soglie che mentono. */
+  const cross = (u, v) => u[0] * v[1] - u[1] * v[0];
+  const nullo = v => Math.abs(v[0]) < 1e-9 && Math.abs(v[1]) < 1e-9;
+
+  /* il SETACCIO del §7.3, eseguito davvero: cesto + ricevute */
+  function setaccio() {
+    const cesto = [], esiti = [];
+    cols.forEach((c, j) => {
+      if (nullo(c)) { esiti.push({ tipo: 'nulla' }); return; }
+      if (cesto.length === 0) { cesto.push(j); esiti.push({ tipo: 'cesto' }); return; }
+      if (cesto.length === 1) {
+        const b = cols[cesto[0]];
+        if (Math.abs(cross(b, c)) < 1e-9) {           // è un multiplo: dipendente
+          const k = Math.abs(b[0]) > Math.abs(b[1]) ? c[0] / b[0] : c[1] / b[1];
+          esiti.push({ tipo: 'scartata', pesi: [k], base: cesto.slice() });
+        } else { cesto.push(j); esiti.push({ tipo: 'cesto' }); }
+        return;
+      }
+      /* cesto pieno (2 colonne indipendenti in ℝ²): ogni altra colonna è una loro combinazione,
+         e i pesi si trovano esattamente (regola di Cramer) */
+      const b1 = cols[cesto[0]], b2 = cols[cesto[1]], d = cross(b1, b2);
+      esiti.push({ tipo: 'scartata', pesi: [cross(c, b2) / d, cross(b1, c) / d], base: cesto.slice() });
+    });
+    return { cesto, esiti };
+  }
+
+  function draw() {
+    const { cesto, esiti } = setaccio();
+    const r = cesto.length;                  // il rango, esatto
+
+    p.clear(); p.grid(); p.axes();
+
+    /* lo span: piano (r=2), retta (r=1), punto (r=0) */
+    if (r === 2) {
+      p.poly([[-9, -9], [9, -9], [9, 9], [-9, 9]],
+             { fill: 'color-mix(in srgb, var(--green) 9%, transparent)' });
+      p.text(0, 3.9, 'lo span è TUTTO il piano', { size: 12.5, bold: true, color: 'var(--green)' });
+    } else if (r === 1) {
+      const base = cols[cesto[0]];
+      const L = Math.hypot(base[0], base[1]);
+      const u = [base[0] / L * 10, base[1] / L * 10];
+      p.line(-u[0], -u[1], u[0], u[1], { color: 'var(--warm)', width: 3, opacity: .55 });
+      p.text(0, 3.9, 'lo span è collassato su una RETTA', { size: 12.5, bold: true, color: 'var(--warm)' });
+    } else {
+      p.dot(0, 0, { color: 'var(--warm)', r: 7 });
+      p.text(0, 3.9, 'lo span è il solo PUNTO O', { size: 12.5, bold: true, color: 'var(--warm)' });
+    }
+
+    cols.forEach((c, k) => {
+      p.arrow(0, 0, c[0], c[1], { color: COLORI[k], width: 3 });
+      p.text(c[0], c[1], 'c' + '₁₂₃'[k], { dx: 15, dy: -9, bold: true, color: COLORI[k] });
+    });
+    cols.forEach((c, k) => {
+      p.handle(c[0], c[1], { color: COLORI[k], snap: 0.5 }, (x, y) => { cols[k] = [x, y]; draw(); });
+    });
+
+    /* il verdetto del setaccio, raccontato — e dev'essere vero in OGNI configurazione */
+    const nomeCesto = cesto.map(j => 'c' + pedice(j)).join(', ');
+    const ricevute = esiti
+      .map((e, j) => ({ e, j }))
+      .filter(({ e }) => e.tipo === 'scartata')
+      .map(({ e, j }) => `<mark>c${pedice(j)} = ${combo(e.pesi, e.base)}</mark>`);
+    const nulle = esiti.filter(e => e.tipo === 'nulla').length;
+
+    let spiega;
+    if (r === 2) {
+      spiega = `Il <b>cesto</b> è {${nomeCesto}}: sono queste due a portare le direzioni.
+                ${ricevute.length
+                  ? `L'altra è <b>zavorra</b>, e la ricevuta lo dimostra: ${ricevute.join(', ')} — non
+                     aggiunge niente di nuovo.`
+                  : ''}
+                ${cesto[0] !== 0 || cesto[1] !== 1
+                  ? `<br><b>Nota che il cesto non è {c₁, c₂}</b>: il setaccio ha scartato una colonna
+                     <em>prima</em> di arrivare in fondo, ed è andato a prendere la direzione mancante dove
+                     c'era.`
+                  : ''}
+                Due colonne bastano a generare tutto il piano: qualunque terza colonna, ovunque la
+                trascini, sarà <em>per forza</em> una loro combinazione (§4.6, fatto 3).`;
+    } else if (r === 1) {
+      spiega = `Le colonne non nulle sono tutte <b>allineate</b>: portano <em>una sola</em> direzione.
+                ${nulle ? `(E ${nulle === 1 ? 'una di esse è nulla' : `${nulle} di esse sono nulle`}:
+                          zavorra suprema, §4.6.) ` : ''}
+                Per quanto combini i pesi, non uscirai mai da questa retta — <mark>metà del mondo è
+                irraggiungibile</mark> (§4.5). Questa matrice <b>schiaccia</b> il piano su una retta: è il
+                collasso del §1.1.
+                ${ricevute.length ? `<br>Le ricevute: ${ricevute.join(', ')}.` : ''}`;
+    } else {
+      spiega = `Tutte le colonne sono nulle: è la <b>matrice nulla</b>. Nessuna direzione, nessuna
+                informazione: <b>Ax = 0</b> qualunque sia x. È la macchina che distrugge tutto.`;
+    }
+
+    const quante = r === 0 ? 'nessuna porta' : (r === 1 ? 'solo una porta' : 'solo due portano');
+    out.innerHTML = `
+      <div class="big">rango = <b style="color:var(--violet)">${r}</b>
+        <span style="color:var(--ink-faint); font-size:.85rem">
+          (tre colonne, ma ${quante} una direzione)</span></div>
+      <div style="margin-top:.45rem; color:var(--ink-soft); font-size:.9rem; text-align:left">${spiega}</div>
+      <div style="margin-top:.45rem; color:var(--ink-faint); font-size:.85rem; text-align:left">
+        Nota che il rango non può <em>mai</em> arrivare a 3: sono tre vettori in ℝ², e più di 2 vettori in
+        ℝ² sono sempre dipendenti (§4.6). La forma parla prima dei numeri: rank ≤ min(2, 3) = 2.
+      </div>`;
+  }
+
+  document.getElementById('wsp-2').onclick = () => { cols = [[3, 1], [-1, 2], [2, 3]]; draw(); };
+  document.getElementById('wsp-1').onclick = () => { cols = [[2, 1], [-4, -2], [3, 1.5]]; draw(); };
+  document.getElementById('wsp-0').onclick = () => { cols = [[0, 0], [0, 0], [0, 0]]; draw(); };
+  draw();
+})();
+
+
+/* =========================================================================
+   WIDGET §7.3 — il setaccio, un passo alla volta
+   ====================================================================== */
+(function () {
+  const body = document.getElementById('wse-body');
+  const out  = document.getElementById('wse-out');
+
+  const MATRICI = [
+    { n: '3×3', M: [[1, 2, 3], [2, 1, 3], [3, 1, 4]] },
+    { n: '3×4', M: [[1, 0, 2, 1], [0, 1, 3, -1], [2, 1, 7, 1]] }
+  ];
+  let mi = 0, passo = 0;     // passo = quante colonne ho già esaminato
+
+  /* per ogni colonna: finisce nel cesto o viene scartata (con ricevuta)? */
+  function analisi(M) {
+    const n = M[0].length;
+    const esiti = [];
+    const cesto = [];        // colonne (come array) già accettate
+    const indici = [];
+    for (let j = 0; j < n; j++) {
+      const c = M.map(r => r[j]);
+      if (c.every(v => v === 0)) {
+        esiti.push({ tipo: 'nulla' });
+        continue;
+      }
+      const x = ricetta(cesto, c);
+      if (x) esiti.push({ tipo: 'scartata', pesi: x, base: indici.slice() });
+      else { esiti.push({ tipo: 'cesto' }); cesto.push(c); indici.push(j); }
+    }
+    return esiti;
+  }
+
+  function render() {
+    const M = MATRICI[mi].M;
+    const esiti = analisi(M);
+    const n = M[0].length;
+    const fatti = esiti.slice(0, passo);
+    const nelCesto = fatti.filter(e => e.tipo === 'cesto').length;
+
+    const cls = (i, j) => {
+      if (j >= passo) return 'lo';                        // non ancora esaminata
+      if (esiti[j].tipo === 'cesto') return 'g';          // nel cesto: verde
+      return 'w';                                         // scartata: rosso
+    };
+    body.innerHTML = `
+      <div style="text-align:center">
+        ${lab(`la matrice (${MATRICI[mi].n}) — <b style="color:var(--green)">verde</b>: nel cesto ·
+               <b style="color:var(--warm)">rosso</b>: scartata`)}
+        ${matHTML(M, { cls })}
+        <div style="margin-top:.9rem; font-family:var(--sans); font-size:13px">
+          colonne esaminate: <b>${passo}</b>/${n} &nbsp;·&nbsp;
+          nel cesto: <b style="color:var(--green)">${nelCesto}</b>
+          ${passo === n
+            ? ` &nbsp;→&nbsp; <b style="color:var(--violet)">rango = ${nelCesto}</b>`
+            : ''}
+        </div>
+      </div>`;
+
+    /* il commento del passo appena fatto */
+    let testo;
+    if (passo === 0) {
+      testo = `Il cesto è vuoto. Premi <b>«prossima colonna»</b>: esaminiamo le colonne una per una, da
+               sinistra a destra, e ci chiediamo ogni volta <em>«porta una direzione nuova?»</em>.
+               ${n === 4
+                 ? `<br><mark>Prima ancora di cominciare sai già qualcosa</mark>: sono 4 colonne in ℝ³, e
+                    più di 3 vettori in ℝ³ sono sempre dipendenti (§4.6). <b>Almeno una è zavorra,
+                    garantito.</b>`
+                 : ''}`;
+    } else {
+      const j = passo - 1, e = esiti[j];
+      if (e.tipo === 'cesto') {
+        testo = `<b>Colonna ${j + 1}</b> → <b style="color:var(--green)">nel cesto</b>.
+                 Non è ottenibile combinando quelle già dentro: porta una <b>direzione nuova</b>.
+                 <br>Adesso so che <b>rango ≥ ${nelCesto}</b> — è la prima metà del panino.`;
+      } else if (e.tipo === 'nulla') {
+        testo = `<b>Colonna ${j + 1}</b> → <b style="color:var(--warm)">scartata</b>: è la colonna nulla,
+                 la zavorra suprema (§4.6).`;
+      } else {
+        testo = `<b>Colonna ${j + 1}</b> → <b style="color:var(--warm)">scartata</b>: è già raggiungibile.
+                 <br><b>La ricevuta:</b> <mark>c${pedice(j)} = ${combo(e.pesi, e.base)}</mark>
+                 — pesi non tutti nulli, quindi le colonne sono dipendenti (§4.6), e questa non aggiunge
+                 niente.`;
+      }
+      if (passo === n) {
+        testo += `<br><br><b style="color:var(--violet)">Finito: rango = ${nelCesto}.</b>
+                  Il panino è chiuso — <b>≥ ${nelCesto}</b> perché ho ${nelCesto} colonne indipendenti nel
+                  cesto, <b>≤ ${nelCesto}</b> perché per tutte le altre ho una ricevuta.
+                  ${nelCesto < Math.min(M.length, n)
+                    ? ` La matrice è <b>deficiente</b>: sembrava piena, non lo era.`
+                    : ` La matrice ha <b>rango pieno</b>.`}`;
+      }
+    }
+    out.innerHTML = `<div style="text-align:left">${testo}</div>`;
+  }
+
+  const b0 = document.getElementById('wse-m0'), b1 = document.getElementById('wse-m1');
+  function scegli(k) {
+    mi = k; passo = 0;
+    b0.classList.toggle('on', k === 0);      // «on» = selezionato: è la convenzione del libro
+    b1.classList.toggle('on', k === 1);
+    render();
+  }
+  document.getElementById('wse-next').onclick = () => {
+    if (passo < MATRICI[mi].M[0].length) passo++;
+    render();
+  };
+  document.getElementById('wse-reset').onclick = () => { passo = 0; render(); };
+  b0.onclick = () => scegli(0);
+  b1.onclick = () => scegli(1);
+  scegli(0);
+})();
+
+
+/* =========================================================================
+   WIDGET §7.9 — lo shifting e il rango (con i λ sfortunati)
+   ====================================================================== */
+(function () {
+  const body = document.getElementById('wsh-body');
+  const out  = document.getElementById('wsh-out');
+  const sl   = document.getElementById('wsh-l');
+  const ov   = sl.nextElementSibling;
+
+  const MAT = [
+    { n: 'S (3×3)', M: [[3, -1, 1], [-1, 3, 1], [1, 1, 1]], cattivi: [0, -3, -4] },
+    { n: 'la 2×2 del §5.8', M: [[1, 2], [0.5, 1]], cattivi: [0, -2] }
+  ];
+  let k = 0;
+
+  function draw() {
+    const lam = parseFloat(sl.value);
+    ov.textContent = lam.toFixed(2);
+    const A = MAT[k].M;
+    const n = A.length;
+    const S = A.map((row, i) => row.map((v, j) => v + (i === j ? lam : 0)));
+    const r = rango(S, 1e-9);
+    const pieno = (r === n);
+
+    body.innerHTML = `
+      <div style="text-align:center">
+        ${lab('A (deficiente)')}
+        ${matHTML(A, { fmt: v => (Number.isInteger(v) ? v : v.toFixed(1)) })}
+      </div>
+      <div style="font-size:20px; color:var(--ink-faint)">+ λI →</div>
+      <div style="text-align:center">
+        ${lab('Ã = A + λI')}
+        ${matHTML(S, { cls: (i, j) => (i === j ? 'd' : ''), fmt: v => (Math.abs(v - Math.round(v)) < 1e-9 ? String(Math.round(v)) : v.toFixed(2)) })}
+      </div>`;
+
+    out.innerHTML = `
+      <div class="big">λ = <b>${lam.toFixed(2)}</b> &nbsp;→&nbsp;
+        rango(Ã) = <b style="color:${pieno ? 'var(--green)' : 'var(--warm)'}">${r}</b>
+        <span style="color:var(--ink-faint); font-size:.85rem">(su ${n} possibili)</span></div>
+      <div style="margin-top:.45rem; color:var(--ink-soft); font-size:.9rem; text-align:left">
+        ${pieno
+          ? `<b style="color:var(--green)">Rango pieno.</b> Lo shift ha rotto la dipendenza: la
+             combinazione di colonne che dava zero in A <mark>non dà più zero</mark> in A + λI. I vettori
+             che A annientava sono stati resuscitati — vengono semplicemente moltiplicati per λ.`
+          : (Math.abs(lam) < 1e-9
+             ? `<b style="color:var(--warm)">λ = 0: nessuno shift.</b> Questa è la matrice originale, e il
+                suo rango è deficiente. Muovi il cursore.`
+             : `⚠ <b style="color:var(--warm)">λ = ${lam} è uno dei valori SFORTUNATI.</b>
+                Lo shift, invece di curare la matrice, l'ha lasciata malata: esiste un <em>altro</em> vettore
+                che A + λI annienta. <mark>Non è sfortuna: quel numero è scritto dentro la matrice
+                stessa.</mark> Nel Cap. 15 avrà un nome.`)}
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-faint); font-size:.85rem; text-align:left">
+        Per questa matrice i valori sfortunati sono <b>${MAT[k].cattivi.join(', ')}</b> — ${MAT[k].cattivi.length}
+        numeri su infiniti. <b>Cercali col cursore</b>: sono l'unico modo di sbagliare.
+      </div>`;
+  }
+
+  sl.oninput = draw;
+  document.getElementById('wsh-m0').onclick = function () {
+    k = 0; this.classList.add('on'); document.getElementById('wsh-m1').classList.remove('on'); draw();
+  };
+  document.getElementById('wsh-m1').onclick = function () {
+    k = 1; this.classList.add('on'); document.getElementById('wsh-m0').classList.remove('on'); draw();
+  };
+  draw();
+})();
+
+
+/* =========================================================================
+   WIDGET §7.10 — il rumore e il rango
+   ====================================================================== */
+(function () {
+  const body = document.getElementById('wr-body');
+  const out  = document.getElementById('wr-out');
+  const se   = document.getElementById('wr-e'), st = document.getElementById('wr-t');
+  const oe   = se.nextElementSibling, ot = st.nextElementSibling;
+
+  /* M = [1,2,3] · [1,-1,2]ᵀ : rango 1, per costruzione (§3.6) */
+  const base = [[1, -1, 2], [2, -2, 4], [3, -3, 6]];
+  /* rumore FISSO (non casuale a ogni ridisegno: altrimenti i numeri ballerebbero mentre leggi) */
+  const rum = [[0.31, -1.04, 0.75], [0.94, -1.95, -0.30], [0.13, -0.32, 0.02]];
+
+  function draw() {
+    const e = parseFloat(se.value), t = parseFloat(st.value);
+    /* all'estremo sinistro il rumore è DAVVERO zero: l'etichetta «0» non deve mentire */
+    const senzaRumore = (e <= -14);
+    const eps = senzaRumore ? 0 : Math.pow(10, e);
+    const tol = Math.pow(10, t);
+    oe.textContent = senzaRumore ? '0' : '1e' + e;
+    ot.textContent = '1e' + t;
+
+    const M = base.map((r, i) => r.map((v, j) => v + eps * rum[i][j]));
+    const r_mis = rango(M, tol);
+
+    body.innerHTML = `
+      ${lab('la matrice, con 12 cifre decimali')}
+      <div class="mtab brk" style="grid-template-columns: repeat(3, auto); font-size:11.5px">
+        ${M.flat().map(v => `<div class="c" style="min-width:7.2em">${v.toFixed(12)}</div>`).join('')}
+      </div>`;
+
+    const vero = 1;   // il rango della matrice PULITA: è un prodotto esterno, per costruzione (§3.6)
+    out.innerHTML = `
+      <div class="big">
+        rango della matrice <b>pulita</b>: <b style="color:var(--violet)">${vero}</b>
+        &nbsp;&nbsp;·&nbsp;&nbsp;
+        rango <b>misurato</b> dal computer: <b style="color:${r_mis === vero ? 'var(--green)' : 'var(--warm)'}">${r_mis}</b>
+      </div>
+      <div style="margin-top:.5rem; color:var(--ink-soft); font-size:.9rem; text-align:left">
+        ${senzaRumore
+          ? `Senza rumore, la matrice è <b>esattamente</b> un prodotto esterno: ogni colonna è multipla di
+             [1, 2, 3]. Rango 1, e il computer lo vede. <b>Adesso alza il rumore.</b>`
+          : (r_mis > vero
+             ? `⚠ <b style="color:var(--warm)">Il computer dice ${r_mis}, ma la matrice pulita aveva rango 1.</b>
+                Un rumore di <b>1e${e}</b> — invisibile a occhio, alla ${Math.abs(e)}ª cifra decimale — ha
+                reso le colonne <em>tecnicamente</em> indipendenti. E il computer non ha sbagliato: ha
+                risposto alla domanda che gli hai fatto.
+                <mark>Il difetto non è nel calcolo, è nella domanda.</mark>`
+             : `<b style="color:var(--green)">Con questa tolleranza il verdetto torna 1.</b>
+                Hai detto al computer: «considera nulla ogni direzione più debole di 1e${t}». Il rumore ci
+                finisce sotto, e il rango torna a raccontare la verità utile.
+                <mark>Ma la soglia l'hai scelta tu</mark> — ed è esattamente il punto: senza una soglia, la
+                domanda «qual è il rango?» non ha una risposta sensata sui dati veri.`)}
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-faint); font-size:.85rem; text-align:left">
+        Prova così: metti il rumore a <b>1e-10</b> e la tolleranza a <b>1e-12</b> → il computer dice
+        <b>3</b>. Poi alza la tolleranza a <b>1e-6</b> → torna a dire <b>1</b>. <em>Stessa matrice, due
+        risposte.</em>
+        <br>
+        (Qui il conto è fatto per eliminazione, con una soglia sui pivot: è una versione semplificata di
+        quello che fa il tuo software, che invece guarda quei «quanto è forte una direzione» di cui parla il
+        testo. Nel Cap. 16 avranno un nome: <b>valori singolari</b>.)
+      </div>`;
+  }
+  se.oninput = draw; st.oninput = draw;
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -28,7 +28,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 4 — Spazi vettoriali
 - [x] 5 — Matrici
 - [x] 6 — Moltiplicazione tra matrici
-- [ ] 7 — Rango
+- [x] 7 — Rango
 - [ ] 8 — Spazi delle matrici
 - [ ] 9 — Numeri complessi
 - [ ] 10 — Sistemi di equazioni
