@@ -135,7 +135,7 @@ const TOC = [
     n: 8,
     titolo: "Spazi delle matrici",
     file: "cap08-spazi-matrici.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Spazio delle colonne" },
       { id: "s8-2", n: "8.2", t: "Spazio delle colonne: A e AAᵀ" },
