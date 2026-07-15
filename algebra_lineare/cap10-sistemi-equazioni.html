@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Sistemi di equazioni — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Sistemi di equazioni</h1>
+    <p class="standfirst">
+      Per nove capitoli ti ho fatto una promessa e non l'ho mantenuta: «\(\mm{A}\vv{x} = \vv{b}\) lo
+      risolveremo nel Capitolo 10». Ci siamo. E scoprirai che non c'è nessuna formula magica da imparare —
+      solo <strong>tre mosse</strong>, ripetute con pazienza, che trasformano qualunque sistema in uno così
+      semplice che la risposta si legge a occhio. Si chiama <mark>eliminazione di Gauss</mark>, ed è il primo
+      vero <em>algoritmo</em> del libro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Questo capitolo <strong>salda un debito</strong>. Nel §3.5 avevi già risolto a mano un sistema senza
+      saperlo; nel §5.1 ti avevo detto che i numeri di una matrice sono i <em>coefficienti</em> di un sistema;
+      nel Capitolo 8 avevamo scritto <em>che aspetto</em> hanno le soluzioni di \(\mm{A}\vv{x} = \vv{b}\) — una
+      soluzione particolare più lo spazio nullo — ma le trovavamo solo quando erano «sotto gli occhi». Il
+      §8.6 lo prometteva a chiare lettere: «<em>il Capitolo 10 lo farà con un metodo meccanico</em>».
+      <br>
+      Ecco il metodo. È anche il capitolo che, finalmente, ci dà uno strumento per <b>calcolare il rango</b>
+      (Cap. 7) senza indovinare, per <b>trovare una base dello spazio nullo</b> (Cap. 8) senza fortuna, e —
+      nei capitoli 11 e 12 — per calcolare determinanti e inverse. È la cassetta degli attrezzi che regge
+      metà della seconda parte del libro.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la fortuna non basta più</div>
+    <p>
+      Fino al Capitolo 8 abbiamo sempre risolto i sistemi con lo stesso trucco: <em>guardarli</em> finché la
+      risposta saltava fuori. Nel §7.2 sceglievi «due righe comode»; nel §8.3 ti accorgevi che
+      \(\vv{b} = 2\vv{c}_1 + \vv{c}_2\) perché i numeri erano piccoli. Funziona finché la matrice è
+      \(3\times3\) e gli interi sono gentili.
+    </p>
+    <p style="margin-bottom:0">
+      <mark>Ma un metodo che dipende dalla fortuna non è un metodo.</mark> Serve una procedura che funzioni
+      <em>sempre</em>: su una matrice \(50\times50\), su numeri sporchi, senza bisogno di intuizione. Nel §7.2
+      ti avevo lasciato un indizio su come sarebbe fatta: l'eliminazione di Gauss «smetterà di sperare in una
+      riga comoda e comincerà a <strong>fabbricarsela</strong>, creando zeri dove servono». È esattamente
+      questo. Non aspetta gli zeri: li produce.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Algebra e geometria delle equazioni</h2>
+
+  <p class="lead">
+    Prima di risolvere, guardiamo bene <em>che cos'è</em> un sistema. Perché un sistema lineare è due cose
+    contemporaneamente, e vederle entrambe è metà del lavoro.
+  </p>
+
+  <p>
+    Prendiamo il sistema più piccolo che abbia qualcosa da dire — due equazioni, due incognite:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un sistema \(2\times2\) <span class="tag">lo stesso oggetto, due letture</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases} x + y = 3 \\ x - y = 1 \end{cases}
+        \qquad\Longleftrightarrow\qquad
+        \underbrace{\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; -1 \end{bmatrix}}_{\mm{A}}
+        \underbrace{\begin{bmatrix} x \\ y \end{bmatrix}}_{\vv{x}}
+        =
+        \underbrace{\begin{bmatrix} 3 \\ 1 \end{bmatrix}}_{\vv{b}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\)</dt>
+        <dd>la <b>matrice dei coefficienti</b>: riga \(i\) = i numeri davanti alle incognite nell'equazione
+            \(i\). È la cambiale del §5.1, dove ti avevo detto che «i numeri di una matrice sono i coefficienti
+            di un sistema».</dd>
+        <dt>\(\vv{x}\)</dt>
+        <dd>il vettore delle <b>incognite</b>. Risolvere il sistema significa trovarlo.</dd>
+        <dt>\(\vv{b}\)</dt>
+        <dd>i <b>termini noti</b>: la colonna a destra dell'uguale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Che il sistema di sinistra e l'equazione matriciale di destra siano <em>la stessa cosa</em> lo sai dal
+      §6.5: \(\mm{A}\vv{x}\) è il vettore le cui componenti sono le righe di \(\mm{A}\) moltiplicate
+      scalarmente per \(\vv{x}\) — cioè, riga per riga, i primi membri delle equazioni.
+    </div>
+  </div>
+
+  <p>
+    E qui viene il bello: questa <em>stessa</em> equazione si può leggere in due modi geometrici
+    completamente diversi. Sono i due quadri che il §6.5 aveva chiamato «la lettura per righe» e «la lettura
+    per colonne», e adesso li vediamo lavorare insieme.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le due letture di \(\mm{A}\vv{x} = \vv{b}\)</div>
+    <p style="margin:.2rem 0 .5rem">
+      <b>① La lettura per righe (il quadro delle rette).</b> Ogni equazione, presa da sola, è una <b>retta</b>
+      nel piano: \(x + y = 3\) è una retta, \(x - y = 1\) è un'altra. Un punto \((x, y)\) risolve
+      <em>tutte e due</em> le equazioni se e solo se sta su <em>entrambe</em> le rette — cioè nel loro
+      <b>incrocio</b>. Risolvere = trovare dove si incontrano le rette.
+    </p>
+    <p style="margin:.2rem 0 0">
+      <b>② La lettura per colonne (il quadro delle frecce).</b> Riscrivi \(\mm{A}\vv{x}\) come il §6.5 ti ha
+      insegnato — <em>combinazione lineare delle colonne</em>:
+      \[
+        x\begin{bmatrix}1\\1\end{bmatrix} + y\begin{bmatrix}1\\-1\end{bmatrix}
+        = \begin{bmatrix}3\\1\end{bmatrix}
+      \]
+      Adesso la domanda è: <em>con quanto di ciascuna colonna devo tirare, per arrivare esattamente a</em>
+      \(\vv{b}\)? Risolvere = trovare i <b>pesi</b> sulle colonne che ricostruiscono \(\vv{b}\).
+    </p>
+  </div>
+
+  <p>
+    Sono la stessa domanda vista da due lati. E la lettura ② ha un vantaggio enorme, che porteremo con noi per
+    tutto il capitolo: <mark>«il sistema ha soluzione?» è <em>esattamente</em> la domanda «\(\vv{b}\) sta nello
+    span delle colonne di \(\mm{A}\)?»</mark> — quella dello spazio delle colonne, \(\Col(\mm{A})\) (§8.1).
+    Il §5.4 te l'aveva promesso parola per parola; adesso è il cuore del capitolo. Se \(\vv{b}\) è
+    raggiungibile combinando le colonne, il sistema ha soluzione; se \(\vv{b}\) è fuori portata, no —
+    e nel §10.7 questa sarà la ragione per cui certi sistemi sono <em>impossibili</em>.
+  </p>
+
+  <figure class="figura" id="fig-due-quadri">
+    <svg viewBox="0 0 720 360" role="img" aria-label="Le due letture di un sistema 2×2: il quadro delle rette e il quadro delle colonne"></svg>
+    <figcaption>
+      <b>Figura 10.1 — Lo stesso sistema, due quadri.</b> A sinistra, <em>per righe</em>: le due equazioni
+      sono due rette, e la soluzione \((2, 1)\) è il loro incrocio. A destra, <em>per colonne</em>: la
+      soluzione dice che \(2\) volte la prima colonna più \(1\) volta la seconda arrivano a \(\vv{b}\). Due
+      disegni diversi, la stessa risposta.
+    </figcaption>
+  </figure>
+
+  <div class="widget" id="w-quadro">
+    <div class="w-head">
+      <span>Risolvere = pesare le colonne</span>
+      <span class="hint">trascina il bersaglio b</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wq-svg" viewBox="0 0 560 400" role="img" aria-label="La soluzione di Ax=b come combinazione delle colonne di A"></svg>
+    </div>
+    <div class="w-readout" id="wq-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché due incognite e non una</div>
+    <p style="margin-bottom:0">
+      Con <em>una</em> incognita un'equazione è \(ax = b\), e la risposta è \(x = b/a\): una divisione, fine.
+      Tutta la difficoltà dell'algebra lineare nasce dal fatto che le incognite sono <b>tante e legate</b>:
+      non puoi ricavarne una senza toccare le altre. L'eliminazione di Gauss è il modo sistematico di
+      <em>slegarle</em>, una alla volta, finché ognuna resta sola in un'equazione — e allora è di nuovo una
+      banale divisione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Dai sistemi alle matrici</h2>
+
+  <p class="lead">
+    Per lavorare in fretta buttiamo via tutto ciò che non serve. In un sistema, le lettere \(x, y, z\) sono
+    solo <em>segnaposto</em>: contano le loro posizioni. Teniamo i numeri, e basta.
+  </p>
+
+  <p>
+    Prendiamo un sistema \(3\times3\) — e questo ci accompagnerà per mezza metà del capitolo, quindi guardalo
+    bene:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La matrice aumentata <span class="tag">i coefficienti, più la colonna dei noti</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases}
+          \;x + \;\;y + \;\;z = \;\;6 \\
+          \;x + 2y + 3z = 14 \\
+          \;x + 4y + 9z = 36
+        \end{cases}
+        \qquad\longrightarrow\qquad
+        \left[\begin{array}{ccc|c}
+          1 &amp; 1 &amp; 1 &amp; 6 \\
+          1 &amp; 2 &amp; 3 &amp; 14 \\
+          1 &amp; 4 &amp; 9 &amp; 36
+        \end{array}\right]
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>a sinistra della barra</dt>
+        <dd>la matrice dei coefficienti \(\mm{A}\): esattamente i numeri davanti a \(x, y, z\).</dd>
+        <dt>la barra \(\;\big|\;\)</dt>
+        <dd>segna dove finivano le incognite e cominciava l'uguale. È solo un promemoria per l'occhio.</dd>
+        <dt>a destra della barra</dt>
+        <dd>la colonna \(\vv{b}\) dei termini noti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa si chiama <span class="termine">matrice aumentata</span> del sistema, e si scrive
+      \([\,\mm{A}\mid\vv{b}\,]\). Non è un oggetto nuovo: è il sistema, scritto senza le lettere. Ogni
+      <b>riga</b> è un'equazione; ogni <b>colonna</b> (tranne l'ultima) è un'incognita.
+    </div>
+  </div>
+
+  <p>
+    Adesso la domanda giusta: <strong>quali cose posso fare a questo blocco di numeri senza cambiare le
+    soluzioni del sistema?</strong> Perché se trovo delle mosse che semplificano la matrice ma lasciano
+    intatto l'insieme delle soluzioni, posso semplificare a piacere e poi leggere la risposta.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le tre mosse consentite (operazioni elementari sulle righe)</div>
+    <p style="margin:.2rem 0 .4rem">Sono tre, e sono le uniche che servono:</p>
+    <ol style="margin:0">
+      <li><b>Scambiare</b> due righe. <span style="color:var(--ink-soft)">(Scrivere le equazioni in un altro
+          ordine non cambia niente: è lo stesso sistema.)</span></li>
+      <li><b>Moltiplicare</b> una riga per un numero \(\lambda \neq 0\).
+          <span style="color:var(--ink-soft)">(«\(2x + 2y = 6\)» e «\(x + y = 3\)» dicono la stessa cosa. Il
+          vincolo \(\lambda \neq 0\) è fondamentale: moltiplicare per zero cancella l'equazione, e
+          <em>perdi</em> informazione.)</span></li>
+      <li><b>Sommare</b> a una riga un multiplo di un'altra.
+          <span style="color:var(--ink-soft)">(Se \(x\) risolve entrambe le equazioni, allora risolve anche
+          la loro somma: è la mossa che <em>crea gli zeri</em>.)</span></li>
+    </ol>
+  </div>
+
+  <p>
+    Perché queste tre non toccano le soluzioni? Perché sono tutte <b>reversibili</b>: ognuna ha una mossa che
+    la annulla (riscambia le righe; ridividi per \(\lambda\); risottrai il multiplo). Se una mossa e la sua
+    inversa sono entrambe lecite, allora <em>nessuna soluzione può nascere o sparire</em>: ogni \(\vv{x}\)
+    che risolveva prima risolve dopo, e viceversa. <mark>L'insieme delle soluzioni è un invariante delle tre
+    mosse.</mark> Su questo si regge tutto il capitolo.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Un vecchio conto ritorna: ogni mossa è una matrice</div>
+    <p style="margin-bottom:0">
+      Nel §6.7 ti avevo detto una cosa che allora sembrava un dettaglio: «ogni operazione sulle righe <em>è</em>
+      una moltiplicazione a sinistra per una matrice». È vero anche qui — ognuna delle tre mosse si ottiene
+      moltiplicando \([\,\mm{A}\mid\vv{b}\,]\) a sinistra per una <b>matrice elementare</b> (la matrice
+      identità con una piccola modifica). Non ci servirà <em>fabbricare</em> quelle matrici — opereremo
+      direttamente sui numeri, che è più veloce — ma tienilo a mente: nel §12.5 sarà proprio questo fatto a
+      regalarci l'inversa di una matrice, e nel §11.7 a spiegare come si comporta il determinante sotto
+      eliminazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>Riduzione per righe</h2>
+
+  <p class="lead">
+    Abbiamo le mosse. Ora serve una <em>meta</em>: verso quale forma vogliamo spingere la matrice? La risposta
+    è una forma che il §5.5 ci ha già fatto amare — la <b>triangolare</b>.
+  </p>
+
+  <p>
+    Ricordi le matrici triangolari dello zoo del §5.5? Quelle con tutti zeri sotto la diagonale. Lì ti avevo
+    promesso: «sono facilissime da risolvere: parti dall'ultima equazione, che ha una sola incognita, e
+    <em>risali</em>». Quella promessa è la bussola di tutto il metodo. L'obiettivo della riduzione per righe è
+    proprio <strong>fabbricare zeri sotto la diagonale</strong>, uno dopo l'altro, finché la matrice diventa
+    triangolare.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il pivot, e la forma a scala</div>
+    <p style="margin:.2rem 0 .5rem">
+      Il <span class="termine">pivot</span> (o «perno») di una riga è <b>il suo primo elemento diverso da
+      zero</b>, leggendo da sinistra. È il numero che useremo come leva per creare zeri nella sua colonna.
+    </p>
+    <p style="margin:0">
+      Una matrice è in <span class="termine">forma a scala</span> (per righe) quando i pivot
+      <b>scendono a gradini verso destra</b>: il pivot di ogni riga sta più a destra di quello della riga
+      sopra, e sotto ogni pivot c'è solo zero. Il nome dice tutto — il profilo degli zeri disegna una scala:
+    </p>
+    <div style="text-align:center; margin:.7rem 0 0">
+      \[
+        \left[\begin{array}{cccc}
+          \boxed{2} &amp; * &amp; * &amp; * \\
+          0 &amp; \boxed{5} &amp; * &amp; * \\
+          0 &amp; 0 &amp; 0 &amp; \boxed{3}
+        \end{array}\right]
+      \]
+    </div>
+    <p style="margin:.5rem 0 0; color:var(--ink-soft)">
+      (I \(\boxed{\phantom{2}}\) sono i pivot; gli \(*\) sono numeri qualunque. Nota la terza riga: il suo
+      pivot ha «saltato» la terza colonna — succede, e nel §10.7 quella colonna saltata avrà un nome.)
+    </p>
+  </div>
+
+  <p>
+    Il verbo che useremo è <b>ridurre</b>: applicare le tre mosse in modo ordinato per portare la matrice in
+    forma a scala. La strategia è sempre la stessa, colonna per colonna da sinistra: <em>scelgo un pivot, e con
+    la terza mossa lo uso per azzerare tutto ciò che gli sta sotto</em>. Poi passo alla colonna dopo. È
+    meccanico — ed è per questo che funziona sempre.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Eliminazione di Gauss</h2>
+
+  <p class="lead">
+    Mettiamo insieme tutto. L'eliminazione di Gauss è due fasi: <b>scendere</b> (fabbricare la forma a scala) e
+    poi <b>risalire</b> (leggere le incognite dal basso). Facciamola per intero sul nostro sistema, senza
+    saltare un passaggio.
+  </p>
+
+  <h3>Fase 1 — la discesa: fabbrichiamo gli zeri</h3>
+
+  <p>
+    Ripartiamo dalla matrice aumentata del §10.2. Il primo pivot è l'\(1\) in alto a sinistra. Lo uso per
+    azzerare la sua colonna:
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>Azzero sotto il primo pivot.</b> Sottraggo la prima riga dalla seconda
+      (\(R_2 \leftarrow R_2 - R_1\)) e dalla terza (\(R_3 \leftarrow R_3 - R_1\)):
+      \[
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;6 \\ 1&amp;2&amp;3&amp;14 \\ 1&amp;4&amp;9&amp;36 \end{array}\right]
+        \;\longrightarrow\;
+        \left[\begin{array}{ccc|c} \hA{1}&amp;1&amp;1&amp;6 \\ 0&amp;1&amp;2&amp;8 \\ 0&amp;3&amp;8&amp;30 \end{array}\right]
+      \]
+      La prima colonna è a posto: sotto il pivot, solo zeri.
+    </li>
+    <li>
+      <b>Scendo al secondo pivot.</b> Ora guardo solo le righe 2 e 3, dalla seconda colonna in poi. Il nuovo
+      pivot è l'\(1\) in posizione \((2,2)\). Lo uso per azzerare il \(3\) che gli sta sotto
+      (\(R_3 \leftarrow R_3 - 3R_2\)):
+      \[
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;6 \\ 0&amp;\hA{1}&amp;2&amp;8 \\ 0&amp;0&amp;2&amp;6 \end{array}\right]
+      \]
+      Ed eccola: <strong>forma a scala</strong>. Tre pivot (\(1, 1, 2\)), zeri sotto ciascuno.
+    </li>
+  </ol>
+
+  <p>
+    Riscritta come sistema, la matrice a scala dice:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il sistema triangolare <span class="tag">l'ultima equazione ha una sola incognita</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases}
+          x + y + z = 6 \\
+          \phantom{x + {}} y + 2z = 8 \\
+          \phantom{x + y + {}} 2z = 6
+        \end{cases}
+      \]
+    </div>
+    <div class="f-note">
+      Guarda l'ultima riga: <b>una sola incognita</b>. Gauss ha «fabbricato la riga comoda» che nel §7.2
+      speravamo di trovare per fortuna. Adesso il sistema si srotola dal basso.
+    </div>
+  </div>
+
+  <h3>Fase 2 — la risalita: back-substitution</h3>
+
+  <p>
+    Partiamo dall'ultima equazione e risaliamo, come promesso nel §5.5. Ogni riga, scendendo… anzi
+    <em>salendo</em>, ha una sola incognita nuova:
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>Ultima equazione:</b> \(2z = 6 \;\Rightarrow\; \hC{z = 3}\).
+    </li>
+    <li>
+      <b>Penultima:</b> \(y + 2z = 8\). Sostituisco \(z = 3\): \(y + 6 = 8 \;\Rightarrow\; \hC{y = 2}\).
+    </li>
+    <li>
+      <b>Prima:</b> \(x + y + z = 6\). Sostituisco \(y = 2, z = 3\): \(x + 5 = 6 \;\Rightarrow\; \hC{x = 1}\).
+    </li>
+  </ol>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La soluzione</div>
+    <p style="margin-bottom:0">
+      \[ \vv{x} = \begin{bmatrix} x \\ y \\ z \end{bmatrix} = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} \]
+      Uno, due, tre — il sistema era costruito per finire bene, ma il <em>metodo</em> non lo sapeva: ha solo
+      fabbricato zeri e risalito. <mark>Verifica sempre</mark>, costa un attimo: \(1 + 2 + 3 = 6\) ✔,
+      \(1 + 4 + 9 = 14\) ✔, \(1 + 8 + 27 = 36\) ✔. Torna.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Quando il pivot è zero: si scambia</div>
+    <p style="margin-bottom:0">
+      E se, arrivato a una colonna, trovo uno <b>zero</b> proprio nella posizione del pivot? Non posso usarlo
+      come leva (dividere per zero non si può). La cura è la <b>prima mossa</b>: <em>scambio</em> quella riga
+      con una più in basso che abbia un numero diverso da zero in quella colonna. Se sotto è tutto zero,
+      invece, quella colonna <em>non ha pivot</em> — e va benissimo: passo alla colonna successiva. È il caso
+      che studieremo nel §10.7, e non è un guasto: è informazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Forma a scala ridotta (RREF)</h2>
+
+  <p class="lead">
+    La risalita funziona, ma richiede ancora testa: sostituire, semplificare, riordinare. Possiamo spingere le
+    <em>mosse</em> ancora un po' più in là, e far sì che la soluzione si legga senza fare più nessun conto.
+  </p>
+
+  <p>
+    L'idea: dopo la discesa, invece di risalire a mano, continuo a usare le tre mosse per <b>ripulire anche
+    sopra i pivot</b>, e per rendere <b>ogni pivot uguale a 1</b>. Quando ho finito, ogni colonna-pivot è
+    diventata una colonna della matrice identità, e la risposta è già scritta.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Forma a scala ridotta per righe (RREF)</div>
+    <p style="margin:.2rem 0 0">
+      Una matrice è in <span class="termine">forma a scala ridotta</span> — in inglese <b>RREF</b>, <em>reduced
+      row echelon form</em> — quando, oltre a essere in forma a scala (§10.3):
+    </p>
+    <ul style="margin:.4rem 0 0">
+      <li>ogni <b>pivot vale 1</b> (si chiama <em>pivot normalizzato</em>);</li>
+      <li>in ogni colonna-pivot, il pivot è l'<b>unico</b> elemento diverso da zero — zeri sopra <em>e</em>
+          sotto.</li>
+    </ul>
+    <p style="margin:.5rem 0 0">
+      La RREF di una matrice è <b>unica</b>: comunque tu applichi le mosse, arrivi sempre alla stessa. È un
+      fatto importante — ci fa dire «<em>la</em> RREF», non «una RREF» — e nel §10.8 sarà la garanzia che il
+      rango è ben definito.
+    </p>
+  </div>
+
+  <p>
+    Riprendiamo la nostra matrice a scala del §10.4 e portiamola fino in fondo:
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>Normalizzo il terzo pivot.</b> \(R_3 \leftarrow \tfrac12 R_3\) trasforma \(2z = 6\) in \(z = 3\):
+      \[
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;6 \\ 0&amp;1&amp;2&amp;8 \\ 0&amp;0&amp;\hA{1}&amp;3 \end{array}\right]
+      \]
+    </li>
+    <li>
+      <b>Pulisco sopra il terzo pivot.</b> \(R_2 \leftarrow R_2 - 2R_3\) e \(R_1 \leftarrow R_1 - R_3\)
+      azzerano la terza colonna sopra il pivot:
+      \[
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;0&amp;3 \\ 0&amp;1&amp;0&amp;2 \\ 0&amp;0&amp;1&amp;3 \end{array}\right]
+      \]
+    </li>
+    <li>
+      <b>Pulisco sopra il secondo pivot.</b> \(R_1 \leftarrow R_1 - R_2\) azzera l'ultima cosa rimasta:
+      \[
+        \left[\begin{array}{ccc|c} \hA{1}&amp;0&amp;0&amp;1 \\ 0&amp;\hA{1}&amp;0&amp;2 \\ 0&amp;0&amp;\hA{1}&amp;3 \end{array}\right]
+      \]
+    </li>
+  </ol>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La risposta si legge, non si calcola</div>
+    <p style="margin-bottom:0">
+      A sinistra della barra c'è l'identità; a destra, la soluzione. Riga per riga la matrice dice
+      \(x = 1\), \(y = 2\), \(z = 3\). <mark>Nessuna sostituzione, nessuna risalita: la risposta è
+      <em>scritta</em>.</mark> Questo è il prezzo e il premio della RREF — qualche mossa in più durante la
+      riduzione, zero conti alla fine.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Eliminazione di Gauss-Jordan</h2>
+
+  <p class="lead">
+    Il metodo che porta una matrice fino alla RREF ha un nome tutto suo: <b>eliminazione di Gauss-Jordan</b>.
+    È l'eliminazione di Gauss del §10.4, spinta fino alla forma ridotta invece di fermarsi alla scala.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Gauss contro Gauss-Jordan</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th></th><th>Eliminazione di Gauss</th><th>Gauss-Jordan</th></tr></thead>
+      <tbody>
+        <tr><td><b>Meta</b></td><td>forma a <b>scala</b> (triangolare)</td><td>forma a scala <b>ridotta</b> (RREF)</td></tr>
+        <tr><td><b>Zeri</b></td><td>solo <em>sotto</em> i pivot</td><td>sopra <em>e</em> sotto i pivot</td></tr>
+        <tr><td><b>Finale</b></td><td>si risale a mano (back-substitution)</td><td>la risposta è già scritta</td></tr>
+        <tr><td><b>Conti</b></td><td>meno mosse, più testa alla fine</td><td>più mosse, zero testa alla fine</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Danno la <em>stessa</em> soluzione: sono due modi di percorrere la stessa strada. Gauss è più svelto a
+      mano; Gauss-Jordan è più meccanico — e siccome «meccanico» è ciò che serve a un computer e alle
+      dimostrazioni, sarà lui il protagonista da qui in poi.
+    </p>
+  </div>
+
+  <div class="widget" id="w-gauss">
+    <div class="w-head">
+      <span>Gauss-Jordan, un passo alla volta</span>
+      <span class="hint">premi «prossimo passo»</span>
+    </div>
+    <div class="w-stage" style="padding:1.4rem; overflow-x:auto; text-align:center">
+      <div id="wg-body"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wg-next">prossimo passo →</button>
+      <button class="w-btn" id="wg-reset">ricomincia</button>
+    </div>
+    <div class="w-readout" id="wg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Le possibilità per le soluzioni</h2>
+
+  <p class="lead">
+    Finora tutto è filato liscio: un sistema, una soluzione. Ma non va sempre così — e la cosa notevole è che
+    le cose che possono andare «storte» sono <strong>solo due</strong>, e le abbiamo già incontrate nel
+    Capitolo 8. Un sistema lineare ha <b>zero</b>, <b>una</b>, oppure <b>infinite</b> soluzioni. Mai due, mai
+    sette. Il §8.11 lo prometteva: «esattamente le tre possibilità, senza altre vie di mezzo». Vediamo perché,
+    con la RREF in mano.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Colonne-pivot e colonne libere</div>
+    <p style="margin:.2rem 0 0">
+      Dopo la riduzione, ogni colonna della matrice dei coefficienti è di uno di due tipi:
+    </p>
+    <ul style="margin:.4rem 0 0">
+      <li>una <span class="termine">colonna-pivot</span> se contiene un pivot;</li>
+      <li>una <span class="termine">colonna libera</span> se non ne contiene nessuno.</li>
+    </ul>
+    <p style="margin:.5rem 0 0">
+      L'incognita di una colonna libera si chiama <b>variabile libera</b>: può valere <em>qualunque cosa</em>,
+      e le altre incognite si aggiustano di conseguenza. Ogni variabile libera è un grado di libertà — e ogni
+      grado di libertà, come vedrai, moltiplica le soluzioni all'infinito.
+    </p>
+  </div>
+
+  <p>
+    Con questo vocabolario, le tre possibilità si leggono a colpo d'occhio sulla matrice ridotta. Mettiamole in
+    fila, ognuna con il suo esempio minimo \(2\times2\) e la sua geometria (il quadro delle rette del §10.1).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Caso ① — una sola soluzione <span class="tag">un pivot in ogni colonna, nessuna libera</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases} x + y = 3 \\ x - y = 1 \end{cases}
+        \;\longrightarrow\;
+        \left[\begin{array}{cc|c} 1&amp;0&amp;2 \\ 0&amp;1&amp;1 \end{array}\right]
+        \;\Rightarrow\; (x, y) = (2, 1)
+      \]
+    </div>
+    <div class="f-note">
+      Ogni incognita ha il suo pivot, nessuna è libera: la soluzione è inchiodata. <b>Geometria:</b> due rette
+      che si <em>incrociano</em> in un punto.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Caso ② — nessuna soluzione <span class="tag">un pivot nella colonna di b</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases} x + y = 2 \\ x + y = 5 \end{cases}
+        \;\longrightarrow\;
+        \left[\begin{array}{cc|c} 1&amp;1&amp;2 \\ 0&amp;0&amp;\hB{3} \end{array}\right]
+        \;\Rightarrow\; \text{la riga dice } 0 = 3 \;\text{✗}
+      \]
+    </div>
+    <div class="f-note">
+      L'ultima riga, tradotta, è \(0x + 0y = 3\): <b>falsa per qualunque</b> \(\vv{x}\). Quando un pivot
+      finisce <em>nella colonna di \(\vv{b}\)</em>, il sistema è <span class="termine">impossibile</span>
+      (o «incompatibile»). <b>Geometria:</b> due rette <em>parallele e distinte</em>, che non si incontrano
+      mai. È il caso promesso nel §7.9 e nel §8.1: \(\vv{b}\) è <em>fuori</em> da \(\Col(\mm{A})\), fuori
+      portata delle colonne.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Caso ③ — infinite soluzioni <span class="tag">c'è una colonna libera</span></div>
+    <div class="f-body">
+      \[
+        \begin{cases} x + y = 2 \\ 2x + 2y = 4 \end{cases}
+        \;\longrightarrow\;
+        \left[\begin{array}{cc|c} 1&amp;\hB{1}&amp;2 \\ 0&amp;0&amp;0 \end{array}\right]
+        \;\Rightarrow\; x = 2 - y,\;\; y \text{ libera}
+      \]
+    </div>
+    <div class="f-note">
+      La seconda equazione era la prima raddoppiata: non aggiunge niente, e si azzera. Resta una sola vera
+      equazione per due incognite: \(y\) è <b>libera</b>, \(x\) la insegue. Per <em>ogni</em> valore di \(y\)
+      una soluzione: infinite, disposte lungo una retta. <b>Geometria:</b> le due rette sono la
+      <em>stessa</em> retta, <em>sovrapposta</em>.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il verdetto, in due domande — ed è il rango</div>
+    <p style="margin:.2rem 0 .5rem">
+      Tutto si decide con due controlli sulla matrice ridotta, e sono entrambi <em>conteggi di pivot</em> —
+      cioè, come stai per capire, conteggi di <b>rango</b> (§7.1):
+    </p>
+    <ol style="margin:0 0 .5rem">
+      <li><b>C'è un pivot nella colonna di \(\vv{b}\)?</b> Se sì → <b>zero soluzioni</b> (caso ②). Se no, il
+          sistema è compatibile, e si passa alla seconda domanda.</li>
+      <li><b>Ci sono colonne libere?</b> Se no (pivot in ogni incognita) → <b>una soluzione</b> (caso ①). Se
+          sì → <b>infinite</b>, una per ogni modo di scegliere le variabili libere (caso ③).</li>
+    </ol>
+    <p style="margin-bottom:0">
+      Il numero di pivot della matrice dei coefficienti <em>è</em> il suo <b>rango</b> \(r\) (Cap. 7): il
+      Capitolo 7 lo chiamava «il numero di colonne davvero indipendenti», il setaccio lo contava una alla
+      volta, e ora sai <mark>come calcolarlo senza indovinare: riduci, e conta i pivot</mark>. Il §7.5 te
+      l'aveva promesso. Con \(n\) incognite:
+      <br>
+      • zero soluzioni \(\iff\) \(\rank[\,\mm{A}\mid\vv{b}\,] &gt; \rank(\mm{A})\) (\(\vv{b}\) aggiunge un pivot);
+      <br>
+      • una soluzione \(\iff\) compatibile e \(r = n\) (nessuna colonna libera);
+      <br>
+      • infinite \(\iff\) compatibile e \(r &lt; n\) (ci sono \(n - r\) variabili libere).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché mai «esattamente due» soluzioni?</div>
+    <p style="margin-bottom:0">
+      La geometria lo grida: due rette nel piano o si incrociano (1 punto), o sono parallele (0 punti), o
+      coincidono (tutta la retta, ∞ punti). Non esiste una coppia di rette che si tocchi in <em>esattamente</em>
+      due punti — sono rette, non curve. L'algebra dice la stessa cosa in modo più profondo: se
+      \(\vv{x}_1\) e \(\vv{x}_2\) fossero <b>due</b> soluzioni distinte di \(\mm{A}\vv{x} = \vv{b}\), allora la
+      loro differenza \(\vv{x}_1 - \vv{x}_2 \neq \vv{0}\) starebbe nello spazio nullo (\(\mm{A}(\vv{x}_1 -
+      \vv{x}_2) = \vv{b} - \vv{b} = \vv{0}\), §8.9), e allora <em>tutta</em> la retta \(\vv{x}_1 + t(\vv{x}_1 -
+      \vv{x}_2)\) sarebbe fatta di soluzioni. Due ne obbligano infinite. <mark>Il «due» collassa subito
+      nell'«infinito».</mark>
+    </p>
+  </div>
+
+  <div class="widget" id="w-possib">
+    <div class="w-head">
+      <span>Le tre possibilità, con due rette</span>
+      <span class="hint">trascina i due punti che definiscono la seconda retta</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-svg" viewBox="0 0 560 400" role="img" aria-label="Due rette che si incrociano, sono parallele, o coincidono"></svg>
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-8"><span class="secnum">Sezione 10.8</span>Spazi delle matrici e riduzione per righe</h2>
+
+  <p class="lead">
+    E ora il momento che aspettavamo dal Capitolo 8. Là avevamo <em>descritto</em> le soluzioni di
+    \(\mm{A}\vv{x} = \vv{b}\) — una soluzione particolare \(\vv{x}_0\), più tutto lo spazio nullo — ma le
+    trovavamo solo per fortuna. Gauss-Jordan le trova <b>tutte, sempre, meccanicamente</b>. E, saldando un
+    ultimo conto, ci consegna anche una base di ognuno dei quattro spazi fondamentali.
+  </p>
+
+  <h3>Le variabili libere <em>sono</em> lo spazio nullo</h3>
+
+  <p>
+    Riprendiamo la matrice-guida del Capitolo 8 — la stessa, perché voglio che tu veda i numeri combaciare:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il sistema del §8.11, risolto per davvero <span class="tag">A e b sono quelli del Cap. 8</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} 1&amp;0&amp;1&amp;2 \\ -1&amp;1&amp;0&amp;-3 \\ 0&amp;-1&amp;-1&amp;1 \end{bmatrix},
+        \qquad
+        \vv{b} = \begin{bmatrix} 2 \\ -1 \\ -1 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Nel §8.3 avevamo <em>indovinato</em> che \(\vv{b} = 2\vv{c}_1 + \vv{c}_2\); nel §8.6 avevamo pescato le
+      due «ricevute» dello spazio nullo. Adesso non indoviniamo niente.
+    </div>
+  </div>
+
+  <p>
+    Riduco la matrice aumentata \([\,\mm{A}\mid\vv{b}\,]\) con le tre mosse. Due passi bastano:
+  </p>
+
+  <ol class="passi">
+    <li>
+      \(R_2 \leftarrow R_2 + R_1\) (azzera il \(-1\) sotto il primo pivot):
+      \[
+        \left[\begin{array}{cccc|c} 1&amp;0&amp;1&amp;2&amp;2 \\ -1&amp;1&amp;0&amp;-3&amp;-1 \\ 0&amp;-1&amp;-1&amp;1&amp;-1 \end{array}\right]
+        \longrightarrow
+        \left[\begin{array}{cccc|c} 1&amp;0&amp;1&amp;2&amp;2 \\ 0&amp;1&amp;1&amp;-1&amp;1 \\ 0&amp;-1&amp;-1&amp;1&amp;-1 \end{array}\right]
+      \]
+    </li>
+    <li>
+      \(R_3 \leftarrow R_3 + R_2\) (azzera il \(-1\) sotto il secondo pivot):
+      \[
+        \left[\begin{array}{cccc|c} \hA{1}&amp;0&amp;1&amp;2&amp;2 \\ 0&amp;\hA{1}&amp;1&amp;-1&amp;1 \\ 0&amp;0&amp;0&amp;0&amp;0 \end{array}\right]
+      \]
+      È già la RREF: i pivot valgono 1, e sopra di loro c'è solo zero. La terza riga è diventata
+      \(0 = 0\) — vera e inutile: ci dice che la terza equazione era combinazione delle prime due.
+    </li>
+  </ol>
+
+  <p>
+    Leggiamo. Le <b>colonne-pivot</b> sono la 1 e la 2 (le incognite \(x_1, x_2\)); le <b>colonne libere</b>
+    sono la 3 e la 4 (\(x_3, x_4\) sono <em>variabili libere</em>). Le due righe non nulle dicono:
+    \[
+      x_1 + x_3 + 2x_4 = 2, \qquad x_2 + x_3 - x_4 = 1.
+    \]
+    Isolo le incognite-pivot e lascio libere \(x_3 = s\) e \(x_4 = t\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Tutte le soluzioni, meccanicamente <span class="tag">e combaciano col §8.11</span></div>
+    <div class="f-body">
+      \[
+        \vv{x} =
+        \begin{bmatrix} x_1 \\ x_2 \\ x_3 \\ x_4 \end{bmatrix}
+        =
+        \underbrace{\begin{bmatrix} 2 \\ 1 \\ 0 \\ 0 \end{bmatrix}}_{\hA{\vv{x}_0}}
+        \;+\; s\underbrace{\begin{bmatrix} -1 \\ -1 \\ 1 \\ 0 \end{bmatrix}}_{\hB{\vv{n}_1}}
+        \;+\; t\underbrace{\begin{bmatrix} -2 \\ 1 \\ 0 \\ 1 \end{bmatrix}}_{\hB{\vv{n}_2}}
+        \qquad s, t \in \R
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Da dove escono i tre pezzi.</strong> Poni \(s = t = 0\): resta \(\vv{x}_0 = (2, 1, 0, 0)\) —
+      la soluzione particolare, ottenuta mettendo a zero le variabili libere. Poi metti \(s = 1, t = 0\):
+      la <em>variazione</em> è \(\vv{n}_1\); metti \(s = 0, t = 1\): è \(\vv{n}_2\). Sono i coefficienti delle
+      colonne libere, cambiati di segno — la stessa ricetta ogni volta.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Cambiale del §8.6 saldata: il setaccio e Gauss trovano lo stesso spazio nullo</div>
+    <p style="margin:.2rem 0 .5rem">
+      Confronta con il §8.11. Là avevamo scritto la soluzione generale come
+      \[
+        \vv{x} = (2,1,0,0) + s'(1,1,-1,0) + t'(2,-1,0,-1).
+      \]
+      I miei \(\vv{n}_1, \vv{n}_2\) sono <em>l'opposto</em> di quei due vettori: \((-1,-1,1,0) = -(1,1,-1,0)\)
+      e \((-2,1,0,1) = -(2,-1,0,-1)\). Ma \(s\) e \(t\) corrono su <b>tutto</b> \(\R\): cambiare segno a un
+      vettore di base non sposta di un millimetro il piano che genera. <mark>È lo <em>stesso</em> spazio nullo,
+      e la <em>stessa</em> \(\vv{x}_0\).</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Nel §8.6 le due «ricevute» le avevamo pescate col setaccio, sperando che i numeri fossero gentili. Qui
+      Gauss le ha fabbricate senza chiedere permesso. Le due strade — il setaccio del Capitolo 7 e
+      l'eliminazione — <b>portano allo stesso posto</b>: era una promessa, ora è un conto verificato.
+    </p>
+  </div>
+
+  <h3>I quattro spazi, letti dalla RREF</h3>
+
+  <p>
+    La riduzione per righe non risolve solo il sistema: consegna una base di ciascuno dei quattro spazi
+    fondamentali del Capitolo 8. C'è però una <b>sottigliezza</b> che vale un intero riquadro, perché è la
+    trappola più classica del capitolo.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Le mosse sulle righe <em>cambiano</em> lo spazio delle colonne</div>
+    <p style="margin:.2rem 0 .5rem">
+      Le tre mosse conservano lo <b>spazio delle righe</b> (ogni riga nuova è combinazione delle vecchie,
+      §8.4) e lo <b>spazio nullo</b> (è tutto il punto: le soluzioni non cambiano). Ma <mark>non</mark>
+      conservano lo <b>spazio delle colonne</b>: mescolare le righe stravolge le colonne come vettori.
+      Esempio lampo: \(\begin{bmatrix} 1 \\ 1 \end{bmatrix} \to \begin{bmatrix} 1 \\ 0 \end{bmatrix}\) dopo
+      \(R_2 \leftarrow R_2 - R_1\) — la colonna è cambiata.
+    </p>
+    <p style="margin-bottom:0">
+      Conseguenza pratica: per una base di \(\Col(\mm{A})\) devo prendere le colonne-pivot <b>della matrice
+      \(\mm{A}\) di partenza</b>, non della RREF. La RREF mi dice <em>quali</em> colonne (la 1 e la 2), la
+      \(\mm{A}\) originale mi dice <em>com'erano fatte</em>.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il ricettario completo (dalla RREF di \(\mm{A}\))</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Spazio (Cap. 8)</th><th>Base</th><th>Dimensione</th></tr></thead>
+      <tbody>
+        <tr><td><b>\(\Col(\mm{A})\)</b> — spazio colonne</td>
+            <td>le colonne <b>di \(\mm{A}\)</b> in posizione di pivot (qui \(\vv{c}_1, \vv{c}_2\))</td>
+            <td>\(r\) &nbsp;<span style="color:var(--ink-faint)">(= 2)</span></td></tr>
+        <tr><td><b>\(\Row(\mm{A})\)</b> — spazio righe</td>
+            <td>le righe <b>non nulle</b> della RREF</td>
+            <td>\(r\) &nbsp;<span style="color:var(--ink-faint)">(= 2)</span></td></tr>
+        <tr><td><b>\(\Null(\mm{A})\)</b> — spazio nullo</td>
+            <td>i vettori \(\vv{n}_1, \vv{n}_2\) (uno per variabile libera)</td>
+            <td>\(n - r\) &nbsp;<span style="color:var(--ink-faint)">(= 2)</span></td></tr>
+        <tr><td><b>\(\Null(\mm{A}\T)\)</b> — nullo sinistro</td>
+            <td>le combinazioni di righe che si azzerano <span style="color:var(--ink-faint)">(qui: \(R_1 + R_2 + R_3 = \vv{0}\))</span></td>
+            <td>\(m - r\) &nbsp;<span style="color:var(--ink-faint)">(= 1)</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Guarda le prime due righe: <b>\(\Col\) e \(\Row\) hanno la stessa dimensione \(r\)</b>. È il teorema che
+      il §7.6 aveva dimostrato con il setaccio (rango per righe = rango per colonne); qui ricompare da solo,
+      perché il numero di pivot è uno solo — lo vedi nella scala, e non gli importa se lo chiami «di riga» o
+      «di colonna». E l'ultima colonna della tabella è il <b>teorema di rango-nullità</b> del §8.8:
+      \(r + (n - r) = n\), cioè \(\rank + \dim\Null = n\). Non l'abbiamo <em>ridimostrato</em>: l'abbiamo
+      visto <em>succedere</em>, contando pivot e colonne libere.
+    </p>
+  </div>
+
+  <p>
+    C'è un'ultima gemma, e chiude il cerchio con il setaccio del §7.3. Le colonne libere della RREF non sono
+    mute: <b>dicono come ricostruire le colonne scartate</b>. Nella nostra RREF la terza colonna è
+    \((1, 1, 0)\) in coordinate-pivot, cioè \(\vv{c}_3 = 1\,\vv{c}_1 + 1\,\vv{c}_2\); la quarta è
+    \((2, -1, 0)\), cioè \(\vv{c}_4 = 2\,\vv{c}_1 - \vv{c}_2\). Sono esattamente le combinazioni che il
+    setaccio del Capitolo 7 aveva trovato per scartare quelle due colonne. <mark>Il setaccio e Gauss non solo
+    danno lo stesso rango: danno le stesse ricette.</mark>
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li><b>Un sistema è \(\mm{A}\vv{x} = \vv{b}\)</b>, e si legge in due quadri (§10.1): <em>per righe</em>
+          (incrocio di rette/piani) e <em>per colonne</em> (con che pesi le colonne raggiungono \(\vv{b}\)).
+          «Ha soluzione?» \(=\) «\(\vv{b} \in \Col(\mm{A})\)?».</li>
+      <li><b>Tre mosse</b> non cambiano le soluzioni (§10.2): scambia righe, moltiplica una riga per
+          \(\lambda \neq 0\), somma a una riga un multiplo di un'altra. Sono reversibili — per questo sono
+          sicure.</li>
+      <li><b>Eliminazione di Gauss</b> (§10.4): scendi fabbricando zeri sotto i pivot fino alla
+          <b>forma a scala</b> (triangolare), poi <b>risali</b> (back-substitution). <mark>Gauss non spera in
+          una riga comoda: se la fabbrica.</mark></li>
+      <li><b>Gauss-Jordan</b> (§10.6) spinge fino alla <b>RREF</b>: pivot uguali a 1, zeri sopra e sotto.
+          Allora la soluzione <em>si legge</em>, non si calcola.</li>
+      <li><b>Tre esiti, mai altri</b> (§10.7): <b>0</b> soluzioni (pivot nella colonna di \(\vv{b}\):
+          \(\vv{b} \notin \Col(\mm{A})\)), <b>1</b> (nessuna colonna libera, \(r = n\)), <b>∞</b> (una o più
+          colonne libere, \(r &lt; n\)). Il numero di pivot <em>è</em> il <b>rango</b> — così si calcola, senza
+          indovinare.</li>
+      <li><b>Soluzione generale</b> \(= \vv{x}_0 + \Null(\mm{A})\) (§10.8): la particolare mettendo a zero le
+          variabili libere, lo spazio nullo dai loro coefficienti. È il metodo meccanico promesso nel §8.6 —
+          e trova lo <em>stesso</em> spazio nullo del setaccio.</li>
+      <li><b>La riduzione consegna i quattro spazi</b>: base di \(\Col\) = colonne-pivot <em>di \(\mm{A}\)</em>
+          (attento: <b>non</b> della RREF!); base di \(\Row\) = righe non nulle della RREF; e
+          \(\rank + \dim\Null = n\) si conta a occhio.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Da qui in poi hai un motore. Nel <b>Capitolo 11</b> lo stesso gioco di pivot ci darà il
+    <em>determinante</em> (e capirai perché il prodotto dei pivot conta); nel <b>Capitolo 12</b> ridurremo
+    \([\,\mm{A}\mid\mm{I}\,]\) per fabbricare l'<em>inversa</em>; e quando un sistema sarà <em>impossibile</em>
+    — \(\vv{b}\) fuori da \(\Col(\mm{A})\) — il <b>Capitolo 14</b> non si arrenderà: cercherà la soluzione
+    «meno sbagliata», e nasceranno i minimi quadrati. Ma il pane quotidiano è questo capitolo. Riduci, conta i
+    pivot, leggi: adesso sai risolvere.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-9"><span class="secnum">Sezione 10.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Risolvi con l'eliminazione, scrivendo la matrice aumentata e riducendola:
+      \[ \begin{cases} x + 2y = 5 \\ 3x - y = 1 \end{cases} \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Risolvi col metodo di Gauss (discesa + risalita):
+      \[ \begin{cases} x + y + z = 4 \\ 2x - y + z = 8 \\ -x + 2y + 3z = 5 \end{cases} \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Senza risolverli fino in fondo, di' quante soluzioni ha ciascun sistema (zero, una, infinite) e perché:
+      <br>(a) \(\begin{cases} x + y = 1 \\ x + y = 2 \end{cases}\)
+      &nbsp;&nbsp; (b) \(\begin{cases} x + y = 1 \\ x - y = 3 \end{cases}\)
+      &nbsp;&nbsp; (c) \(\begin{cases} x + y = 1 \\ 2x + 2y = 2 \end{cases}\)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      Porta in RREF la matrice \(\mm{M} = \begin{bmatrix} 1&amp;2&amp;0&amp;1 \\ 2&amp;4&amp;1&amp;4 \\ 1&amp;2&amp;1&amp;3 \end{bmatrix}\).
+      Quali sono le colonne-pivot e quali le colonne libere? Quanto vale \(\rank(\mm{M})\)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.5</div>
+    <p style="margin-bottom:0">
+      Per la stessa \(\mm{M}\) dell'esercizio precedente, trova una base dello spazio nullo \(\Null(\mm{M})\)
+      risolvendo \(\mm{M}\vv{x} = \vv{0}\) con le variabili libere. Verifica che
+      \(\rank + \dim\Null = 4\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.6</div>
+    <p style="margin-bottom:0">
+      Con la \(\mm{M}\) di prima e \(\vv{b} = (1, 3, 2)\), scrivi <em>tutte</em> le soluzioni di
+      \(\mm{M}\vv{x} = \vv{b}\) nella forma \(\vv{x}_0 + \Null(\mm{M})\).
+      <br><span style="color:var(--ink-soft)">(Suggerimento: cerca prima una soluzione particolare mettendo a
+      zero le variabili libere.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.7</div>
+    <p style="margin-bottom:0">
+      Mostra che \(\begin{cases} x + y = 1 \\ 2x + 2y = 3 \end{cases}\) è impossibile, in due modi: (a) riducendo
+      la matrice aumentata e trovando una riga «\(0 = k\)»; (b) osservando dove sta \(\vv{b} = (1, 3)\) rispetto
+      a \(\Col(\mm{A})\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.8</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga di motivazione ciascuno:
+      <br>(a) Se una matrice \(3\times5\) ha rango 3, allora \(\mm{A}\vv{x} = \vv{b}\) ha soluzione per
+      <em>ogni</em> \(\vv{b}\).
+      <br>(b) Un sistema con più incognite che equazioni non può avere una soluzione unica.
+      <br>(c) L'eliminazione di Gauss cambia lo spazio delle colonne di \(\mm{A}\).
+      <br>(d) Se \([\,\mm{A}\mid\vv{b}\,]\) ha un pivot nell'ultima colonna, il sistema è impossibile.
+      <br>(e) \(\mm{A}\vv{x} = \vv{0}\) ha sempre almeno una soluzione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-10"><span class="secnum">Sezione 10.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Matrice aumentata e riduzione:
+      \[
+        \left[\begin{array}{cc|c} 1&amp;2&amp;5 \\ 3&amp;-1&amp;1 \end{array}\right]
+        \xrightarrow{R_2 - 3R_1}
+        \left[\begin{array}{cc|c} 1&amp;2&amp;5 \\ 0&amp;-7&amp;-14 \end{array}\right]
+      \]
+      L'ultima riga: \(-7y = -14 \Rightarrow y = 2\). Risalendo: \(x + 2\cdot 2 = 5 \Rightarrow x = 1\).
+      Soluzione \((x, y) = \mathbf{(1, 2)}\). Verifica: \(1 + 4 = 5\) ✔, \(3 - 2 = 1\) ✔.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      \[
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;4 \\ 2&amp;-1&amp;1&amp;8 \\ -1&amp;2&amp;3&amp;5 \end{array}\right]
+        \xrightarrow[\;R_3 + R_1\;]{R_2 - 2R_1}
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;4 \\ 0&amp;-3&amp;-1&amp;0 \\ 0&amp;3&amp;4&amp;9 \end{array}\right]
+        \xrightarrow{R_3 + R_2}
+        \left[\begin{array}{ccc|c} 1&amp;1&amp;1&amp;4 \\ 0&amp;-3&amp;-1&amp;0 \\ 0&amp;0&amp;3&amp;9 \end{array}\right]
+      \]
+      Risalita: \(3z = 9 \Rightarrow z = 3\); \(-3y - z = 0 \Rightarrow -3y = 3 \Rightarrow y = -1\);
+      \(x + y + z = 4 \Rightarrow x - 1 + 3 = 4 \Rightarrow x = 2\). Soluzione
+      \(\mathbf{(2, -1, 3)}\). Verifica sulla terza equazione: \(-2 - 2 + 9 = 5\) ✔.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      <b>(a) Zero.</b> Riducendo: \(R_2 - R_1\) dà la riga \((0\;\;0\mid 1)\), cioè \(0 = 1\): impossibile. Le
+      due rette sono parallele e distinte.
+      <br><b>(b) Una.</b> \(R_2 - R_1\) dà \((0\;\;{-2}\mid 2)\), pivot in ogni colonna: \(y = -1\),
+      \(x = 2\). Le rette si incrociano in \((2, -1)\).
+      <br><b>(c) Infinite.</b> La seconda equazione è la prima raddoppiata: \(R_2 - 2R_1\) la azzera. Resta
+      \(x + y = 1\), con \(y\) libera: infinite soluzioni \((1 - y,\, y)\). Le rette coincidono.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      \[
+        \begin{bmatrix} 1&amp;2&amp;0&amp;1 \\ 2&amp;4&amp;1&amp;4 \\ 1&amp;2&amp;1&amp;3 \end{bmatrix}
+        \xrightarrow[\;R_3 - R_1\;]{R_2 - 2R_1}
+        \begin{bmatrix} 1&amp;2&amp;0&amp;1 \\ 0&amp;0&amp;1&amp;2 \\ 0&amp;0&amp;1&amp;2 \end{bmatrix}
+        \xrightarrow{R_3 - R_2}
+        \begin{bmatrix} 1&amp;2&amp;0&amp;1 \\ 0&amp;0&amp;1&amp;2 \\ 0&amp;0&amp;0&amp;0 \end{bmatrix}
+      \]
+      È già ridotta (i pivot valgono 1, sopra il secondo pivot c'è 0). <b>Colonne-pivot:</b> la 1 e la 3.
+      <b>Colonne libere:</b> la 2 e la 4. <b>Rango:</b> \(\rank(\mm{M}) = 2\) (due pivot).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.5</div>
+    <p style="margin-bottom:0">
+      Dalla RREF, con variabili libere \(x_2 = s\) e \(x_4 = t\): la riga 1 dà
+      \(x_1 + 2x_2 + x_4 = 0 \Rightarrow x_1 = -2s - t\); la riga 2 dà
+      \(x_3 + 2x_4 = 0 \Rightarrow x_3 = -2t\). Quindi
+      \[
+        \vv{x} = s\begin{bmatrix} -2 \\ 1 \\ 0 \\ 0 \end{bmatrix} + t\begin{bmatrix} -1 \\ 0 \\ -2 \\ 1 \end{bmatrix}.
+      \]
+      Base di \(\Null(\mm{M})\): quei due vettori. Controllo: \(\rank = 2\), \(\dim\Null = 2\), somma
+      \(= 4 = n\) ✔ (rango-nullità, §8.8). <span style="color:var(--ink-soft)">(Verifica veloce del primo:
+      \(\mm{M}(-2,1,0,0) = -2\vv{c}_1 + \vv{c}_2 = -2(1,2,1) + (2,4,2) = \vv{0}\) ✔.)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.6</div>
+    <p style="margin-bottom:0">
+      Una soluzione particolare con le libere a zero (\(x_2 = x_4 = 0\)): dalla RREF di \([\mm{M}\mid\vv{b}]\)
+      — la stessa riduzione dell'Es. 10.4 applicata anche a \(\vv{b} = (1,3,2)\) dà destra
+      \((1, 1, 0)\) — si legge \(x_1 = 1\), \(x_3 = 1\). Quindi \(\vv{x}_0 = (1, 0, 1, 0)\)
+      <span style="color:var(--ink-soft)">(verifica: \(\vv{c}_1 + \vv{c}_3 = (1,2,1) + (0,1,1) = (1,3,2) = \vv{b}\) ✔)</span>.
+      Aggiungendo lo spazio nullo dell'Es. 10.5:
+      \[
+        \vv{x} = \begin{bmatrix} 1 \\ 0 \\ 1 \\ 0 \end{bmatrix}
+        + s\begin{bmatrix} -2 \\ 1 \\ 0 \\ 0 \end{bmatrix}
+        + t\begin{bmatrix} -1 \\ 0 \\ -2 \\ 1 \end{bmatrix}, \qquad s, t \in \R.
+      \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.7</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \(\left[\begin{array}{cc|c} 1&amp;1&amp;1 \\ 2&amp;2&amp;3 \end{array}\right]
+      \xrightarrow{R_2 - 2R_1} \left[\begin{array}{cc|c} 1&amp;1&amp;1 \\ 0&amp;0&amp;1 \end{array}\right]\):
+      l'ultima riga è \(0 = 1\), falsa. Impossibile.
+      <br><b>(b)</b> \(\Col(\mm{A}) = \span\{(1, 2)\}\): tutte le combinazioni delle colonne stanno sulla retta
+      dei multipli di \((1, 2)\). Ma \(\vv{b} = (1, 3)\) <em>non</em> è un multiplo di \((1, 2)\) (dovrebbe
+      essere \((1, 2)\)): \(\vv{b} \notin \Col(\mm{A})\), quindi nessuna combinazione delle colonne lo
+      raggiunge. Stessa conclusione, dalla lettura per colonne.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.8</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> Rango 3 in una \(3\times5\) significa un pivot in ognuna delle 3 righe: nessun pivot può
+      finire nella colonna di \(\vv{b}\), quindi il sistema è sempre compatibile. Detto per colonne:
+      \(\Col(\mm{A})\) ha dimensione 3, cioè è tutto \(\R^3\), e ogni \(\vv{b}\) è raggiungibile.
+      <br><b>(b) VERO.</b> Più incognite che equazioni (\(n &gt; m\)) impone \(r \le m &lt; n\), quindi c'è almeno
+      una colonna libera. Allora il sistema è impossibile (0) oppure ha infinite soluzioni: mai
+      <em>esattamente una</em>.
+      <br><b>(c) VERO</b> (in generale). Le mosse sulle righe mescolano le componenti delle colonne e ne
+      cambiano lo span — per questo la base di \(\Col(\mm{A})\) si prende dalle colonne <em>originali</em>, non
+      dalla RREF (§10.8).
+      <br><b>(d) VERO.</b> Un pivot nella colonna di \(\vv{b}\) corrisponde a una riga \(0 = k\) con
+      \(k \neq 0\): nessun \(\vv{x}\) la soddisfa.
+      <br><b>(e) VERO.</b> \(\vv{x} = \vv{0}\) risolve sempre \(\mm{A}\vv{0} = \vv{0}\). Il sistema omogeneo
+      non è mai impossibile: al più ha <em>solo</em> quella (se \(r = n\)) o infinite (se \(r &lt; n\)).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise (le stesse dei capitoli 5-9).
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+/* un numero come lo scriverebbe il libro dentro una combinazione: segno esplicito */
+const sgn = v => (v < 0 ? '−' : '+');
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => nfmt(v));
+  const gt = opt.aug
+    ? `repeat(${opt.aug}, auto) 10px auto`   // barra prima dell'ultima colonna
+    : `repeat(${cols}, auto)`;
+  let h = `<div class="mtab brk" style="grid-template-columns:${gt}">`;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (opt.aug && j === opt.aug)
+        h += `<div class="corner" style="border-left:1.5px solid var(--ink-soft)"></div>`;
+      h += `<div class="c ${cls(i, j, M[i][j])}" data-i="${i}" data-j="${j}">${fmt(M[i][j])}</div>`;
+    }
+  }
+  return h + '</div>';
+}
+
+
+/* ============================================================================
+   FIGURA 10.1 — le due letture di un sistema 2×2
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-due-quadri svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n);
+                          for (const k in at) if (at[k] != null) e.setAttribute(k, at[k]); return e; };
+  const T = (x, y, s, o = {}) => {
+    const t = el('text', { x, y, class: o.bold ? 'lbl-b' : 'lbl', fill: o.color || null,
+                           'text-anchor': o.anchor || 'middle', 'font-size': o.size || null,
+                           'font-style': o.italic ? 'italic' : null });
+    t.textContent = s; return t;
+  };
+  const mk = (id) => {
+    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5,
+                             markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse', markerUnits: 'strokeWidth' });
+    m.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--violet)' }));
+    return m;
+  };
+  const defs = el('defs', {}); defs.appendChild(mk('f101-arr')); svg.appendChild(defs);
+
+  /* ---- pannello sinistro: quadro delle rette ---- */
+  (function () {
+    const ox = 40, oy = 300, u = 40;          // origine e unità in px
+    const X = x => ox + x * u, Y = y => oy - y * u;
+    const g = el('g', {}); svg.appendChild(g);
+    // griglia leggera
+    for (let k = -1; k <= 6; k++) {
+      g.appendChild(el('line', { x1: X(k), y1: Y(-1), x2: X(k), y2: Y(6), class: 'grid' }));
+      g.appendChild(el('line', { x1: X(-1), y1: Y(k), x2: X(6), y2: Y(k), class: 'grid' }));
+    }
+    // assi
+    g.appendChild(el('line', { x1: X(-1), y1: Y(0), x2: X(6), y2: Y(0), class: 'axis' }));
+    g.appendChild(el('line', { x1: X(0), y1: Y(-1), x2: X(0), y2: Y(6), class: 'axis' }));
+    // retta x + y = 3  →  y = 3 - x
+    g.appendChild(el('line', { x1: X(-1), y1: Y(4), x2: X(6), y2: Y(-3), stroke: 'var(--accent)', 'stroke-width': 2.6 }));
+    // retta x - y = 1  →  y = x - 1
+    g.appendChild(el('line', { x1: X(-1), y1: Y(-2), x2: X(6), y2: Y(5), stroke: 'var(--warm)', 'stroke-width': 2.6 }));
+    // incrocio (2,1)
+    g.appendChild(el('circle', { cx: X(2), cy: Y(1), r: 5, fill: 'var(--violet)', stroke: 'var(--paper)', 'stroke-width': 2 }));
+    g.appendChild(T(X(2) + 10, Y(1) - 10, '(2, 1)', { bold: true, color: 'var(--violet)', anchor: 'start' }));
+    g.appendChild(T(X(-0.6), Y(3.9), 'x + y = 3', { color: 'var(--accent)', anchor: 'start', size: 12 }));
+    g.appendChild(T(X(5.0), Y(4.4), 'x − y = 1', { color: 'var(--warm)', anchor: 'end', size: 12 }));
+    g.appendChild(T(X(2), 335, 'per righe: dove si incrociano le rette', { italic: true, size: 12.5 }));
+  })();
+
+  /* ---- pannello destro: quadro delle colonne ---- */
+  (function () {
+    const ox = 430, oy = 300, u = 40;
+    const X = x => ox + x * u, Y = y => oy - y * u;
+    const g = el('g', {}); svg.appendChild(g);
+    for (let k = -1; k <= 4; k++) {
+      g.appendChild(el('line', { x1: X(k), y1: Y(-2), x2: X(k), y2: Y(4), class: 'grid' }));
+      g.appendChild(el('line', { x1: X(-1), y1: Y(k - 1), x2: X(4), y2: Y(k - 1), class: 'grid' }));
+    }
+    g.appendChild(el('line', { x1: X(-1), y1: Y(0), x2: X(4), y2: Y(0), class: 'axis' }));
+    g.appendChild(el('line', { x1: X(0), y1: Y(-2), x2: X(0), y2: Y(4), class: 'axis' }));
+    const arr = (x1, y1, x2, y2, c, w) => g.appendChild(el('line', {
+      x1: X(x1), y1: Y(y1), x2: X(x2), y2: Y(y2), stroke: c, 'stroke-width': w || 2.6,
+      'marker-end': 'url(#f101-arr)' }));
+    // 2·c1 poi + c2 fino a b = (3,1).  c1=(1,1), c2=(1,-1)
+    // catena: 0 -> 2c1=(2,2) -> +c2=(3,1)
+    g.appendChild(el('line', { x1: X(0), y1: Y(0), x2: X(2), y2: Y(2), stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-dasharray': '4 3', opacity: .8 }));
+    g.appendChild(el('line', { x1: X(2), y1: Y(2), x2: X(3), y2: Y(1), stroke: 'var(--warm)', 'stroke-width': 2, 'stroke-dasharray': '4 3', opacity: .8 }));
+    // le colonne unitarie
+    const am = el('marker', { id: 'f101-a', viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse', markerUnits: 'strokeWidth' });
+    am.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--accent)' })); defs.appendChild(am);
+    const wm = el('marker', { id: 'f101-w', viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse', markerUnits: 'strokeWidth' });
+    wm.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--warm)' })); defs.appendChild(wm);
+    g.appendChild(el('line', { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), stroke: 'var(--accent)', 'stroke-width': 2.6, 'marker-end': 'url(#f101-a)' }));
+    g.appendChild(el('line', { x1: X(0), y1: Y(0), x2: X(1), y2: Y(-1), stroke: 'var(--warm)', 'stroke-width': 2.6, 'marker-end': 'url(#f101-w)' }));
+    arr(0, 0, 3, 1, 'var(--violet)', 3);
+    g.appendChild(T(X(1) + 6, Y(1) - 6, 'c₁', { bold: true, color: 'var(--accent)', anchor: 'start' }));
+    g.appendChild(T(X(1) + 6, Y(-1) + 14, 'c₂', { bold: true, color: 'var(--warm)', anchor: 'start' }));
+    g.appendChild(T(X(3) + 8, Y(1) - 6, 'b', { bold: true, color: 'var(--violet)', anchor: 'start' }));
+    g.appendChild(T(X(1.5), 335, 'per colonne: 2·c₁ + 1·c₂ = b', { italic: true, size: 12.5 }));
+  })();
+})();
+
+
+/* ============================================================================
+   WIDGET §10.1 — risolvere = pesare le colonne
+   A = [[2,1],[1,3]] fissa; si trascina b; x = A⁻¹ b (det = 5).
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wq-svg');
+  if (!svg) return;
+  const out = document.getElementById('wq-out');
+  const p = new Plot(svg, { xmin: -5.5, xmax: 5.5, ymin: -4, ymax: 4 });
+  const c1 = [2, 1], c2 = [1, 3];
+  let b = [4, 3];
+
+  function solve(b) {                 // A⁻¹ b, A = [[2,1],[1,3]], det = 5
+    const x = (3 * b[0] - 1 * b[1]) / 5;
+    const y = (-1 * b[0] + 2 * b[1]) / 5;
+    return [x, y];
+  }
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const [x, y] = solve(b);
+    // catena: 0 -> x·c1 -> + y·c2 = b
+    const m1 = [x * c1[0], x * c1[1]];
+    p.line(0, 0, m1[0], m1[1], { color: 'var(--accent)', width: 2, dash: '5 3', opacity: .85 });
+    p.line(m1[0], m1[1], b[0], b[1], { color: 'var(--warm)', width: 2, dash: '5 3', opacity: .85 });
+    // colonne unitarie
+    p.arrow(0, 0, c1[0], c1[1], { color: 'var(--accent)', width: 2.6, label: 'c₁' });
+    p.arrow(0, 0, c2[0], c2[1], { color: 'var(--warm)', width: 2.6, label: 'c₂' });
+    p.arrow(0, 0, b[0], b[1], { color: 'var(--violet)', width: 3.2 });
+    p.dot(b[0], b[1], { color: 'var(--violet)', r: 5 });
+    p.handle(b[0], b[1], { color: 'var(--violet)', snap: 0.5 }, (X, Y) => { b = [X, Y]; draw(); });
+
+    out.innerHTML = `
+      <div class="big">
+        <b style="color:var(--violet)">b = (${nfmt(b[0])}, ${nfmt(b[1])})</b>
+        &nbsp;→&nbsp; servono
+        <b style="color:var(--accent)">${nfmt(x)}</b> di c₁ e
+        <b style="color:var(--warm)">${nfmt(y)}</b> di c₂
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b>Per colonne:</b> \\(${nfmt(x)}\\begin{bmatrix}2\\\\1\\end{bmatrix}
+        ${y < 0 ? '−' : '+'} ${nfmt(Math.abs(y))}\\begin{bmatrix}1\\\\3\\end{bmatrix}
+        = \\begin{bmatrix}${nfmt(b[0])}\\\\${nfmt(b[1])}\\end{bmatrix}\\).
+        <br>
+        <b>Per righe:</b> è la soluzione di \\(2x + y = ${nfmt(b[0])}\\), \\(x + 3y = ${nfmt(b[1])}\\):
+        <mark>x = ${nfmt(x)}, y = ${nfmt(y)}</mark>.
+        <br>
+        Le due colonne sono indipendenti, quindi <em>ogni</em> b è raggiungibile in <b>un solo modo</b>: una
+        soluzione, sempre. (Le tre possibilità arrivano nel §10.7, quando le colonne non bastano.)
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §10.6 — Gauss-Jordan un passo alla volta (steps precompilati)
+   Sistema:  [1 1 1 | 6 ; 1 2 3 | 14 ; 1 4 9 | 36]  →  x=1,y=2,z=3
+   ========================================================================= */
+(function () {
+  const body = document.getElementById('wg-body');
+  if (!body) return;
+  const out = document.getElementById('wg-out');
+  const btnN = document.getElementById('wg-next');
+  const btnR = document.getElementById('wg-reset');
+
+  // ogni passo: matrice risultante, descrizione, celle-pivot, celle appena azzerate
+  const M0 = [[1, 1, 1, 6], [1, 2, 3, 14], [1, 4, 9, 36]];
+  const STEPS = [
+    { M: M0, op: 'La matrice aumentata di partenza. I pivot li fabbrichiamo noi.', piv: [], zero: [] },
+    { M: [[1, 1, 1, 6], [0, 1, 2, 8], [1, 4, 9, 36]], op: 'R₂ ← R₂ − R₁ : azzero sotto il primo pivot.', piv: [[0, 0]], zero: [[1, 0]] },
+    { M: [[1, 1, 1, 6], [0, 1, 2, 8], [0, 3, 8, 30]], op: 'R₃ ← R₃ − R₁ : finisco la prima colonna.', piv: [[0, 0]], zero: [[1, 0], [2, 0]] },
+    { M: [[1, 1, 1, 6], [0, 1, 2, 8], [0, 0, 2, 6]], op: 'R₃ ← R₃ − 3R₂ : azzero sotto il secondo pivot. Forma a scala!', piv: [[0, 0], [1, 1]], zero: [[1, 0], [2, 0], [2, 1]] },
+    { M: [[1, 1, 1, 6], [0, 1, 2, 8], [0, 0, 1, 3]], op: 'R₃ ← ½R₃ : normalizzo il terzo pivot a 1.', piv: [[0, 0], [1, 1], [2, 2]], zero: [[1, 0], [2, 0], [2, 1]] },
+    { M: [[1, 1, 0, 3], [0, 1, 0, 2], [0, 0, 1, 3]], op: 'R₂ ← R₂ − 2R₃ e R₁ ← R₁ − R₃ : pulisco sopra il terzo pivot.', piv: [[0, 0], [1, 1], [2, 2]], zero: [[0, 2], [1, 2]] },
+    { M: [[1, 0, 0, 1], [0, 1, 0, 2], [0, 0, 1, 3]], op: 'R₁ ← R₁ − R₂ : pulisco sopra il secondo pivot. È la RREF.', piv: [[0, 0], [1, 1], [2, 2]], zero: [[0, 1]] },
+  ];
+  let k = 0;
+
+  function render() {
+    const s = STEPS[k];
+    const pv = new Set(s.piv.map(([i, j]) => i + ',' + j));
+    const zr = new Set(s.zero.map(([i, j]) => i + ',' + j));
+    const done = (k === STEPS.length - 1);
+    body.innerHTML = matHTML(s.M, {
+      aug: 3,
+      cls: (i, j, v) => {
+        if (pv.has(i + ',' + j)) return 'p hl';
+        if (zr.has(i + ',' + j) && v === 0) return 'z';
+        return '';
+      }
+    });
+    out.innerHTML = `
+      <div style="min-height:2.4em">
+        <b>Passo ${k}/${STEPS.length - 1}.</b> ${s.op}
+      </div>
+      ${done
+        ? `<div style="margin-top:.3rem; color:var(--green)"><b>A sinistra c'è l'identità: la risposta si
+           legge a destra.</b> x = 1, y = 2, z = 3. (E infatti 1+2+3 = 6 ✔, 1+4·2+9·3 = 36 ✔.)</div>`
+        : `<div style="margin-top:.3rem; color:var(--ink-soft)">In viola i pivot; in grigio gli zeri appena
+           fabbricati. Premi «prossimo passo».</div>`}`;
+    btnN.disabled = done;
+    btnN.style.opacity = done ? .4 : 1;
+  }
+  btnN.onclick = () => { if (k < STEPS.length - 1) { k++; render(); } };
+  btnR.onclick = () => { k = 0; render(); };
+  render();
+})();
+
+
+/* ============================================================================
+   WIDGET §10.7 — le tre possibilità con due rette
+   L1 fissa: x + y = 2. L2 passa per due punti trascinabili A, B.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wp-out');
+  const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -3.5, ymax: 3.5 });
+  let A = [-2, -2], B = [3, 3];       // stato iniziale: L2 = (x − y = 0), incrocia L1 in (1,1): caso «una»
+
+  // retta per due punti P,Q come  n·(x,y) = d   con n = normale, d = offset
+  function lineOf(P, Q) {
+    const dx = Q[0] - P[0], dy = Q[1] - P[1];
+    const n = [dy, -dx];              // normale alla direzione
+    const d = n[0] * P[0] + n[1] * P[1];
+    return { n, d };
+  }
+  // estremi della retta n·x = d dentro la finestra, per disegnarla
+  function segOf(n, d) {
+    // parametrizza: trova due punti lontani sulla retta
+    const L = Math.hypot(n[0], n[1]) || 1;
+    const dir = [-n[1] / L, n[0] / L];         // direzione della retta
+    const p0 = [n[0] * d / (L * L), n[1] * d / (L * L)]; // punto più vicino all'origine
+    const t = 12;
+    return [[p0[0] - dir[0] * t, p0[1] - dir[1] * t], [p0[0] + dir[0] * t, p0[1] + dir[1] * t]];
+  }
+
+  const L1 = { n: [1, 1], d: 2 };      // x + y = 2
+
+  function classify(L2) {
+    // determinante del sistema 2×2 delle due normali
+    const det = L1.n[0] * L2.n[1] - L1.n[1] * L2.n[0];
+    if (Math.abs(det) > 1e-9) return { tipo: 'una' };
+    // parallele: coincidono se gli offset sono proporzionali col rapporto delle normali
+    // scala L2 sulla stessa normale di L1
+    const k = (Math.abs(L1.n[0]) > 1e-9) ? L2.n[0] / L1.n[0] : L2.n[1] / L1.n[1];
+    const dScaled = L2.d / k;
+    return Math.abs(dScaled - L1.d) < 1e-6 ? { tipo: 'infinite' } : { tipo: 'zero' };
+  }
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const L2 = lineOf(A, B);
+    const c = classify(L2);
+
+    // L1
+    let s = segOf(L1.n, L1.d);
+    p.line(s[0][0], s[0][1], s[1][0], s[1][1], { color: 'var(--accent)', width: 2.6 });
+    // L2
+    s = segOf(L2.n, L2.d);
+    p.line(s[0][0], s[0][1], s[1][0], s[1][1], { color: 'var(--warm)', width: 2.6 });
+
+    // incrocio, se unico
+    let pt = null;
+    if (c.tipo === 'una') {
+      const det = L1.n[0] * L2.n[1] - L1.n[1] * L2.n[0];
+      pt = [(L1.d * L2.n[1] - L2.d * L1.n[1]) / det, (L1.n[0] * L2.d - L2.n[0] * L1.d) / det];
+      p.dot(pt[0], pt[1], { color: 'var(--violet)', r: 5.5 });
+    }
+    // i due handle di L2
+    p.handle(A[0], A[1], { color: 'var(--warm)', snap: 0.5 }, (x, y) => { A = [x, y]; draw(); });
+    p.handle(B[0], B[1], { color: 'var(--warm)', snap: 0.5 }, (x, y) => { B = [x, y]; draw(); });
+
+    /* costruisco solo il ramo giusto: il ramo «una» tocca pt, che è null negli altri casi */
+    let testo;
+    if (c.tipo === 'una') {
+      testo = {
+        col: 'var(--violet)',
+        tit: 'UNA soluzione',
+        det: `Le rette si incrociano in <b>(${nfmt(pt[0])}, ${nfmt(pt[1])})</b>. La matrice dei coefficienti ha
+              rango 2 = numero di incognite: nessuna colonna libera. <mark>Un pivot per ogni incognita.</mark>`
+      };
+    } else if (c.tipo === 'zero') {
+      testo = {
+        col: 'var(--warm)',
+        tit: 'ZERO soluzioni',
+        det: `Le rette sono <b>parallele e distinte</b>: non si toccano mai. Riducendo, salta fuori una riga
+              «0 = k» con k ≠ 0 — <mark>un pivot nella colonna di b</mark>. Impossibile (§10.7, caso ②).`
+      };
+    } else {
+      testo = {
+        col: 'var(--green)',
+        tit: 'INFINITE soluzioni',
+        det: `Le due rette <b>coincidono</b>: la seconda equazione non aggiunge niente. Una colonna resta
+              libera — <mark>rango 1 &lt; 2 incognite</mark> — e le soluzioni sono un'intera retta (§10.7, caso ③).`
+      };
+    }
+
+    out.innerHTML = `
+      <div class="big" style="color:${testo.col}">${testo.tit}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b style="color:var(--accent)">L₁: x + y = 2</b> (fissa) &nbsp;·&nbsp;
+        <b style="color:var(--warm)">L₂</b> passa per (${nfmt(A[0])}, ${nfmt(A[1])}) e (${nfmt(B[0])}, ${nfmt(B[1])}).
+        <br>${testo.det}
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

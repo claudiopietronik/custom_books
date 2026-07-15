@@ -172,7 +172,7 @@ const TOC = [
     n: 10,
     titolo: "Sistemi di equazioni",
     file: "cap10-sistemi-equazioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Algebra e geometria delle equazioni" },
       { id: "s10-2", n: "10.2", t: "Dai sistemi alle matrici" },
