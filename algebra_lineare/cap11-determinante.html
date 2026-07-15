@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Determinante — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Determinante</h1>
+    <p class="standfirst">
+      Sotto il primissimo widget del libro, nel §1.1, avevo lasciato cadere una frase e un numero: quando la
+      griglia collassava su una retta, quel numero — \(ad - bc\) — andava a zero. L'avevo chiamato
+      <em>determinante</em> e avevo promesso che era «il cuore dei capitoli 7, 11 e 12». Il rango (Cap. 7)
+      ci ha detto <em>quante</em> dimensioni sopravvivono. Adesso il determinante risponde alla seconda
+      domanda: <mark>di <em>quanto</em> una matrice gonfia o schiaccia l'area</mark> — e da che parte la
+      gira.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il determinante è un <strong>numero</strong> che si attacca a una matrice <b>quadrata</b> (solo quadrata,
+      §5.2) e ne riassume, in una cifra sola, il comportamento geometrico. Lo costruiremo <em>vedendolo</em>:
+      è l'area (con segno) di un parallelogramma, il volume (con segno) di un parallelepipedo. Da lì
+      ricaveremo la formula \(ad - bc\), la regola per le \(3\times3\), la procedura generale, e — sorpresa —
+      la macchina che nel Capitolo 15 produrrà gli <b>autovalori</b>: il polinomio caratteristico, che il
+      §5.5 ci aveva già fatto intravedere.
+      <br>
+      Un avvertimento fin da subito, perché questo libro non vende illusioni: il determinante è
+      <em>splendido in teoria</em> e <em>pessimo in pratica</em> per i numeri sporchi. Alla fine (§11.9) ti
+      dirò quando usarlo e quando lasciarlo perdere.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la seconda delle tre risposte</div>
+    <p>
+      Nel §7.1 avevo scritto che il collasso del §1.1 era «il cuore dei capitoli 7 (rango), 11 (determinante)
+      e 12 (inversa)», e che sono <em>tre domande diverse</em> sullo stesso fenomeno:
+    </p>
+    <ul style="margin:.2rem 0 .5rem">
+      <li><b>Rango</b> (Cap. 7): <em>quante</em> dimensioni sopravvivono alla trasformazione?</li>
+      <li><b>Determinante</b> (qui): <em>di quanto</em> si è ristretta — o dilatata — l'area?</li>
+      <li><b>Inversa</b> (Cap. 12): <em>si può</em> tornare indietro? (E la risposta sarà: solo se non hai
+          perso dimensioni.)</li>
+    </ul>
+    <p style="margin-bottom:0">
+      Il determinante è la <b>seconda</b>. Misura un <em>fattore di scala</em>: quanto un'unità di area, data
+      in pasto alla matrice, esce ingrandita o rimpicciolita. E quando esce <mark>schiacciata a zero</mark> —
+      determinante nullo — sai che una dimensione è morta per strada, e che indietro non si torna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Caratteristiche del determinante</h2>
+
+  <p class="lead">
+    Invece di darti una formula da mandare a memoria, parto da <em>che cosa deve fare</em> il determinante.
+    Tre richieste geometriche, e la formula ne uscirà da sola — costretta, non inventata.
+  </p>
+
+  <p>
+    L'idea guida è una sola, e la porteremo per tutto il capitolo. Una matrice \(\mm{A}\) prende i vettori
+    base \(\vv{e}_1, \vv{e}_2\) — i lati del quadratino unitario — e li manda nelle sue <b>colonne</b>
+    (§6.5). Quel quadratino di area 1 diventa un <b>parallelogramma</b>, i cui lati sono le colonne di
+    \(\mm{A}\).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il determinante, geometricamente</div>
+    <p style="margin-bottom:0">
+      Il <span class="termine">determinante</span> di una matrice \(2\times2\) è l'<b>area con segno</b> del
+      parallelogramma costruito sulle sue due colonne. Per una \(3\times3\), è il <b>volume con segno</b> del
+      parallelepipedo costruito sulle sue tre colonne. In generale: <mark>il fattore di cui la matrice
+      moltiplica le aree (i volumi)</mark>. Un'unità di area entra, \(\det(\mm{A})\) unità escono.
+    </p>
+  </div>
+
+  <p>
+    «Con segno» non è un dettaglio: è metà del contenuto. Il segno registra l'<b>orientamento</b>. Se la
+    matrice conserva il verso di rotazione da \(\vv{e}_1\) a \(\vv{e}_2\) (antiorario), il determinante è
+    <b>positivo</b>; se lo <em>ribalta</em> (come uno specchio), è <b>negativo</b>. È lo stesso segno che nel
+    §3.5 governava il prodotto vettoriale, e lo ritroveremo nel §11.4.
+  </p>
+
+  <p>
+    Da questa immagine discendono tre proprietà, e sono <em>tutto</em> il determinante — nel senso letterale
+    che una sola funzione le soddisfa. Le chiamo le sue <b>caratteristiche</b>:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le tre caratteristiche <span class="tag">e determinano il determinante</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>① Normalizzazione</dt>
+        <dd>\(\det(\mm{I}) = 1\). L'identità non tocca niente: il quadratino unitario resta il quadratino
+            unitario, area 1, orientamento intatto.</dd>
+        <dt>② Alternanza</dt>
+        <dd>scambiare due colonne <b>cambia il segno</b>: \(\det[\dots\vv{c}_i\dots\vv{c}_j\dots] =
+            -\det[\dots\vv{c}_j\dots\vv{c}_i\dots]\). Scambiare due lati ribalta l'orientamento del
+            parallelogramma. <em>Conseguenza immediata:</em> se due colonne sono <b>uguali</b>, il
+            determinante è \(0\) (un parallelogramma con due lati sovrapposti è schiacciato: area zero).</dd>
+        <dt>③ Multilinearità</dt>
+        <dd>il determinante è <b>lineare in ogni colonna</b>, tenendo ferme le altre. Allungare un lato di un
+            fattore \(k\) allunga l'area di \(k\): \(\det[\dots k\vv{c}_i\dots] = k\det[\dots\vv{c}_i\dots]\).
+            E le aree si <em>sommano</em> se spezzi un lato in due: \(\det[\dots\vv{u}+\vv{w}\dots] =
+            \det[\dots\vv{u}\dots] + \det[\dots\vv{w}\dots]\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non le dimostro «assiomaticamente» — non è quel tipo di libro. Ma nota che sono tutte
+      <em>leggibili sul parallelogramma</em>: normalizzazione (l'unità resta unità), alternanza (scambiare i
+      lati ribalta il verso), multilinearità (l'area scala con i lati). Nel §11.2 le faccio lavorare, e ne
+      cade fuori \(ad - bc\).
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La conseguenza che aspettavamo dal §1.1</div>
+    <p style="margin-bottom:0">
+      Metti insieme ② e ③. Se una colonna è <b>combinazione lineare</b> delle altre (colonne dipendenti,
+      §4.6), il parallelogramma è schiacciato in una dimensione più bassa: area zero. Quindi
+      \[ \boxed{\;\det(\mm{A}) = 0 \iff \text{le colonne di } \mm{A} \text{ sono dipendenti}\;} \]
+      Questo è il collasso del §1.1, finalmente con un nome numerico. Ed è la <em>stessa</em> cosa che nel
+      §6.3 avevo detto essere «due modi di dire la medesima frase»: colonne indipendenti \(\iff\)
+      \(\det \neq 0\). <mark>Non «quadrata vuol dire \(\det \neq 0\)»</mark> — quello è falso, una quadrata può
+      benissimo essere singolare — ma «colonne indipendenti \(\iff \det \neq 0\)», che invece è ferro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>Determinante di una 2×2</h2>
+
+  <p class="lead">
+    Facciamo cadere la formula. Le colonne di \(\mm{A} = \begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix}\)
+    sono \(\vv{c}_1 = (a, c)\) e \(\vv{c}_2 = (b, d)\). Qual è l'area con segno del parallelogramma che
+    formano?
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il determinante di una 2×2 <span class="tag">l'unica formula da ricordare</span></div>
+    <div class="f-body">
+      \[ \det\begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix} = ad - bc \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(ad\)</dt>
+        <dd>il prodotto della diagonale principale (da in alto a sinistra a in basso a destra).</dd>
+        <dt>\(bc\)</dt>
+        <dd>il prodotto dell'antidiagonale, <b>sottratto</b>.</dd>
+        <dt>area con segno</dt>
+        <dd>è esattamente il <b>prodotto vettoriale</b> \(\vv{c}_1 \times \vv{c}_2\) nel piano (§3.5):
+            \((a)(d) - (c)(b)\). Il §3.5 lo chiamava «area del parallelogramma con segno», e non era un caso —
+            <mark>era già il determinante</mark>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Vuoi vederla cadere dalle tre caratteristiche? Scrivi le colonne come combinazioni di \(\vv{e}_1,
+      \vv{e}_2\): \(\vv{c}_1 = a\vv{e}_1 + c\vv{e}_2\), \(\vv{c}_2 = b\vv{e}_1 + d\vv{e}_2\). Espandi
+      \(\det[\vv{c}_1, \vv{c}_2]\) con la multilinearità (③): saltano fuori quattro pezzi. I due con colonne
+      uguali (\(\det[\vv{e}_1,\vv{e}_1]\), \(\det[\vv{e}_2,\vv{e}_2]\)) valgono zero (②); restano
+      \(ad\det[\vv{e}_1,\vv{e}_2] + cb\det[\vv{e}_2,\vv{e}_1] = ad(1) + cb(-1) = ad - bc\), usando ① e ②.
+      La formula è <em>forzata</em>: non poteva essere altro.
+    </div>
+  </div>
+
+  <p>
+    Tre esempi, per fissare le tre facce del determinante — grandezza, segno, collasso:
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Grandezza, segno, collasso</div>
+    <p style="margin:.2rem 0 .3rem">
+      <b>Grandezza.</b> \(\det\begin{bmatrix} 3 &amp; 1 \\ 1 &amp; 2 \end{bmatrix} = 3\cdot 2 - 1\cdot 1 = 5\):
+      questa matrice <em>quintuplica</em> le aree.
+    </p>
+    <p style="margin:.2rem 0 .3rem">
+      <b>Segno.</b> \(\det\begin{bmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{bmatrix} = 0\cdot 0 - 1\cdot 1 = -1\):
+      questa è lo scambio degli assi (uno specchio). Conserva le aree (\(|{-1}| = 1\)) ma <em>ribalta
+      l'orientamento</em> — ecco il segno meno.
+    </p>
+    <p style="margin:.2rem 0 0">
+      <b>Collasso.</b> \(\det\begin{bmatrix} 2 &amp; 4 \\ 3 &amp; 6 \end{bmatrix} = 2\cdot 6 - 4\cdot 3 = 0\):
+      la seconda colonna è il doppio della prima (\((4,6) = 2(2,3)\)). Colonne dipendenti, parallelogramma
+      schiacciato su una retta, area zero. È la matrice singolare del §5.5.
+    </p>
+  </div>
+
+  <div class="widget" id="w-area">
+    <div class="w-head">
+      <span>Il determinante è un'area con segno</span>
+      <span class="hint">trascina le due colonne</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wa-svg" viewBox="0 0 560 400" role="img" aria-label="Il parallelogramma generato dalle due colonne di una matrice 2×2, con la sua area con segno"></svg>
+    </div>
+    <div class="w-readout" id="wa-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Una promessa del §4.6, saldata al volo</div>
+    <p style="margin-bottom:0">
+      Nell'Esercizio 4.5 avevi incontrato \(\begin{bmatrix} 2 &amp; 4 \\ 3 &amp; t \end{bmatrix}\) e la domanda
+      «per quale \(t\) le colonne sono dipendenti?». Adesso è un conto: \(\det = 2t - 12\), che è zero per
+      \(t = 6\). Per \(t = 6\) la seconda colonna diventa \((4, 6) = 2(2, 3)\): dipendente. Il determinante
+      trasforma una domanda di geometria («collassano?») in un'equazione di una riga.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Il polinomio caratteristico</h2>
+
+  <p class="lead">
+    Ora una parentesi che è quasi un regalo. Con la sola formula \(ad - bc\) in mano, possiamo già costruire
+    l'oggetto più importante della seconda metà del libro — quello che nel §5.5 avevo promesso e chiamato per
+    nome senza spiegarlo.
+  </p>
+
+  <p>
+    Nel §5.5 giocavamo con lo <em>shifting</em>: sottrarre \(\lambda\) dalla diagonale, cioè formare
+    \(\mm{A} - \lambda\mm{I}\), e cercare i valori di \(\lambda\) che la rendono <b>singolare</b>. «Singolare»
+    adesso ha un test: determinante zero. Quindi cerchiamo i \(\lambda\) che annullano
+    \(\det(\mm{A} - \lambda\mm{I})\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il polinomio caratteristico <span class="tag">le radici sono gli autovalori</span></div>
+    <div class="f-body">
+      \[
+        p(\lambda) \;=\; \det(\mm{A} - \lambda\mm{I})
+        \;=\; \det\begin{bmatrix} a-\lambda &amp; b \\ c &amp; d-\lambda \end{bmatrix}
+        \;=\; \lambda^2 - \underbrace{(a+d)}_{\tr(\mm{A})}\lambda + \underbrace{(ad-bc)}_{\det(\mm{A})}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(p(\lambda)\)</dt>
+        <dd>il <span class="termine">polinomio caratteristico</span> di \(\mm{A}\): per una \(2\times2\) è un
+            polinomio di secondo grado in \(\lambda\).</dd>
+        <dt>\(\tr(\mm{A}) = a+d\)</dt>
+        <dd>la <b>traccia</b> (§6.9): compare come coefficiente di \(\lambda\), cambiato di segno.</dd>
+        <dt>\(\det(\mm{A}) = ad-bc\)</dt>
+        <dd>il determinante: è il <b>termine noto</b>. (Bello, no? Traccia e determinante, i due riassunti di
+            una matrice, sono proprio i coefficienti del suo polinomio.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Le <b>radici</b> di \(p(\lambda)\) — i \(\lambda\) per cui \(\mm{A} - \lambda\mm{I}\) collassa — si
+      chiamano <span class="termine">autovalori</span> di \(\mm{A}\), e li studieremo sul serio nel
+      <b>Capitolo 15</b>. Qui ci basta vedere che <mark>il determinante è la macchina che li produce</mark>.
+    </div>
+  </div>
+
+  <p>
+    Due esempi, e uno dei due chiude un cerchio aperto due capitoli fa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Due matrici, due destini</div>
+    <p style="margin:.2rem 0 .4rem">
+      <b>Autovalori reali.</b> Per \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) (simmetrica):
+      \[ p(\lambda) = \lambda^2 - 4\lambda + 3 = (\lambda - 1)(\lambda - 3) \;\Rightarrow\; \lambda = 1,\ 3. \]
+      Due autovalori reali. Le simmetriche ce li hanno <em>sempre</em> reali — te l'avevo detto nel §5.5, e nel
+      §15.8 lo dimostreremo.
+    </p>
+    <p style="margin:.2rem 0 0">
+      <b>Autovalori complessi.</b> Per la <b>rotazione di 90°</b>,
+      \(\mm{R} = \begin{bmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{bmatrix}\):
+      \[ p(\lambda) = \lambda^2 + 1 \;\Rightarrow\; \lambda = \pm i. \]
+      <mark>Nessuna radice reale</mark> — la parabola non tocca l'asse. È esattamente il vettore che nel §9.1
+      non trovavamo: la rotazione «non ha direzioni fisse» finché resti nei reali, ma in \(\C\) i suoi
+      autovalori sono \(\pm i\). Il determinante e i numeri complessi si stringono la mano proprio qui.
+    </p>
+  </div>
+
+  <div class="widget" id="w-charpoly">
+    <div class="w-head">
+      <span>Il polinomio caratteristico, disegnato</span>
+      <span class="hint">scegli la matrice</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-svg" viewBox="0 0 560 400" role="img" aria-label="La parabola del polinomio caratteristico e le sue radici, gli autovalori"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wc-sym">simmetrica (2 reali)</button>
+      <button class="w-btn" id="wc-neg">un autovalore negativo</button>
+      <button class="w-btn" id="wc-rot">rotazione (complessi)</button>
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Determinante di una 3×3</h2>
+
+  <p class="lead">
+    Saliamo di una dimensione. Tre colonne in \(\R^3\) formano un parallelepipedo, e il determinante è il suo
+    <b>volume con segno</b>. La formula ha più pezzi, ma nasconde una struttura semplice: <em>è fatta di
+    determinanti \(2\times2\)</em>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Sviluppo per cofattori (prima riga) <span class="tag">tre 2×2, a segni alterni</span></div>
+    <div class="f-body">
+      \[
+        \det\begin{bmatrix} a_1 &amp; a_2 &amp; a_3 \\ b_1 &amp; b_2 &amp; b_3 \\ c_1 &amp; c_2 &amp; c_3 \end{bmatrix}
+        = a_1\det\begin{bmatrix} b_2 &amp; b_3 \\ c_2 &amp; c_3 \end{bmatrix}
+        - a_2\det\begin{bmatrix} b_1 &amp; b_3 \\ c_1 &amp; c_3 \end{bmatrix}
+        + a_3\det\begin{bmatrix} b_1 &amp; b_2 \\ c_1 &amp; c_2 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Prendi ogni elemento della prima riga; cancella la sua riga e la sua colonna; quel che resta è una
+      \(2\times2\), il suo <b>minore</b>. Moltiplica l'elemento per il determinante del minore, con i segni
+      <b>\(+ - +\)</b> alternati. Somma. (Quei segni alterni sono l'alternanza ② del §11.1 che rispunta.)
+    </div>
+  </div>
+
+  <p>
+    Sul nostro esempio \(\mm{A} = \begin{bmatrix} 2 &amp; 1 &amp; 1 \\ 1 &amp; 2 &amp; 1 \\ 1 &amp; 1 &amp; 2 \end{bmatrix}\):
+  </p>
+
+  <ol class="passi">
+    <li>
+      \(2\det\begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix} = 2(4 - 1) = 6\).
+    </li>
+    <li>
+      \(-\,1\det\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 2 \end{bmatrix} = -1(2 - 1) = -1\).
+    </li>
+    <li>
+      \(+\,1\det\begin{bmatrix} 1 &amp; 2 \\ 1 &amp; 1 \end{bmatrix} = 1(1 - 2) = -1\).
+    </li>
+    <li>
+      <b>Somma:</b> \(6 - 1 - 1 = \hC{4}\). Il parallelepipedo delle tre colonne ha volume \(4\).
+    </li>
+  </ol>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> La regola di Sarrus (solo per le 3×3)</div>
+    <p style="margin-bottom:0">
+      Per le \(3\times3\) — e <b>solo</b> per quelle — c'è una scorciatoia visiva: somma i prodotti delle tre
+      diagonali «che scendono verso destra», sottrai i prodotti delle tre «che salgono». Sul nostro esempio:
+      discendenti \(2\cdot2\cdot2 + 1\cdot1\cdot1 + 1\cdot1\cdot1 = 8 + 1 + 1 = 10\); ascendenti
+      \(1\cdot2\cdot1 + 2\cdot1\cdot1 + 1\cdot1\cdot2 = 2 + 2 + 2 = 6\); differenza \(10 - 6 = 4\) ✔.
+      <br>
+      <mark>Attenzione:</mark> Sarrus funziona <em>solo</em> per le \(3\times3\). Per le \(4\times4\) in su non
+      esiste nessuna «regola delle diagonali» — chi la usa sbaglia. Da \(4\times4\) in su si va di cofattori
+      (§11.5) o, meglio, di riduzione (§11.7).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>La procedura completa</h2>
+
+  <p class="lead">
+    Lo sviluppo per cofattori non è legato né alla prima riga né alle \(3\times3\): funziona per qualunque
+    \(n\times n\), lungo <em>qualunque</em> riga o colonna. È la definizione generale del determinante.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Minori, cofattori, la scacchiera dei segni</div>
+    <p style="margin:.2rem 0 .4rem">
+      Fissa una riga (o colonna). Per ogni suo elemento \(a_{ij}\):
+    </p>
+    <ul style="margin:0 0 .4rem">
+      <li>il <span class="termine">minore</span> \(M_{ij}\) è il determinante della matrice \((n-1)\times(n-1)\)
+          ottenuta cancellando la riga \(i\) e la colonna \(j\);</li>
+      <li>il <span class="termine">cofattore</span> è \(C_{ij} = (-1)^{i+j} M_{ij}\): il minore col segno
+          della <b>scacchiera</b> \(\begin{smallmatrix}+&amp;-&amp;+\\-&amp;+&amp;-\\+&amp;-&amp;+\end{smallmatrix}\).</li>
+    </ul>
+    <p style="margin:0">
+      Il determinante è \(\displaystyle \det(\mm{A}) = \sum_j a_{ij}\,C_{ij}\) (lungo la riga \(i\)) — e dà lo
+      <b>stesso numero</b> qualunque riga o colonna tu scelga. Conviene sempre <b>scegliere la riga o colonna
+      con più zeri</b>: ogni zero cancella un intero minore.
+    </p>
+  </div>
+
+  <p>
+    Verifichiamolo: sviluppiamo la stessa \(\mm{A}\) del §11.4 lungo la <b>seconda riga</b> \((1, 2, 1)\), con
+    segni \((-, +, -)\):
+    \[
+      -1\det\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}
+      + 2\det\begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}
+      - 1\det\begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}
+      = -1(1) + 2(3) - 1(1) = 4 \ ✔
+    \]
+    Stesso \(4\) di prima. È un buon controllo: se due sviluppi diversi danno numeri diversi, hai sbagliato un
+    conto.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Il prodotto vettoriale era un determinante</div>
+    <p style="margin-bottom:0">
+      Nel §3.5 avevo promesso: «nel Cap. 11 riconoscerai nel prodotto vettoriale la struttura del
+      determinante». Eccola. Con un piccolo abuso di notazione (mettere dei <em>vettori</em> in una riga):
+      \[
+        \vv{a} \times \vv{b} = \det\begin{bmatrix}
+          \vv{i} &amp; \vv{j} &amp; \vv{k} \\ a_1 &amp; a_2 &amp; a_3 \\ b_1 &amp; b_2 &amp; b_3
+        \end{bmatrix}
+      \]
+      Sviluppa per cofattori lungo la prima riga: ottieni esattamente le tre componenti «prodotto in croce
+      meno prodotto in croce» del §3.5. Lo schema ciclico che allora avevi imparato a memoria <em>era</em> lo
+      sviluppo di un determinante.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il prezzo dei cofattori: \(n!\)</div>
+    <p style="margin-bottom:0">
+      Lo sviluppo per cofattori è bellissimo e <b>impraticabile</b> per matrici grandi. Una \(n\times n\) si
+      spezza in \(n\) minori \((n-1)\times(n-1)\), ognuno in \(n-1\) minori… il conto esplode come
+      \(n!\): per una \(20\times20\) sono più operazioni che secondi dall'inizio dell'universo. Serve un'altra
+      strada — e ce l'abbiamo già dal Capitolo 10. È il §11.7.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Il Δ dei triangoli</h2>
+
+  <p class="lead">
+    Prima di correre alla riduzione, un caso che rende tutto facile — e che il §5.5 ti aveva già promesso.
+    Per le matrici <b>triangolari</b>, il determinante è un regalo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Determinante di una triangolare <span class="tag">solo la diagonale conta</span></div>
+    <div class="f-body">
+      \[
+        \det\begin{bmatrix} d_1 &amp; * &amp; * \\ 0 &amp; d_2 &amp; * \\ 0 &amp; 0 &amp; d_3 \end{bmatrix}
+        = d_1 \cdot d_2 \cdot d_3
+      \]
+    </div>
+    <div class="f-note">
+      <strong>Il prodotto degli elementi sulla diagonale</strong>, e basta — gli \(*\) non contano nulla. Il
+      §5.5 lo prometteva parola per parola: «il loro determinante è solo il prodotto della diagonale (§11.6)».
+      Vale per le triangolari superiori <em>e</em> inferiori.
+    </div>
+  </div>
+
+  <p>
+    Perché? Sviluppa per cofattori lungo la <b>prima colonna</b>: sotto \(d_1\) ci sono solo zeri, quindi
+    sopravvive un solo termine, \(d_1\) per il minore in basso a destra — che è ancora triangolare, di taglia
+    \((n-1)\). Ripeti, e resta \(d_1 d_2 \cdots d_n\). Esempio:
+    \[
+      \det\begin{bmatrix} 2 &amp; 5 &amp; 1 \\ 0 &amp; 3 &amp; 4 \\ 0 &amp; 0 &amp; -1 \end{bmatrix}
+      = 2 \cdot 3 \cdot (-1) = -6.
+    \]
+    E come caso particolare, \(\det(\mm{I}) = 1\cdot1\cdots1 = 1\) — la caratteristica ① del §11.1, ritrovata.
+    Questo è il motivo per cui l'eliminazione di Gauss, che <em>fabbrica</em> triangolari (§10.4), è la strada
+    giusta per il determinante.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Determinante e riduzione per righe</h2>
+
+  <p class="lead">
+    Ecco la promessa del §10.2: «nel §11.7 vedremo come si comporta il determinante sotto eliminazione». La
+    strategia è ovvia adesso — <em>riduci a triangolare e moltiplica la diagonale</em> — ma c'è da tenere il
+    conto di come ogni mossa tocca il determinante.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Come le tre mosse (§10.2) toccano il determinante</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Mossa sulle righe</th><th>Effetto su \(\det\)</th><th>Perché</th></tr></thead>
+      <tbody>
+        <tr><td><b>Scambio</b> di due righe</td><td>\(\times(-1)\)</td>
+            <td>è l'alternanza ② del §11.1: scambiare ribalta il segno</td></tr>
+        <tr><td><b>Moltiplico</b> una riga per \(k\)</td><td>\(\times k\)</td>
+            <td>è la multilinearità ③: un lato \(k\) volte più lungo, area \(k\) volte</td></tr>
+        <tr><td><b>Sommo</b> a una riga un multiplo di un'altra</td><td><mark>invariato</mark></td>
+            <td>«spingere» un lato lungo un altro non cambia l'area (base e altezza restano)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      La terza riga è la chiave: <b>l'operazione che usiamo di più — sommare un multiplo di un'altra riga —
+      non cambia il determinante</b>. Quindi possiamo azzerare a piacere sotto i pivot senza pagare pegno, e
+      pagare solo per gli scambi e le eventuali normalizzazioni.
+    </p>
+  </div>
+
+  <p>
+    L'algoritmo: riduci a triangolare tenendo un <b>fattore di correzione</b> \(s\) (parte da \(1\); ogni
+    scambio lo moltiplica per \(-1\), ogni volta che dividi una riga per \(k\) lo dividi per \(k\)). Alla
+    fine, \(\det(\mm{A}) = s^{-1} \cdot (\text{prodotto della diagonale})\) — o, se non normalizzi mai le
+    righe, semplicemente \(\det(\mm{A}) = (-1)^{\#\text{scambi}} \cdot (\text{prodotto dei pivot})\).
+    Facciamolo su una matrice che <em>obbliga</em> a uno scambio:
+  </p>
+
+  <ol class="passi">
+    <li>
+      Il pivot in alto a sinistra è \(0\): devo <b>scambiare</b> \(R_1\) e \(R_2\). Il fattore diventa
+      \(s = -1\).
+      \[
+        \begin{bmatrix} 0 &amp; 1 &amp; 2 \\ 1 &amp; 1 &amp; 1 \\ 2 &amp; 3 &amp; 1 \end{bmatrix}
+        \;\xrightarrow{R_1 \leftrightarrow R_2}\;
+        \begin{bmatrix} 1 &amp; 1 &amp; 1 \\ 0 &amp; 1 &amp; 2 \\ 2 &amp; 3 &amp; 1 \end{bmatrix}
+      \]
+    </li>
+    <li>
+      Azzero sotto il primo pivot: \(R_3 \leftarrow R_3 - 2R_1\). <em>Non cambia il determinante.</em>
+      \[
+        \begin{bmatrix} 1 &amp; 1 &amp; 1 \\ 0 &amp; 1 &amp; 2 \\ 0 &amp; 1 &amp; -1 \end{bmatrix}
+      \]
+    </li>
+    <li>
+      Azzero sotto il secondo pivot: \(R_3 \leftarrow R_3 - R_2\). <em>Non cambia il determinante.</em>
+      \[
+        \begin{bmatrix} \hA{1} &amp; 1 &amp; 1 \\ 0 &amp; \hA{1} &amp; 2 \\ 0 &amp; 0 &amp; \hA{-3} \end{bmatrix}
+      \]
+    </li>
+    <li>
+      Triangolare. Prodotto della diagonale: \(1 \cdot 1 \cdot (-3) = -3\). Un solo scambio, quindi
+      \[ \det(\mm{A}) = (-1)^{1}\cdot(-3) = \hC{3}. \]
+    </li>
+  </ol>
+
+  <p>
+    Controllo con i cofattori sulla \(\mm{A}\) di partenza (prima riga \((0, 1, 2)\)):
+    \(-1\det\begin{bmatrix}1&amp;1\\2&amp;1\end{bmatrix} + 2\det\begin{bmatrix}1&amp;1\\2&amp;3\end{bmatrix}
+    = -1(1-2) + 2(3-2) = 1 + 2 = 3\) ✔. Stesso \(3\), con una frazione del lavoro — e su matrici grandi la
+    differenza è tra «istantaneo» e «mai».
+  </p>
+
+  <div class="widget" id="w-riduzione">
+    <div class="w-head">
+      <span>Il determinante lungo l'eliminazione</span>
+      <span class="hint">premi «prossimo passo»</span>
+    </div>
+    <div class="w-stage" style="padding:1.4rem; overflow-x:auto; text-align:center">
+      <div id="wr-body"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wr-next">prossimo passo →</button>
+      <button class="w-btn" id="wr-reset">ricomincia</button>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-8"><span class="secnum">Sezione 11.8</span>Δ e moltiplicazione scalare</h2>
+
+  <p class="lead">
+    Tre proprietà algebriche che useremo di continuo — e la prima nasconde una trappola in cui cadono tutti,
+    almeno una volta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Moltiplicare tutta la matrice per uno scalare <span class="tag">la trappola del \(k^n\)</span></div>
+    <div class="f-body">
+      \[ \det(k\mm{A}) = k^{n}\det(\mm{A}) \qquad (\mm{A} \text{ è } n\times n) \]
+    </div>
+    <div class="f-note">
+      <mark>Non \(k\det(\mm{A})\).</mark> Moltiplicare \(k\mm{A}\) allunga <em>tutte e \(n\)</em> le righe di
+      \(k\): per la multilinearità, ogni riga contribuisce un fattore \(k\), e insieme fanno \(k^n\).
+      Geometricamente ovvio: se raddoppi i tre lati di un cubo, il volume diventa \(2^3 = 8\) volte, non
+      \(2\). Esempio: \(\det\begin{bmatrix}3&amp;1\\1&amp;2\end{bmatrix} = 5\), e
+      \(\det\left(3\begin{bmatrix}3&amp;1\\1&amp;2\end{bmatrix}\right) = \det\begin{bmatrix}9&amp;3\\3&amp;6\end{bmatrix}
+      = 54 - 9 = 45 = 3^2 \cdot 5\) ✔.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il prodotto e la trasposta <span class="tag">le due proprietà d'oro</span></div>
+    <div class="f-body">
+      \[ \det(\mm{A}\mm{B}) = \det(\mm{A})\det(\mm{B}) \qquad\qquad \det(\mm{A}\T) = \det(\mm{A}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\det(\mm{A}\mm{B}) = \det(\mm{A})\det(\mm{B})\)</dt>
+        <dd>i fattori di scala si <b>compongono moltiplicandosi</b>: applicare \(\mm{B}\) e poi \(\mm{A}\)
+            scala l'area di \(\det(\mm{B})\) e poi di \(\det(\mm{A})\). È una delle proprietà più potenti del
+            libro. <em>Verifica:</em> \(\mm{A}=\begin{bmatrix}2&amp;0\\0&amp;1\end{bmatrix}\) (\(\det 2\)),
+            \(\mm{B}=\begin{bmatrix}1&amp;1\\0&amp;3\end{bmatrix}\) (\(\det 3\)),
+            \(\mm{A}\mm{B}=\begin{bmatrix}2&amp;2\\0&amp;3\end{bmatrix}\), \(\det = 6 = 2\cdot 3\) ✔.</dd>
+        <dt>\(\det(\mm{A}\T) = \det(\mm{A})\)</dt>
+        <dd>trasporre non cambia il determinante: <b>righe e colonne pesano uguale</b>. È il motivo per cui
+            «area sulle colonne» e «area sulle righe» danno lo stesso numero, e per cui lo sviluppo per
+            cofattori funziona sia per righe sia per colonne (§11.5).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Da \(\det(\mm{A}\mm{B})\) segue una perla che il Capitolo 12 raccoglierà: se \(\mm{A}\) è invertibile,
+      \(\det(\mm{A})\det(\mm{A}\inv) = \det(\mm{A}\mm{A}\inv) = \det(\mm{I}) = 1\), quindi
+      \(\det(\mm{A}\inv) = 1/\det(\mm{A})\). Tornare indietro scala l'area del <em>reciproco</em> — e non si
+      può, se \(\det(\mm{A}) = 0\). Ecco perché il determinante nullo vieta l'inversa.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-9"><span class="secnum">Sezione 11.9</span>Teoria vs pratica</h2>
+
+  <p class="lead">
+    Devo essere onesto, come nel §7.9. Tutto quello che hai letto è <em>teoricamente</em> centrale. Ma se apri
+    un vero programma di calcolo scientifico e cerchi «calcola il determinante per sapere se la matrice è
+    invertibile», stai per fare un errore da principiante.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Perché il determinante è un pessimo test numerico</div>
+    <p style="margin:.2rem 0 .4rem">
+      Il determinante è un <b>prodotto</b> di \(n\) numeri (i pivot). Su matrici grandi questo lo rende
+      inservibile per decidere «è singolare?»:
+    </p>
+    <ul style="margin:0 0 .3rem">
+      <li><b>Esplode o si annulla per pura scala.</b> \(\det(k\mm{A}) = k^n\det(\mm{A})\): una matrice
+          \(100\times100\) con elementi attorno a \(10\) ha determinante attorno a \(10^{100}\) — fuori dai
+          numeri di una macchina. E una con elementi \(0.1\) lo ha attorno a \(10^{-100}\): «quasi zero», ma
+          la matrice è perfettamente invertibile. <mark>«\(\det\) piccolo» non vuol dire «quasi
+          singolare».</mark></li>
+      <li><b>Non è scala-invariante.</b> Moltiplica una riga per \(1000\) e il determinante cambia di
+          \(1000\), ma la matrice è «la stessa» quanto a invertibilità.</li>
+    </ul>
+    <p style="margin:0">
+      È lo stesso avvertimento del §7.9 sul rango: <em>sui dati sporchi, il conto ingenuo mente</em>. Il test
+      serio di «quanto vicina al collasso» è il <b>numero di condizionamento</b>, che nasce dalla SVD
+      (Cap. 16) — non il determinante.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Quando il determinante è invece perfetto</div>
+    <p style="margin-bottom:0">
+      Non buttarlo via: è insostituibile <b>in teoria e sulle matrici piccole o simboliche</b>. Serve a
+      <em>dimostrare</em> teoremi (\(\det(\mm{A}\mm{B}) = \det\mm{A}\det\mm{B}\) è oro puro), a scrivere il
+      <b>polinomio caratteristico</b> (§11.3 → Cap. 15), a ragionare su \(2\times2\) e \(3\times3\) a mano.
+      Regola pratica: <mark>determinante per capire, riduzione e SVD per calcolare.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La grande equivalenza (per una matrice quadrata \(n\times n\))</div>
+    <p style="margin:.2rem 0 .4rem">
+      Tutti questi enunciati sono <b>la stessa cosa</b> — se uno è vero, lo sono tutti; se uno è falso, tutti:
+    </p>
+    <p style="margin:0; padding-left:.6rem; border-left:3px solid var(--gold)">
+      \(\det(\mm{A}) \neq 0\) &nbsp;\(\iff\)&nbsp; le colonne sono indipendenti (§4.6) &nbsp;\(\iff\)&nbsp;
+      \(\rank(\mm{A}) = n\) (pieno, Cap. 7) &nbsp;\(\iff\)&nbsp; \(\Null(\mm{A}) = \{\vv{0}\}\) (Cap. 8)
+      &nbsp;\(\iff\)&nbsp; \(\mm{A}\vv{x} = \vv{b}\) ha <b>una sola</b> soluzione per ogni \(\vv{b}\) (Cap. 10)
+      &nbsp;\(\iff\)&nbsp; \(\mm{A}\) è invertibile (Cap. 12).
+    </p>
+    <p style="margin:.5rem 0 0">
+      E il rovescio: \(\det(\mm{A}) = 0\) \(\iff\) singolare \(\iff\) colonne dipendenti \(\iff\) rango
+      deficiente \(\iff\) spazio nullo non banale \(\iff\) il sistema ha \(0\) o \(\infty\) soluzioni \(\iff\)
+      niente inversa. <mark>Sei arrivato al punto in cui sei capitoli si dicono la stessa frase.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><b>Il determinante è un'area (un volume) con segno</b>: il fattore di cui la matrice scala le aree
+          (§11.1). \(|\det|\) = quanto; il <b>segno</b> = l'orientamento (conservato o ribaltato).</li>
+      <li><b>2×2:</b> \(\det\begin{bmatrix}a&amp;b\\c&amp;d\end{bmatrix} = ad - bc\) (§11.2) — è il prodotto
+          vettoriale del §3.5.</li>
+      <li><b>\(\det = 0 \iff\) colonne dipendenti</b> \(\iff\) collasso (§1.1) \(\iff\) singolare. <mark>Non
+          «quadrata \(\Rightarrow \det \neq 0\)»</mark>: una quadrata può essere singolare.</li>
+      <li><b>Polinomio caratteristico</b> \(p(\lambda) = \det(\mm{A} - \lambda\mm{I}) = \lambda^2 -
+          \tr(\mm{A})\lambda + \det(\mm{A})\) per le \(2\times2\); le sue radici sono gli
+          <b>autovalori</b> (§11.3 → Cap. 15). La rotazione dà \(\lambda^2 + 1\): autovalori \(\pm i\)
+          (Cap. 9).</li>
+      <li><b>3×3 e oltre: sviluppo per cofattori</b> (minori × scacchiera dei segni, §11.4-11.5), lungo la
+          riga/colonna con più zeri. Sarrus <em>solo</em> per le 3×3. Il prodotto vettoriale è il determinante
+          con \(\vv{i},\vv{j},\vv{k}\) in prima riga.</li>
+      <li><b>Triangolare: \(\det = \) prodotto della diagonale</b> (§11.6). Per questo si calcola per
+          <b>riduzione</b> (§11.7): sommare multipli di righe non cambia \(\det\); ogni scambio lo
+          moltiplica per \(-1\).</li>
+      <li><b>\(\det(k\mm{A}) = k^n\det(\mm{A})\)</b> (non \(k\det\mm{A}\)!), <b>\(\det(\mm{A}\mm{B}) =
+          \det\mm{A}\det\mm{B}\)</b>, <b>\(\det(\mm{A}\T) = \det(\mm{A})\)</b> (§11.8).</li>
+      <li><b>Teoria vs pratica</b> (§11.9): splendido per capire e per le matrici piccole, <mark>pessimo test
+          numerico di singolarità</mark> (esplode con la scala). Per calcolare: riduzione e SVD.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai in mano la seconda delle tre risposte. Il <b>Capitolo 12</b> raccoglie la terza — l'inversa — e il
+    determinante ci sarà già utile: comparirà al denominatore (niente inversa se \(\det = 0\)), e nella regola
+    di Cramer. Il <b>Capitolo 15</b> prenderà il polinomio caratteristico di oggi e ne farà la teoria degli
+    autovalori. Ma la lezione da tenere stretta è quella del §11.9: il determinante è una <em>idea</em>
+    luminosa e uno <em>strumento di calcolo</em> fragile. Sappi quale dei due ti serve, di volta in volta.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-10"><span class="secnum">Sezione 11.10</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Calcola i tre determinanti \(2\times2\), e di' cosa fa geometricamente ciascuna matrice:
+      <br>(a) \(\det\begin{bmatrix} 4 &amp; 1 \\ 2 &amp; 3 \end{bmatrix}\)
+      &nbsp;&nbsp; (b) \(\det\begin{bmatrix} 1 &amp; 2 \\ 2 &amp; 4 \end{bmatrix}\)
+      &nbsp;&nbsp; (c) \(\det\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; -1 \end{bmatrix}\)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Per quale valore di \(t\) la matrice \(\begin{bmatrix} 2 &amp; 4 \\ 3 &amp; t \end{bmatrix}\) è singolare?
+      E per quel valore, esibisci la dipendenza tra le colonne.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Scrivi il polinomio caratteristico e trova gli autovalori di
+      \(\mm{A} = \begin{bmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{bmatrix}\).
+      <br><span style="color:var(--ink-soft)">(Nota che aspetto ha \(\mm{A}\): che cosa ti suggerisce sugli
+      autovalori di una triangolare?)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Calcola \(\det\begin{bmatrix} 1 &amp; 2 &amp; 0 \\ 3 &amp; -1 &amp; 2 \\ 0 &amp; 4 &amp; 1 \end{bmatrix}\)
+      con lo sviluppo per cofattori. Scegli con cura la riga o colonna da cui espandere.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.5</div>
+    <p style="margin-bottom:0">
+      Ricalcola lo stesso determinante dell'esercizio precedente per <b>riduzione per righe</b>, tenendo il
+      conto degli scambi e dei fattori. Deve venire lo stesso numero.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.6</div>
+    <p style="margin-bottom:0">
+      Sia \(\mm{A}\) una matrice \(3\times3\) con \(\det(\mm{A}) = 4\), e \(\mm{B}\) una \(3\times3\) con
+      \(\det(\mm{B}) = -2\). Calcola, senza conoscere le matrici:
+      (a) \(\det(2\mm{A})\); &nbsp; (b) \(\det(\mm{A}\mm{B})\); &nbsp; (c) \(\det(\mm{A}\T)\); &nbsp;
+      (d) \(\det(\mm{A}\inv)\), ammesso che esista.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.7</div>
+    <p style="margin-bottom:0">
+      Calcola \(\det\begin{bmatrix} 5 &amp; 8 &amp; -2 \\ 0 &amp; 3 &amp; 7 \\ 0 &amp; 0 &amp; 4 \end{bmatrix}\) e
+      spiega, in una riga, perché gli \(8, -2, 7\) non contano.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.8</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga di motivazione:
+      <br>(a) Se \(\det(\mm{A}) = 0\) allora \(\mm{A}\vv{x} = \vv{0}\) ha soluzioni oltre a \(\vv{x} = \vv{0}\).
+      <br>(b) \(\det(\mm{A} + \mm{B}) = \det(\mm{A}) + \det(\mm{B})\).
+      <br>(c) Una matrice \(2\times3\) ha determinante zero.
+      <br>(d) Se raddoppio ogni elemento di una \(4\times4\), il determinante raddoppia.
+      <br>(e) Una matrice con una riga di soli zeri ha determinante zero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-11"><span class="secnum">Sezione 11.11</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \(4\cdot 3 - 1\cdot 2 = \mathbf{10}\): dilata le aree di 10, orientamento conservato.
+      <br><b>(b)</b> \(1\cdot 4 - 2\cdot 2 = \mathbf{0}\): singolare, la colonna 2 è il doppio della 1
+      (\((2,4) = 2(1,2)\)); schiaccia il piano su una retta.
+      <br><b>(c)</b> \(1\cdot(-1) - 0 = \mathbf{-1}\): conserva le aree (\(|-1| = 1\)) ma <em>ribalta</em>
+      (è la riflessione rispetto all'asse \(x\)) — segno negativo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      \(\det = 2t - 12 = 0 \Rightarrow \mathbf{t = 6}\). Per \(t = 6\) le colonne sono \((2, 3)\) e
+      \((4, 6) = 2(2, 3)\): la seconda è il <b>doppio</b> della prima, dipendenti. (Combacia col §4.6.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      \(p(\lambda) = \det\begin{bmatrix} 3-\lambda &amp; 1 \\ 0 &amp; 2-\lambda \end{bmatrix}
+      = (3-\lambda)(2-\lambda) - 0 = (3-\lambda)(2-\lambda)\). Autovalori \(\mathbf{\lambda = 3}\) e
+      \(\mathbf{\lambda = 2}\).
+      <br>\(\mm{A}\) è <b>triangolare</b>, e gli autovalori sono <em>proprio i suoi elementi diagonali</em>.
+      Non è un caso: per una triangolare, \(\mm{A} - \lambda\mm{I}\) è ancora triangolare, e il suo
+      determinante è il prodotto della diagonale \((d_1-\lambda)(d_2-\lambda)\cdots\), che si annulla sui
+      \(d_i\). <mark>Gli autovalori di una triangolare sono la sua diagonale</mark> (§11.6 + §11.3).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      La <b>prima colonna</b> \((1, 3, 0)\) ha uno zero: conviene. Con i segni \((+, -, +)\) sulla colonna:
+      \[
+        1\det\begin{bmatrix} -1 &amp; 2 \\ 4 &amp; 1 \end{bmatrix}
+        - 3\det\begin{bmatrix} 2 &amp; 0 \\ 4 &amp; 1 \end{bmatrix}
+        + 0
+        = 1(-1 - 8) - 3(2 - 0) = -9 - 6 = \mathbf{-15}.
+      \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.5</div>
+    <p style="margin-bottom:0">
+      Nessuno scambio serve (il pivot \((1,1)\) è \(1\)). \(R_2 \leftarrow R_2 - 3R_1\) dà \((0, -7, 2)\);
+      \(R_1, R_3\) invariate. Poi \(R_3 \leftarrow R_3 + \tfrac47 R_2\) dà terza riga \((0, 0, 1 + \tfrac47\cdot 2)
+      = (0, 0, \tfrac{15}{7})\):
+      \[
+        \begin{bmatrix} 1 &amp; 2 &amp; 0 \\ 0 &amp; -7 &amp; 2 \\ 0 &amp; 0 &amp; \tfrac{15}{7} \end{bmatrix}.
+      \]
+      Nessuno scambio, solo somme di multipli (che non toccano \(\det\)): \(\det = 1 \cdot (-7) \cdot
+      \tfrac{15}{7} = \mathbf{-15}\) ✔. Stesso numero della Soluzione 11.4.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.6</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \(\det(2\mm{A}) = 2^3\det(\mm{A}) = 8\cdot 4 = \mathbf{32}\) (è \(3\times3\): \(k^n = 2^3\), non
+      \(2\)).
+      <br><b>(b)</b> \(\det(\mm{A}\mm{B}) = \det(\mm{A})\det(\mm{B}) = 4\cdot(-2) = \mathbf{-8}\).
+      <br><b>(c)</b> \(\det(\mm{A}\T) = \det(\mm{A}) = \mathbf{4}\).
+      <br><b>(d)</b> \(\det(\mm{A}\inv) = 1/\det(\mm{A}) = \mathbf{1/4}\) (esiste perché \(\det \neq 0\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.7</div>
+    <p style="margin-bottom:0">
+      È triangolare superiore: \(\det = 5 \cdot 3 \cdot 4 = \mathbf{60}\). Gli \(8, -2, 7\) stanno
+      <em>sopra</em> la diagonale e non entrano nel prodotto — sviluppando per cofattori lungo la prima
+      colonna, sotto ogni pivot ci sono solo zeri, e sopravvive un solo termine per volta (§11.6).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.8</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(\det = 0 \Rightarrow\) colonne dipendenti \(\Rightarrow \Null(\mm{A}) \neq \{\vv{0}\}\):
+      esiste \(\vv{x} \neq \vv{0}\) con \(\mm{A}\vv{x} = \vv{0}\) (la grande equivalenza, §11.9).
+      <br><b>(b) FALSO.</b> Il determinante <em>non</em> è additivo. Controesempio: \(\mm{A} = \mm{I}\),
+      \(\mm{B} = -\mm{I}\) (2×2): \(\det\mm{A} + \det\mm{B} = 1 + 1 = 2\), ma \(\det(\mm{A}+\mm{B}) =
+      \det(\mm{0}) = 0\).
+      <br><b>(c) INDEFINITO / falso.</b> Una \(2\times3\) <b>non è quadrata</b>: non ha determinante affatto
+      (§5.2). Non «vale zero» — proprio non esiste.
+      <br><b>(d) FALSO.</b> \(\det(2\mm{A}) = 2^4\det(\mm{A}) = 16\det(\mm{A})\): diventa <b>16 volte</b>, non
+      il doppio (§11.8).
+      <br><b>(e) VERO.</b> Sviluppando per cofattori lungo quella riga, ogni termine ha un fattore zero: la
+      somma è \(0\). (Geometricamente: una riga nulla schiaccia il volume.)
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise (le stesse dei capitoli 5-10).
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => nfmt(v));
+  let h = `<div class="mtab brk" style="grid-template-columns:repeat(${cols}, auto)">`;
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      h += `<div class="c ${cls(i, j, M[i][j])}" data-i="${i}" data-j="${j}">${fmt(M[i][j])}</div>`;
+  return h + '</div>';
+}
+const det2 = m => m[0][0] * m[1][1] - m[0][1] * m[1][0];
+
+
+/* ============================================================================
+   WIDGET §11.2 — il determinante è un'area con segno
+   Trascini le due colonne c1, c2; l'area con segno del parallelogramma è il det.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wa-svg');
+  if (!svg) return;
+  const out = document.getElementById('wa-out');
+  const p = new Plot(svg, { xmin: -4.5, xmax: 4.5, ymin: -3.2, ymax: 3.2 });
+  let c1 = [3, 1], c2 = [1, 2];
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const d = c1[0] * c2[1] - c1[1] * c2[0];      // det = area con segno
+    const quasiZero = Math.abs(d) < 1e-9;
+    // il parallelogramma 0 -> c1 -> c1+c2 -> c2
+    const c12 = [c1[0] + c2[0], c1[1] + c2[1]];
+    const col = quasiZero ? 'var(--ink-faint)' : (d > 0 ? 'var(--accent)' : 'var(--warm)');
+    p.poly([[0, 0], c1, c12, c2], {
+      fill: col, color: col, width: 2,
+      opacity: 0.16
+    });
+    p.poly([[0, 0], c1, c12, c2], { color: col, width: 2 });
+    p.arrow(0, 0, c1[0], c1[1], { color: 'var(--accent)', width: 3, label: 'c₁' });
+    p.arrow(0, 0, c2[0], c2[1], { color: 'var(--warm)', width: 3, label: 'c₂' });
+    p.handle(c1[0], c1[1], { color: 'var(--accent)', snap: 0.5 }, (x, y) => { c1 = [x, y]; draw(); });
+    p.handle(c2[0], c2[1], { color: 'var(--warm)', snap: 0.5 }, (x, y) => { c2 = [x, y]; draw(); });
+
+    const orient = quasiZero ? '—'
+      : (d > 0 ? 'conservato (c₂ è in senso antiorario da c₁)' : 'ribaltato (c₂ è in senso orario da c₁)');
+    out.innerHTML = `
+      <div class="big">
+        det = ${nfmt(c1[0])}·${nfmt(c2[1])} − ${nfmt(c2[0])}·${nfmt(c1[1])} =
+        <b style="color:${col}">${nfmt(d)}</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b>Area del parallelogramma:</b> |det| = ${nfmt(Math.abs(d))}.
+        &nbsp;·&nbsp; <b>Orientamento:</b> ${orient}.
+        <br>${quasiZero
+          ? `<mark>det = 0.</mark> Le due colonne sono <b>allineate</b>: il parallelogramma è schiacciato su
+             una retta, area zero. Colonne dipendenti, matrice <b>singolare</b> — è il collasso del §1.1.`
+          : `La matrice \\(\\begin{bmatrix}${nfmt(c1[0])}&${nfmt(c2[0])}\\\\${nfmt(c1[1])}&${nfmt(c2[1])}\\end{bmatrix}\\)
+             moltiplica ogni area per <b>${nfmt(Math.abs(d))}</b>${d < 0 ? ', e la ribalta' : ''}.`}
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §11.3 — il polinomio caratteristico disegnato
+   p(λ) = λ² − tr·λ + det, parabola; le radici sono gli autovalori.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wc-out');
+  const p = new Plot(svg, { xmin: -2.5, xmax: 5.5, ymin: -3, ymax: 7 });
+  const MATS = {
+    sym: { M: [[2, 1], [1, 2]], nome: 'simmetrica' },
+    neg: { M: [[1, 4], [1, 1]], nome: 'un autovalore negativo' },
+    rot: { M: [[0, -1], [1, 0]], nome: 'rotazione di 90°' },
+  };
+  let cur = 'sym';
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true, xname: 'λ', yname: '' });
+    const A = MATS[cur].M;
+    const tr = A[0][0] + A[1][1], dt = det2(A);
+    const poly = l => l * l - tr * l + dt;      // det(A − λI) per 2×2
+    // la parabola
+    const pts = [];
+    for (let l = -2.5; l <= 5.5; l += 0.1) pts.push([l, poly(l)]);
+    p.poly(pts, { color: 'var(--violet)', width: 2.6, close: false });
+    // radici (autovalori reali): λ = (tr ± √Δ)/2
+    const disc = tr * tr - 4 * dt;
+    let radici = [];
+    if (disc >= -1e-12) {
+      const s = Math.sqrt(Math.max(0, disc));
+      radici = disc < 1e-9 ? [tr / 2] : [(tr - s) / 2, (tr + s) / 2];
+      for (const r of radici) p.dot(r, 0, { color: 'var(--warm)', r: 6 });
+    }
+
+    const trS = nfmt(tr), dtS = nfmt(dt);
+    // p(λ) = λ² − tr·λ + det, omettendo i termini nulli e il coefficiente 1 davanti a λ
+    const termine = (coef, sym) => {
+      if (Math.abs(coef) < 1e-9) return '';
+      const c = Math.abs(coef);
+      const cs = (sym && Math.abs(c - 1) < 1e-9) ? '' : nfmt(c);
+      return ` ${coef < 0 ? '−' : '+'} ${cs}${sym}`;
+    };
+    const polyS = `λ²${termine(-tr, 'λ')}${termine(dt, '')}`;
+    out.innerHTML = `
+      <div class="big">
+        p(λ) = det(A − λI) = <b style="color:var(--violet)">${polyS}</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b>${MATS[cur].nome}</b>: traccia ${trS}, determinante ${dtS}.
+        <br>${disc > 1e-9
+          ? `Due radici reali (i <b style="color:var(--warm)">punti</b> in cui la parabola tocca l'asse):
+             <mark>autovalori λ = ${nfmt(radici[0])} e λ = ${nfmt(radici[1])}</mark>.`
+          : disc < -1e-9
+          ? `La parabola <b>non tocca mai l'asse</b> (Δ = ${nfmt(disc)} < 0): <mark>nessun autovalore
+             reale</mark>. In ℂ sono complessi coniugati — per la rotazione, λ = ±i (Cap. 9).`
+          : `Una radice doppia: <mark>autovalore λ = ${nfmt(radici[0])}</mark> (la parabola sfiora l'asse).`}
+      </div>`;
+  }
+  document.getElementById('wc-sym').onclick = () => { cur = 'sym'; draw(); };
+  document.getElementById('wc-neg').onclick = () => { cur = 'neg'; draw(); };
+  document.getElementById('wc-rot').onclick = () => { cur = 'rot'; draw(); };
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §11.7 — il determinante lungo l'eliminazione (passi precompilati)
+   A = [[0,1,2],[1,1,1],[2,3,1]]  →  det = 3  (uno scambio, poi triangolare −3)
+   ========================================================================= */
+(function () {
+  const body = document.getElementById('wr-body');
+  if (!body) return;
+  const out = document.getElementById('wr-out');
+  const btnN = document.getElementById('wr-next');
+  const btnR = document.getElementById('wr-reset');
+
+  const STEPS = [
+    { M: [[0, 1, 2], [1, 1, 1], [2, 3, 1]], op: 'La matrice di partenza. Il fattore parte da s = +1.', s: '+1', piv: [] },
+    { M: [[1, 1, 1], [0, 1, 2], [2, 3, 1]], op: 'Pivot (1,1) è 0 → SCAMBIO R₁↔R₂. Uno scambio: s = −1.', s: '−1', piv: [] },
+    { M: [[1, 1, 1], [0, 1, 2], [0, 1, -1]], op: 'R₃ ← R₃ − 2R₁. Somma di multipli: non cambia il det.', s: '−1', piv: [[0, 0]] },
+    { M: [[1, 1, 1], [0, 1, 2], [0, 0, -3]], op: 'R₃ ← R₃ − R₂. Triangolare! Diagonale: 1, 1, −3.', s: '−1', piv: [[0, 0], [1, 1], [2, 2]] },
+  ];
+  let k = 0;
+
+  function render() {
+    const st = STEPS[k];
+    const pv = new Set(st.piv.map(([i, j]) => i + ',' + j));
+    const done = (k === STEPS.length - 1);
+    body.innerHTML = matHTML(st.M, {
+      cls: (i, j, v) => (pv.has(i + ',' + j) ? 'p hl' : (v === 0 ? 'z' : ''))
+    });
+    out.innerHTML = `
+      <div style="min-height:2.2em"><b>Passo ${k}/${STEPS.length - 1}.</b> ${st.op}
+        &nbsp;·&nbsp; fattore <b>s = ${st.s}</b></div>
+      ${done
+        ? `<div style="margin-top:.3rem; color:var(--green)"><b>Prodotto della diagonale = 1·1·(−3) = −3.</b>
+           Con uno scambio (s = −1): det(A) = (−1)·(−3) = <b>3</b>. (Verifica per cofattori: anche 3 ✔.)</div>`
+        : `<div style="margin-top:.3rem; color:var(--ink-soft)">In viola i pivot; in grigio gli zeri
+           fabbricati. Ogni <b>scambio</b> moltiplica s per −1; sommare multipli non tocca il det.</div>`}`;
+    btnN.disabled = done; btnN.style.opacity = done ? .4 : 1;
+  }
+  btnN.onclick = () => { if (k < STEPS.length - 1) { k++; render(); } };
+  btnR.onclick = () => { k = 0; render(); };
+  render();
+})();
+</script>
+</body>
+</html>

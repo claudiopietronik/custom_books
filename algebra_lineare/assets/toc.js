@@ -190,7 +190,7 @@ const TOC = [
     n: 11,
     titolo: "Determinante",
     file: "cap11-determinante.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Caratteristiche del determinante" },
       { id: "s11-2", n: "11.2", t: "Determinante di una 2×2" },
