@@ -227,7 +227,7 @@ const TOC = [
     n: 13,
     titolo: "Proiezioni",
     file: "cap13-proiezioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Proiezioni in ℝ²" },
       { id: "s13-2", n: "13.2", t: "Proiezioni in ℝᴺ" },
