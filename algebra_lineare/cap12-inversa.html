@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Inversa di una matrice — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Inversa di una matrice</h1>
+    <p class="standfirst">
+      Il rango (Cap. 7) ha contato le dimensioni sopravvissute; il determinante (Cap. 11) ha misurato di
+      quanto l'area si è ristretta. Resta la terza domanda, quella che nel §1.1 avevo lasciato in sospeso:
+      <mark>si può tornare indietro?</mark> Esiste una matrice che <em>disfa</em> ciò che \(\mm{A}\) ha
+      fatto? Quando la risposta è sì, quella matrice si chiama <b>inversa</b>, e la risposta è sì esattamente
+      quando non hai perso nessuna dimensione.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiudiamo il trittico aperto sotto il primo widget del libro. L'inversa \(\mm{A}\inv\) è la trasformazione
+      che riporta ogni cosa al suo posto: \(\mm{A}\inv\mm{A} = \mm{I}\). La costruiremo in tre modi — la
+      formula lampo per le \(2\times2\), l'<b>aggiunta</b> con i cofattori del Capitolo 11, e la
+      <b>riduzione</b> di \([\,\mm{A}\mid\mm{I}\,]\) del Capitolo 10 — e poi faremo una cosa nuova e potente:
+      inventare un'inversa <em>anche per le matrici non quadrate</em>, le inverse <b>sinistra</b> e
+      <b>destra</b>, fino alla <b>pseudoinversa</b>. È il ponte verso i minimi quadrati (Cap. 14) e la SVD
+      (Cap. 16).
+      <br>
+      Come sempre, un avvertimento onesto in apertura: <mark>quasi mai, nella pratica, si calcola davvero
+      un'inversa.</mark> Serve a <em>pensare</em>, non a <em>calcolare</em> — e nel §12.5 ti dirò perché.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Concetti e applicazioni</h2>
+
+  <p class="lead">
+    Una matrice \(\mm{A}\) prende un vettore e lo trasforma. L'inversa fa il viaggio di ritorno: prende il
+    risultato e ricostruisce il punto di partenza. Se \(\mm{A}\) ruota di 30°, \(\mm{A}\inv\) ruota di
+    \(-30°\); se \(\mm{A}\) raddoppia, \(\mm{A}\inv\) dimezza.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'inversa <span class="tag">la matrice che disfa</span></div>
+    <div class="f-body">
+      \[ \mm{A}\inv\mm{A} = \mm{A}\mm{A}\inv = \mm{I} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\inv\)</dt>
+        <dd>si legge «\(\mm{A}\) inversa». È l'<b>unica</b> matrice che, composta con \(\mm{A}\) (in
+            entrambi gli ordini), dà l'identità.</dd>
+        <dt>\(\mm{I}\)</dt>
+        <dd>l'identità (§5.3): la trasformazione che non fa nulla. Applicare \(\mm{A}\) e poi \(\mm{A}\inv\) è
+            come non aver fatto niente.</dd>
+        <dt>entrambi gli ordini</dt>
+        <dd>per una matrice <b>quadrata</b>, se \(\mm{A}\inv\mm{A} = \mm{I}\) allora anche
+            \(\mm{A}\mm{A}\inv = \mm{I}\): il ritorno funziona da tutte e due le parti. (Per le non quadrate
+            no — ed è il §12.6.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Prima applicazione, quella che tutti citano: se \(\mm{A}\vv{x} = \vv{b}\) e \(\mm{A}\) è invertibile,
+      allora \(\vv{x} = \mm{A}\inv\vv{b}\). Bello — ma leggi il §12.5 prima di correre a usarlo: nella pratica
+      <em>non si risolve così</em>.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Chi è invertibile: la terza risposta al §1.1</div>
+    <p style="margin:.2rem 0 .4rem">
+      Nel §7.1 avevo scritto che l'inversa «si chiederà <em>se</em> si può tornare indietro, e la risposta
+      sarà: solo se non hai perso dimensioni, cioè solo a rango pieno». Eccola, precisa. Una matrice quadrata
+      \(n\times n\) è <b>invertibile</b> (si dice anche <em>non singolare</em>) se e solo se — e qui ritrovi
+      la grande equivalenza del §11.9:
+    </p>
+    <p style="margin:0; padding-left:.6rem; border-left:3px solid var(--gold)">
+      \(\mm{A}\inv\) esiste &nbsp;\(\iff\)&nbsp; \(\det(\mm{A}) \neq 0\) &nbsp;\(\iff\)&nbsp; le colonne sono
+      indipendenti &nbsp;\(\iff\)&nbsp; \(\rank(\mm{A}) = n\) &nbsp;\(\iff\)&nbsp; \(\Null(\mm{A}) = \{\vv{0}\}\)
+      &nbsp;\(\iff\)&nbsp; \(\mm{A}\vv{x} = \vv{b}\) ha una sola soluzione per ogni \(\vv{b}\).
+    </p>
+    <p style="margin:.5rem 0 0">
+      La ragione geometrica è quella di sempre: se \(\mm{A}\) <b>schiaccia</b> una dimensione (rango non
+      pieno, \(\det = 0\)), due punti diversi finiscono nello stesso posto — e allora, dal risultato, non
+      puoi sapere da quale dei due venivi. <mark>Il ritorno è impossibile perché l'informazione è andata
+      persa.</mark> Solo le trasformazioni che non perdono niente si possono disfare.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le regole dell'inversa (e una è già vecchia conoscenza)</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Proprietà</th><th>Perché</th></tr></thead>
+      <tbody>
+        <tr><td>\((\mm{A}\inv)\inv = \mm{A}\)</td>
+            <td>disfare il disfare è rifare: torni al punto di partenza</td></tr>
+        <tr><td>\((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\)</td>
+            <td><b>l'ordine si inverte</b> — come per la trasposta (§6.4, «LIVE EVIL»)! Per disfare «prima
+                \(\mm{B}\), poi \(\mm{A}\)» devi disfare «prima \(\mm{A}\), poi \(\mm{B}\)»: scarpe e
+                calzini</td></tr>
+        <tr><td>\((\mm{A}\T)\inv = (\mm{A}\inv)\T\)</td>
+            <td>trasporre e invertire commutano</td></tr>
+        <tr><td>\(\det(\mm{A}\inv) = 1/\det(\mm{A})\)</td>
+            <td>già dimostrata nel §11.8: tornare indietro scala l'area del <em>reciproco</em></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      La seconda è la stessa struttura di \((\mm{A}\mm{B})\T = \mm{B}\T\mm{A}\T\): <mark>invertire un prodotto
+      rovescia l'ordine dei fattori.</mark> È il gesto «prima ti tolgo le scarpe (che ho messo per ultime),
+      poi i calzini».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Inversa di una matrice diagonale</h2>
+
+  <p class="lead">
+    Cominciamo dal caso più facile che esista, perché è anche il più istruttivo: una matrice
+    <b>diagonale</b> non fa che allungare ogni asse per un fattore. Disfarla è ovvio — accorcia ogni asse
+    dello stesso fattore.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Inversa di una diagonale <span class="tag">un reciproco per ogni asse</span></div>
+    <div class="f-body">
+      \[
+        \mm{D} = \begin{bmatrix} d_1 &amp; &amp; \\ &amp; d_2 &amp; \\ &amp; &amp; d_3 \end{bmatrix}
+        \qquad\Longrightarrow\qquad
+        \mm{D}\inv = \begin{bmatrix} 1/d_1 &amp; &amp; \\ &amp; 1/d_2 &amp; \\ &amp; &amp; 1/d_3 \end{bmatrix}
+      \]
+    </div>
+    <div class="f-note">
+      Ogni elemento diventa il suo <b>reciproco</b>, e basta. Verifica: \(\mm{D}\mm{D}\inv\) ha sulla
+      diagonale \(d_i \cdot (1/d_i) = 1\) — l'identità. Se \(\mm{D}\) triplica l'asse \(x\), \(\mm{D}\inv\) lo
+      divide per tre.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Uno zero sulla diagonale, e il ritorno svanisce</div>
+    <p style="margin-bottom:0">
+      Se anche <em>uno solo</em> dei \(d_i\) è zero, \(\mm{D}\) non è invertibile: quel reciproco \(1/0\) non
+      esiste. E ha senso — un \(d_i = 0\) <b>schiaccia a zero</b> l'asse \(i\): tutto ciò che stava su
+      quell'asse finisce nell'origine, e non c'è modo di sapere da dove veniva. È il collasso del §1.1, visto
+      su un asse solo. (Nota anche: il determinante di \(\mm{D}\) è \(d_1 d_2 d_3\), §11.6 — e uno zero lo
+      annulla, coerente con «\(\det = 0 \Rightarrow\) niente inversa».)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Inversa di una 2×2</h2>
+
+  <p class="lead">
+    Sali di un gradino e trovi la formula più usata dell'algebra lineare elementare — quella che vale la pena
+    imparare a memoria, perché è corta e la userai mille volte.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La formula lampo <span class="tag">scambia, cambia segno, dividi per il det</span></div>
+    <div class="f-body">
+      \[
+        \mm{A} = \begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix}
+        \qquad\Longrightarrow\qquad
+        \mm{A}\inv = \frac{1}{\underbrace{ad - bc}_{\det(\mm{A})}}
+        \begin{bmatrix} d &amp; -b \\ -c &amp; a \end{bmatrix}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\begin{bmatrix} d &amp; -b \\ -c &amp; a \end{bmatrix}\)</dt>
+        <dd>la ricetta a mano: <b>scambia</b> \(a\) e \(d\) (gli angoli della diagonale), <b>cambia segno</b>
+            a \(b\) e \(c\). (Questa matrice è l'<em>aggiunta</em> del §12.4, per il caso \(2\times2\).)</dd>
+        <dt>\(\dfrac{1}{ad - bc}\)</dt>
+        <dd>dividi tutto per il <b>determinante</b> (§11.2). Ecco perché <mark>l'inversa esiste solo se
+            \(\det \neq 0\)</mark>: se il determinante è zero, questa divisione esplode. Il determinante al
+            denominatore <em>è</em> il fattore d'area da disfare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché funziona? Moltiplica e guarda: \(\begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix}
+      \begin{bmatrix} d &amp; -b \\ -c &amp; a \end{bmatrix} = \begin{bmatrix} ad - bc &amp; 0 \\ 0 &amp; ad - bc \end{bmatrix}
+      = (ad - bc)\mm{I}\). Dividendo per \(ad - bc\) resta \(\mm{I}\). Non c'è magia: c'è \(ad - bc\).
+    </div>
+  </div>
+
+  <p>
+    Un esempio con numeri gentili: \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}\), con
+    \(\det = 2\cdot 1 - 1\cdot 1 = 1\). Scambio la diagonale, cambio segno agli altri due, divido per \(1\):
+    \[
+      \mm{A}\inv = \frac{1}{1}\begin{bmatrix} 1 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}
+      = \begin{bmatrix} 1 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}.
+    \]
+    Controllo: \(\mm{A}\mm{A}\inv = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}
+    \begin{bmatrix} 1 &amp; -1 \\ -1 &amp; 2 \end{bmatrix} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}\) ✔.
+  </p>
+
+  <div class="widget" id="w-undo">
+    <div class="w-head">
+      <span>L'inversa disfa la trasformazione</span>
+      <span class="hint">trascina le due colonne di A</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wu-svg" viewBox="0 0 560 400" role="img" aria-label="Il quadratino unitario trasformato da A in un parallelogramma, e l'inversa che lo riporta indietro"></svg>
+    </div>
+    <div class="w-readout" id="wu-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>L'algoritmo MCA</h2>
+
+  <p class="lead">
+    Per le matrici più grandi la formula lampo non basta, ma la sua struttura si generalizza: dividi per il
+    determinante una certa matrice fatta di <b>cofattori</b> — quelli del §11.5. L'algoritmo si ricorda con
+    tre lettere: <b>M-C-A</b>, Minori → Cofattori → Aggiunta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La formula dell'aggiunta <span class="tag">l'inversa via cofattori</span></div>
+    <div class="f-body">
+      \[ \mm{A}\inv = \frac{1}{\det(\mm{A})}\,\operatorname{adj}(\mm{A}), \qquad \operatorname{adj}(\mm{A}) = \mm{C}\T \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>M — <b>Minori</b></dt>
+        <dd>per ogni posizione \((i, j)\), il minore \(M_{ij}\): cancella la riga \(i\) e la colonna \(j\), e
+            fai il determinante di ciò che resta (§11.5).</dd>
+        <dt>C — <b>Cofattori</b></dt>
+        <dd>metti i segni della scacchiera: \(C_{ij} = (-1)^{i+j} M_{ij}\). La matrice \(\mm{C}\) di tutti i
+            cofattori.</dd>
+        <dt>A — <b>Aggiunta</b></dt>
+        <dd>l'<span class="termine">aggiunta</span> (o «aggiunta classica») è la <b>trasposta</b> della
+            matrice dei cofattori: \(\operatorname{adj}(\mm{A}) = \mm{C}\T\). Poi dividi per il determinante.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per una \(2\times2\) questo dà esattamente la formula lampo del §12.3: i cofattori di
+      \(\begin{bmatrix} a &amp; b \\ c &amp; d \end{bmatrix}\) sono \(d, -c, -b, a\), e la loro trasposta è
+      \(\begin{bmatrix} d &amp; -b \\ -c &amp; a \end{bmatrix}\). La formula lampo <em>era</em> l'MCA.
+    </div>
+  </div>
+
+  <p>
+    Facciamolo su una \(3\times3\) scelta apposta perché ha <b>\(\det = 1\)</b> — così l'inversa <em>è</em>
+    l'aggiunta, senza divisioni:
+    \(\mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 0 &amp; 1 &amp; 4 \\ 5 &amp; 6 &amp; 0 \end{bmatrix}\).
+    I nove cofattori (calcola qualche minore per convincerti — es. \(C_{11} = +\det\begin{bmatrix}1&amp;4\\6&amp;0\end{bmatrix}
+    = -24\); \(C_{23} = -\det\begin{bmatrix}1&amp;2\\5&amp;6\end{bmatrix} = -(6-10) = 4\)):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">M → C → A, sul nostro esempio <span class="tag">det = 1, quindi A⁻¹ = adj(A)</span></div>
+    <div class="f-body">
+      \[
+        \mm{C} = \begin{bmatrix} -24 &amp; 20 &amp; -5 \\ 18 &amp; -15 &amp; 4 \\ 5 &amp; -4 &amp; 1 \end{bmatrix}
+        \;\xrightarrow{\ \text{trasponi}\ }\;
+        \operatorname{adj}(\mm{A}) = \mm{C}\T = \begin{bmatrix} -24 &amp; 18 &amp; 5 \\ 20 &amp; -15 &amp; -4 \\ -5 &amp; 4 &amp; 1 \end{bmatrix}
+        = \mm{A}\inv
+      \]
+    </div>
+    <div class="f-note">
+      Controllo di una colonna, per fiducia: \(\mm{A}\) per la prima colonna di \(\mm{A}\inv\),
+      \((-24, 20, -5)\), fa \((1\cdot(-24) + 2\cdot 20 + 3\cdot(-5),\ 0\cdot(-24)+1\cdot20+4\cdot(-5),\
+      5\cdot(-24)+6\cdot 20+0) = (-24+40-15,\ 20-20,\ -120+120) = (1, 0, 0)\) — la prima colonna di
+      \(\mm{I}\) ✔.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Bella, ma lenta</div>
+    <p style="margin-bottom:0">
+      L'MCA richiede \(n^2\) determinanti di taglia \((n-1)\times(n-1)\): eredita l'esplosione \(n!\) dei
+      cofattori (§11.5). Per una \(3\times3\) fatta a mano va benissimo; da \(4\times4\) in su è
+      inservibile. La strada pratica è un'altra, e la conosciamo già dal Capitolo 10.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Inversa via riduzione per righe</h2>
+
+  <p class="lead">
+    Ecco la promessa fatta nel §10.2 e nel §11.7: l'inversa si calcola con l'eliminazione di Gauss-Jordan, ed
+    è il modo giusto. Il trucco è tanto semplice quanto elegante: <b>affianca l'identità e riduci</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'algoritmo \([\,\mm{A}\mid\mm{I}\,] \to [\,\mm{I}\mid\mm{A}\inv\,]\)</div>
+    <p style="margin:.2rem 0 0">
+      Scrivi la matrice <b>aumentata con l'identità</b>: \([\,\mm{A}\mid\mm{I}\,]\). Applica le tre mosse del
+      §10.2 fino a portare il blocco di sinistra alla <b>forma a scala ridotta</b> (§10.5). Quando a sinistra
+      compare \(\mm{I}\), a destra — <em>dove prima c'era \(\mm{I}\)</em> — compare \(\mm{A}\inv\).
+      \[ [\,\mm{A} \mid \mm{I}\,] \;\xrightarrow{\ \text{Gauss-Jordan}\ }\; [\,\mm{I} \mid \mm{A}\inv\,] \]
+    </p>
+  </div>
+
+  <p>
+    <b>Perché funziona</b> — ed è una delle idee più belle del corso. Nel §10.2 avevo detto che ogni mossa
+    sulle righe <em>è</em> una moltiplicazione a sinistra per una matrice elementare. La sequenza di mosse che
+    trasforma \(\mm{A}\) in \(\mm{I}\) è dunque una moltiplicazione a sinistra per una certa matrice \(\mm{M}\)
+    tale che \(\mm{M}\mm{A} = \mm{I}\) — cioè <b>\(\mm{M} = \mm{A}\inv\)</b>. Ma le stesse identiche mosse,
+    applicate al blocco di destra, trasformano \(\mm{I}\) in \(\mm{M}\mm{I} = \mm{M} = \mm{A}\inv\).
+    <mark>La colonna di destra registra tutto ciò che hai fatto ad \(\mm{A}\) per ridurla</mark> — ed è
+    proprio l'inversa.
+  </p>
+
+  <p>
+    Sulla \(\mm{A} = \begin{bmatrix} 1 &amp; 2 &amp; 3 \\ 0 &amp; 1 &amp; 4 \\ 5 &amp; 6 &amp; 0 \end{bmatrix}\) di
+    prima, riduciamo \([\,\mm{A}\mid\mm{I}\,]\). Bastano cinque mosse, tutte a coefficienti interi:
+  </p>
+
+  <ol class="passi">
+    <li>
+      \(R_3 \leftarrow R_3 - 5R_1\) (azzero il \(5\) in basso a sinistra):
+      \[
+        \left[\begin{array}{ccc|ccc} 1&amp;2&amp;3&amp;1&amp;0&amp;0 \\ 0&amp;1&amp;4&amp;0&amp;1&amp;0 \\ 0&amp;-4&amp;-15&amp;-5&amp;0&amp;1 \end{array}\right]
+      \]
+    </li>
+    <li>
+      \(R_3 \leftarrow R_3 + 4R_2\) (azzero il \(-4\)): la terza riga a sinistra diventa \((0, 0, 1)\).
+      \[
+        \left[\begin{array}{ccc|ccc} 1&amp;2&amp;3&amp;1&amp;0&amp;0 \\ 0&amp;1&amp;4&amp;0&amp;1&amp;0 \\ 0&amp;0&amp;1&amp;-5&amp;4&amp;1 \end{array}\right]
+      \]
+    </li>
+    <li>
+      Ora pulisco <em>sopra</em> i pivot. \(R_2 \leftarrow R_2 - 4R_3\) e \(R_1 \leftarrow R_1 - 3R_3\):
+      \[
+        \left[\begin{array}{ccc|ccc} 1&amp;2&amp;0&amp;16&amp;-12&amp;-3 \\ 0&amp;1&amp;0&amp;20&amp;-15&amp;-4 \\ 0&amp;0&amp;1&amp;-5&amp;4&amp;1 \end{array}\right]
+      \]
+    </li>
+    <li>
+      \(R_1 \leftarrow R_1 - 2R_2\): a sinistra compare \(\mm{I}\).
+      \[
+        \left[\begin{array}{ccc|ccc} \hA{1}&amp;0&amp;0&amp;-24&amp;18&amp;5 \\ 0&amp;\hA{1}&amp;0&amp;20&amp;-15&amp;-4 \\ 0&amp;0&amp;\hA{1}&amp;-5&amp;4&amp;1 \end{array}\right]
+      \]
+    </li>
+  </ol>
+
+  <p>
+    A destra è comparsa \(\mm{A}\inv = \begin{bmatrix} -24 &amp; 18 &amp; 5 \\ 20 &amp; -15 &amp; -4 \\ -5 &amp; 4 &amp; 1 \end{bmatrix}\):
+    <mark>identica a quella trovata con l'MCA</mark> nel §12.4. Due strade, stessa inversa — e questa, su
+    matrici grandi, è incomparabilmente più veloce (\(n^3\) contro \(n!\)).
+  </p>
+
+  <div class="widget" id="w-inversa">
+    <div class="w-head">
+      <span>[A | I] → [I | A⁻¹], un passo alla volta</span>
+      <span class="hint">premi «prossimo passo»</span>
+    </div>
+    <div class="w-stage" style="padding:1.4rem; overflow-x:auto; text-align:center">
+      <div id="wr-body"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wr-next">prossimo passo →</button>
+      <button class="w-btn" id="wr-reset">ricomincia</button>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> E se \(\mm{A}\) è singolare?</div>
+    <p style="margin-bottom:0">
+      Se durante la riduzione il blocco di sinistra <b>non</b> riesce a diventare \(\mm{I}\) — salta fuori una
+      riga di zeri a sinistra — allora \(\mm{A}\) non ha rango pieno, \(\det = 0\), e <b>l'inversa non
+      esiste</b>. L'algoritmo non «fallisce»: ti sta <em>dicendo</em> che il ritorno è impossibile, esattamente
+      come il §10.7 ti diceva che un sistema era incompatibile.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La verità che nessuno dice: non invertire per risolvere</div>
+    <p style="margin-bottom:0">
+      Hai \(\mm{A}\vv{x} = \vv{b}\) e ti viene voglia di scrivere \(\vv{x} = \mm{A}\inv\vv{b}\). <b>Non
+      farlo</b> — non calcolare \(\mm{A}\inv\). Calcolare l'inversa e poi moltiplicarla per \(\vv{b}\) costa
+      di più, ed è numericamente peggio, che ridurre direttamente \([\,\mm{A}\mid\vv{b}\,]\) come nel Capitolo
+      10. <mark>\(\mm{A}\inv\vv{b}\) è come si <em>scrive</em> la soluzione; l'eliminazione è come si
+      <em>trova</em>.</mark> L'inversa serve a ragionare in formule (dimostrare teoremi, manipolare
+      espressioni), non a macinare numeri. È lo stesso spirito del §11.9 sul determinante: idea limpida,
+      strumento di calcolo da maneggiare con parsimonia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Inversa sinistra</h2>
+
+  <p class="lead">
+    Finora: matrici quadrate. Ma il §5.2 ci aveva avvisato che le matrici interessanti dei dati sono
+    <b>alte</b> (tante righe, poche colonne). Non sono quadrate, quindi non hanno un'inversa vera. Eppure —
+    sorpresa — qualcosa che le disfa <em>da un lato</em> esiste.
+  </p>
+
+  <p>
+    Prendi \(\mm{A}\) di taglia \(m\times n\) con \(m &gt; n\) (alta) e a <b>rango pieno di colonna</b>
+    (\(\rank = n\): colonne indipendenti). \(\mm{A}\) <em>immerge</em> \(\R^n\) dentro \(\R^m\) senza
+    schiacciare niente: da \(\vv{x}\) a \(\mm{A}\vv{x}\) non si perde informazione. Allora deve esistere un
+    modo di risalire da \(\mm{A}\vv{x}\) a \(\vv{x}\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'inversa sinistra <span class="tag">funziona solo da sinistra</span></div>
+    <div class="f-body">
+      \[ \mm{A}^{+} = (\mm{A}\T\mm{A})\inv\mm{A}\T \qquad\Longrightarrow\qquad \mm{A}^{+}\mm{A} = \mm{I}_n \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\T\mm{A}\)</dt>
+        <dd>è <b>quadrata</b> \(n\times n\), e — questo è il punto — è <b>invertibile</b> esattamente quando
+            le colonne di \(\mm{A}\) sono indipendenti. Lo abbiamo dimostrato nel §7.7:
+            \(\rank(\mm{A}\T\mm{A}) = \rank(\mm{A})\). A rango pieno di colonna, \(\mm{A}\T\mm{A}\) si
+            inverte.</dd>
+        <dt>\(\mm{A}^{+}\mm{A} = \mm{I}_n\)</dt>
+        <dd>verifica: \((\mm{A}\T\mm{A})\inv\mm{A}\T\mm{A} = (\mm{A}\T\mm{A})\inv(\mm{A}\T\mm{A}) = \mm{I}\).
+            Da sinistra, \(\mm{A}^{+}\) disfa \(\mm{A}\).</dd>
+        <dt>solo da sinistra</dt>
+        <dd>attenzione: \(\mm{A}\mm{A}^{+} \neq \mm{I}_m\) in generale. È una matrice \(m\times m\), e non può
+            essere l'identità — \(\mm{A}\) ha solo \(n &lt; m\) colonne indipendenti, quindi \(\mm{A}\mm{A}^{+}\)
+            ha rango \(n\), non \(m\). (È una <b>proiezione</b>, e la incontreremo nel Cap. 13.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché <em>quella</em> formula? Perché è la scelta «più naturale», e nel Capitolo 14 scoprirai che
+      \(\mm{A}^{+}\vv{b}\) è la <b>soluzione ai minimi quadrati</b> di \(\mm{A}\vv{x} = \vv{b}\) — la migliore
+      risposta quando il sistema, essendo alto, di solito non ha soluzione esatta. Per ora prendila come
+      l'inversa sinistra costruita con gli attrezzi che hai.
+    </div>
+  </div>
+
+  <p>
+    Esempio concreto, \(\mm{A}\) alta \(3\times2\):
+    \(\mm{A} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}\). Allora
+    \(\mm{A}\T\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) (det \(3\), invertibile), e
+    \[
+      \mm{A}^{+} = (\mm{A}\T\mm{A})\inv\mm{A}\T
+      = \frac{1}{3}\begin{bmatrix} 2 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\begin{bmatrix} 1 &amp; 0 &amp; 1 \\ 0 &amp; 1 &amp; 1 \end{bmatrix}
+      = \frac{1}{3}\begin{bmatrix} 2 &amp; -1 &amp; 1 \\ -1 &amp; 2 &amp; 1 \end{bmatrix}.
+    \]
+    Verifica: \(\mm{A}^{+}\mm{A} = \frac{1}{3}\begin{bmatrix} 2 &amp; -1 &amp; 1 \\ -1 &amp; 2 &amp; 1 \end{bmatrix}
+    \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \\ 1 &amp; 1 \end{bmatrix} = \frac{1}{3}\begin{bmatrix} 3 &amp; 0 \\ 0 &amp; 3 \end{bmatrix}
+    = \mm{I}_2\) ✔.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Inversa destra</h2>
+
+  <p class="lead">
+    Specularmente: le matrici <b>larghe</b> (poche righe, tante colonne) hanno un'inversa <b>destra</b>. Tutto
+    si ottiene dal §12.6 con una trasposizione — è la stessa idea guardata allo specchio.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'inversa destra <span class="tag">per le matrici larghe, a rango pieno di riga</span></div>
+    <div class="f-body">
+      \[ \mm{A}^{+} = \mm{A}\T(\mm{A}\mm{A}\T)\inv \qquad\Longrightarrow\qquad \mm{A}\mm{A}^{+} = \mm{I}_m \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\) larga, \(m\times n\) con \(m &lt; n\)</dt>
+        <dd>a <b>rango pieno di riga</b> (\(\rank = m\): righe indipendenti). \(\mm{A}\mm{A}\T\) è
+            \(m\times m\) e invertibile (di nuovo §7.7, applicato ad \(\mm{A}\T\)).</dd>
+        <dt>\(\mm{A}\mm{A}^{+} = \mm{I}_m\)</dt>
+        <dd>\(\mm{A}\,\mm{A}\T(\mm{A}\mm{A}\T)\inv = \mm{I}_m\). Stavolta funziona da <b>destra</b>.</dd>
+        <dt>e da sinistra?</dt>
+        <dd>\(\mm{A}^{+}\mm{A} \neq \mm{I}_n\): è ancora una proiezione (Cap. 13). Una matrice larga ha
+            <em>infinite</em> inverse destre; questa è la naturale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il legame con le soluzioni: una matrice larga dà sistemi <b>sotto-determinati</b> (infinite soluzioni,
+      §10.7). \(\mm{A}^{+}\vv{b} = \mm{A}\T(\mm{A}\mm{A}\T)\inv\vv{b}\) sceglie, tra le infinite, quella di
+      <b>norma minima</b> — la più corta. Anche questo si chiarirà nel Cap. 14.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>La pseudoinversa, parte 1</h2>
+
+  <p class="lead">
+    Mettiamo insieme i pezzi. Abbiamo costruito un oggetto — l'ho già chiamato \(\mm{A}^{+}\) — che si comporta
+    da inversa <em>per ogni matrice a rango pieno</em>, quadrata o no. Si chiama <b>pseudoinversa</b> (o
+    inversa di Moore-Penrose), ed è uno dei ponti più importanti verso la seconda metà del libro.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La pseudoinversa \(\mm{A}^{+}\), a rango pieno</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th>Forma di \(\mm{A}\)</th><th>\(\mm{A}^{+}\)</th><th>Che cosa fa</th></tr></thead>
+      <tbody>
+        <tr><td><b>quadrata</b> invertibile</td><td>\(\mm{A}\inv\)</td>
+            <td>l'inversa vera: \(\mm{A}^{+}\mm{A} = \mm{A}\mm{A}^{+} = \mm{I}\)</td></tr>
+        <tr><td><b>alta</b> (\(m &gt; n\)), rango \(n\)</td><td>\((\mm{A}\T\mm{A})\inv\mm{A}\T\)</td>
+            <td>inversa <b>sinistra</b>: \(\mm{A}^{+}\mm{A} = \mm{I}_n\) (§12.6)</td></tr>
+        <tr><td><b>larga</b> (\(m &lt; n\)), rango \(m\)</td><td>\(\mm{A}\T(\mm{A}\mm{A}\T)\inv\)</td>
+            <td>inversa <b>destra</b>: \(\mm{A}\mm{A}^{+} = \mm{I}_m\) (§12.7)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Le tre righe sono <em>lo stesso oggetto</em>: quando \(\mm{A}\) è quadrata e invertibile,
+      \((\mm{A}\T\mm{A})\inv\mm{A}\T = \mm{A}\inv(\mm{A}\T)\inv\mm{A}\T = \mm{A}\inv\). La pseudoinversa
+      <mark>coincide con l'inversa quando questa esiste</mark>, e la <em>estende</em> a tutte le matrici a
+      rango pieno.
+    </p>
+  </div>
+
+  <p>
+    Era la promessa del §5.2: «una matrice alta non ha inversa, ma ha una <em>pseudo</em>inversa (§12.8)».
+    Eccola. E perché «parte 1»? Perché mancano ancora due pezzi, e sono due capitoli:
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Quel che resta da capire (e dove)</div>
+    <ul style="margin:.2rem 0 0">
+      <li><b>Perché proprio queste formule</b> — cioè in che senso \(\mm{A}^{+}\vv{b}\) è la
+          <em>migliore</em> risposta a un sistema senza soluzione (alto) o con troppe (largo): è la teoria dei
+          <b>minimi quadrati</b>, <b>Capitolo 14</b>.</li>
+      <li><b>Il caso a rango NON pieno</b> — quando anche \(\mm{A}\T\mm{A}\) è singolare e nessuna di queste
+          formule regge: lì serve la <b>SVD</b>, e la pseudoinversa completa (per <em>qualunque</em> matrice)
+          arriva nel <b>Capitolo 16</b>. È la «parte 2».</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>L'inversa disfa</b>: \(\mm{A}\inv\mm{A} = \mm{A}\mm{A}\inv = \mm{I}\) (§12.1). Esiste
+          <mark>solo per le quadrate a rango pieno</mark> (\(\det \neq 0\)): la terza risposta al collasso del
+          §1.1.</li>
+      <li><b>Regole:</b> \((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\) (l'ordine si rovescia, come la
+          trasposta), \((\mm{A}\inv)\inv = \mm{A}\), \(\det(\mm{A}\inv) = 1/\det(\mm{A})\).</li>
+      <li><b>Diagonale:</b> reciproco di ogni elemento (§12.2). <b>2×2:</b> scambia la diagonale, cambia
+          segno agli altri due, dividi per \(ad - bc\) (§12.3).</li>
+      <li><b>MCA</b> (§12.4): \(\mm{A}\inv = \frac{1}{\det}\operatorname{adj}(\mm{A})\), con
+          \(\operatorname{adj} = \mm{C}\T\) (cofattori trasposti). Elegante ma \(n!\): solo per matrici
+          piccole.</li>
+      <li><b>Via riduzione</b> (§12.5): \([\,\mm{A}\mid\mm{I}\,] \to [\,\mm{I}\mid\mm{A}\inv\,]\) con
+          Gauss-Jordan. È il modo pratico. <mark>Ma per risolvere \(\mm{A}\vv{x} = \vv{b}\) non invertire:
+          riduci direttamente</mark> (Cap. 10).</li>
+      <li><b>Non quadrate a rango pieno:</b> inversa <b>sinistra</b> \((\mm{A}\T\mm{A})\inv\mm{A}\T\) per le
+          alte (§12.6), <b>destra</b> \(\mm{A}\T(\mm{A}\mm{A}\T)\inv\) per le larghe (§12.7). Funzionano perché
+          \(\mm{A}\T\mm{A}\) è invertibile \(\iff\) colonne indipendenti (§7.7).</li>
+      <li><b>Pseudoinversa \(\mm{A}^{+}\)</b> (§12.8): unifica i tre casi, coincide con \(\mm{A}\inv\) quando
+          esiste. Il «perché» (minimi quadrati) è il Cap. 14; il caso a rango deficiente (SVD) è il Cap. 16.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con questo il trittico del §1.1 è completo: <b>rango</b> (quante dimensioni restano), <b>determinante</b>
+    (di quanto scala l'area), <b>inversa</b> (si torna indietro). Da qui la strada si biforca verso il cuore
+    applicativo del libro. La pseudoinversa che hai appena costruito non è un oggetto astratto: è la formula
+    che, nel <b>Capitolo 14</b>, adatterà una retta a una nuvola di punti — i minimi quadrati, il pane della
+    statistica e del machine learning. Ma prima, nel <b>Capitolo 13</b>, dobbiamo capire quella «proiezione»
+    che è spuntata due volte qui (\(\mm{A}\mm{A}^{+}\)): è il prossimo mattone.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-9"><span class="secnum">Sezione 12.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Scrivi l'inversa di \(\mm{D} = \begin{bmatrix} 2 &amp; 0 &amp; 0 \\ 0 &amp; -1 &amp; 0 \\ 0 &amp; 0 &amp; 5 \end{bmatrix}\).
+      E se l'elemento \((2,2)\) fosse \(0\) invece di \(-1\), che succederebbe?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Calcola l'inversa di \(\mm{A} = \begin{bmatrix} 4 &amp; 3 \\ 2 &amp; 2 \end{bmatrix}\) con la formula lampo,
+      e verifica che \(\mm{A}\mm{A}\inv = \mm{I}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      La matrice \(\begin{bmatrix} 2 &amp; 4 \\ 1 &amp; 2 \end{bmatrix}\) ha inversa? Rispondi con un conto solo, e
+      spiega geometricamente cosa significa la risposta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Trova l'inversa di \(\mm{A} = \begin{bmatrix} 1 &amp; 1 &amp; 1 \\ 0 &amp; 1 &amp; 1 \\ 0 &amp; 0 &amp; 1 \end{bmatrix}\)
+      riducendo \([\,\mm{A}\mid\mm{I}\,]\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.5</div>
+    <p style="margin-bottom:0">
+      Siano \(\mm{A}, \mm{B}\) invertibili \(n\times n\). Semplifica: (a) \((\mm{A}\mm{B})\inv\); &nbsp;
+      (b) \((\mm{B}\mm{A})\inv\); &nbsp; (c) \(\big((\mm{A}\mm{B})\T\big)\inv\); &nbsp;
+      (d) \((\mm{A}^2)\inv\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.6</div>
+    <p style="margin-bottom:0">
+      Calcola l'inversa sinistra \(\mm{A}^{+} = (\mm{A}\T\mm{A})\inv\mm{A}\T\) della matrice alta
+      \(\mm{A} = \begin{bmatrix} 1 &amp; 0 \\ 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix}\), e verifica che
+      \(\mm{A}^{+}\mm{A} = \mm{I}_2\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.7</div>
+    <p style="margin-bottom:0">
+      Spiega perché una matrice alta \(3\times2\) <b>non può</b> avere un'inversa destra \(\mm{R}\) con
+      \(\mm{A}\mm{R} = \mm{I}_3\). <span style="color:var(--ink-soft)">(Suggerimento: che rango ha
+      \(\mm{A}\mm{R}\)? E che rango ha \(\mm{I}_3\)?)</span>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.8</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga di motivazione:
+      <br>(a) \((\mm{A} + \mm{B})\inv = \mm{A}\inv + \mm{B}\inv\).
+      <br>(b) \((\mm{A}\mm{B})\inv = \mm{A}\inv\mm{B}\inv\).
+      <br>(c) Se \(\det(\mm{A}) = 0\), \(\mm{A}\) non ha inversa.
+      <br>(d) Se \(\mm{A}, \mm{B}\) sono quadrate e \(\mm{A}\mm{B} = \mm{I}\), allora \(\mm{B}\mm{A} = \mm{I}\).
+      <br>(e) L'inversa di una matrice simmetrica invertibile è simmetrica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-10"><span class="secnum">Sezione 12.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Reciproco di ogni elemento diagonale:
+      \(\mm{D}\inv = \begin{bmatrix} 1/2 &amp; 0 &amp; 0 \\ 0 &amp; -1 &amp; 0 \\ 0 &amp; 0 &amp; 1/5 \end{bmatrix}\)
+      (nota: \(1/(-1) = -1\)). Se l'elemento \((2,2)\) fosse \(0\), servirebbe \(1/0\): <b>niente inversa</b>.
+      Il determinante diventerebbe \(2\cdot 0\cdot 5 = 0\) (§11.6), l'asse \(y\) sarebbe schiacciato, il
+      ritorno impossibile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      \(\det = 4\cdot 2 - 3\cdot 2 = 2\). Scambio la diagonale, cambio segno agli altri, divido per \(2\):
+      \[
+        \mm{A}\inv = \frac{1}{2}\begin{bmatrix} 2 &amp; -3 \\ -2 &amp; 4 \end{bmatrix}
+        = \begin{bmatrix} 1 &amp; -3/2 \\ -1 &amp; 2 \end{bmatrix}.
+      \]
+      Verifica: \(\begin{bmatrix} 4 &amp; 3 \\ 2 &amp; 2 \end{bmatrix}\begin{bmatrix} 1 &amp; -3/2 \\ -1 &amp; 2 \end{bmatrix}
+      = \begin{bmatrix} 4-3 &amp; -6+6 \\ 2-2 &amp; -3+4 \end{bmatrix} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}\) ✔.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      \(\det = 2\cdot 2 - 4\cdot 1 = 0\): <b>nessuna inversa</b>. Geometricamente, le colonne \((2, 1)\) e
+      \((4, 2) = 2(2, 1)\) sono dipendenti: la matrice schiaccia il piano sulla retta dei multipli di
+      \((2, 1)\). Due punti distinti finiscono sovrapposti, e dal risultato non si può risalire — il ritorno
+      è impossibile (§12.1).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      \[
+        \left[\begin{array}{ccc|ccc} 1&amp;1&amp;1&amp;1&amp;0&amp;0 \\ 0&amp;1&amp;1&amp;0&amp;1&amp;0 \\ 0&amp;0&amp;1&amp;0&amp;0&amp;1 \end{array}\right]
+        \xrightarrow[R_1 - R_3]{R_2 - R_3}
+        \left[\begin{array}{ccc|ccc} 1&amp;1&amp;0&amp;1&amp;0&amp;-1 \\ 0&amp;1&amp;0&amp;0&amp;1&amp;-1 \\ 0&amp;0&amp;1&amp;0&amp;0&amp;1 \end{array}\right]
+        \xrightarrow{R_1 - R_2}
+        \left[\begin{array}{ccc|ccc} 1&amp;0&amp;0&amp;1&amp;-1&amp;0 \\ 0&amp;1&amp;0&amp;0&amp;1&amp;-1 \\ 0&amp;0&amp;1&amp;0&amp;0&amp;1 \end{array}\right]
+      \]
+      \(\mm{A}\inv = \begin{bmatrix} 1 &amp; -1 &amp; 0 \\ 0 &amp; 1 &amp; -1 \\ 0 &amp; 0 &amp; 1 \end{bmatrix}\).
+      (Ha senso: \(\mm{A}\) somma le componenti «da qui in giù», \(\mm{A}\inv\) fa le differenze consecutive.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.5</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\) (l'ordine si rovescia).
+      <br><b>(b)</b> \((\mm{B}\mm{A})\inv = \mm{A}\inv\mm{B}\inv\).
+      <br><b>(c)</b> \(\big((\mm{A}\mm{B})\T\big)\inv = \big((\mm{A}\mm{B})\inv\big)\T =
+      (\mm{B}\inv\mm{A}\inv)\T = (\mm{A}\inv)\T(\mm{B}\inv)\T\) (trasposta e inversa commutano, poi LIVE EVIL).
+      <br><b>(d)</b> \((\mm{A}^2)\inv = (\mm{A}\mm{A})\inv = \mm{A}\inv\mm{A}\inv = (\mm{A}\inv)^2\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.6</div>
+    <p style="margin-bottom:0">
+      \(\mm{A}\T\mm{A} = \begin{bmatrix} 1 &amp; 1 &amp; 0 \\ 0 &amp; 1 &amp; 1 \end{bmatrix}
+      \begin{bmatrix} 1 &amp; 0 \\ 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\),
+      con \(\det = 3\), quindi \((\mm{A}\T\mm{A})\inv = \frac{1}{3}\begin{bmatrix} 2 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\).
+      \[
+        \mm{A}^{+} = (\mm{A}\T\mm{A})\inv\mm{A}\T
+        = \frac{1}{3}\begin{bmatrix} 2 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}\begin{bmatrix} 1 &amp; 1 &amp; 0 \\ 0 &amp; 1 &amp; 1 \end{bmatrix}
+        = \frac{1}{3}\begin{bmatrix} 2 &amp; 1 &amp; -1 \\ -1 &amp; 1 &amp; 2 \end{bmatrix}.
+      \]
+      Verifica: \(\mm{A}^{+}\mm{A} = \frac{1}{3}\begin{bmatrix} 2 &amp; 1 &amp; -1 \\ -1 &amp; 1 &amp; 2 \end{bmatrix}
+      \begin{bmatrix} 1 &amp; 0 \\ 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix} = \frac{1}{3}\begin{bmatrix} 3 &amp; 0 \\ 0 &amp; 3 \end{bmatrix}
+      = \mm{I}_2\) ✔.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.7</div>
+    <p style="margin-bottom:0">
+      Una \(3\times2\) ha rango al più \(2\). Per la regola del rango di un prodotto,
+      \(\rank(\mm{A}\mm{R}) \le \rank(\mm{A}) \le 2\). Ma \(\mm{I}_3\) ha rango \(3\). Quindi \(\mm{A}\mm{R}\)
+      non può essere \(\mm{I}_3\): <b>nessuna inversa destra</b>. Geometricamente, \(\mm{A}\) manda \(\R^2\) in
+      un piano dentro \(\R^3\); nessuna \(\mm{R}\) può «riempire» la terza dimensione che \(\mm{A}\) non
+      raggiunge mai.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.8</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Controesempio: \(\mm{A} = \mm{B} = \mm{I}\) (2×2). \(\mm{A}\inv + \mm{B}\inv = 2\mm{I}\),
+      ma \((\mm{A} + \mm{B})\inv = (2\mm{I})\inv = \frac{1}{2}\mm{I} \neq 2\mm{I}\).
+      <br><b>(b) FALSO.</b> L'ordine si <b>rovescia</b>: \((\mm{A}\mm{B})\inv = \mm{B}\inv\mm{A}\inv\), non
+      \(\mm{A}\inv\mm{B}\inv\) (a meno che commutino).
+      <br><b>(c) VERO.</b> \(\det = 0 \iff\) rango non pieno \(\iff\) niente inversa (la grande equivalenza,
+      §12.1).
+      <br><b>(d) VERO.</b> Per le quadrate, un'inversa da un lato è automaticamente inversa da entrambi: se
+      \(\mm{A}\mm{B} = \mm{I}\) con \(\mm{A}, \mm{B}\) quadrate, allora \(\mm{B} = \mm{A}\inv\) e
+      \(\mm{B}\mm{A} = \mm{I}\). (È la ragione per cui, per le quadrate, basta verificare un lato.)
+      <br><b>(e) VERO.</b> Se \(\mm{A} = \mm{A}\T\), allora \((\mm{A}\inv)\T = (\mm{A}\T)\inv = \mm{A}\inv\):
+      anche \(\mm{A}\inv\) è simmetrica.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise (le stesse dei capitoli 5-11).
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  if (Math.abs(v - r) < 1e-7) return String(r);
+  return v.toFixed(2);
+};
+/* un numero come frazione «bella» se il denominatore è piccolo, altrimenti decimale */
+function fnice(v) {
+  if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+  for (const den of [2, 3, 4, 5, 6]) {
+    const num = v * den;
+    if (Math.abs(num - Math.round(num)) < 1e-9) return `${Math.round(num)}/${den}`;
+  }
+  return v.toFixed(2);
+}
+function matHTML(M, opt = {}) {
+  const rows = M.length, cols = M[0].length;
+  const cls = opt.cls || (() => '');
+  const fmt = opt.fmt || (v => nfmt(v));
+  const gt = opt.aug ? `repeat(${opt.aug}, auto) 10px repeat(${cols - opt.aug}, auto)` : `repeat(${cols}, auto)`;
+  let h = `<div class="mtab brk" style="grid-template-columns:${gt}">`;
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++) {
+      if (opt.aug && j === opt.aug)
+        h += `<div class="corner" style="border-left:1.5px solid var(--ink-soft)"></div>`;
+      h += `<div class="c ${cls(i, j, M[i][j])}">${fmt(M[i][j])}</div>`;
+    }
+  return h + '</div>';
+}
+
+
+/* ============================================================================
+   WIDGET §12.3 — l'inversa disfa la trasformazione
+   Trascini le colonne di A; il quadratino unitario diventa il parallelogramma,
+   e A⁻¹ è la trasformazione che lo riporta indietro. Se det→0, A⁻¹ esplode.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wu-svg');
+  if (!svg) return;
+  const out = document.getElementById('wu-out');
+  const p = new Plot(svg, { xmin: -3.5, xmax: 4.5, ymin: -2.6, ymax: 3.2 });
+  let c1 = [2, 1], c2 = [1, 1];
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const a = c1[0], c = c1[1], b = c2[0], d = c2[1];
+    const det = a * d - b * c;
+    const quasiZero = Math.abs(det) < 1e-9;
+    // quadratino unitario (dominio) in grigio tenue
+    p.poly([[0, 0], [1, 0], [1, 1], [0, 1]], { color: 'var(--ink-faint)', width: 1.4, dash: '4 3' });
+    p.text(0.5, 0.5, '1', { color: 'var(--ink-faint)', size: 11 });
+    // parallelogramma immagine (A applicata) 0 -> c1 -> c1+c2 -> c2
+    const c12 = [a + b, c + d];
+    const col = quasiZero ? 'var(--ink-faint)' : (det > 0 ? 'var(--accent)' : 'var(--warm)');
+    p.poly([[0, 0], c1, c12, c2], { fill: col, color: col, width: 2, opacity: 0.14 });
+    p.poly([[0, 0], c1, c12, c2], { color: col, width: 2 });
+    p.arrow(0, 0, a, c, { color: 'var(--accent)', width: 2.6, label: 'c₁' });
+    p.arrow(0, 0, b, d, { color: 'var(--warm)', width: 2.6, label: 'c₂' });
+    p.handle(a, c, { color: 'var(--accent)', snap: 0.5 }, (x, y) => { c1 = [x, y]; draw(); });
+    p.handle(b, d, { color: 'var(--warm)', snap: 0.5 }, (x, y) => { c2 = [x, y]; draw(); });
+
+    if (quasiZero) {
+      out.innerHTML = `
+        <div class="big" style="color:var(--warm)">det = 0 — A⁻¹ non esiste</div>
+        <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          Le due colonne sono <b>allineate</b>: il quadratino viene schiacciato su un segmento. L'area va a
+          zero, e <mark>la trasformazione non si può disfare</mark> — dividere per det = 0 esplode.
+          Due punti diversi finiscono sovrapposti: dal risultato non sai più da dove venivi (§12.1).
+        </div>`;
+      return;
+    }
+    // A⁻¹ = (1/det)[[d,−b],[−c,a]]
+    const inv = [[d / det, -b / det], [-c / det, a / det]];
+    out.innerHTML = `
+      <div class="big">
+        A = \\(\\begin{bmatrix}${nfmt(a)}&${nfmt(b)}\\\\${nfmt(c)}&${nfmt(d)}\\end{bmatrix}\\),
+        &nbsp; det = <b style="color:${col}">${nfmt(det)}</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b>La formula lampo</b> (scambia la diagonale, cambia segno agli altri, dividi per det):
+        \\[ A^{-1} = \\frac{1}{${nfmt(det)}}\\begin{bmatrix}${nfmt(d)}&${nfmt(-b)}\\\\${nfmt(-c)}&${nfmt(a)}\\end{bmatrix}
+        = \\begin{bmatrix}${fnice(inv[0][0])}&${fnice(inv[0][1])}\\\\${fnice(inv[1][0])}&${fnice(inv[1][1])}\\end{bmatrix} \\]
+        A⁻¹ è la trasformazione che riporta il parallelogramma <b>colorato</b> sul quadratino
+        <b>tratteggiato</b>: disfa esattamente ciò che A ha fatto${det < 0 ? ', ribaltamento incluso' : ''}.
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §12.5 — [A | I] → [I | A⁻¹], un passo alla volta (precompilato)
+   A = [[1,2,3],[0,1,4],[5,6,0]]  →  A⁻¹ = [[-24,18,5],[20,-15,-4],[-5,4,1]]
+   ========================================================================= */
+(function () {
+  const body = document.getElementById('wr-body');
+  if (!body) return;
+  const out = document.getElementById('wr-out');
+  const btnN = document.getElementById('wr-next');
+  const btnR = document.getElementById('wr-reset');
+
+  const STEPS = [
+    { M: [[1, 2, 3, 1, 0, 0], [0, 1, 4, 0, 1, 0], [5, 6, 0, 0, 0, 1]], op: 'La matrice aumentata [A | I]. A destra c\'è l\'identità.', piv: [] },
+    { M: [[1, 2, 3, 1, 0, 0], [0, 1, 4, 0, 1, 0], [0, -4, -15, -5, 0, 1]], op: 'R₃ ← R₃ − 5R₁ : azzero il 5 in basso a sinistra.', piv: [[0, 0]] },
+    { M: [[1, 2, 3, 1, 0, 0], [0, 1, 4, 0, 1, 0], [0, 0, 1, -5, 4, 1]], op: 'R₃ ← R₃ + 4R₂ : la terza riga a sinistra diventa (0,0,1).', piv: [[0, 0], [1, 1]] },
+    { M: [[1, 2, 0, 16, -12, -3], [0, 1, 0, 20, -15, -4], [0, 0, 1, -5, 4, 1]], op: 'R₂ ← R₂ − 4R₃ e R₁ ← R₁ − 3R₃ : pulisco sopra il terzo pivot.', piv: [[0, 0], [1, 1], [2, 2]] },
+    { M: [[1, 0, 0, -24, 18, 5], [0, 1, 0, 20, -15, -4], [0, 0, 1, -5, 4, 1]], op: 'R₁ ← R₁ − 2R₂ : a sinistra compare I. Fatto!', piv: [[0, 0], [1, 1], [2, 2]] },
+  ];
+  let k = 0;
+
+  function render() {
+    const st = STEPS[k];
+    const pv = new Set(st.piv.map(([i, j]) => i + ',' + j));
+    const done = (k === STEPS.length - 1);
+    body.innerHTML = matHTML(st.M, {
+      aug: 3,
+      cls: (i, j, v) => {
+        if (j < 3 && pv.has(i + ',' + j)) return 'p hl';
+        if (j < 3 && v === 0) return 'z';
+        if (j >= 3 && done) return 'g';       // evidenzia A⁻¹ alla fine
+        return '';
+      }
+    });
+    out.innerHTML = `
+      <div style="min-height:2.2em"><b>Passo ${k}/${STEPS.length - 1}.</b> ${st.op}</div>
+      ${done
+        ? `<div style="margin-top:.3rem; color:var(--green)"><b>A sinistra c'è I; a destra, A⁻¹.</b> Le mosse
+           che riducono A a I, applicate a I, la trasformano nell'inversa (§12.5). Combacia con l'MCA del
+           §12.4 ✔.</div>`
+        : `<div style="margin-top:.3rem; color:var(--ink-soft)">In viola i pivot; in grigio gli zeri
+           fabbricati. Il blocco di destra registra ogni mossa.</div>`}`;
+    btnN.disabled = done; btnN.style.opacity = done ? .4 : 1;
+  }
+  btnN.onclick = () => { if (k < STEPS.length - 1) { k++; render(); } };
+  btnR.onclick = () => { k = 0; render(); };
+  render();
+})();
+</script>
+</body>
+</html>

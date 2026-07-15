@@ -209,7 +209,7 @@ const TOC = [
     n: 12,
     titolo: "Inversa di una matrice",
     file: "cap12-inversa.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Concetti e applicazioni" },
       { id: "s12-2", n: "12.2", t: "Inversa di una matrice diagonale" },
