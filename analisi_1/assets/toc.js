@@ -25,7 +25,7 @@ const TOC = [
     n: 2,
     titolo: "I numeri reali",
     file: "cap02-numeri-reali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Perché i numeri sono un problema" },
       { id: "s2-2", n: "2.2", t: "Dai naturali ai razionali" },
