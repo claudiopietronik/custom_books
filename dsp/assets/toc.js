@@ -143,7 +143,7 @@ const TOC = [
     n: 9,
     titolo: "Applicazioni della DFT",
     file: "cap09-applicazioni-dft.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Analisi spettrale dei segnali" },
       { id: "s9-2", n: "9.2", t: "Filtrare passando per la frequenza" },

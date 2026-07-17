@@ -35,7 +35,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 6 — La convoluzione
 - [x] 7 — Proprietà della convoluzione
 - [x] 8 — La trasformata di Fourier discreta (DFT)
-- [ ] 9 — Applicazioni della DFT
+- [x] 9 — Applicazioni della DFT
 - [ ] 10 — Proprietà della trasformata di Fourier
 - [ ] 11 — Coppie di trasformate di Fourier
 - [ ] 12 — La trasformata di Fourier veloce (FFT)

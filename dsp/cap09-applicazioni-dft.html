@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Applicazioni della DFT — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.09 — Capitolo 9</div>
+    <h1>Applicazioni della DFT</h1>
+    <p class="standfirst">
+      La DFT è uno strumento; questo capitolo è la cassetta degli attrezzi. Vediamo i tre usi che ricorrono
+      ovunque — <b>capire</b> di che frequenze è fatto un segnale, <b>filtrarlo</b> passando per la frequenza,
+      <b>misurarne la potenza</b> — e affrontiamo il problema pratico che rovina i risultati agli inesperti: la
+      <b>dispersione spettrale</b>, e le <b>finestre</b> che la tengono a bada.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Subito dopo aver imparato <em>cos'è</em> la DFT (Cap. 8), impariamo a <em>usarla</em>. Restano ancora due
+      capitoli di teoria della frequenza (le proprietà, Cap. 10, e le coppie notevoli, Cap. 11), ma già qui
+      raccogli risultati concreti. La velocità di calcolo — data per scontata finora — arriverà con la FFT
+      (Cap. 12).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      L'analisi spettrale è forse l'uso più diffuso del DSP in assoluto: diagnosi di macchine dalle vibrazioni,
+      accordatori, riconoscimento di note, radioastronomia, analisi di elettrocardiogrammi. E capire la
+      <strong>dispersione spettrale</strong> è ciò che distingue uno spettro letto correttamente da uno che
+      mente — un errore che, senza saperlo, commettono in tantissimi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">SEZIONE 9.1</span>Analisi spettrale dei segnali</h2>
+
+  <p class="lead">
+    L'uso più immediato della DFT è rispondere alla domanda: <em>di quali frequenze è fatto questo segnale?</em>
+    Si calcola lo spettro di ampiezza e si guarda dove ci sono i picchi.
+  </p>
+
+  <p>
+    Per interpretare l'asse orizzontale serve tradurre l'indice \(k\) (numero di cicli sulla finestra) in una
+    frequenza vera, in hertz. La regola è diretta: la frequenza corrispondente a \(k\) è \(f_k = k \cdot f_s / N\),
+    dove \(f_s\) è la frequenza di campionamento e \(N\) il numero di campioni. Il picco più alto ti dice la
+    componente dominante; picchi multipli, un segnale ricco (una nota musicale, per esempio, ha un picco alla
+    fondamentale e altri alle armoniche — è ciò che chiamiamo <em>timbro</em>, Cap. 22).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Lo spettro come «impronta digitale»</div>
+    <p style="margin-bottom:0">
+      Ogni sorgente ha uno spettro caratteristico. Un motore sano vibra a certe frequenze; se compare un picco
+      nuovo, qualcosa si è rotto — un cuscinetto, un ingranaggio. Una voce ha uno spettro diverso da un'altra.
+      Una stella emette luce con righe spettrali che ne rivelano la composizione. <mark>Guardare lo spettro è
+      spesso il modo più rapido per identificare, diagnosticare o riconoscere</mark> — molto più che guardare il
+      segnale grezzo nel tempo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">SEZIONE 9.2</span>Filtrare passando per la frequenza</h2>
+
+  <p class="lead">
+    Ecco un'idea potente e sorprendentemente semplice: per togliere certe frequenze da un segnale, vai in
+    frequenza, <b>cancellale</b>, e torna indietro.
+  </p>
+
+  <p>
+    La ricetta è: (1) DFT del segnale; (2) nello spettro, azzera (o riduci) le frequenze indesiderate — un
+    ronzio a 50 Hz è un singolo picco da spegnere; (3) DFT inversa per tornare al tempo. Il segnale che ne esce
+    è ripulito. È il filtraggio nel suo aspetto più intuitivo: nel tempo un filtro è una convoluzione arzigogolata,
+    in frequenza è <em>una moltiplicazione</em> per una maschera che dice «questa frequenza sì, questa no».
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Non è gratis: la convoluzione circolare</div>
+    <p style="margin-bottom:0">
+      C'è un trabocchetto. La DFT tratta il segnale come <em>periodico</em> (§8.1): moltiplicare lo spettro
+      equivale a una convoluzione <b>circolare</b>, che «avvolge» le due estremità del segnale. Se non si prendono
+      precauzioni, la fine del segnale contamina l'inizio, creando artefatti ai bordi. Il modo corretto di
+      filtrare via FFT — con imbottitura di zeri e sovrapposizione dei blocchi — è il tema del Cap. 18. Per un
+      ritocco «una tantum» il metodo diretto va benissimo; per filtrare a regime, servono le accortezze del
+      Cap. 18.
+    </p>
+  </div>
+
+  <h3>Provalo: ripulisci un segnale nello spettro</h3>
+
+  <p>
+    Il segnale (in <b style="color:var(--ink-faint)">grigio</b>) è una lenta ondulazione utile, sporcata da un
+    <b>ronzio ad alta frequenza</b> e da un po' di rumore. Abbassa la frequenza di taglio: tutto ciò che sta
+    sopra viene azzerato nello spettro, e il segnale ricostruito (in <b style="color:var(--accent)">teal</b>) si
+    ripulisce. Guarda insieme il tempo e lo spettro.
+  </p>
+
+  <div class="widget" id="w-fdfilt">
+    <div class="w-head">
+      <span>Filtraggio in frequenza</span>
+      <span class="hint">taglia le frequenze alte e ripulisci</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wf-top" viewBox="0 0 620 150" role="img" aria-label="Segnale originale sporco e segnale ripulito"></svg>
+      <svg id="wf-bot" viewBox="0 0 620 140" role="img" aria-label="Spettro del segnale con la banda tagliata evidenziata"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>taglio</label><input type="range" id="wf-c" min="1" max="32" step="1" value="32"><output id="wf-cv">32</output></div>
+    </div>
+    <div class="w-readout" id="wf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">SEZIONE 9.3</span>Densità spettrale di potenza</h2>
+
+  <p class="lead">
+    Spesso non interessa la fase, ma <em>quanta energia</em> il segnale porta a ciascuna frequenza. È la
+    <b>densità spettrale di potenza</b>, e si ottiene elevando al quadrato l'ampiezza dello spettro.
+  </p>
+
+  <p>
+    La potenza alla frequenza \(k\) è \(\abs{X[k]}^2 = \Real X[k]^2 + \Imag X[k]^2\): il quadrato del modulo. È
+    utilissima per confrontare quanto «pesa» il segnale rispetto al rumore in ciascuna banda — un rapporto
+    segnale/rumore <em>frequenza per frequenza</em>. Un segnale utile concentrato in poche frequenze spicca sopra
+    un rumore spalmato su tutte.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Lo spettro di potenza è rumoroso: mediare aiuta</div>
+    <p style="margin-bottom:0">
+      Lo spettro di potenza di un singolo spezzone di segnale è sorprendentemente «peloso»: fluttua molto,
+      perché il rumore contribuisce in modo casuale a ogni frequenza. Il rimedio è quello del Cap. 2:
+      <b>mediare</b>. Si spezza il segnale in tanti tratti, si calcola lo spettro di potenza di ciascuno e se ne
+      fa la media (è il <em>metodo di Welch</em>). Come per il rumore nel tempo, mediando \(M\) tratti la
+      fluttuazione cala di \(\sqrt{M}\): lo spettro si liscia e i picchi veri emergono netti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">SEZIONE 9.4</span>Risoluzione, dispersione e finestre</h2>
+
+  <p class="lead">
+    Ed eccoci al problema pratico più importante del capitolo. Nella teoria del Cap. 8 una sinusoide pura dava un
+    picco perfetto. Nella pratica, quasi mai — e capire perché è essenziale.
+  </p>
+
+  <p>
+    La DFT assume che il segnale sia <b>periodico</b> con periodo esattamente pari alla finestra di \(N\)
+    campioni. Se una sinusoide compie un numero <em>intero</em> di cicli nella finestra, l'assunzione è vera e il
+    picco è netto. Ma se compie, poniamo, \(5{,}5\) cicli, alla fine della finestra si «spezza»: la ripetizione
+    periodica crea una discontinuità artificiale. E una discontinuità, in frequenza, ha bisogno di <em>tante</em>
+    frequenze per essere descritta — così l'energia della sinusoide, invece di stare in un picco, si
+    <b class="termine">disperde</b> (in inglese <em>spectral leakage</em>) sulle frequenze vicine, sporcando lo
+    spettro.
+  </p>
+
+  <p>
+    Il rimedio sono le <b class="termine">finestre</b>. Prima di fare la DFT, si moltiplica il segnale per una
+    curva che va dolcemente a zero alle due estremità (Hamming, Hanning, Blackman sono le più note). Così i bordi
+    non «sbattono», la discontinuità sparisce e la dispersione crolla. Il prezzo? Il picco diventa un po' più
+    <em>largo</em>: si perde risoluzione in cambio di pulizia. È l'ennesimo compromesso del DSP.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Risoluzione in frequenza <span class="tag">quanto fini distingui</span></div>
+    <div class="f-body">
+      \[
+        \Delta f \;=\; \frac{\hA{f_s}}{\hB{N}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\Delta f\)</dt><dd>la <b>risoluzione</b>: la minima distanza in frequenza tra due picchi che
+            riesci ancora a distinguere.</dd>
+        <dt>\(\hA{f_s}\)</dt><dd>la frequenza di campionamento.</dd>
+        <dt>\(\hB{N}\)</dt><dd>il numero di campioni nella finestra.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Più campioni prendi (finestra più lunga), più fine è la risoluzione: distingui frequenze più vicine. È
+      l'analogo in frequenza del «più campioni = più fedeltà» del tempo. <mark>Vuoi separare due note vicine?
+      Ascolta più a lungo.</mark> Ma finestra più lunga significa anche meno «istantaneità»: non puoi avere
+      insieme ottima risoluzione in frequenza e ottima localizzazione nel tempo (è il principio di
+      indeterminazione dei segnali).
+    </div>
+  </div>
+
+  <h3>Provalo: dispersione e finestre</h3>
+
+  <p>
+    Muovi la frequenza della sinusoide con continuità. Quando i cicli sono un numero <em>intero</em>, lo spettro
+    è un picco pulito; tra un intero e l'altro, l'energia <b>si disperde</b> in una nuvola di frequenze. Poi
+    attiva una finestra e guarda la nuvola sgonfiarsi: i «lobi laterali» si abbassano drasticamente, in cambio di
+    un picco leggermente più largo.
+  </p>
+
+  <div class="widget" id="w-leak">
+    <div class="w-head">
+      <span>Dispersione spettrale e finestre</span>
+      <span class="hint">frequenza non intera ⇒ dispersione; la finestra la riduce</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wlk-svg" viewBox="0 0 620 260" role="img" aria-label="Lo spettro di una sinusoide con dispersione, e come la finestra la riduce"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>cicli</label><input type="range" id="wlk-f" min="4" max="16" step="0.1" value="8"><output id="wlk-fv">8.0</output></div>
+      <button class="w-btn on" id="wlk-rect">rettangolare</button>
+      <button class="w-btn" id="wlk-ham">Hamming</button>
+      <button class="w-btn" id="wlk-black">Blackman</button>
+    </div>
+    <div class="w-readout" id="wlk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">SEZIONE 9.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">Un segnale è campionato a \(f_s = 8000\) Hz con \(N = 800\) campioni. A quale
+      frequenza in hertz corrisponde il bin \(k = 100\)? Qual è la risoluzione \(\Delta f\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Frequenza del bin: \(f_k = k f_s / N = 100 \times 8000 / 800 = 1000\) Hz.</p>
+        <p>Risoluzione: \(\Delta f = f_s / N = 8000/800 = 10\) Hz. Due frequenze più vicine di 10 Hz non si
+          distinguono con questa finestra.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">Vuoi distinguere due toni a 440 Hz e 442 Hz. Con \(f_s = 44\,100\) Hz, quanti
+      campioni servono almeno?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Serve \(\Delta f \le 2\) Hz. Da \(\Delta f = f_s/N\): \(N \ge f_s/\Delta f = 44\,100/2 = 22\,050\)
+          campioni — circa mezzo secondo di audio. Per separare frequenze vicine bisogna ascoltare a lungo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">Perché una sinusoide con un numero non intero di cicli nella finestra «disperde»
+      la sua energia, mentre con un numero intero no?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La DFT assume la finestra periodica. Con un numero intero di cicli, la ripetizione combacia
+          perfettamente: nessuna discontinuità, picco netto. Con un numero non intero, alla giunzione tra una
+          copia e la successiva c'è un <b>salto</b>: una discontinuità, che richiede molte frequenze per essere
+          descritta. L'energia si sparge su di esse — è la dispersione. Le finestre attenuano i bordi e riducono
+          il salto (§9.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">Che vantaggio e che prezzo comporta applicare una finestra (es. Hamming) prima
+      della DFT?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Vantaggio:</b> riduce fortemente la dispersione (lobi laterali più bassi), così un picco debole
+          vicino a uno forte non viene sommerso. <b>Prezzo:</b> il picco principale si allarga, cioè si perde un
+          po' di risoluzione in frequenza. È il classico compromesso: pulizia contro nitidezza. La finestra
+          giusta dipende da cosa ti serve di più.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">SEZIONE 9.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li><b>Analisi spettrale:</b> lo spettro di ampiezza rivela le frequenze; \(f_k = k f_s / N\) traduce il
+          bin in hertz. Lo spettro è un'impronta digitale.</li>
+      <li><b>Filtraggio in frequenza:</b> DFT → azzera le frequenze indesiderate → DFT inversa. Semplice, ma
+          attento alla convoluzione circolare (Cap. 18).</li>
+      <li><b>Densità di potenza</b> = \(\abs{X[k]}^2\); mediare più tratti (Welch) la liscia di \(\sqrt{M}\).</li>
+      <li><b>Dispersione spettrale:</b> frequenze non intere sui bordi «sbattono» e spargono l'energia. Le
+          <b>finestre</b> la riducono, allargando un po' il picco.</li>
+      <li><b>Risoluzione</b> \(\Delta f = f_s/N\): più campioni, frequenze più fini distinguibili — ma meno
+          localizzazione temporale.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo usato la DFT; ora torniamo un momento alla teoria per raccoglierne i frutti. Il
+    <strong>Capitolo 10</strong> esplora le <b>proprietà della trasformata di Fourier</b> — linearità,
+    traslazione, simmetria e soprattutto il <b>teorema di convoluzione</b>, la scoperta che convolvere nel tempo
+    equivale a <em>moltiplicare</em> in frequenza. È il ponte tra i due domini, e la chiave che renderà possibile
+    la convoluzione veloce del Cap. 18.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* DFT/IDFT complete (N punti) per i widget */
+function dftFull(x) {
+  const N = x.length, Re = new Array(N).fill(0), Im = new Array(N).fill(0);
+  for (let k = 0; k < N; k++) {
+    let re = 0, im = 0;
+    for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); }
+    Re[k] = re; Im[k] = im;
+  }
+  return { Re, Im };
+}
+function idftFull(Re, Im) {
+  const N = Re.length, x = new Array(N).fill(0);
+  for (let n = 0; n < N; n++) {
+    let s = 0;
+    for (let k = 0; k < N; k++) { const a = 2 * Math.PI * k * n / N; s += Re[k] * Math.cos(a) - Im[k] * Math.sin(a); }
+    x[n] = s / N;
+  }
+  return x;
+}
+
+/* ============================================================================
+   WIDGET §9.2 — filtraggio in frequenza (taglia-alte)
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wf-top'), bot = document.getElementById('wf-bot');
+  if (!top) return;
+  const out = document.getElementById('wf-out');
+  const cS = document.getElementById('wf-c'), cV = document.getElementById('wf-cv');
+  const N = 64;
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(3);
+  const x0 = [];
+  for (let n = 0; n < N; n++) x0.push(1.1 * Math.sin(2 * Math.PI * 2 * n / N) + 0.5 * Math.sin(2 * Math.PI * 24 * n / N) + 0.25 * (rng() - 0.5));
+
+  function draw() {
+    const cut = parseInt(cS.value, 10);
+    cV.textContent = cut;
+    const { Re, Im } = dftFull(x0);
+    const Re2 = Re.slice(), Im2 = Im.slice();
+    for (let k = 0; k <= N / 2; k++) if (k > cut) { Re2[k] = Im2[k] = 0; const m = (N - k) % N; Re2[m] = Im2[m] = 0; }
+    const xf = idftFull(Re2, Im2);
+    const mag = []; for (let k = 0; k <= N / 2; k++) mag.push(Math.sqrt(Re[k] * Re[k] + Im[k] * Im[k]) * 2 / N);
+
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: 0, xmax: N, ymin: -2, ymax: 2 });
+    pt.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    pt.seq(x0, { color: 'var(--ink-faint)', width: 1.3 });
+    pt.seq(xf, { color: 'var(--accent)', width: 2.4 });
+    pt.text(1, 1.8, 'grigio: originale · teal: filtrato', { color: 'var(--ink-soft)', anchor: 'start', size: 10.5 });
+
+    bot.innerHTML = '';
+    const pb = new Plot(bot, { xmin: -1, xmax: N / 2 + 1, ymin: 0, ymax: Math.max(...mag) * 1.2 + 0.01 });
+    pb.axes({ numbers: true, names: true, xname: 'k', yname: '', stepX: 8, fmtY: () => '' });
+    // zona tagliata
+    pb.rect(cut + 0.5, 0, N / 2 + 1, Math.max(...mag) * 1.2, { fill: 'color-mix(in srgb, var(--warm) 12%, transparent)', color: 'none' });
+    pb.bars(mag.map((m, k) => k <= cut ? m : m * 0.25), { x0: 0, dxs: 1, bw: 0.7, fill: 'color-mix(in srgb, var(--accent) 55%, transparent)', color: 'var(--accent)' });
+    pb.line(cut + 0.5, 0, cut + 0.5, Math.max(...mag) * 1.2, { color: 'var(--warm)', width: 1.6, dash: '4 3' });
+
+    out.innerHTML = `
+      <div class="big">taglio a k = <b style="color:var(--warm)">${cut}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le frequenze oltre il taglio (zona <b style="color:var(--warm)">ambra</b>) vengono azzerate nello
+        spettro; la DFT inversa ricostruisce il segnale <b style="color:var(--accent)">ripulito</b>.
+        ${cut < 6 ? 'Tagliando troppo <mark>si perde anche il segnale utile</mark>: resta solo l&rsquo;ondulazione più lenta.'
+          : cut > 20 ? 'Taglio alto: passa quasi tutto, ronzio compreso.'
+            : 'Buon compromesso: via il <mark>ronzio veloce</mark>, resta l&rsquo;ondulazione utile.'}
+      </div>`;
+  }
+  cS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §9.4 — dispersione spettrale e finestre
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wlk-svg');
+  if (!svg) return;
+  const out = document.getElementById('wlk-out');
+  const fS = document.getElementById('wlk-f'), fV = document.getElementById('wlk-fv');
+  const btns = { rect: document.getElementById('wlk-rect'), ham: document.getElementById('wlk-ham'), black: document.getElementById('wlk-black') };
+  let win = 'rect';
+  const N = 128;
+
+  function window(n) {
+    if (win === 'ham') return 0.54 - 0.46 * Math.cos(2 * Math.PI * n / (N - 1));
+    if (win === 'black') return 0.42 - 0.5 * Math.cos(2 * Math.PI * n / (N - 1)) + 0.08 * Math.cos(4 * Math.PI * n / (N - 1));
+    return 1;
+  }
+
+  function draw() {
+    const cyc = parseFloat(fS.value);
+    fV.textContent = cyc.toFixed(1);
+    const x = [];
+    for (let n = 0; n < N; n++) x.push(Math.sin(2 * Math.PI * cyc * n / N) * window(n));
+    const { Re, Im } = dftFull(x);
+    const half = N / 2, mag = [];
+    for (let k = 0; k <= half; k++) mag.push(Math.sqrt(Re[k] * Re[k] + Im[k] * Im[k]));
+    const peak = Math.max(...mag);
+    // in dB per apprezzare i lobi laterali
+    const magdB = mag.map(m => 20 * Math.log10(Math.max(m, 1e-6) / peak));
+
+    svg.innerHTML = '';
+    const KMAX = 28;
+    const p = new Plot(svg, { xmin: -1, xmax: KMAX, ymin: -70, ymax: 6 });
+    p.grid(4, 20); p.axes({ numbers: true, names: true, xname: 'k', yname: 'dB', stepX: 4, stepY: 20 });
+    p.bars(magdB.slice(0, KMAX).map(v => v + 70), { x0: 0, dxs: 1, bw: 0.65,
+      fill: 'color-mix(in srgb, var(--accent) 50%, transparent)', color: 'var(--accent)' });
+    // nota: le barre sono disegnate da y=0 in su, quindi trasliamo di +70 e ridisegniamo l'asse "finto"
+    // (l'asse reale è in dB da -70 a +6, ma bars parte da 0: compensiamo con la traslazione)
+
+    const isInt = Math.abs(cyc - Math.round(cyc)) < 0.05;
+    out.innerHTML = `
+      <div class="big">${cyc.toFixed(1)} cicli &nbsp;·&nbsp; finestra: <b>${win === 'rect' ? 'rettangolare (nessuna)' : win === 'ham' ? 'Hamming' : 'Blackman'}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Spettro in dB (0 dB = picco). ${isInt
+          ? 'Cicli <mark>interi</mark>: il picco è netto, quasi nessuna dispersione.'
+          : 'Cicli <mark>non interi</mark>: senza finestra l&rsquo;energia si sparge sui bin vicini (dispersione).'}
+        ${win === 'rect' ? 'Attiva Hamming o Blackman e guarda i <b>lobi laterali crollare</b> — in cambio il picco si allarga un po&rsquo;.'
+          : 'La finestra ha <mark>abbassato i lobi laterali</mark>: un picco debole vicino non verrebbe più sommerso. Il picco principale è un filo più largo.'}
+      </div>`;
+  }
+  fS.addEventListener('input', draw);
+  function setWin(w) { win = w; for (const k in btns) btns[k].classList.toggle('on', k === w); draw(); }
+  btns.rect.addEventListener('click', () => setWin('rect'));
+  btns.ham.addEventListener('click', () => setWin('ham'));
+  btns.black.addEventListener('click', () => setWin('black'));
+  draw();
+})();
+</script>
+</body>
+</html>
