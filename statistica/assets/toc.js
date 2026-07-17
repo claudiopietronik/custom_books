@@ -272,7 +272,7 @@ const TOC = [
   /* ===================== PARTE IV — STATISTICA INFERENZIALE ============== */
   {
     n: 23, parte: "IV · Statistica inferenziale",
-    titolo: "Il teorema del limite centrale", file: "cap23-clt.html", stato: "da-fare",
+    titolo: "Il teorema del limite centrale", file: "cap23-clt.html", stato: "pronto",
     sezioni: [
       { id: "s23-1", n: "23.1", t: "La distribuzione delle medie" },
       { id: "s23-2", n: "23.2", t: "L'enunciato del TLC" },
