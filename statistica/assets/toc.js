@@ -214,7 +214,7 @@ const TOC = [
   },
   {
     n: 18, parte: "III · Probabilità",
-    titolo: "Campionamento e Monte Carlo", file: "cap18-sampling.html", stato: "da-fare",
+    titolo: "Campionamento e Monte Carlo", file: "cap18-sampling.html", stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Estrarre da una distribuzione" },
       { id: "s18-2", n: "18.2", t: "Variabilità campionaria" },

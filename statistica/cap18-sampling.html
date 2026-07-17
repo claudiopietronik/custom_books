@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Campionamento e Monte Carlo — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte III · Probabilità</div>
+    <h1>Campionamento e Monte Carlo</h1>
+    <p class="standfirst">
+      Fin qui abbiamo <em>descritto</em> le distribuzioni; ora impariamo a <b>estrarne</b> campioni al computer.
+      Questo apre la porta a un'idea potentissima: risolvere problemi difficili — integrali, probabilità,
+      simulazioni — semplicemente <b>tirando a caso tante volte</b>. È il metodo <b>Monte Carlo</b>, e con esso la
+      variabilità campionaria diventa uno strumento, non un fastidio.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Mettiamo in pratica le distribuzioni della Parte III. La variabilità campionaria che osserviamo qui è
+      esattamente ciò che il TLC (Cap. 23) descriverà con precisione, e Monte Carlo è la macchina dietro il
+      bootstrap (Cap. 35) e i test di permutazione (Cap. 33).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Moltissimi problemi reali non hanno una formula chiusa: la distribuzione è troppo complicata da integrare a
+      mano. Il campionamento li rende risolvibili per forza bruta — genera migliaia di scenari e conta. È il
+      cavallo di battaglia della statistica computazionale, della finanza quantitativa, della fisica e del
+      machine learning.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">SEZIONE 18.1</span>Estrarre da una distribuzione</h2>
+
+  <p class="lead">
+    <b>Campionare</b> significa generare valori casuali che seguono una distribuzione data: se estrai tanti valori
+    da una normale, il loro istogramma riproduce la campana.
+  </p>
+
+  <p>
+    Il computer sa generare numeri (pseudo)casuali uniformi in [0, 1]; da lì, con opportune trasformazioni, si
+    ottengono campioni di <em>qualunque</em> distribuzione. L'idea chiave — e il ponte con la CDF del Cap. 17 — è
+    l'<b>inversione</b>: genera un numero uniforme \(u \in [0,1]\), poi trova la \(x\) tale che \(F(x) = u\)
+    (entra nella CDF dall'asse verticale). I valori così ottenuti seguono esattamente la distribuzione voluta.
+    Non devi implementarlo a mano — <code>numpy.random</code> lo fa per te — ma sapere che <b>campionare = leggere
+    la CDF al contrario</b> chiude il cerchio con i capitoli precedenti.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Campione (di nuovo, ma dal modello)</div>
+    <p style="margin-bottom:0">
+      Al Cap. 2 il campione veniva dal mondo reale; qui viene da una <b>distribuzione teorica</b>, generato al
+      computer. In entrambi i casi è un insieme finito di valori che <em>rappresenta</em> qualcosa di più grande —
+      e in entrambi i casi «balla» se lo riestrai.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">SEZIONE 18.2</span>Variabilità campionaria</h2>
+
+  <p class="lead">
+    Ogni campione è diverso. Una statistica calcolata su di esso (media, proporzione…) cambia da campione a
+    campione: è la <b>variabilità campionaria</b>, il fenomeno centrale di tutta l'inferenza.
+  </p>
+
+  <p>
+    L'abbiamo già intravista (Cap. 2, Cap. 14): la media di 20 valori estratti da una normale non è mai
+    esattamente la vera media, e riestraendo ottieni un numero un po' diverso. Questa variabilità non è un difetto
+    del metodo — è <em>informazione</em>: quanto una statistica balla ci dice quanto possiamo fidarcene.
+    Campionando ripetutamente al computer possiamo <b>misurare</b> direttamente questo ballo, invece di doverlo
+    calcolare con una formula — ed è esattamente ciò che fanno bootstrap e test di permutazione.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La regola della radice di n</div>
+    <p style="margin-bottom:0">
+      Un'anticipazione che tornerà ovunque: la variabilità della <b>media</b> campionaria scende come
+      \(1/\sqrt{n}\). <mark>Per dimezzare l'incertezza serve quadruplicare i dati.</mark> È il motivo per cui «più
+      dati» aiuta, ma con rendimenti decrescenti — e Monte Carlo eredita la stessa legge: per un'ulteriore cifra
+      di precisione servono ~100 volte più simulazioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">SEZIONE 18.3</span>Il metodo Monte Carlo</h2>
+
+  <p class="lead">
+    <b>Monte Carlo</b> è l'idea di stimare una quantità difficile <em>simulandola</em>: genera tanti casi casuali,
+    misura la frazione che soddisfa una condizione, e quella frazione stima la probabilità (o l'area, o
+    l'integrale) cercata.
+  </p>
+
+  <p>
+    L'esempio-manifesto è la stima di \(\pi\). Lancia punti a caso in un quadrato con dentro un quarto di cerchio:
+    la frazione di punti che cade nel cerchio è pari al rapporto tra le aree, cioè \(\pi/4\). Quindi
+    \(\pi \approx 4 \times (\text{punti dentro} / \text{punti totali})\). Non abbiamo integrato nulla: abbiamo
+    <b>contato</b>. È il paradigma di Monte Carlo — sostituire un calcolo difficile con tanti tiri di dado.
+  </p>
+
+  <h3>Provalo: stima π con i dardi</h3>
+
+  <p>
+    Ogni punto è un dardo lanciato a caso nel quadrato. In <b style="color:var(--accent)">indaco</b> quelli dentro
+    il quarto di cerchio, in <b style="color:var(--ink-faint)">grigio</b> quelli fuori. Aumenta i dardi e guarda
+    la stima di \(\pi\) avvicinarsi al valore vero — lentamente, con la legge della radice di \(n\).
+  </p>
+
+  <div class="widget" id="w-mc">
+    <div class="w-head">
+      <span>Monte Carlo: stima di π</span>
+      <span class="hint">più dardi, stima migliore (∝ 1/√n)</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wmc-svg" viewBox="0 0 300 300" role="img" aria-label="Punti casuali in un quadrato per stimare pi greco col metodo Monte Carlo"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>numero di dardi</label><input type="range" id="wmc-n" min="50" max="5000" step="50" value="500"><output id="wmc-nv">500</output></div>
+      <button class="w-btn" id="wmc-go">Rilancia</button>
+    </div>
+    <div class="w-readout" id="wmc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">SEZIONE 18.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.1</div>
+    <p style="margin-bottom:0">In una simulazione Monte Carlo lanci 10 000 dardi e 7854 cadono nel quarto di
+      cerchio. Quale stima di \(\pi\) ottieni?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(\pi \approx 4 \times (7854/10000) = 4 \times 0{,}7854 = \mathbf{3{,}1416}\)
+          (§18.3). Notevolmente vicino a \(\pi = 3{,}14159\ldots\), ma è fortuna: con 10 000 dardi l'incertezza
+          tipica è di qualche millesimo, e un altro lancio darebbe una cifra diversa.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.2</div>
+    <p style="margin-bottom:0">Con Monte Carlo, quante volte più simulazioni servono per <b>dimezzare</b> l'errore
+      della stima?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">L'errore scende come \(1/\sqrt{n}\) (§18.2): per dimezzarlo serve rendere
+          \(\sqrt{n}\) due volte più grande, cioè <b>quadruplicare</b> \(n\) (×4). Per un'altra cifra decimale di
+          precisione (errore ÷10), servono ×100 simulazioni. È il prezzo — decrescente ma reale — della forza
+          bruta.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.3</div>
+    <p style="margin-bottom:0">Come useresti Monte Carlo per stimare la probabilità che, lanciando 5 dadi, la loro
+      somma superi 20?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Simuli: genera 5 dadi casuali, somma, e registra se supera 20; ripeti tante
+          volte (es. 100 000). La <b>frazione</b> di prove con somma &gt; 20 stima la probabilità cercata (§18.3).
+          È molto più semplice che enumerare a mano tutte le \(6^5 = 7776\) combinazioni — e generalizza a
+          problemi dove l'enumerazione è impossibile.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">SEZIONE 18.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li><b>Campionare</b> = generare valori che seguono una distribuzione; al fondo è «leggere la CDF al
+        contrario».</li>
+      <li><b>Variabilità campionaria:</b> ogni campione dà una statistica diversa. È informazione, non rumore
+        inutile.</li>
+      <li><b>Monte Carlo:</b> stima quantità difficili simulando tanti casi e contando le frazioni. Es. \(\pi\) coi
+        dardi.</li>
+      <li><b>Precisione ∝ 1/√n:</b> dimezzare l'errore costa ×4 simulazioni. Base di bootstrap e permutazione.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo estrarre campioni e simulare. Ora torniamo alla teoria per un concetto che riassume un'intera
+    distribuzione in un solo numero «di lungo periodo»: il <b>valore atteso</b>. È la media di una distribuzione —
+    ciò che ottieni, in media, ripetendo infinite volte — e il tema del <strong>Capitolo 19</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §18.3 — stima di π col metodo Monte Carlo
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wmc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wmc-out');
+  const nS = document.getElementById('wmc-n'), nV = document.getElementById('wmc-nv');
+  const go = document.getElementById('wmc-go');
+  let seed = 2718;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  function draw() {
+    const n = parseInt(nS.value, 10);
+    nV.textContent = n;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 1, ymin: 0, ymax: 1, iso: true });
+    p.rect(0, 0, 1, 1, { color: 'var(--ink-faint)', width: 1.5 });
+    // quarto di cerchio
+    const arc = [];
+    for (let t = 0; t <= Math.PI / 2 + 0.01; t += 0.03) arc.push([Math.cos(t), Math.sin(t)]);
+    p.poly(arc, { color: 'var(--accent)', width: 1.8, close: false });
+    let inside = 0;
+    // per performance, disegna al massimo ~1500 punti ma conta tutti
+    const drawEvery = Math.max(1, Math.floor(n / 1500));
+    for (let i = 0; i < n; i++) {
+      const x = u(), y = u();
+      const isIn = x * x + y * y <= 1;
+      if (isIn) inside++;
+      if (i % drawEvery === 0) p.dot(x, y, { r: 1.4, color: isIn ? 'color-mix(in srgb, var(--accent) 70%, transparent)' : 'color-mix(in srgb, var(--ink-faint) 55%, transparent)', stroke: 'none', sw: 0 });
+    }
+    const est = 4 * inside / n;
+    const err = Math.abs(est - Math.PI);
+    out.innerHTML = `
+      <div class="big">π ≈ 4 × ${inside}/${n} = <b>${est.toFixed(4)}</b> &nbsp;<span style="color:var(--ink-faint)">(vero 3,1416)</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Errore attuale: ${err.toFixed(4)}.
+        ${n < 300 ? 'Con pochi dardi la stima <mark>balla</mark> parecchio: rilancia e cambia ogni volta.'
+                  : n < 2000 ? 'La stima migliora, ma resta un po’ di rumore.'
+                  : 'Con molti dardi la stima è stabile e vicina a π. Per un’altra cifra decimale servirebbero ~100× dardi.'}
+      </div>`;
+  }
+  go.addEventListener('click', () => { seed = (seed * 48271 + 1) & 0x7fffffff; draw(); });
+  nS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
