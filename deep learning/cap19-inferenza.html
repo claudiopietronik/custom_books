@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 · Inferenza approssimata — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="19">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 19 · Parte III</div>
+    <h1>Inferenza approssimata</h1>
+    <p class="standfirst">
+      Dato un modello con variabili nascoste \(\vv{h}\) e dati \(\vv{x}\), l'<b>inferenza</b> chiede: qual è la
+      distribuzione delle nascoste dati i dati, \(p(\vv{h}\given\vv{x})\)? Per i modelli profondi è
+      <b>intrattabile</b>. La grande idea di questo capitolo: <mark>trasformare l'inferenza in
+      un'ottimizzazione</mark>. Invece di calcolare il posterior esatto, cerchiamo la <em>migliore
+      approssimazione</em> \(q\) all'interno di una famiglia trattabile — l'<b>inferenza variazionale</b>, il
+      motore matematico del VAE.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il cambio di prospettiva: l'<b>inferenza come ottimizzazione</b> (§19.1). L'algoritmo classico:
+      <b>Expectation Maximization</b> (§19.2). Il caso più semplice: l'<b>inferenza MAP e sparse coding</b>
+      (§19.3). Il cuore: l'<b>inferenza variazionale</b> e la sua ottimizzazione congiunta (§19.4, widget).
+      Infine, farla <b>imparare a una rete</b> (§19.5), l'idea dietro il VAE.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      L'inferenza variazionale è la base del <b>VAE</b> (Cap. 20), uno dei grandi modelli generativi. E il suo
+      concetto centrale — l'<b>ELBO</b>, un limite inferiore della verosimiglianza che si può ottimizzare — è uno
+      degli oggetti più importanti del deep learning probabilistico. <mark>Capire come si approssima un posterior
+      intrattabile è capire come si addestrano metà dei modelli generativi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-1"><span class="secnum">Sezione 19.1</span>L'inferenza come ottimizzazione</h2>
+
+  <p class="lead">
+    Il salto concettuale: non calcolare il posterior esatto \(p(\vv{h}\given\vv{x})\), ma <b>cercare</b> la
+    distribuzione \(q\) più vicina possibile ad esso — un problema di ottimizzazione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'ELBO: il limite inferiore variazionale <span class="tag">massimizzalo, e approssimi il posterior</span></div>
+    <div class="f-body">
+      \[ \log p(\vv{x}) = \underbrace{\E_{q}[\log p(\vv{x},\vv{h})] + \Hent(q)}_{\hA{\text{ELBO}(q)}}
+         + \underbrace{\KL\!\big(q(\vv{h}) \,\|\, p(\vv{h}\given\vv{x})\big)}_{\hB{\ge 0}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{ELBO}}\) — il <b>limite inferiore</b></dt>
+        <dd>(<em>Evidence Lower BOund</em>) una quantità <b>trattabile</b> che sta sempre <b>sotto</b> la
+            log-verosimiglianza. Massimizzarlo alza la verosimiglianza <em>e</em> avvicina \(q\) al posterior.</dd>
+        <dt>\(\hB{\KL(q\,\|\,p(\vv{h}\given\vv{x}))}\)</dt>
+        <dd>la «distanza» tra la nostra approssimazione \(q\) e il posterior vero, sempre \(\ge 0\). Poiché la
+            somma è fissa (\(=\log p(\vv{x})\)), <mark>massimizzare l'ELBO equivale a minimizzare questa KL</mark>:
+            rendere \(q\) il più vicino possibile al posterior.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È l'idea più elegante del capitolo: non potendo calcolare né \(\log p(\vv{x})\) né il posterior, ne
+      ottimizziamo un <b>surrogato trattabile</b> (l'ELBO) che li insegue entrambi. La scelta della famiglia di
+      \(q\) (di solito gaussiane fattorizzate) decide quanto buona sarà l'approssimazione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-2"><span class="secnum">Sezione 19.2</span>Expectation Maximization (EM)</h2>
+
+  <p class="lead">
+    L'algoritmo classico per modelli con variabili nascoste, precursore dell'inferenza variazionale: alterna due
+    passi finché non converge.
+  </p>
+
+  <p>
+    L'<span class="termine">EM</span> alterna: nel passo <b>E</b> (Expectation) calcola il posterior delle
+    variabili nascoste con i parametri correnti (l'inferenza); nel passo <b>M</b> (Maximization) aggiorna i
+    parametri massimizzando la verosimiglianza attesa (l'apprendimento). Nel linguaggio dell'ELBO: il passo E
+    ottimizza \(q\) (avvicinandola al posterior), il passo M ottimizza i parametri del modello. <mark>È inferenza
+    variazionale in cui il passo E è esatto</mark>. Il classico esempio è l'addestramento di una mistura di
+    gaussiane (clustering probabilistico).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-3"><span class="secnum">Sezione 19.3</span>Inferenza MAP e sparse coding</h2>
+
+  <p class="lead">
+    La forma più semplice di inferenza: invece di tutta la distribuzione \(q\), tenere solo il suo <b>picco</b> —
+    il valore più probabile delle nascoste.
+  </p>
+
+  <p>
+    L'<span class="termine">inferenza MAP</span> (massimo a posteriori) approssima il posterior con un solo
+    punto: il \(\vv{h}\) più probabile dati \(\vv{x}\). È una \(q\) «a delta», concentrata sul picco. Lo
+    <b>sparse coding</b> (§13.4) è esattamente questo: trovare i coefficienti \(\vv{h}\) che meglio ricostruiscono
+    \(\vv{x}\) con la penalità di sparsità è un'inferenza MAP con prior sparsa. <mark>È veloce ma perde
+    l'incertezza</mark>: sapere che \(\vv{h}\) «più probabile» è un valore non dice quanto ne siamo sicuri, cosa
+    che invece l'inferenza variazionale completa conserva.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-4"><span class="secnum">Sezione 19.4</span>Inferenza variazionale e apprendimento</h2>
+
+  <p class="lead">
+    Il caso generale: approssimare il posterior con una famiglia trattabile e ottimizzare l'ELBO. Un dettaglio
+    sottile ma decisivo: la <b>direzione</b> della KL determina il comportamento dell'approssimazione.
+  </p>
+
+  <p>
+    L'inferenza variazionale minimizza \(\KL(q\,\|\,p)\) — la KL «al contrario» rispetto alla massima
+    verosimiglianza (§3.8). Questa direzione è <b>mode-seeking</b> (cerca un modo): se il posterior vero è
+    <b>multimodale</b> (più picchi), una \(q\) gaussiana singola tende a <b>infilarsi in un solo picco</b>
+    piuttosto che spalmarsi malamente su tutti. Il widget lo mostra: il posterior vero (in grigio) è bimodale;
+    tu regoli media e larghezza della gaussiana \(q\) (viola) per minimizzare la KL. <mark>Scoprirai che la
+    soluzione migliore copre <em>un</em> modo, non entrambi</mark> — una proprietà fondamentale (e a volte un
+    difetto) dell'inferenza variazionale.
+  </p>
+
+  <div class="widget" id="w-vi">
+    <div class="w-head">
+      <span>Inferenza variazionale: q insegue il posterior</span>
+      <span class="hint">regola media e larghezza di q</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wvi-svg" viewBox="0 0 560 360" role="img" aria-label="Un posterior bimodale approssimato da una gaussiana q: minimizzando KL(q||p), q si infila in un solo modo"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>μ</label><input type="range" id="wvi-m" min="-2.5" max="2.5" step="0.05" value="0"><output id="wvi-m-o">0.0</output></div>
+      <div class="w-ctrl"><label>σ</label><input type="range" id="wvi-s" min="0.3" max="2.2" step="0.05" value="1.3"><output id="wvi-s-o">1.3</output></div>
+      <button class="w-btn" id="wvi-best">Ottimo</button>
+    </div>
+    <div class="w-readout" id="wvi-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-5"><span class="secnum">Sezione 19.5</span>L'inferenza approssimata appresa</h2>
+
+  <p class="lead">
+    Ultimo salto: invece di ottimizzare \(q\) da capo per ogni dato, addestriamo una <b>rete</b> a produrre
+    direttamente i parametri di \(q\). È l'idea che fa funzionare il VAE.
+  </p>
+
+  <p>
+    Fare inferenza variazionale <em>da zero</em> per ogni esempio è lento. La <span class="termine">inferenza
+    ammortizzata</span> addestra invece una rete (l'<b>encoder</b>) a mappare ogni \(\vv{x}\) direttamente nei
+    parametri della sua \(q(\vv{h}\given\vv{x})\): l'inferenza diventa un singolo passaggio in avanti.
+    <mark>Il costo dell'ottimizzazione è «ammortizzato» su tutti gli esempi durante l'addestramento</mark>,
+    imparato una volta per tutte. Questo è precisamente il VAE (Cap. 20): un encoder che fa inferenza
+    variazionale ammortizzata e un decoder che è il modello generativo, addestrati insieme massimizzando l'ELBO.
+    Chiude il cerchio con gli autoencoder del Cap. 14.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 19</div>
+    <ol style="margin-bottom:0">
+      <li>L'inferenza esatta \(p(\vv{h}\given\vv{x})\) è intrattabile → la si trasforma in <b>ottimizzazione</b>:
+          cerca la migliore \(q\) approssimante (§19.1).</li>
+      <li>Si massimizza l'<b>ELBO</b>, un limite inferiore trattabile della verosimiglianza: equivale a
+          minimizzare \(\KL(q\,\|\,p(\vv{h}\given\vv{x}))\) (§19.1). L'<b>EM</b> ne è il caso con passo E esatto
+          (§19.2).</li>
+      <li>La KL «al contrario» è <b>mode-seeking</b>: una \(q\) gaussiana approssima <b>un</b> modo di un
+          posterior multimodale (§19.4, widget). L'<b>inferenza MAP</b> tiene solo il picco (§19.3).</li>
+      <li>L'<b>inferenza ammortizzata</b>: una rete (encoder) produce i parametri di \(q\) in un colpo — è il
+          VAE (§19.5, Cap. 20).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo tutti i pezzi: modelli grafici (16), Monte Carlo (17), la funzione di partizione (18) e l'inferenza
+    approssimata (19). Il <strong>Capitolo 20</strong> li assembla nei <b>modelli generativi profondi</b> — dalle
+    macchine di Boltzmann ai <b>VAE</b> e alle <b>GAN</b>, le reti che imparano a <em>creare</em>: volti, voci,
+    testi mai visti. È il gran finale del libro.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-6"><span class="secnum">Sezione 19.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.1</div>
+    <p style="margin-bottom:0">
+      Perché massimizzare l'ELBO equivale a minimizzare \(\KL(q\,\|\,p(\vv{h}\given\vv{x}))\)?
+      <em>Suggerimento:</em> guarda la scomposizione di \(\log p(\vv{x})\) in §19.1 e ricorda che è una costante
+      rispetto a \(q\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.2</div>
+    <p style="margin-bottom:0">
+      Nel widget di §19.4, prova a coprire <b>entrambi</b> i modi con una \(q\) larga e centrata a zero. La KL è
+      più bassa così o infilando \(q\) in un solo modo? Cosa ci dice sul comportamento «mode-seeking»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.3</div>
+    <p style="margin-bottom:0">
+      Che differenza c'è tra inferenza <b>MAP</b> (tenere il picco) e inferenza <b>variazionale</b> completa
+      (tenere una distribuzione \(q\))? Cosa perde la MAP?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) L'ELBO è un limite superiore della log-verosimiglianza. &nbsp;
+      (b) L'EM alterna un passo di inferenza (E) e uno di apprendimento (M). &nbsp;
+      (c) L'inferenza ammortizzata usa una rete per produrre i parametri di \(q\). &nbsp;
+      (d) La KL usata dall'inferenza variazionale tende a coprire tutti i modi di un posterior multimodale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-7"><span class="secnum">Sezione 19.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.1</div>
+    <p style="margin-bottom:0">
+      Perché \(\log p(\vv{x}) = \text{ELBO}(q) + \KL(q\,\|\,p(\vv{h}\given\vv{x}))\), e il lato sinistro
+      <b>non dipende da \(q\)</b> (è una costante, fissati i dati e i parametri). Quindi la somma dei due termini
+      a destra è costante: <mark>alzare l'ELBO abbassa la KL della stessa quantità</mark>. Massimizzare l'uno è
+      minimizzare l'altra.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.2</div>
+    <p style="margin-bottom:0">
+      La KL è <b>più bassa infilando \(q\) in un solo modo</b> (con σ piccola). Una \(q\) larga centrata a zero
+      mette molta massa nella <b>vallata</b> tra i due modi, dove il posterior vero è quasi zero: lì
+      \(q/p\) è enorme e la \(\KL(q\|p)\) esplode. <mark>La KL «al contrario» punisce severamente il mettere
+      massa dove p è piccola</mark>, quindi preferisce coprire bene un modo piuttosto che entrambi male: è il
+      comportamento <b>mode-seeking</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.3</div>
+    <p style="margin-bottom:0">
+      La <b>MAP</b> tiene solo il <b>valore più probabile</b> di \(\vv{h}\) (un punto); la variazionale tiene
+      un'intera <b>distribuzione</b> \(q\). La MAP perde l'<b>incertezza</b>: non dice quanto siamo sicuri di
+      quel valore, né se ci sono alternative quasi altrettanto probabili. È più veloce, ma cieca alla forma del
+      posterior.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> L'ELBO è un limite <b>inferiore</b> (Evidence Lower Bound) (§19.1). <br>
+      <b>(b) VERO.</b> Passo E = inferenza (posterior), passo M = aggiornamento dei parametri (§19.2). <br>
+      <b>(c) VERO.</b> È l'inferenza ammortizzata, il cuore del VAE (§19.5). <br>
+      <b>(d) FALSO.</b> La \(\KL(q\|p)\) è <b>mode-seeking</b>: tende a coprire <em>un</em> modo, non tutti
+      (§19.4).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §19.4 — inferenza variazionale: q gaussiana su posterior bimodale
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wvi-svg');
+  if (!svg) return;
+  const out = document.getElementById('wvi-out');
+  const mI = document.getElementById('wvi-m'), sI = document.getElementById('wvi-s');
+  const mO = document.getElementById('wvi-m-o'), sO = document.getElementById('wvi-s-o');
+  const bestB = document.getElementById('wvi-best');
+  const g = (x, mu, s) => Math.exp(-((x - mu) ** 2) / (2 * s * s)) / (s * Math.sqrt(2 * Math.PI));
+  // posterior "vero" bimodale
+  const P = x => 0.55 * g(x, -1.4, 0.45) + 0.45 * g(x, 1.5, 0.55);
+
+  function klQP(mu, s) {
+    const xm = -5, xM = 5, N = 500, dx = (xM - xm) / N; let kl = 0;
+    for (let i = 0; i <= N; i++) { const x = xm + i * dx; const q = g(x, mu, s); const p = Math.max(P(x), 1e-9); if (q > 1e-12) kl += q * Math.log(q / p) * dx; }
+    return kl;
+  }
+
+  function draw() {
+    const mu = parseFloat(mI.value), s = parseFloat(sI.value);
+    mO.textContent = fmt(mu, 2); sO.textContent = fmt(s, 2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -0.06, ymax: 0.75 });
+    p.grid(1, 0.2); p.axes({ numbers: true, stepX: 1, stepY: 0.2, xname: 'h' });
+    p.area(P, -4, 4, { fill: 'color-mix(in srgb, var(--ink-faint) 20%, transparent)' });
+    p.func(P, { color: 'var(--ink-faint)', width: 2.4 });
+    p.func(x => g(x, mu, s), { color: 'var(--violet)', width: 2.8 });
+    const kl = klQP(mu, s);
+    out.innerHTML = `
+      <div class="big">
+        KL(q ‖ p) = <b style="color:var(--violet)">${fmt(kl, 3)}</b> &nbsp;<span style="color:var(--ink-faint)">(più bassa = q più vicina al posterior)</span>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--ink-faint)">posterior vero</b> (grigio) ha <b>due modi</b>; la
+        <b style="color:var(--violet)">q gaussiana</b> (viola) può averne uno solo.
+        ${Math.abs(mu) < 0.6 && s > 1.3 ? '<mark>q larga e centrata: mette massa nella vallata dove p≈0 → KL alta. Non conviene.</mark>'
+          : (Math.abs(mu + 1.4) < 0.4 || Math.abs(mu - 1.5) < 0.4) && s < 0.8 ? '<mark>q infilata in un modo: KL bassa. È la soluzione «mode-seeking» dell\'inferenza variazionale.</mark>'
+          : 'Sposta μ su uno dei due picchi e stringi σ: la KL scende. Prova invece a coprirli entrambi e guardala salire.'}
+        Premi «Ottimo» per la q migliore.
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  mI.addEventListener('input', draw); sI.addEventListener('input', draw);
+  bestB.addEventListener('click', () => {
+    // cerca (mu,s) che minimizza la KL
+    let bm = 0, bs = 1, bk = 1e9;
+    for (let mu = -2.5; mu <= 2.5; mu += 0.1) for (let s = 0.3; s <= 2.2; s += 0.1) { const k = klQP(mu, s); if (k < bk) { bk = k; bm = mu; bs = s; } }
+    mI.value = fmt(bm, 2); sI.value = fmt(bs, 2); draw();
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

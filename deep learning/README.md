@@ -52,7 +52,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 16 — Modelli probabilistici strutturati
 - [x] 17 — Metodi Monte Carlo
 - [x] 18 — Affrontare la funzione di partizione
-- [ ] 19 — Inferenza approssimata
+- [x] 19 — Inferenza approssimata
 - [ ] 20 — Modelli generativi profondi
 
 ## Nota

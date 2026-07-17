@@ -345,7 +345,7 @@ const TOC = [
     titolo: "Inferenza approssimata",
     file: "cap19-inferenza.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "L'inferenza come ottimizzazione" },
       { id: "s19-2", n: "19.2", t: "Expectation Maximization (EM)" },
