@@ -49,7 +49,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 17 — La relatività ristretta
 - [x] 18 — Fotoni, elettroni e la fisica quantistica
 - [x] 19 — La struttura dell'atomo
-- [ ] 20 — Il nucleo e le particelle
+- [x] 20 — Il nucleo e le particelle
 
 ## Nota
 

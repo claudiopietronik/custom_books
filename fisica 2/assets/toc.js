@@ -297,7 +297,7 @@ const TOC = [
     n: 20,
     titolo: "Il nucleo e le particelle",
     file: "cap20-nucleo-particelle.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s20-1", n: "20.1", t: "Il nucleo atomico" },
       { id: "s20-2", n: "20.2", t: "La radioattività" },
