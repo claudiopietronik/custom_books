@@ -310,7 +310,7 @@ const TOC = [
     n: 19,
     titolo: "La prima legge della termodinamica",
     file: "cap19-prima-legge.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "Sistemi e stati termodinamici" },
       { id: "s19-2", n: "19.2", t: "Il lavoro termodinamico" },
