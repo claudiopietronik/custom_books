@@ -72,7 +72,7 @@ const TOC = [
     n: 5,
     titolo: "Lo spazio ℝⁿ e la topologia",
     file: "cap05-spazio-rn.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Vettori, norma, distanza" },
       { id: "s5-2", n: "5.2", t: "Prodotto scalare e disuguaglianze" },

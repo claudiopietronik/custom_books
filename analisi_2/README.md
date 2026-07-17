@@ -25,7 +25,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 - [x] 2 — Successioni e serie di funzioni
 - [x] 3 — Serie di potenze
 - [x] 4 — Serie di Fourier
-- [ ] 5 — Lo spazio ℝⁿ e la topologia
+- [x] 5 — Lo spazio ℝⁿ e la topologia
 - [ ] 6 — Funzioni di più variabili: limiti e continuità
 - [ ] 7 — Calcolo differenziale in più variabili
 - [ ] 8 — Taylor e ottimizzazione libera
