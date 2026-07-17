@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>43 · Regressione lineare — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="43">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Regressione lineare</h1>
+    <p class="standfirst">
+      L'ultimo grande arco: dalla domanda «sono diversi?» a «posso <b>prevedere</b> \(y\) da \(x\)?». La
+      regressione lineare traccia la <b>retta che meglio si adatta</b> a una nuvola di punti — e «meglio» ha un
+      significato preciso: minimizzare gli errori al quadrato. È il modello predittivo più usato al mondo, e la
+      base di tutto il resto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dalla misura della relazione (correlazione, Cap. 36) al suo <em>uso predittivo</em>. I minimi quadrati usano
+      gli scarti al quadrato (Cap. 4); \(R^2\) è la stessa scomposizione «spiegato + residuo» dell'ANOVA
+      (Cap. 41). I Capitoli 44–45 estendono a più predittori e alla classificazione.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Prevedere il prezzo di una casa dalla metratura, le vendite dalla spesa pubblicitaria, il consumo dalla
+      temperatura: la regressione è ovunque. È anche il mattone concettuale del machine learning supervisionato —
+      capirla bene è capire da dove viene metà dell'IA applicata.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-1"><span class="secnum">SEZIONE 43.1</span>La retta che meglio si adatta</h2>
+
+  <p class="lead">
+    Data una nuvola di punti \((x, y)\), cerchiamo la retta \(\hat{y} = b_0 + b_1 x\) che li «riassume» meglio:
+    quella da cui i punti, in media, si discostano di meno.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modello di regressione lineare <span class="tag">una retta predittiva</span></div>
+    <div class="f-body">
+      \[ \hat{y} \;=\; \hA{b_0} \;+\; \hB{b_1}\, x \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hat{y}\)</dt><dd>il valore <b>previsto</b> di \(y\) (il «cappello» segnala una stima, Cap. 2).</dd>
+        <dt>\(\hA{b_0}\)</dt><dd>l'<b>intercetta</b>: il valore previsto quando \(x = 0\).</dd>
+        <dt>\(\hB{b_1}\)</dt><dd>la <b>pendenza</b>: di quanto cambia \(\hat{y}\) per ogni unità in più di \(x\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La <b>pendenza</b> è il cuore interpretativo: «per ogni anno di esperienza in più, lo stipendio previsto sale
+      di \(b_1\)». <mark>La retta non passa per tutti i punti</mark> — nessuna retta può — ma li attraversa nel
+      modo «meno sbagliato» possibile. Resta da definire «meno sbagliato».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-2"><span class="secnum">SEZIONE 43.2</span>I minimi quadrati</h2>
+
+  <p class="lead">
+    Il criterio: la retta migliore è quella che rende minima la <b>somma dei quadrati dei residui</b>. Un
+    <b>residuo</b> è la distanza verticale tra un punto e la retta — l'errore di previsione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il criterio dei minimi quadrati <span class="tag">minimizza gli errori²</span></div>
+    <div class="f-body">
+      \[ \min_{b_0, b_1} \; \sum_{i=1}^{n} \underbrace{\big(\hC{y_i} - \hD{\hat{y}_i}\big)^2}_{\text{residuo}^2} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{y_i}\)</dt><dd>il valore <b>osservato</b> (il punto vero).</dd>
+        <dt>\(\hD{\hat{y}_i}\)</dt><dd>il valore <b>previsto</b> dalla retta a quella \(x\).</dd>
+        <dt>\((y_i - \hat{y}_i)^2\)</dt><dd>il residuo al <b>quadrato</b>: penalizza gli errori grandi, e li rende positivi (come la varianza, Cap. 4).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché il <b>quadrato</b>? Stessi motivi della varianza: elimina i segni e punisce di più gli errori grossi.
+      Esiste una formula chiusa per \(b_0, b_1\) (legata alla covarianza: \(b_1 = \Cov(x,y)/\Var(x)\)), quindi la
+      retta ottima si calcola in un colpo. <mark>La retta dei minimi quadrati passa sempre per il punto
+      \((\bar{x}, \bar{y})\)</mark>, il baricentro dei dati.
+    </div>
+  </div>
+
+  <h3>Provalo: trova la retta migliore</h3>
+
+  <p>
+    Trascina i due estremi della retta e guarda i <b style="color:var(--warm)">residui</b> (le barre verticali) e
+    la loro somma dei quadrati. Cerca di minimizzarla a mano; poi premi «minimi quadrati» per far scattare la retta
+    nella posizione ottima.
+  </p>
+
+  <div class="widget" id="w-reg">
+    <div class="w-head">
+      <span>Minimi quadrati</span>
+      <span class="hint">minimizza la somma dei residui²</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wrg-svg" viewBox="0 0 420 320" role="img" aria-label="Uno scatter con una retta trascinabile e i residui; il pulsante trova i minimi quadrati"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" id="wrg-fit">minimi quadrati</button>
+    </div>
+    <div class="w-readout" id="wrg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-3"><span class="secnum">SEZIONE 43.3</span>Pendenza, intercetta, residui</h2>
+
+  <p class="lead">
+    Trovata la retta, i suoi tre elementi raccontano tutto: pendenza (la relazione), intercetta (il punto di
+    partenza), residui (ciò che il modello non spiega).
+  </p>
+
+  <p>
+    La <b>pendenza</b> \(b_1\) quantifica la relazione: segno = direzione, valore = intensità dell'effetto di \(x\)
+    su \(y\). L'<b>intercetta</b> \(b_0\) è il valore previsto a \(x = 0\) — a volte sensato, a volte solo un
+    ancoraggio matematico (prevedere il peso a «altezza zero» non ha senso: attento all'<b>estrapolazione</b> fuori
+    dal range dei dati). I <b>residui</b> sono l'ingrediente diagnostico: se sono piccoli e senza pattern, il
+    modello lineare va bene; se mostrano una curva o un imbuto, la relazione non è lineare o la variabilità non è
+    costante — segnali da non ignorare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-4"><span class="secnum">SEZIONE 43.4</span>Il coefficiente R²</h2>
+
+  <p class="lead">
+    Quanto bene la retta si adatta? La risposta in un numero: \(R^2\), la <b>frazione di variabilità di \(y\)
+    spiegata</b> dal modello.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Coefficiente di determinazione <span class="tag">frazione di varianza spiegata</span></div>
+    <div class="f-body">
+      \[ R^2 \;=\; 1 - \frac{\hB{SS_{\text{residui}}}}{\hA{SS_{\text{totale}}}} \;\in\; [0, 1] \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{SS_{\text{totale}}}\)</dt><dd>la variabilità totale di \(y\) (rispetto alla sua media): quella che vorresti spiegare.</dd>
+        <dt>\(\hB{SS_{\text{residui}}}\)</dt><dd>la variabilità <b>rimasta</b> dopo il modello (gli errori²): quella che <em>non</em> spieghi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È la stessa scomposizione dell'ANOVA (Cap. 41): totale = spiegato + residuo. <mark>\(R^2 = 1\): la retta passa
+      per tutti i punti (previsione perfetta); \(R^2 = 0\): la retta non spiega nulla più della media.</mark> Per
+      una regressione semplice, \(R^2 = r^2\) (il quadrato del Pearson, Cap. 36). Attento: un \(R^2\) alto non
+      garantisce un buon modello (guarda i residui!), né implica causa (Cap. 36).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-5"><span class="secnum">SEZIONE 43.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 43.1</div>
+    <p style="margin-bottom:0">Una regressione dà \(\hat{y} = 20 + 3x\), dove \(x\) è gli anni di esperienza e \(y\)
+      lo stipendio (in migliaia). Interpreta pendenza e intercetta.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Pendenza 3:</b> per ogni anno di esperienza in più, lo stipendio previsto
+          aumenta di 3 mila (§43.1). <b>Intercetta 20:</b> lo stipendio previsto per \(x = 0\) (nessuna esperienza)
+          è 20 mila. Qui l'intercetta è sensata (uno stipendio d'ingresso); non sempre lo è (§43.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 43.2</div>
+    <p style="margin-bottom:0">Perché si minimizza la somma dei residui <b>al quadrato</b> e non la somma dei
+      residui semplici?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché i residui semplici (con segno) si <b>cancellano</b>: sopra e sotto la
+          retta si annullano, e la loro somma è zero per infinite rette — inutile come criterio (§43.2, come gli
+          scarti dalla media, Cap. 4). Il <b>quadrato</b> elimina i segni e penalizza di più gli errori grandi,
+          dando un unico minimo ben definito e calcolabile in forma chiusa.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 43.3</div>
+    <p style="margin-bottom:0">Un modello ha \(R^2 = 0{,}85\). Cosa significa? E significa che \(x\) causa \(y\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(R^2 = 0{,}85\): il modello spiega l'<b>85% della variabilità</b> di \(y\); il
+          restante 15% resta nei residui (§43.4). Buon adattamento — ma <b>non</b> implica causa: \(x\) e \(y\)
+          potrebbero essere legati da una confondente o da causa inversa (Cap. 36). \(R^2\) misura la <em>bontà
+          della previsione</em>, non la direzione causale. E un \(R^2\) alto con residui «a pattern» segnala
+          comunque un modello mal specificato.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s43-6"><span class="secnum">SEZIONE 43.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 43</div>
+    <ol style="margin-bottom:0">
+      <li><b>Modello:</b> \(\hat{y} = b_0 + b_1 x\). Pendenza \(b_1\) = effetto di \(x\); intercetta \(b_0\) =
+        valore a \(x=0\).</li>
+      <li><b>Minimi quadrati:</b> la retta che minimizza la somma dei <b>residui²</b>. Passa per \((\bar{x},
+        \bar{y})\).</li>
+      <li><b>Residui:</b> ciò che il modello non spiega; guardali per diagnosticare (curve, imbuti = problemi).</li>
+      <li><b>R²</b> \(\in [0,1]\): frazione di variabilità spiegata (\(= r^2\) nella semplice). Alto ≠ causa, e
+        ≠ modello buono senza controllare i residui.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Una retta, un predittore. Ma il prezzo di una casa dipende da metratura, posizione, età, stanze… tutte
+    insieme. E se la relazione è curva? Il <strong>Capitolo 44</strong> estende la regressione a <b>più
+    predittori</b> e alle forme <b>polinomiali</b>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §43.2 — retta trascinabile, residui², minimi quadrati
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wrg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wrg-out');
+  const fit = document.getElementById('wrg-fit');
+  // dati fissi con relazione lineare + rumore
+  let seed = 123;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const pts = [];
+  for (let i = 0; i < 16; i++) { const x = 10 + i * 5; const y = 20 + 0.85 * x + 9 * g(); pts.push([x, Math.max(8, Math.min(95, y))]); }
+  // retta definita da due maniglie (agli estremi x)
+  let P = [[12, 40], [88, 70]];
+
+  function lineAt(x) { const [x1, y1] = P[0], [x2, y2] = P[1]; return y1 + (y2 - y1) * (x - x1) / (x2 - x1); }
+
+  function ols() {
+    const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+    let sxy = 0, sxx = 0; pts.forEach(p => { sxy += (p[0] - mx) * (p[1] - my); sxx += (p[0] - mx) ** 2; });
+    const b1 = sxy / sxx, b0 = my - b1 * mx;
+    return { b0, b1 };
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 100, iso: false });
+    p.axes({ numbers: false, names: true, xname: 'x', yname: 'y' });
+    // residui
+    let ssr = 0;
+    pts.forEach(q => { const yh = lineAt(q[0]); ssr += (q[1] - yh) ** 2; p.line(q[0], q[1], q[0], yh, { color: 'color-mix(in srgb, var(--warm) 55%, transparent)', width: 1.4 }); });
+    // retta
+    p.poly([[0, lineAt(0)], [100, lineAt(100)]], { color: 'var(--accent)', width: 2.6, close: false });
+    // punti
+    pts.forEach(q => p.dot(q[0], q[1], { r: 3.2, color: 'var(--ink)', stroke: 'var(--paper)', sw: 0.8 }));
+    // maniglie
+    P.forEach((h, i) => p.handle(h[0], h[1], { r: 6, color: 'var(--accent)', axis: 'y' }, (x, y) => { P[i][1] = Math.max(2, Math.min(98, y)); draw(); }));
+
+    // SSR ottimo per confronto
+    const { b0, b1 } = ols();
+    let ssrOpt = 0; pts.forEach(q => { const yh = b0 + b1 * q[0]; ssrOpt += (q[1] - yh) ** 2; });
+    out.innerHTML = `
+      <div class="big">somma residui² = <b style="color:var(--warm)">${ssr.toFixed(0)}</b> &nbsp;<span style="color:var(--ink-faint)">(minimo possibile: ${ssrOpt.toFixed(0)})</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le barre rosse sono i <b>residui</b>. Trascina gli estremi della retta per rimpicciolire la somma dei loro
+        quadrati. ${ssr < ssrOpt * 1.03 ? 'Sei praticamente sull’ottimo!' : 'Premi «minimi quadrati» per la retta che la <mark>minimizza</mark> esattamente.'}
+      </div>`;
+  }
+  fit.addEventListener('click', () => { const { b0, b1 } = ols(); P = [[12, b0 + b1 * 12], [88, b0 + b1 * 88]]; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

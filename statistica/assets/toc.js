@@ -505,7 +505,7 @@ const TOC = [
   },
   {
     n: 43, parte: "IV · Statistica inferenziale",
-    titolo: "Regressione lineare", file: "cap43-regressione.html", stato: "da-fare",
+    titolo: "Regressione lineare", file: "cap43-regressione.html", stato: "pronto",
     sezioni: [
       { id: "s43-1", n: "43.1", t: "La retta che meglio si adatta" },
       { id: "s43-2", n: "43.2", t: "I minimi quadrati" },
