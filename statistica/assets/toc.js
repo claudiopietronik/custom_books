@@ -528,7 +528,7 @@ const TOC = [
   },
   {
     n: 45, parte: "IV · Statistica inferenziale",
-    titolo: "Regressione logistica", file: "cap45-logistica.html", stato: "da-fare",
+    titolo: "Regressione logistica", file: "cap45-logistica.html", stato: "pronto",
     sezioni: [
       { id: "s45-1", n: "45.1", t: "Prevedere una classe" },
       { id: "s45-2", n: "45.2", t: "La funzione logistica" },

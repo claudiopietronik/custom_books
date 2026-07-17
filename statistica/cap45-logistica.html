@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>45 · Regressione logistica — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="45">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Regressione logistica</h1>
+    <p class="standfirst">
+      E se \(y\) non è un numero ma una <b>categoria</b> — spam o no, malato o sano, clic o no? La retta non serve:
+      servirebbe prevedere una <b>probabilità</b>, che sta tra 0 e 1. La regressione <b>logistica</b> piega la retta
+      in una <b>S</b> che vive in \([0,1]\), e lo fa lavorando sulle <b>log-odds</b> del Capitolo 15. È l'algoritmo
+      di classificazione più usato in assoluto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Estende la regressione (Cap. 43–44) dalla previsione di numeri a quella di <em>classi</em>, riportando in
+      scena le odds e il logit (Cap. 15). È il ponte tra la statistica classica e il machine learning
+      supervisionato, e prepara il tema della generalizzazione (Cap. 46).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Filtri antispam, diagnosi mediche, scoring del credito, previsione di abbandono clienti: ovunque si debba
+      dire «sì/no» con una probabilità, c'è (spesso) una regressione logistica. È semplice, interpretabile e
+      sorprendentemente potente — il primo modello che ogni data scientist prova su un problema di classificazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s45-1"><span class="secnum">SEZIONE 45.1</span>Prevedere una classe</h2>
+
+  <p class="lead">
+    L'obiettivo cambia: \(y\) è <b>binaria</b> (0 o 1). Non vogliamo prevedere «0,7 di malattia», ma la
+    <b>probabilità</b> che \(y = 1\) — da cui poi decidere la classe.
+  </p>
+
+  <p>
+    Perché non usare la regressione lineare? Perché una retta può dare valori sotto 0 o sopra 1, che come
+    probabilità non hanno senso; e presume una relazione lineare tra \(x\) e una risposta 0/1, che non regge. Serve
+    una funzione che prenda qualunque combinazione di predittori e la <b>schiacci</b> dolcemente nell'intervallo
+    \([0,1]\), restituendo una probabilità. Quella funzione è la <b>logistica</b> (o sigmoide).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s45-2"><span class="secnum">SEZIONE 45.2</span>La funzione logistica</h2>
+
+  <div class="formula">
+    <div class="f-head">La funzione logistica (sigmoide) <span class="tag">schiaccia tutto in [0,1]</span></div>
+    <div class="f-body">
+      \[ \hat{p} \;=\; \frac{1}{1 + e^{-(\hA{b_0} + \hB{b_1} x)}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hat{p}\)</dt><dd>la <b>probabilità prevista</b> che \(y = 1\): sempre tra 0 e 1.</dd>
+        <dt>\(\hA{b_0} + \hB{b_1} x\)</dt><dd>una <b>combinazione lineare</b> dei predittori (come nella regressione!): può valere qualunque numero.</dd>
+        <dt>\(\dfrac{1}{1 + e^{-z}}\)</dt><dd>la sigmoide: prende quel numero e lo <b>schiaccia</b> in [0,1] con una curva a S.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La curva è una <b>S</b>: quasi 0 per \(x\) piccoli, quasi 1 per \(x\) grandi, con una transizione ripida nel
+      mezzo. \(b_1\) controlla la <b>pendenza</b> (quanto netta è la separazione), \(b_0\) la <b>posizione</b> del
+      punto di mezzo (dove \(\hat{p} = 0{,}5\)). <mark>Per classificare si applica una soglia</mark>: di solito
+      \(\hat{p} > 0{,}5\) → classe 1.
+    </div>
+  </div>
+
+  <h3>Provalo: la curva a S</h3>
+
+  <p>
+    Punti in basso (classe 0) e in alto (classe 1) lungo \(x\). Regola pendenza e posizione della sigmoide per
+    separare al meglio le due classi: la curva stima, per ogni \(x\), la probabilità di essere classe 1.
+  </p>
+
+  <div class="widget" id="w-log">
+    <div class="w-head">
+      <span>La sigmoide di classificazione</span>
+      <span class="hint">probabilità tra 0 e 1</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wlg-svg" viewBox="0 0 480 280" role="img" aria-label="Curva logistica a S che separa due classi lungo una variabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>posizione (b₀)</label><input type="range" id="wlg-m" min="20" max="80" step="1" value="50"><output id="wlg-mv">50</output></div>
+      <div class="w-ctrl"><label>pendenza (b₁)</label><input type="range" id="wlg-s" min="5" max="80" step="1" value="30"><output id="wlg-sv"></output></div>
+    </div>
+    <div class="w-readout" id="wlg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s45-3"><span class="secnum">SEZIONE 45.3</span>Log-odds e coefficienti</h2>
+
+  <p class="lead">
+    Perché proprio quella formula strana? Perché, girata al contrario, dice una cosa elegante: la parte lineare
+    \(b_0 + b_1 x\) sono le <b>log-odds</b> (il logit) della probabilità — le odds del Capitolo 15, in logaritmo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il logit: dietro la sigmoide <span class="tag">lineare nelle log-odds</span></div>
+    <div class="f-body">
+      \[ \ln\!\left(\frac{\hat{p}}{1 - \hat{p}}\right) \;=\; b_0 + b_1 x \]
+    </div>
+    <div class="f-note">
+      A sinistra c'è il <b>logaritmo delle odds</b> \(\hat{p}/(1-\hat{p})\) (Cap. 15). Quindi la logistica è
+      <mark>una regressione lineare… sulle log-odds</mark>: schiaccia la probabilità (limitata in [0,1]) sul logit
+      (illimitato, simmetrico), dove una retta ha di nuovo senso. Da qui l'interpretazione dei coefficienti: un
+      aumento di 1 in \(x\) cambia le log-odds di \(b_1\), cioè <b>moltiplica le odds per \(e^{b_1}\)</b> (l'«odds
+      ratio», il modo standard di riportare i risultati logistici).
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Come si adatta</div>
+    <p style="margin-bottom:0">
+      A differenza della regressione lineare, non c'è una formula chiusa: i coefficienti si trovano massimizzando
+      la <b>verosimiglianza</b> (quanto il modello rende probabili le classi osservate), con metodi iterativi. La
+      funzione di costo che si minimizza è la <b>cross-entropy</b> — sì, l'entropia del Capitolo 9: la statistica
+      si richiude su sé stessa.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s45-4"><span class="secnum">SEZIONE 45.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 45.1</div>
+    <p style="margin-bottom:0">Perché non si usa la regressione lineare per prevedere una variabile 0/1?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché una retta può restituire valori <b>fuori da [0,1]</b> (negativi o sopra
+          1), privi di senso come probabilità (§45.1); e impone una relazione lineare con una risposta binaria, che
+          non regge (l'effetto di \(x\) satura vicino a 0 e a 1). La logistica risolve schiacciando la parte
+          lineare in [0,1] con la sigmoide, restituendo sempre una probabilità valida.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 45.2</div>
+    <p style="margin-bottom:0">In una logistica, \(\hat{p} = 0{,}5\) in un certo punto. Cosa vale lì la parte
+      lineare \(b_0 + b_1 x\)? E le odds?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Quando \(\hat{p} = 0{,}5\), le odds sono \(0{,}5/0{,}5 = 1\), e il logit è
+          \(\ln(1) = \mathbf{0}\) (§45.3). Quindi la parte lineare \(b_0 + b_1 x = 0\): quel punto è il
+          <b>centro della S</b>, la «soglia di decisione» dove il modello è indeciso tra le due classi. È il punto
+          in cui \(x = -b_0/b_1\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 45.3</div>
+    <p style="margin-bottom:0">Un coefficiente logistico è \(b_1 = 0{,}7\). Cosa dice sulle odds? (Suggerimento:
+      \(e^{0,7} \approx 2\).)</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Un aumento di 1 in \(x\) aumenta le log-odds di 0,7, cioè <b>moltiplica le odds
+          per \(e^{0{,}7} \approx 2\)</b> (§45.3): l'<b>odds ratio</b> è ~2. In parole: ogni unità in più di \(x\)
+          <b>raddoppia le odds</b> di appartenere alla classe 1. È così che si comunicano i risultati logistici (es.
+          «fumare raddoppia le odds di malattia»), non con la probabilità, che dipende dal punto di partenza.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s45-5"><span class="secnum">SEZIONE 45.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 45</div>
+    <ol style="margin-bottom:0">
+      <li><b>Classificazione:</b> \(y\) binaria; si prevede la <b>probabilità</b> \(\hat{p}\) che \(y=1\), poi si
+        applica una soglia.</li>
+      <li><b>Sigmoide:</b> \(\hat{p} = 1/(1 + e^{-(b_0 + b_1 x)})\): schiaccia la parte lineare in [0,1] con una
+        curva a S.</li>
+      <li><b>È lineare nelle log-odds:</b> \(\ln(\hat{p}/(1-\hat{p})) = b_0 + b_1 x\). Un +1 in \(x\) moltiplica le
+        odds per \(e^{b_1}\) (odds ratio).</li>
+      <li>Si adatta massimizzando la verosimiglianza (costo = <b>cross-entropy</b>, l'entropia del Cap. 9).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la logistica abbiamo modelli che <em>predicono</em>. Ma un modello si giudica su ciò che <b>non</b> ha
+    visto: la vera domanda è se generalizza. L'abbiamo sfiorata con la polinomiale (Cap. 44); ora la affrontiamo di
+    petto. Il <strong>Capitolo 46</strong> chiude il libro con il dilemma centrale di tutto il modellare —
+    <b>under- e overfitting</b> — e il compromesso bias-varianza.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §45.2 — curva logistica su due classi
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wlg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wlg-out');
+  const mS = document.getElementById('wlg-m'), mV = document.getElementById('wlg-mv');
+  const sS = document.getElementById('wlg-s'), sV = document.getElementById('wlg-sv');
+  // dati binari: classe 0 tende a x basso, classe 1 a x alto, con sovrapposizione
+  let seed = 555;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const data = [];
+  for (let i = 0; i < 40; i++) { const cls = i < 20 ? 0 : 1; const x = (cls === 0 ? 30 : 62) + 16 * (u() - 0.5) * 2; data.push({ x: Math.max(4, Math.min(96, x)), y: cls }); }
+
+  function draw() {
+    const mid = parseInt(mS.value, 10);
+    const steep = parseInt(sS.value, 10) / 100;   // pendenza
+    mV.textContent = mid; sV.textContent = steep.toFixed(2);
+    const sig = x => 1 / (1 + Math.exp(-steep * (x - mid)));
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: -0.12, ymax: 1.12, iso: false });
+    p.axes({ numbers: false, names: true, xname: 'x (predittore)', yname: 'P(classe 1)' });
+    p.line(0, 0, 100, 0, { color: 'var(--rule)', width: 1 });
+    p.line(0, 1, 100, 1, { color: 'var(--rule)', width: 1, dash: '2 3' });
+    p.line(0, 0.5, 100, 0.5, { color: 'var(--ink-faint)', width: 1, dash: '3 3' });
+    // soglia di decisione (dove p=0.5 → x=mid)
+    p.line(mid, -0.12, mid, 1.12, { color: 'var(--gold)', width: 1.4, dash: '4 3' });
+    p.text(mid, 1.08, 'soglia', { color: 'var(--gold)', size: 9.5 });
+    // curva
+    p.func(sig, { color: 'var(--accent)', width: 2.8, from: 0, to: 100 });
+    // punti dati
+    data.forEach(d => p.dot(d.x, d.y, { r: 3.2, color: d.y === 1 ? 'var(--warm)' : 'var(--green)', stroke: 'var(--paper)', sw: 0.7 }));
+
+    // accuratezza con soglia 0.5
+    let correct = 0; data.forEach(d => { const pred = sig(d.x) > 0.5 ? 1 : 0; if (pred === d.y) correct++; });
+    out.innerHTML = `
+      <div class="big">P(classe 1) = 0,5 a x = <b>${mid}</b> &nbsp;·&nbsp; classificati bene: <b>${correct}/${data.length}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva a <b>S</b> dà, per ogni x, la probabilità di essere <b style="color:var(--warm)">classe 1</b>.
+        A sinistra della soglia predice 0 (verde), a destra 1 (rosso). Aumenta la <b>pendenza</b> per una
+        separazione più netta, sposta la <b>posizione</b> per centrare la soglia tra le due classi.
+      </div>`;
+  }
+  mS.addEventListener('input', draw); sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
