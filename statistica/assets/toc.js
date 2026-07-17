@@ -180,7 +180,7 @@ const TOC = [
   },
   {
     n: 15, parte: "III · Probabilità",
-    titolo: "Odds e calcolo", file: "cap15-odds.html", stato: "da-fare",
+    titolo: "Odds e calcolo", file: "cap15-odds.html", stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Regola della somma e del prodotto" },
       { id: "s15-2", n: "15.2", t: "Le odds (quote)" },
