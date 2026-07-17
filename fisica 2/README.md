@@ -41,7 +41,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 
 ### Ottica
 - [x] 13 — La natura e la propagazione della luce
-- [ ] 14 — L'ottica geometrica e gli strumenti ottici
+- [x] 14 — L'ottica geometrica e gli strumenti ottici
 - [ ] 15 — L'interferenza
 - [ ] 16 — La diffrazione
 

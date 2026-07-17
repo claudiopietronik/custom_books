@@ -208,7 +208,7 @@ const TOC = [
     n: 14,
     titolo: "L'ottica geometrica e gli strumenti ottici",
     file: "cap14-ottica-geometrica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Gli specchi piani" },
       { id: "s14-2", n: "14.2", t: "Gli specchi sferici" },
