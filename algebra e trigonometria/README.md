@@ -39,7 +39,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 9 — Coordinate polari, complessi e vettori
 - [x] 10 — Sistemi di equazioni e disequazioni
 - [x] 11 — Matrici e determinanti
-- [ ] 12 — Geometria analitica: le coniche
+- [x] 12 — Geometria analitica: le coniche
 - [ ] 13 — Successioni, serie, induzione e probabilità
 
 ## Nota
