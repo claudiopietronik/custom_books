@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>26 · Reti neurali (e altro!) — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="26">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.26 — Capitolo 26</div>
+    <h1>Reti neurali (e altro!)</h1>
+    <p class="standfirst">
+      C'è una domanda davanti alla quale il DSP «classico» si ferma: non «com'è fatto questo segnale?» ma
+      «<em>che cosa</em> è?». Un volto, una parola, una malattia. Rispondere richiede di <b>imparare dagli
+      esempi</b> invece di programmare regole — ed è il territorio delle <b>reti neurali</b>. Sorprendentemente,
+      il loro mattone di base è una vecchia conoscenza: la somma pesata, cioè la convoluzione.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un capitolo-ponte tra il DSP e l'apprendimento automatico. Non è un corso di reti neurali — è la
+      spiegazione di <em>perché</em> sono il prolungamento naturale del DSP verso il riconoscimento, e di come i
+      loro ingredienti siano concetti che già conosci. È l'ultimo dei grandi temi applicativi prima delle
+      chiusure hardware (Cap. 28–29) e degli approfondimenti matematici (Cap. 30–34).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Riconoscere pattern è ovunque: assistenti vocali, diagnosi automatica, guida autonoma, moderazione di
+      contenuti. E il legame con il DSP è profondo e attuale: le reti che elaborano immagini e suoni sono
+      <strong>convoluzionali</strong> — usano, letteralmente, i kernel di convoluzione dei Cap. 6 e 24, solo
+      <em>appresi dai dati</em> invece che progettati a mano. Capire questo legame è capire dove sta andando il
+      campo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-1"><span class="secnum">SEZIONE 26.1</span>Riconoscere forme e pattern</h2>
+
+  <p class="lead">
+    Fin qui abbiamo <em>trasformato</em> i segnali: filtrati, ripuliti, analizzati. Il riconoscimento è un
+    problema diverso: assegnare un'<b>etichetta</b>. Questa immagine contiene un gatto o un cane? Questo suono è
+    la parola «sì» o «no»? Questo elettrocardiogramma è normale o patologico?
+  </p>
+
+  <p>
+    Il DSP classico non basta, perché non esiste una formula che, dai pixel, dica «gatto». Le variazioni sono
+    infinite: pose, luci, sfondi. La svolta è cambiare strategia: invece di <b>programmare le regole</b>
+    (impossibile), si <b>impara dagli esempi</b>. Mostri al sistema migliaia di immagini etichettate, e lui
+    trova da solo i pattern che distinguono un gatto da un cane. È l'apprendimento automatico, e le reti neurali
+    ne sono lo strumento più potente.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-2"><span class="secnum">SEZIONE 26.2</span>Architettura di una rete neurale</h2>
+
+  <p class="lead">
+    Il mattone di una rete è il <b>neurone</b>, e la sua matematica ti è già familiare: prende alcuni ingressi,
+    ne fa una <b>somma pesata</b> e la passa attraverso una funzione «a soglia».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un neurone artificiale <span class="tag">somma pesata + non linearità</span></div>
+    <div class="f-body">
+      \[
+        y \;=\; f\!\Big(\, \hA{w_1 x_1 + w_2 x_2 + \cdots} \;+\; \hB{b} \,\Big)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{w_i x_i}\)</dt><dd>gli ingressi \(x_i\) moltiplicati per i <b>pesi</b> \(w_i\) e sommati: è una
+            <b>somma pesata</b> — la stessa operazione della convoluzione e della correlazione (Cap. 6–7)!</dd>
+        <dt>\(\hB{b}\)</dt><dd>una costante additiva, il <b>bias</b>, che sposta la soglia.</dd>
+        <dt>\(f(\cdot)\)</dt><dd>la funzione di <b>attivazione</b>, non lineare (a «S», o un semplice
+            «acceso/spento»): è ciò che dà alla rete la sua potenza. Senza di essa la rete sarebbe solo un grande
+            filtro lineare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un neurone, da solo, traccia un <b>confine</b> nello spazio degli ingressi e dice «di qua sì, di là no».
+      <mark>Il cuore del neurone è la somma pesata — pura aritmetica da DSP</mark> — e la non linearità è il
+      tocco che permette di combinarne molti per decisioni complesse.
+    </div>
+  </div>
+
+  <p>
+    I neuroni si organizzano in <b>strati</b>: uno d'ingresso (i dati grezzi), uno o più strati <b>nascosti</b>
+    (dove avviene l'elaborazione), e uno d'uscita (l'etichetta). Ogni neurone di uno strato riceve dagli output
+    dello strato precedente. Impilando molti strati — <em>deep learning</em> — la rete impara a riconoscere prima
+    pattern semplici (bordi, in un'immagine) e via via più complessi (occhi, musi, gatti).
+  </p>
+
+  <h3>Provalo: sii tu il neurone</h3>
+
+  <p>
+    Due gruppi di punti da separare (blu e ambra). Regola i pesi \(w_1, w_2\) e il bias per orientare la
+    <b>linea di decisione</b> del neurone finché i due gruppi finiscono su lati opposti. È esattamente ciò che la
+    rete fa da sola durante l'addestramento — solo che qui lo fai tu, a mano.
+  </p>
+
+  <div class="widget" id="w-neuron">
+    <div class="w-head">
+      <span>Il neurone che separa</span>
+      <span class="hint">orienta la linea per dividere i due gruppi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wn-svg" viewBox="0 0 320 320" style="max-width:340px; display:block; margin:0 auto" role="img" aria-label="Due gruppi di punti e la linea di decisione di un neurone"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>w₁</label><input type="range" id="wn-w1" min="-2" max="2" step="0.05" value="1"><output id="wn-w1v">1.00</output></div>
+      <div class="w-ctrl"><label>w₂</label><input type="range" id="wn-w2" min="-2" max="2" step="0.05" value="0.3"><output id="wn-w2v">0.30</output></div>
+      <div class="w-ctrl"><label>bias</label><input type="range" id="wn-b" min="-1.5" max="1.5" step="0.05" value="0"><output id="wn-bv">0.00</output></div>
+    </div>
+    <div class="w-readout" id="wn-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-3"><span class="secnum">SEZIONE 26.3</span>L'addestramento: la backpropagation</h2>
+
+  <p class="lead">
+    Come fa la rete a trovare i pesi giusti da sola? Con un'idea che, guarda caso, viene dritta dall'analisi
+    matematica: <b>scendere lungo il gradiente</b> dell'errore.
+  </p>
+
+  <p>
+    Si parte da pesi casuali. Si dà alla rete un esempio, si guarda la risposta e la si confronta con l'etichetta
+    vera: la differenza è l'<b>errore</b>. Ora la domanda è: come cambiare ogni peso per <em>ridurre</em>
+    l'errore? La risposta è la <b>derivata</b> dell'errore rispetto a quel peso — ci dice in che direzione
+    spingere. Si aggiustano tutti i pesi di un passettino in quella direzione, si prende un altro esempio, e si
+    ripete milioni di volte. L'errore, passo dopo passo, cala. L'algoritmo che calcola efficientemente tutte
+    queste derivate propagandole all'indietro tra gli strati si chiama <b class="termine">backpropagation</b>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La discesa del gradiente: rotolare verso il basso</div>
+    <p style="margin-bottom:0">
+      Immagina l'errore come un <b>paesaggio a colline</b>, con i pesi come coordinate: vuoi arrivare nel punto
+      più basso (errore minimo). La derivata (il gradiente) ti dice la direzione di massima pendenza; tu fai un
+      passo in discesa, e ripeti. <mark>È come una biglia che rotola verso valle.</mark> Due insidie note: un
+      passo troppo grande ti fa «saltare oltre» e rimbalzare (o divergere); troppo piccolo, e la discesa è
+      lentissima. La scelta del passo — il <em>learning rate</em> — è cruciale. Il widget lo mostra.
+    </p>
+  </div>
+
+  <h3>Provalo: la discesa del gradiente</h3>
+
+  <p>
+    La biglia parte in alto sulla «collina» dell'errore. Premi <b>un passo</b> e guardala scendere verso il
+    minimo, seguendo la pendenza. Cambia il <b>passo</b> (learning rate): piccolo → discesa lenta ma sicura;
+    grande → rapida ma rischia di <b>rimbalzare</b> o divergere. È il dilemma di ogni addestramento.
+  </p>
+
+  <div class="widget" id="w-gd">
+    <div class="w-head">
+      <span>Discesa del gradiente</span>
+      <span class="hint">trova il minimo dell'errore</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wgd-svg" viewBox="0 0 620 240" role="img" aria-label="Una biglia che scende lungo la curva dell'errore verso il minimo"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>passo</label><input type="range" id="wgd-r" min="0.02" max="1.05" step="0.01" value="0.3"><output id="wgd-rv">0.30</output></div>
+      <button class="w-btn" id="wgd-step">un passo</button>
+      <button class="w-btn" id="wgd-run">10 passi</button>
+      <button class="w-btn" id="wgd-reset">azzera</button>
+    </div>
+    <div class="w-readout" id="wgd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-4"><span class="secnum">SEZIONE 26.4</span>Reti neurali e DSP</h2>
+
+  <p class="lead">
+    Il legame tra DSP e reti neurali non è una metafora: è tecnico e profondo. Le reti che dominano l'elaborazione
+    di immagini e suoni si chiamano <b>convoluzionali</b> per un ottimo motivo.
+  </p>
+
+  <p>
+    Una <b class="termine">rete convoluzionale</b> (CNN) applica, nei suoi primi strati, <b>kernel di
+    convoluzione</b> — esattamente quelli del Cap. 24 (sfoca, bordi, rilievo) — per estrarre caratteristiche
+    dall'immagine. La differenza decisiva rispetto al DSP classico: quei kernel non li progetti tu, li
+    <b>impara la rete</b> dai dati, scegliendo da sola quali pattern sono utili a distinguere le classi. Il
+    rilevatore di bordi che nel Cap. 24 abbiamo scritto a mano, una CNN lo scopre da sé — e ne scopre migliaia di
+    altri che noi non sapremmo progettare.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il DSP è il substrato dell'IA percettiva</div>
+    <p style="margin-bottom:0">
+      Metti in fila i pezzi: un neurone è una <b>somma pesata</b> (correlazione); una CNN è fatta di
+      <b>convoluzioni</b> apprese; l'addestramento è <b>discesa del gradiente</b> (analisi); l'input è un segnale
+      (audio, immagine) preparato con tecniche di DSP (campionamento, spettrogrammi, filtri). <mark>Le reti
+      neurali non sostituiscono il DSP: lo estendono, mettendo l'apprendimento dove prima c'era il progetto a
+      mano.</mark> Chi conosce il DSP ha già in mano metà delle idee dell'IA percettiva.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-5"><span class="secnum">SEZIONE 26.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 26.1</div>
+    <p style="margin-bottom:0">Il calcolo centrale di un neurone è \(w_1 x_1 + w_2 x_2 + \cdots + b\). Con quale
+      operazione del DSP coincide, e cosa aggiunge il neurone?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>È una <b>somma pesata</b> degli ingressi: la stessa operazione della <b>convoluzione/correlazione</b>
+          (Cap. 6–7). Il neurone aggiunge la <b>funzione di attivazione non lineare</b> \(f\), che è ciò che
+          permette di combinare molti neuroni per decisioni complesse (senza, sarebbe solo un filtro lineare).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 26.2</div>
+    <p style="margin-bottom:0">Nell'addestramento, cosa dice la derivata dell'errore rispetto a un peso, e come si
+      usa?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Dice in che <b>direzione</b> (e quanto) cambiare quel peso per <em>ridurre</em> l'errore. Si aggiorna
+          il peso di un passettino nella direzione opposta al gradiente (discesa del gradiente), e si ripete su
+          molti esempi. La backpropagation calcola tutte queste derivate in modo efficiente propagandole
+          all'indietro tra gli strati (§26.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 26.3</div>
+    <p style="margin-bottom:0">Perché un learning rate troppo grande può impedire l'apprendimento?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché un passo troppo grande fa «saltare oltre» il minimo: la biglia rimbalza da un lato all'altro
+          della valle senza scendere, o addirittura <b>diverge</b> (l'errore cresce invece di calare). È lo stesso
+          fenomeno dell'instabilità: serve un passo abbastanza piccolo da convergere, ma non così piccolo da
+          rendere la discesa eterna (§26.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 26.4</div>
+    <p style="margin-bottom:0">In che senso una rete neurale convoluzionale «usa il DSP»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Applica <b>kernel di convoluzione</b> (Cap. 24) per estrarre caratteristiche dalle immagini — ma
+          invece di progettarli a mano, li <b>impara dai dati</b>. Il rilevatore di bordi che scriveremmo a mano,
+          la rete lo scopre da sola, insieme a migliaia di altri filtri utili. La convoluzione è il motore; la
+          novità è l'apprendimento (§26.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s26-6"><span class="secnum">SEZIONE 26.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 26</div>
+    <ol style="margin-bottom:0">
+      <li><b>Riconoscimento:</b> assegnare un'etichetta («cos'è?»), dove il DSP classico si ferma. Le reti
+          <b>imparano dagli esempi</b> invece di seguire regole programmate.</li>
+      <li><b>Neurone</b> = <b>somma pesata</b> (aritmetica da DSP) + attivazione non lineare. In strati impilati
+          (deep learning) riconosce pattern via via più complessi.</li>
+      <li><b>Addestramento</b> = <b>discesa del gradiente</b>: la derivata dell'errore guida l'aggiornamento dei
+          pesi (backpropagation). Il passo (learning rate) va scelto: né troppo grande né troppo piccolo.</li>
+      <li><b>Le CNN usano convoluzioni</b> (Cap. 24) apprese dai dati: il DSP è il substrato dell'IA percettiva.</li>
+      <li>Chi conosce il DSP possiede già metà delle idee: somma pesata, convoluzione, gradiente.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Dal riconoscimento torniamo a un problema più «ingegneristico» ma onnipresente: far entrare i segnali in
+    meno spazio. Il <strong>Capitolo 27</strong> è dedicato alla <b>compressione dei dati</b>: le tecniche senza
+    perdita (run-length, Huffman, LZW) e con perdita (JPEG per le immagini, sulla scia dell'MPEG audio del
+    Cap. 22). Scopriremo come si spreme l'informazione senza buttarla — e come, a volte, buttarne un po' con
+    criterio sia la mossa vincente.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §26.2 — sii tu il neurone (confine di decisione)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wn-svg');
+  if (!svg) return;
+  const out = document.getElementById('wn-out');
+  const w1S = document.getElementById('wn-w1'), w2S = document.getElementById('wn-w2'), bS = document.getElementById('wn-b');
+  const w1V = document.getElementById('wn-w1v'), w2V = document.getElementById('wn-w2v'), bV = document.getElementById('wn-bv');
+  // due gruppi separabili
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(13);
+  const A = [], B = [];
+  for (let i = 0; i < 12; i++) { A.push([0.45 + (rng() - 0.5) * 0.6, 0.4 + (rng() - 0.5) * 0.6]); B.push([-0.45 + (rng() - 0.5) * 0.6, -0.4 + (rng() - 0.5) * 0.6]); }
+
+  function draw() {
+    const w1 = parseFloat(w1S.value), w2 = parseFloat(w2S.value), b = parseFloat(bS.value);
+    w1V.textContent = w1.toFixed(2); w2V.textContent = w2.toFixed(2); bV.textContent = b.toFixed(2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1.2, xmax: 1.2, ymin: -1.2, ymax: 1.2, iso: true });
+    p.grid(0.5); p.axes({ numbers: false, names: false });
+    // linea di decisione w1*x + w2*y + b = 0
+    if (Math.abs(w2) > 1e-3) p.func(x => -(w1 * x + b) / w2, { color: 'var(--violet)', width: 2.4 });
+    else p.line(-b / (w1 || 1e-3), -1.2, -b / (w1 || 1e-3), 1.2, { color: 'var(--violet)', width: 2.4 });
+    // punti
+    let ok = 0;
+    A.forEach(pt => { const s = w1 * pt[0] + w2 * pt[1] + b; if (s > 0) ok++; p.dot(pt[0], pt[1], { color: 'var(--accent)', r: 5 }); });
+    B.forEach(pt => { const s = w1 * pt[0] + w2 * pt[1] + b; if (s < 0) ok++; p.dot(pt[0], pt[1], { color: 'var(--warm)', r: 5 }); });
+    const tot = A.length + B.length;
+    out.innerHTML = `
+      <div class="big">classificati correttamente: <b style="color:${ok === tot ? 'var(--green)' : 'var(--ink)'}">${ok}/${tot}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--violet)">linea di decisione</b> del neurone separa il piano: <b style="color:var(--accent)">blu</b> da un lato, <b style="color:var(--warm)">ambra</b> dall'altro.
+        ${ok === tot ? '<mark>Separazione perfetta!</mark> È ciò che l\'addestramento trova da solo.' : 'Orienta w₁, w₂ e il bias finché i due gruppi finiscono su lati opposti.'}
+        Il neurone calcola solo w₁x₁+w₂x₂+b: una somma pesata, come una correlazione.
+      </div>`;
+  }
+  [w1S, w2S, bS].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §26.3 — discesa del gradiente
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wgd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wgd-out');
+  const rS = document.getElementById('wgd-r'), rV = document.getElementById('wgd-rv');
+  const E = w => 0.35 * w * w + 0.4 - 0.5 * Math.cos(1.6 * w);   // "collina" con un minimo
+  const dE = w => 0.7 * w + 0.8 * Math.sin(1.6 * w);
+  let w = -2.6, steps = 0, diverged = false;
+
+  function step() {
+    if (diverged) return;
+    const r = parseFloat(rS.value);
+    const wn = w - r * dE(w);
+    if (!isFinite(wn) || Math.abs(wn) > 6) { diverged = true; }
+    else { w = wn; steps++; }
+    draw();
+  }
+
+  function draw() {
+    rV.textContent = parseFloat(rS.value).toFixed(2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: 0, ymax: 4 });
+    p.grid(1, 1); p.axes({ numbers: false, names: true, xname: 'peso w', yname: 'errore' });
+    p.func(E, { color: 'var(--ink-soft)', width: 2.4, samples: 400 });
+    const wc = Math.max(-3, Math.min(3, w));
+    p.dot(wc, E(wc), { color: diverged ? 'var(--warm)' : 'var(--accent)', r: 7 });
+    out.innerHTML = `
+      <div class="big">passi: <b>${steps}</b> &nbsp;·&nbsp; w = <b>${w.toFixed(2)}</b> &nbsp;·&nbsp; errore = <b>${diverged ? '∞' : E(w).toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${diverged ? '<mark>Divergenza!</mark> Passo troppo grande: la biglia è schizzata via. Azzera e riduci il passo.'
+          : Math.abs(dE(w)) < 0.05 ? '<mark>Sei nel minimo</mark>: l\'errore non cala più. Addestramento «convergito».'
+            : 'La biglia scende seguendo la pendenza. Premi ancora, o cambia il passo e osserva: piccolo = lento e sicuro, grande = rapido ma rischioso.'}
+      </div>`;
+  }
+  rS.addEventListener('input', draw);
+  document.getElementById('wgd-step').addEventListener('click', step);
+  document.getElementById('wgd-run').addEventListener('click', () => { for (let i = 0; i < 10; i++) step(); });
+  document.getElementById('wgd-reset').addEventListener('click', () => { w = -2.6; steps = 0; diverged = false; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -387,7 +387,7 @@ const TOC = [
     n: 26,
     titolo: "Reti neurali (e altro!)",
     file: "cap26-reti-neurali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s26-1", n: "26.1", t: "Riconoscere forme e pattern" },
       { id: "s26-2", n: "26.2", t: "Architettura di una rete neurale" },
