@@ -153,7 +153,7 @@ const TOC = [
     titolo: "Ottimizzazione per l'addestramento",
     file: "cap08-ottimizzazione.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Come l'apprendimento differisce dall'ottimizzazione" },
       { id: "s8-2", n: "8.2", t: "Le sfide dell'ottimizzazione delle reti" },

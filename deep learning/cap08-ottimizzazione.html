@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Ottimizzazione per l'addestramento — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8 · Parte II</div>
+    <h1>Ottimizzazione per l'addestramento</h1>
+    <p class="standfirst">
+      Addestrare una rete è minimizzare una funzione di costo con milioni di variabili, non convessa, piena di
+      selle e valli storte. La discesa del gradiente pura (Cap. 4) da sola arranca. Questo capitolo è la
+      cassetta degli attrezzi che la rende pratica: il <b>momentum</b> per non zig-zagare, le
+      <b>inizializzazioni</b> giuste, i tassi di apprendimento <b>adattivi</b> (<b>Adam</b>) e la <b>batch
+      normalization</b>. <mark>Sono gli accorgimenti che separano una rete che converge da una che non parte
+      nemmeno.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché ottimizzare per imparare è diverso dall'ottimizzare e basta (§8.1) e quali <b>sfide</b> pone
+      (§8.2). Gli algoritmi base: <b>SGD e momentum</b> (§8.3, widget). Perché il <b>punto di partenza</b> conta
+      (§8.4). I metodi con <b>learning rate adattivo</b> — AdaGrad, RMSProp, <b>Adam</b> (§8.5). Un cenno ai
+      <b>metodi del secondo ordine</b> (§8.6) e al meta-algoritmo che ha cambiato tutto, la <b>batch
+      normalization</b> (§8.7).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Nel codice reale non scrivi «minimizza»: scegli un <b>ottimizzatore</b> (quasi sempre <b>Adam</b> o SGD
+      con momentum), un <b>learning rate</b>, uno schema per diminuirlo, e magari la <b>batch norm</b>. Sono le
+      manopole che decidono se e quanto in fretta la rete impara. <mark>Capire cosa fanno momentum e Adam ti
+      evita giorni di addestramenti che non convergono.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Come l'apprendimento differisce dall'ottimizzazione</h2>
+
+  <p class="lead">
+    In ottimizzazione pura vogliamo il minimo di una funzione. Nell'apprendimento, quella funzione (l'errore sul
+    training) è solo un <b>surrogato</b> di ciò che ci interessa davvero: l'errore sui dati nuovi.
+  </p>
+
+  <p>
+    Minimizziamo il <b>rischio empirico</b> (la loss media sul training set), ma il nostro vero obiettivo è il
+    <b>rischio atteso</b> sulla distribuzione vera dei dati — che non conosciamo. Questa differenza ha
+    conseguenze pratiche: <mark>non ci serve raggiungere il minimo esatto del training</mark> (anzi, sarebbe
+    overfitting, Cap. 7); ci fermiamo prima, quando la validation è al minimo. Ecco perché in deep learning
+    «ottimizzare bene» e «imparare bene» non sono la stessa cosa, e perché usiamo l'SGD (che non trova mai il
+    minimo esatto) senza troppi rimpianti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>Le sfide dell'ottimizzazione delle reti</h2>
+
+  <p class="lead">
+    Perché addestrare è difficile? Non tanto per i minimi locali, quanto per <b>selle</b>, <b>valli storte</b> e
+    <b>gradienti che esplodono o svaniscono</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> I veri ostacoli</div>
+    <p style="margin-bottom:0">
+      • <b>Selle</b>, non minimi locali. In alta dimensione i punti critici sono quasi sempre selle (§4.4): il
+        gradiente è piccolo ma non siamo al minimo. La discesa rallenta ma può sfuggirne.<br>
+      • <b>Malcondizionamento</b>: la loss è una valle stretta e allungata (§4.2), e la discesa zig-zaga.<br>
+      • <b>Gradienti che esplodono/svaniscono</b>: in reti profonde e ricorrenti, i gradienti moltiplicati
+        strato dopo strato tendono a \(0\) o a \(\infty\) (§6.3, Cap. 10). Il rimedio pratico per l'esplosione è
+        il <b>gradient clipping</b> (tagliare la norma del gradiente).<br>
+      <mark>Momentum e learning rate adattivi nascono per attaccare proprio questi ostacoli.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Algoritmi di base: SGD e momentum</h2>
+
+  <p class="lead">
+    L'SGD (Cap. 5) fa un passo nella direzione del gradiente su un mini-batch. Il <b>momentum</b> gli aggiunge
+    inerzia: accumula una «velocità» che leviga il cammino e accelera nelle direzioni costanti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">SGD con momentum <span class="tag">una pallina che rotola con inerzia</span></div>
+    <div class="f-body">
+      \[ \vv{v} \leftarrow \hB{\beta}\,\vv{v} - \eta\,\hA{\grad_{\vv{\theta}}\Loss}, \qquad
+         \vv{\theta} \leftarrow \vv{\theta} + \vv{v} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{v}\) — la <b>velocità</b></dt>
+        <dd>una media mobile dei gradienti passati. Invece di seguire ogni gradiente istantaneo, la pallina
+            accumula slancio nelle direzioni che si ripetono.</dd>
+        <dt>\(\hB{\beta}\) — il <b>coefficiente di momentum</b></dt>
+        <dd>quanta memoria dei passi precedenti conservare (tipicamente \(0{,}9\)). \(\beta=0\) è l'SGD puro;
+            più è alto, più inerzia.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'effetto: nelle valli strette (malcondizionate), le oscillazioni trasversali si <b>cancellano</b> tra un
+      passo e l'altro, mentre lo slancio lungo il fondo si <b>accumula</b>. <mark>Il momentum trasforma lo
+      zig-zag in una corsa diritta verso il minimo.</mark> Nel widget: attiva il momentum sulla stessa valle
+      storta del Cap. 4 e guarda la traiettoria raddrizzarsi e arrivare al fondo molto prima.
+    </div>
+  </div>
+
+  <div class="widget" id="w-mom">
+    <div class="w-head">
+      <span>SGD vs momentum sulla valle storta</span>
+      <span class="hint">trascina il punto · regola η e β</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wm-svg" viewBox="0 0 560 420" role="img" aria-label="Confronto tra la traiettoria della discesa del gradiente pura e con momentum su una valle malcondizionata"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>η</label><input type="range" id="wm-lr" min="0.01" max="0.18" step="0.005" value="0.045"><output id="wm-lr-o">0.045</output></div>
+      <div class="w-ctrl"><label>β</label><input type="range" id="wm-b" min="0" max="0.95" step="0.05" value="0.85"><output id="wm-b-o">0.85</output></div>
+    </div>
+    <div class="w-readout" id="wm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Strategie di inizializzazione dei parametri</h2>
+
+  <p class="lead">
+    Da dove parte la discesa conta moltissimo. Inizializzare male i pesi può far esplodere o svanire i segnali
+    già al primo passo — la rete non parte proprio.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Le regole d'oro dell'inizializzazione</div>
+    <p style="margin-bottom:0">
+      • <b>Non</b> a zero, e <b>non</b> tutti uguali: neuroni identici resterebbero identici per sempre (rompere
+        la <b>simmetria</b> è essenziale). Si parte da valori <b>casuali</b> piccoli.<br>
+      • La scala giusta mantiene la <b>varianza dei segnali</b> costante attraverso gli strati, così non
+        esplodono né svaniscono. Le ricette <b>Xavier/Glorot</b> (per tanh) e <b>He</b> (per ReLU) scelgono la
+        varianza in funzione del numero di ingressi del neurone.<br>
+      <mark>Un'inizializzazione sbagliata è una delle cause più comuni di reti che «non imparano».</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Learning rate adattivi: AdaGrad, RMSProp, Adam</h2>
+
+  <p class="lead">
+    Un solo learning rate per tutti i parametri è un compromesso: alcune direzioni vorrebbero passi grandi,
+    altre piccoli. I metodi adattivi danno a <b>ogni parametro il suo passo</b>.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Metodo</th><th>Idea</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td><b>AdaGrad</b></td><td>divide il passo per la radice della somma dei gradienti² passati</td>
+        <td>Passi grandi per parametri rari, piccoli per quelli frequenti. Ma il passo decade troppo col
+            tempo.</td></tr>
+      <tr><td><b>RMSProp</b></td><td>come AdaGrad, ma con una <b>media mobile</b> dei gradienti² (dimentica il
+        passato lontano)</td>
+        <td>Risolve il decadimento eccessivo di AdaGrad. Ottimo per problemi non convessi.</td></tr>
+      <tr><td><b>Adam</b></td><td>RMSProp <b>+ momentum</b>: media mobile del gradiente <em>e</em> del suo
+        quadrato</td>
+        <td><mark>Il default de facto del deep learning.</mark> Robusto, poco sensibile al tuning.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Adam, in due medie mobili <span class="tag">momento primo e secondo del gradiente</span></div>
+    <div class="f-body">
+      \[ \vv{m} \leftarrow \beta_1\vv{m} + (1-\beta_1)\vv{g}, \quad
+         \vv{s} \leftarrow \beta_2\vv{s} + (1-\beta_2)\vv{g}\odot\vv{g}, \quad
+         \vv{\theta} \leftarrow \vv{\theta} - \eta\,\frac{\hat{\vv{m}}}{\sqrt{\hat{\vv{s}}}+\epsilon} \]
+    </div>
+    <div class="f-note">
+      \(\vv{m}\) è la direzione media (il momentum), \(\vv{s}\) la scala tipica di ciascun gradiente (per
+      normalizzare il passo). Dividendo \(\vv{m}\) per \(\sqrt{\vv{s}}\), ogni parametro riceve un passo
+      <b>adattato alla propria geometria</b> (i cappelli sono una correzione del bias iniziale). <mark>In pratica
+      Adam «funziona e basta» con il learning rate di default</mark>, ed è per questo che è il primo ottimizzatore
+      che quasi tutti provano.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Metodi approssimati del secondo ordine</h2>
+
+  <p class="lead">
+    Il metodo di Newton userebbe la curvatura (l'Hessiana, §4.4) per fare il passo perfetto. Per le reti è
+    impraticabile — ma si può <b>approssimare</b>.
+  </p>
+
+  <p>
+    Newton fa \(\vv{\theta}\leftarrow\vv{\theta}-\mm{H}\inv\grad f\): usa l'inversa dell'Hessiana per adattarsi
+    perfettamente alla curvatura, convergendo in pochissimi passi su una quadratica. Il problema:
+    \(\mm{H}\) ha (n. parametri)² elementi — per una rete con milioni di pesi, impossibile da formare, e ancor
+    meno da invertire. I metodi <b>quasi-Newton</b> (L-BFGS) e la <b>curvatura senza Hessiana</b> la stimano
+    implicitamente, ma <mark>in deep learning restano di nicchia</mark>: i metodi del primo ordine con momentum e
+    adattività (Adam) vincono per semplicità e scalabilità. La curvatura, però, resta la spiegazione teorica di
+    <em>perché</em> quei metodi funzionano.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Meta-algoritmi: batch normalization</h2>
+
+  <p class="lead">
+    Non un ottimizzatore, ma un <b>strato</b> che si infila nella rete e ne rivoluziona l'addestrabilità: la
+    <b>batch normalization</b>. Forse il singolo trucco più impattante dopo la ReLU.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Batch normalization <span class="tag">normalizza le attivazioni di ogni strato</span></div>
+    <div class="f-body">
+      \[ \hat{\vv{h}} = \frac{\vv{h} - \mu_{\text{batch}}}{\sqrt{\sigma^2_{\text{batch}}+\epsilon}}, \qquad
+         \vv{y} = \gamma\,\hat{\vv{h}} + \beta \]
+    </div>
+    <div class="f-note">
+      Ad ogni strato, la batch norm <b>ricentra e riscala</b> le attivazioni usando media e varianza calcolate
+      sul mini-batch, poi le riscala di nuovo con due parametri appresi \(\gamma,\beta\). Perché aiuta? Mantiene
+      le attivazioni in un regime «sano» (né saturate né esplose) strato dopo strato, rendendo la loss molto più
+      liscia da ottimizzare. <mark>In pratica permette learning rate più alti, convergenza molto più rapida, e
+      agisce anche da lieve regolarizzatore</mark> (il rumore del batch). È quasi ovunque nelle reti moderne di
+      visione.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>Ottimizzare per imparare ≠ ottimizzare e basta: minimizziamo un <b>surrogato</b> e ci fermiamo prima
+          del minimo esatto (§8.1). Gli ostacoli veri sono <b>selle</b>, valli storte e gradienti che
+          esplodono/svaniscono (§8.2).</li>
+      <li>Il <b>momentum</b> aggiunge inerzia: cancella lo zig-zag e accelera lungo il fondo della valle (§8.3,
+          widget).</li>
+      <li>L'<b>inizializzazione</b> (Xavier/He) tiene la varianza dei segnali sotto controllo (§8.4). I metodi
+          <b>adattivi</b> danno a ogni parametro il suo passo; <b>Adam</b> è il default (§8.5).</li>
+      <li>La <b>batch normalization</b> normalizza le attivazioni strato per strato: convergenza più rapida,
+          learning rate più alti, un pizzico di regolarizzazione (§8.7).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con reti (6), regolarizzazione (7) e ottimizzazione (8) sappiamo addestrare un MLP generico. Ma per immagini,
+    suoni e sequenze servono architetture <em>specializzate</em>. Il <strong>Capitolo 9</strong> introduce le
+    <b>reti convoluzionali</b>: la condivisione dei pesi (§7.7) portata al suo trionfo, l'architettura che ha
+    fatto esplodere la visione artificiale.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-8"><span class="secnum">Sezione 8.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §8.3, con la valle molto storta, confronta la traiettoria a \(\beta=0\) (SGD puro) e
+      \(\beta=0{,}9\). Cosa cambia nel numero di passi e nella forma del cammino? Perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Perché inizializzare tutti i pesi di uno strato a zero (o allo stesso valore) impedisce alla rete di
+      imparare? Cosa succede ai gradienti di neuroni identici?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      In una parola per ciascuno: cosa aggiunge Adam rispetto (a) all'SGD puro e (b) a RMSProp? Perché è il primo
+      ottimizzatore che quasi tutti provano?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) I minimi locali sono il principale ostacolo all'addestramento di reti profonde. &nbsp;
+      (b) Il momentum aiuta soprattutto nelle valli malcondizionate. &nbsp;
+      (c) Il metodo di Newton è pratico per reti con milioni di parametri. &nbsp;
+      (d) La batch normalization permette di usare learning rate più alti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-9"><span class="secnum">Sezione 8.9</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      A \(\beta=0\) la traiettoria <b>zig-zaga</b> tra le pareti ripide della valle e avanza lentissimo lungo il
+      fondo: tanti passi. A \(\beta=0{,}9\) le oscillazioni trasversali si <b>cancellano</b> (slancio opposto tra
+      un passo e l'altro), mentre la componente lungo il fondo si <b>accumula</b>: il cammino si raddrizza e
+      arriva al minimo in molti meno passi. <mark>L'inerzia media via il rumore e amplifica la direzione
+      costante.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      Se due neuroni dello stesso strato partono <b>identici</b>, ricevono lo stesso input, producono la stessa
+      uscita e — per simmetria — lo <b>stesso gradiente</b>: si aggiornano in modo identico e restano identici
+      per sempre. Lo strato si comporta come se avesse un solo neurone. Servono valori <b>casuali</b> per
+      <b>rompere la simmetria</b> e far specializzare i neuroni.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      (a) Rispetto all'SGD, Adam aggiunge <b>adattività</b> (un passo per parametro) — e anche momentum. (b)
+      Rispetto a RMSProp, Adam aggiunge il <b>momentum</b> (la media mobile del gradiente, non solo del suo
+      quadrato). È il primo che si prova perché è <b>robusto</b>: funziona bene con il learning rate di default,
+      senza troppo tuning.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> In alta dimensione dominano le <b>selle</b>, non i minimi locali (§8.2, §4.4). <br>
+      <b>(b) VERO.</b> Il momentum cancella lo zig-zag tipico delle valli storte, accelerando lungo il fondo
+      (§8.3). <br>
+      <b>(c) FALSO.</b> L'Hessiana ha (n. parametri)² elementi: impraticabile per reti grandi; si usano metodi
+      del primo ordine (§8.6). <br>
+      <b>(d) VERO.</b> Normalizzando le attivazioni, la batch norm rende la loss più liscia e consente passi più
+      grandi (§8.7).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §8.3 — SGD vs momentum sulla valle malcondizionata
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wm-svg');
+  if (!svg) return;
+  const out = document.getElementById('wm-out');
+  const lrI = document.getElementById('wm-lr'), bI = document.getElementById('wm-b');
+  const lrO = document.getElementById('wm-lr-o'), bO = document.getElementById('wm-b-o');
+  let start = [-3.4, 1.9];
+  const KAP = 14;                       // valle molto storta
+
+  function run(eta, beta) {
+    let x = start[0], y = start[1], vx = 0, vy = 0;
+    const path = [[x, y]];
+    let steps = 0, diverged = false;
+    for (let i = 0; i < 120; i++) {
+      const gx = x, gy = KAP * y;
+      vx = beta * vx - eta * gx; vy = beta * vy - eta * gy;
+      x += vx; y += vy;
+      path.push([x, y]); steps++;
+      if (!isFinite(x) || Math.hypot(x, y) > 14) { diverged = true; break; }
+      if (Math.hypot(x, y) < 0.03) break;
+    }
+    return { path, steps, diverged };
+  }
+
+  function drawPath(p, res, color) {
+    for (let i = 1; i < res.path.length; i++) {
+      const a = res.path[i - 1], b = res.path[i];
+      p.line(a[0], a[1], Math.max(-4, Math.min(4, b[0])), Math.max(-3, Math.min(3, b[1])), { color, width: 1.7 });
+    }
+    for (const q of res.path) if (Math.abs(q[0]) <= 4 && Math.abs(q[1]) <= 3) p.dot(q[0], q[1], { color, r: 2.4 });
+  }
+
+  function draw() {
+    const eta = parseFloat(lrI.value), beta = parseFloat(bI.value);
+    lrO.textContent = fmt(eta, 3); bO.textContent = fmt(beta, 2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -3, ymax: 3, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true });
+    p.contour((x, y) => 0.5 * (x * x + KAP * y * y), [0.5, 1.5, 3, 5, 8], { color: 'color-mix(in srgb, var(--accent) 40%, var(--paper))', width: 1.2 });
+    const plain = run(eta, 0);
+    const mom = run(eta, beta);
+    drawPath(p, plain, 'color-mix(in srgb, var(--warm) 55%, transparent)');   // SGD puro
+    drawPath(p, mom, 'var(--green)');                                          // momentum
+    p.dot(0, 0, { color: 'var(--violet)', r: 5 });
+    p.handle(start[0], start[1], { color: 'var(--accent)' }, (x, y) => { start = [x, y]; draw(); });
+
+    out.innerHTML = `
+      <div class="big">
+        <b style="color:var(--warm)">SGD (β=0): ${plain.diverged ? 'diverge' : plain.steps + ' passi'}</b> &nbsp;vs&nbsp;
+        <b style="color:var(--green)">momentum (β=${fmt(beta, 2)}): ${mom.diverged ? 'diverge' : mom.steps + ' passi'}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Stessa valle storta, stesso η. Il cammino <b style="color:var(--warm)">arancione chiaro</b> è l'SGD puro
+        (zig-zag); quello <b style="color:var(--green)">verde</b> ha il momentum.
+        ${beta >= 0.5 && !mom.diverged && (mom.steps < plain.steps || plain.diverged)
+          ? '<mark>Il momentum raddrizza il cammino e arriva al minimo molto prima.</mark>'
+          : beta < 0.3 ? 'Alza β verso 0,9 per vedere il momentum in azione.'
+          : mom.diverged ? '<mark>β troppo alto con questo η: il momentum accumula troppo slancio e scavalca. Abbassa η o β.</mark>'
+          : 'Confronta i due cammini al variare di β.'}
+      </div>`;
+  }
+  lrI.addEventListener('input', draw); bI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
