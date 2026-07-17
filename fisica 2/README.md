@@ -37,7 +37,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 9 — L'induzione elettromagnetica
 - [x] 10 — L'induttanza
 - [x] 11 — Le correnti alternate
-- [ ] 12 — Le onde elettromagnetiche
+- [x] 12 — Le onde elettromagnetiche
 
 ### Ottica
 - [ ] 13 — La natura e la propagazione della luce

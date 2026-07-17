@@ -177,7 +177,7 @@ const TOC = [
     n: 12,
     titolo: "Le onde elettromagnetiche",
     file: "cap12-onde-em.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Le equazioni di Maxwell" },
       { id: "s12-2", n: "12.2", t: "Le onde elettromagnetiche" },
