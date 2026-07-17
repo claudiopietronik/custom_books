@@ -331,7 +331,7 @@ const TOC = [
     n: 19,
     titolo: "PCA",
     file: "cap19-pca.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "PCA: interpretazioni e applicazioni" },
       { id: "s19-2", n: "19.2", t: "Come si esegue una PCA" },

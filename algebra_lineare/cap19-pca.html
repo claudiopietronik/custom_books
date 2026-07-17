@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 · PCA — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="19">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 19</div>
+    <h1>PCA — Analisi delle componenti principali</h1>
+    <p class="standfirst">
+      Il gran finale. Un dataset con cento variabili, ma che in realtà «vive» lungo due o tre direzioni: la
+      PCA le trova. È il momento in cui <mark>ogni pezzo del libro si incastra</mark> — prodotto scalare,
+      proiezioni, autovettori, forma quadratica, covarianza, SVD — in un unico algoritmo. Diagonalizzi la
+      matrice di covarianza, tieni gli autovettori dominanti, e hai ridotto la dimensione dei dati
+      conservando quel che conta.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prima <em>cosa</em> fa la PCA e a cosa serve (§19.1), poi la <b>ricetta</b> operativa passo per passo
+      (§19.2). Il cuore è l'<b>algebra</b> (§19.3): perché gli autovettori della covarianza sono le direzioni
+      di massima varianza — è il teorema di Rayleigh del §17.4 applicato alla matrice del §18.5. Chiudiamo con
+      la <b>regolarizzazione</b> per i casi difficili (§19.4) e con l'onestà intellettuale: <b>quando la PCA
+      <em>non</em> è la scelta giusta</b> (§19.5). Poi il libro finisce (Cap. 20).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il finale che raccoglie tutto</div>
+    <p>
+      La PCA è ovunque nella scienza dei dati: comprimere immagini, visualizzare dati ad alta dimensione in
+      2D, togliere rumore, estrarre caratteristiche prima di un modello, riconoscere volti («eigenfaces»),
+      studiare la genetica delle popolazioni. <mark>Ogni volta che hai troppe variabili e sospetti che siano
+      ridondanti, la PCA è la prima mossa.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Ma per noi è soprattutto il <b>punto d'arrivo</b>: non introduce quasi nulla di nuovo. È una proiezione
+      (Cap. 13) sui primi autovettori (Cap. 15) della matrice di covarianza (Cap. 18), scelti perché
+      massimizzano una forma quadratica (Cap. 17), e calcolabile con la SVD (Cap. 16). Se capisci la PCA, hai
+      capito il libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-1"><span class="secnum">Sezione 19.1</span>PCA: interpretazioni e applicazioni</h2>
+
+  <p class="lead">
+    La PCA fa una cosa sola, che si può raccontare in tre modi — tutti veri, tutti utili a seconda di cosa ti
+    serve.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Tre modi di dire la stessa cosa</div>
+    <ul style="margin-bottom:0">
+      <li><b>Massima varianza.</b> La PCA trova le direzioni lungo cui i dati si <em>allargano</em> di più, in
+          ordine di importanza. La prima componente è la direzione di massima dispersione, la seconda la
+          migliore tra quelle perpendicolari alla prima, e così via.</li>
+      <li><b>Riduzione di dimensione.</b> Proiettando i dati sulle prime \(k\) direzioni, li descrivi con
+          \(k\) numeri invece di \(d\), perdendo il <em>minimo</em> possibile. È la compressione del §16.8, sui
+          dati.</li>
+      <li><b>Decorrelazione.</b> La PCA ruota gli assi in modo che le nuove variabili siano
+          <em>scorrelate</em> tra loro: nel nuovo sistema, la matrice di covarianza diventa diagonale. Elimina
+          la ridondanza.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'idea in una figura</div>
+    <p style="margin-bottom:0">
+      Immagina una nuvola di punti a forma di sigaro obliquo. Gli assi \(x\) e \(y\) originali non dicono
+      granché: la vera struttura è «lungo il sigaro» e «di traverso al sigaro». La PCA <mark>gira gli assi per
+      allinearli al sigaro</mark>: la prima componente lungo la lunghezza (dove c'è tanta varianza), la
+      seconda lungo lo spessore (poca). Se lo spessore è trascurabile, butti la seconda componente e il sigaro
+      diventa un segmento — da 2 dimensioni a 1, quasi senza perdita. Il widget del §19.3 è questo sigaro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-2"><span class="secnum">Sezione 19.2</span>Come si esegue una PCA</h2>
+
+  <p class="lead">
+    La ricetta è breve e usa solo cose che sai già fare. Cinque passi, dall'inizio alla fine.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La procedura, cinque passi</div>
+    <ol style="margin-bottom:0">
+      <li><b>Centra i dati.</b> Togli a ogni variabile (colonna di \(\mm{X}\)) la sua media (§18.2). Se le
+          variabili hanno unità diverse, <em>standardizzale</em> anche (dividi per \(\sigma\)) — cioè lavora
+          sulla correlazione anziché sulla covarianza (§18.6, §19.4).</li>
+      <li><b>Calcola la matrice di covarianza</b> \(\mm{C} = \frac{1}{n-1}\mm{X}\T\mm{X}\) (§18.5).</li>
+      <li><b>Diagonalizza:</b> trova autovalori e autovettori di \(\mm{C}\), cioè
+          \(\mm{C} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\) (§15.8). Ordina gli autovalori dal più grande al più
+          piccolo.</li>
+      <li><b>Scegli quante componenti tenere.</b> Ogni autovalore \(\lambda_i\) è la <em>varianza</em> lungo la
+          sua componente; la frazione \(\lambda_i / \sum_j \lambda_j\) è la varianza spiegata. Tieni le prime
+          \(k\) che coprono, diciamo, il 90–95% (lo <em>scree plot</em> del §16.9).</li>
+      <li><b>Proietta:</b> i nuovi dati sono \(\mm{Y} = \mm{X}\mm{Q}_k\), con \(\mm{Q}_k\) = le prime \(k\)
+          colonne di autovettori. Da \(d\) a \(k\) dimensioni.</li>
+    </ol>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> In pratica si usa la SVD, non la covarianza</div>
+    <p style="margin-bottom:0">
+      Costruire \(\mm{C} = \mm{X}\T\mm{X}\) e poi diagonalizzarla è concettualmente limpido, ma
+      numericamente <em>peggiora</em> il condizionamento (i valori si elevano al quadrato, §16.10). I software
+      fanno invece la <b>SVD di \(\mm{X}\)</b> direttamente: se \(\mm{X} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\)
+      (§16.1), allora \(\mm{C} = \frac{1}{n-1}\mm{V}\boldsymbol{\Sigma}^2\mm{V}\T\), quindi <mark>i vettori
+      singolari destri \(\mm{V}\) sono già le componenti principali</mark> e \(\sigma_i^2/(n-1)\) sono le
+      varianze \(\lambda_i\). Stesso risultato, più stabile. La SVD del Cap. 16 non era un esercizio: era
+      questo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-3"><span class="secnum">Sezione 19.3</span>L'algebra della PCA</h2>
+
+  <p class="lead">
+    Perché <em>proprio</em> gli autovettori della covarianza? Non è una scelta arbitraria: è l'unica risposta
+    alla domanda «quale direzione massimizza la varianza?». E quella domanda l'abbiamo già risolta nel §17.4.
+  </p>
+
+  <p>
+    La varianza dei dati <b>proiettati</b> su una direzione unitaria \(\vv{w}\) è la forma quadratica della
+    covarianza in quella direzione:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La varianza lungo w è wᵀCw <span class="tag">proiezione + varianza</span></div>
+    <div class="f-body">
+      \[
+        \operatorname{Var}(\mm{X}\vv{w}) = \frac{1}{n-1}(\mm{X}\vv{w})\T(\mm{X}\vv{w})
+        = \vv{w}\T\!\left(\tfrac{1}{n-1}\mm{X}\T\mm{X}\right)\!\vv{w}
+        = \vv{w}\T\mm{C}\,\vv{w}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{X}\vv{w}\)</dt>
+        <dd>la proiezione dei dati (centrati) sulla direzione \(\vv{w}\) (§13.1): un numero per misura, le
+            «coordinate lungo \(\vv{w}\)».</dd>
+        <dt>\(\vv{w}\T\mm{C}\vv{w}\)</dt>
+        <dd>la loro varianza è la <b>forma quadratica</b> della covarianza (§17.1). Massimizzarla su
+            \(\norm{\vv{w}} = 1\) è il quoziente di Rayleigh (§17.4): <mark>il massimo è \(\lambda_{\max}\),
+            raggiunto sull'autovettore \(\vv{q}_1\).</mark></dd>
+        <dt>le componenti successive</dt>
+        <dd>la seconda componente massimizza la varianza <em>tra le direzioni ortogonali a \(\vv{q}_1\)</em>:
+            è \(\vv{q}_2\), con varianza \(\lambda_2\). E così via. Gli autovettori, ordinati per autovalore,
+            <b>sono</b> le componenti principali.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La firma della decorrelazione: nelle nuove coordinate \(\mm{Y} = \mm{X}\mm{Q}\), la covarianza diventa
+      \(\operatorname{Cov}(\mm{Y}) = \mm{Q}\T\mm{C}\mm{Q} = \boldsymbol{\Lambda}\), <b>diagonale</b> (§15.8).
+      Fuori diagonale, zeri: le componenti principali sono <mark>scorrelate</mark>. La PCA è la rotazione che
+      diagonalizza la covarianza.
+    </div>
+  </div>
+
+  <p>
+    Sul dataset del §18.5 (\(\vv{x} = (1,2,3,4)\), \(\vv{y} = (1,3,2,4)\)), avevamo
+    \(\mm{C} = \begin{bmatrix} 5/3 &amp; 4/3 \\ 4/3 &amp; 5/3 \end{bmatrix}\), con \(\lambda_1 = 3\)
+    (autovettore \(\tfrac{1}{\sqrt2}(1,1)\)) e \(\lambda_2 = \tfrac13\) (autovettore \(\tfrac{1}{\sqrt2}(1,-1)\)).
+    La varianza totale è \(\tr(\mm{C}) = \tfrac{10}{3}\), quindi la prima componente spiega
+    \[
+      \frac{\lambda_1}{\lambda_1 + \lambda_2} = \frac{3}{10/3} = \frac{9}{10} = 90\%
+    \]
+    della varianza. <mark>Proiettando su \(\vv{q}_1\) soltanto, da 2 dimensioni a 1, conservi il 90% dei
+    dati.</mark> Nel widget, premi «proietta» e guarda i punti schiacciarsi sull'asse principale.
+  </p>
+
+  <div class="widget" id="w-pca">
+    <div class="w-head">
+      <span>PCA: proietta sulla prima componente</span>
+      <span class="hint">trascina i punti · premi «proietta su PC1»</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-svg" viewBox="0 0 560 400" role="img" aria-label="PCA di una nuvola di punti: proiezione sulla prima componente principale con varianza spiegata"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wp-proj">proietta su PC1</button>
+      <button class="w-btn" id="wp-reset">nuvola completa</button>
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Massima varianza = minima perdita</div>
+    <p style="margin-bottom:0">
+      C'è una dualità elegante (è di nuovo Pitagora, §13.3). Tenere la direzione di <b>massima varianza</b> è
+      la stessa cosa che <b>minimizzare l'errore di proiezione</b> — la distanza dei punti dalla retta su cui
+      li schiacci. Massimizzare la varianza conservata e minimizzare l'informazione persa sono <em>lo stesso
+      problema</em>, guardato dai due lati. La PCA è i minimi quadrati (Cap. 14) girati dall'altra parte: non
+      la retta che passa <em>tra</em> i punti, ma la retta lungo cui i punti si <em>distendono</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-4"><span class="secnum">Sezione 19.4</span>Regolarizzazione</h2>
+
+  <p class="lead">
+    Nel mondo reale la matrice di covarianza può essere mal condizionata o addirittura singolare — tipico
+    quando hai <em>più variabili che misure</em> (\(d &gt; n\)), come in genetica o nelle immagini. La cura è
+    la stessa vista in tutto il libro: lo shifting.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regolarizzazione (shrinkage) <span class="tag">somma λI, §7.9</span></div>
+    <div class="f-body">
+      \[ \mm{C}_{\text{reg}} = \mm{C} + \gamma\,\mm{I} \qquad (\gamma \ge 0) \]
+    </div>
+    <div class="f-note">
+      Sommare \(\gamma\mm{I}\) alza <em>tutti</em> gli autovalori di \(\gamma\) (§7.9): quelli quasi nulli si
+      staccano da zero, la matrice torna definita positiva e invertibile, il condizionamento \(\kappa\)
+      migliora (§16.10). È la <b>ridge regression</b> del §14.4 applicata alla covarianza, ed è il ponte con la
+      regolarizzazione del machine learning. Il parametro \(\gamma\) bilancia fedeltà ai dati (piccolo
+      \(\gamma\)) e stabilità (grande \(\gamma\)).
+    </div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> Standardizzare o no? (covarianza vs correlazione)</div>
+    <p style="margin-bottom:0">
+      L'altra decisione «di regolarizzazione» è del §18.6: fare la PCA sulla <b>covarianza</b> o sulla
+      <b>correlazione</b>? Se una variabile è in metri e un'altra in millimetri, la prima avrà varianza enorme
+      solo per via delle unità, e dominerà la PC1 <em>senza motivo</em>. Standardizzare (PCA sulla
+      correlazione) mette tutte le variabili sullo stesso piano. Regola pratica: <mark>unità diverse →
+      standardizza</mark>; stesse unità e le scale contano → covarianza grezza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-5"><span class="secnum">Sezione 19.5</span>La PCA è sempre la scelta giusta?</h2>
+
+  <p class="lead">
+    No — e sapere <em>quando non usarla</em> è segno di maturità, non di sfiducia. La PCA è potente ma fa tre
+    assunzioni forti, e ognuna può tradirti.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> I tre limiti da conoscere</div>
+    <ul style="margin-bottom:0">
+      <li><b>È lineare.</b> La PCA trova solo direzioni <em>rette</em>. Se i dati vivono su una spirale o su
+          una superficie curva, li appiattisce male. Per la struttura non lineare servono altri strumenti
+          (kernel PCA, t-SNE, UMAP, autoencoder) — la stessa cecità dei minimi quadrati (§18.4).</li>
+      <li><b>Assume che varianza = importanza.</b> Non è sempre vero! A volte l'informazione utile sta in una
+          direzione di <em>piccola</em> varianza. In una classificazione, la direzione che separa due classi
+          può avere varianza minima: la PCA la butterebbe. Se hai delle <em>etichette</em>, un metodo
+          supervisionato (come l'LDA, l'autodecomposizione generalizzata del §15.12) è spesso migliore.</li>
+      <li><b>Le componenti possono essere difficili da interpretare.</b> Una componente principale è una
+          <em>combinazione</em> di tutte le variabili originali («0.3·altezza − 0.7·età + …»): matematicamente
+          pulita, ma non sempre dotata di significato concreto.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La regola d'oro</div>
+    <p style="margin-bottom:0">
+      Usa la PCA quando sospetti <b>ridondanza lineare</b> (variabili correlate che dicono cose simili) e
+      vuoi <b>comprimere, visualizzare o decorrelare</b> senza etichette. Diffidane quando la struttura è
+      <b>non lineare</b>, quando <b>conta l'interpretabilità</b>, o quando hai un <b>obiettivo
+      supervisionato</b> per cui la varianza non è la bussola giusta. <mark>La PCA è un martello eccellente:
+      assicurati solo che il tuo problema sia un chiodo.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 19</div>
+    <ol style="margin-bottom:0">
+      <li><b>La PCA</b> trova le direzioni di <mark>massima varianza</mark>, in ordine: comprime, visualizza e
+          decorrela i dati (§19.1). Tre facce di un'unica operazione.</li>
+      <li><b>La ricetta</b> (§19.2): centra (ed eventualmente standardizza) → covarianza \(\mm{C}\) →
+          diagonalizza \(\mm{C} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\) → tieni le prime \(k\) componenti →
+          proietta \(\mm{Y} = \mm{X}\mm{Q}_k\). In pratica via <b>SVD di \(\mm{X}\)</b>, più stabile.</li>
+      <li><b>Il perché</b> (§19.3): la varianza lungo \(\vv{w}\) è \(\vv{w}\T\mm{C}\vv{w}\); massimizzarla
+          (Rayleigh, §17.4) dà l'autovettore dominante. Le componenti sono gli <b>autovettori della
+          covarianza</b>, le varianze sono gli <b>autovalori</b>, e nelle nuove coordinate la covarianza è
+          <b>diagonale</b>.</li>
+      <li><b>Regolarizzazione</b> (§19.4): \(\mm{C} + \gamma\mm{I}\) per i casi mal condizionati o
+          \(d &gt; n\); standardizza quando le unità sono diverse.</li>
+      <li><b>Limiti</b> (§19.5): la PCA è <b>lineare</b>, assume <b>varianza = importanza</b>, e dà componenti
+          non sempre interpretabili. Grande per la ridondanza lineare non supervisionata; sbagliata per
+          struttura curva o obiettivi con etichette.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Guarda cosa è appena successo: per capire la PCA hai usato il <b>prodotto scalare</b> (Cap. 3), le
+    <b>proiezioni</b> (Cap. 13), i <b>minimi quadrati</b> (Cap. 14), gli <b>autovettori</b> (Cap. 15), la
+    <b>SVD</b> (Cap. 16), la <b>forma quadratica</b> (Cap. 17) e la <b>covarianza</b> (Cap. 18). Nessun
+    concetto nuovo — solo tutti quelli vecchi, che si tengono per mano. <em>Questa</em> è l'algebra lineare:
+    poche idee, infinite combinazioni. Nel <b>Capitolo 20</b>, due parole per chiudere il cerchio.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise.
+   ========================================================================= */
+const nfmt = (v, d = 2) => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(d);
+};
+const norm = a => Math.hypot(...a);
+
+function eig2sym(A) {
+  const a = A[0][0], b = A[0][1], d = A[1][1];
+  if (Math.abs(b) < 1e-12) {
+    return a >= d ? [{ lam: a, v: [1, 0] }, { lam: d, v: [0, 1] }]
+                  : [{ lam: d, v: [0, 1] }, { lam: a, v: [1, 0] }];
+  }
+  const m = (a + d) / 2, disc = Math.hypot((a - d) / 2, b);
+  const l1 = m + disc, l2 = m - disc;
+  const vec = l => { const v = [l - d, b]; const n = norm(v) || 1; return [v[0] / n, v[1] / n]; };
+  return [{ lam: l1, v: vec(l1) }, { lam: l2, v: vec(l2) }];
+}
+
+function stats(P) {
+  const n = P.length;
+  const mx = P.reduce((s, p) => s + p[0], 0) / n;
+  const my = P.reduce((s, p) => s + p[1], 0) / n;
+  let sxx = 0, syy = 0, sxy = 0;
+  for (const [x, y] of P) { const dx = x - mx, dy = y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+  const den = Math.max(1, n - 1);
+  return { mean: [mx, my], C: [[sxx / den, sxy / den], [sxy / den, syy / den]] };
+}
+
+
+/* ============================================================================
+   WIDGET §19.3 — PCA: proiezione sulla prima componente
+   Mostra gli assi principali e, premendo "proietta", schiaccia i punti su PC1,
+   con i segmenti di errore e la percentuale di varianza conservata.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wp-out');
+  const p = new Plot(svg, { xmin: -0.5, xmax: 5.5, ymin: -0.5, ymax: 5.5 });
+
+  let P = [[1, 1], [2, 3], [3, 2], [4, 4]];     // dataset del Cap. 18 (PC1 = 90%)
+  let projected = false;
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const { mean, C } = stats(P);
+    const eig = eig2sym(C);
+    const [{ lam: l1, v: v1 }, { lam: l2, v: v2 }] = eig;
+    const tot = l1 + l2 || 1;
+    const pct1 = 100 * l1 / tot, pct2 = 100 * l2 / tot;
+
+    // assi principali (autovettori attraverso la media, lunghezza ∝ √λ)
+    const s1 = 2 * Math.sqrt(Math.max(l1, 0)), s2 = 2 * Math.sqrt(Math.max(l2, 0));
+    p.line(mean[0] - s1 * v1[0], mean[1] - s1 * v1[1], mean[0] + s1 * v1[0], mean[1] + s1 * v1[1],
+      { color: 'var(--violet)', width: 2.4 });
+    p.line(mean[0] - s2 * v2[0], mean[1] - s2 * v2[1], mean[0] + s2 * v2[0], mean[1] + s2 * v2[1],
+      { color: 'var(--warm)', width: 1.6, dash: '4 3' });
+    p.text(mean[0] + s1 * v1[0], mean[1] + s1 * v1[1], 'PC1', { color: 'var(--violet)', bold: true, dy: -8 });
+
+    // proiezioni su PC1: piede = media + ((q-media)·v1) v1
+    P.forEach((q) => {
+      const t = (q[0] - mean[0]) * v1[0] + (q[1] - mean[1]) * v1[1];
+      const foot = [mean[0] + t * v1[0], mean[1] + t * v1[1]];
+      if (projected) {
+        p.line(q[0], q[1], foot[0], foot[1], { color: 'var(--ink-faint)', width: 1.2, dash: '3 3' });
+        p.dot(foot[0], foot[1], { color: 'var(--violet)', r: 5 });
+      }
+    });
+    p.dot(mean[0], mean[1], { color: 'var(--ink-soft)', r: 3.5 });
+    // punti originali (trascinabili se non proiettati; comunque mostrati)
+    P.forEach((q, i) => p.handle(q[0], q[1], { color: 'var(--accent)', r: projected ? 4 : 6 },
+      (x, y) => { P[i] = [x, y]; draw(); }));
+
+    out.innerHTML = `
+      <div class="big">
+        PC1 spiega <b style="color:var(--violet)">${nfmt(pct1, 1)}%</b> della varianza
+        &nbsp;·&nbsp; PC2 il <b style="color:var(--warm)">${nfmt(pct2, 1)}%</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        λ₁ = ${nfmt(l1)}, λ₂ = ${nfmt(l2)} (le varianze lungo le due componenti).
+        ${projected
+          ? 'I punti <span style="color:var(--violet)">viola</span> sono la proiezione su <b>PC1</b>: da 2D a 1D. I trattini sono l\'<b>errore</b> — e la loro varianza è esattamente λ₂ = ' + nfmt(l2) + ' (il ' + nfmt(pct2, 1) + '% buttato). <mark>Conservi il ' + nfmt(pct1, 1) + '%.</mark>'
+          : 'L\'asse <span style="color:var(--violet)">viola</span> è la direzione di massima varianza. Premi «proietta» per ridurre a 1 dimensione lungo di essa, o trascina i punti per cambiare la forma della nuvola.'}
+      </div>`;
+  }
+
+  document.getElementById('wp-proj').onclick = () => { projected = true; draw(); };
+  document.getElementById('wp-reset').onclick = () => { projected = false; draw(); };
+  draw();
+})();
+</script>
+</body>
+</html>
