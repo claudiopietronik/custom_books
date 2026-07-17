@@ -75,7 +75,7 @@ const TOC = [
     titolo: "Calcolo numerico",
     file: "cap04-calcolo-numerico.html",
     parte: P1,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Overflow e underflow" },
       { id: "s4-2", n: "4.2", t: "Il malcondizionamento" },

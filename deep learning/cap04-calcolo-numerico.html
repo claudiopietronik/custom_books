@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Calcolo numerico — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4 · Parte I</div>
+    <h1>Calcolo numerico</h1>
+    <p class="standfirst">
+      Un computer non fa matematica esatta: usa numeri a precisione finita, e questo apre voragini —
+      <b>overflow</b>, <b>underflow</b>, errori che si amplificano. Ma il cuore di questo capitolo è un altro:
+      l'<b>ottimizzazione basata sul gradiente</b>, cioè <mark>la discesa del gradiente</mark>, il motore che
+      addestra ogni rete neurale esistente. La regola è ridicolmente semplice — «vai in discesa» — e la vedrai
+      dal vivo, con tutti i modi in cui può andare storta.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le insidie dei numeri finiti: <b>overflow e underflow</b> (§4.1) e il <b>malcondizionamento</b> (§4.2).
+      Poi il protagonista: l'<b>ottimizzazione basata sul gradiente</b> (§4.3, con il widget della discesa) e
+      cosa aggiungono le derivate seconde — <b>Jacobiana e Hessiana</b> (§4.4). Un accenno all'<b>ottimizzazione
+      vincolata</b> (§4.5) e infine un esempio completo che unisce tutto: i <b>minimi quadrati lineari</b> (§4.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Addestrare una rete significa <b>minimizzare una funzione di costo</b> \(\Loss(\vv{\theta})\) rispetto a
+      milioni di parametri \(\vv{\theta}\). Non esiste una formula chiusa: si procede a piccoli passi, ognuno
+      nella direzione in cui il costo scende più ripidamente — l'opposto del <b>gradiente</b>. Tutto il deep
+      learning, dai primi percettroni ai transformer, gira su questa singola idea. <mark>Capire la discesa del
+      gradiente — e perché il tasso di apprendimento è il parametro più delicato — è capire l'addestramento.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>Overflow e underflow</h2>
+
+  <p class="lead">
+    I numeri reali sono infiniti; un <code>float</code> a 32 bit no. Quando un calcolo esce dall'intervallo
+    rappresentabile, il risultato è spazzatura — e a volte silenziosa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Le due rovine</div>
+    <p style="margin-bottom:0">
+      L'<span class="termine">underflow</span> avviene quando un numero vicino a zero viene arrotondato a zero:
+      innocuo, finché non ci dividi o non ne prendi il logaritmo (\(\log 0 = -\infty\)). L'<span
+      class="termine">overflow</span> è l'opposto: numeri enormi diventano \(\infty\) (o <code>NaN</code>) e
+      infettano ogni calcolo successivo. <mark>Sono la causa numero uno dei <code>NaN</code> che compaiono
+      durante l'addestramento.</mark>
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il softmax stabile <span class="tag">un esempio concreto di difesa</span></div>
+    <div class="f-body">
+      \[ \softmax(\vv{z})_i = \frac{\eu^{z_i}}{\sum_j \eu^{z_j}}
+         = \frac{\eu^{z_i - \max_k z_k}}{\sum_j \eu^{z_j - \max_k z_k}} \]
+    </div>
+    <div class="f-note">
+      Il softmax (l'uscita di ogni classificatore) fa \(\eu^{z_i}\): se qualche \(z_i\) è grande, \(\eu^{z_i}\)
+      va in overflow; se sono tutti molto negativi, il denominatore va in underflow a zero. Il rimedio, usato in
+      <em>ogni</em> libreria: <b>sottrarre il massimo</b> \(\max_k z_k\) da tutti gli \(z\). Il risultato
+      matematico non cambia (numeratore e denominatore si scalano insieme), ma ora l'esponente più grande è
+      \(0\), quindi \(\eu^0=1\): niente overflow. <mark>Non lo scriverai a mano, ma sapere che c'è spiega perché
+      il framework è affidabile.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>Il malcondizionamento</h2>
+
+  <p class="lead">
+    Alcuni problemi sono «fragili»: un input di poco diverso dà un output molto diverso. Sono
+    <b>malcondizionati</b>, e per la discesa del gradiente sono un incubo.
+  </p>
+
+  <p>
+    Il <span class="termine">numero di condizionamento</span> di una matrice è il rapporto tra il suo autovalore
+    più grande e il più piccolo (in modulo): \(\kappa = \abs{\lambda_{\max}/\lambda_{\min}}\). Quando è grande, la
+    funzione è ripidissima lungo una direzione e quasi piatta lungo un'altra — una valle stretta e allungata.
+    Un algoritmo che segue il gradiente <b>zig-zaga</b> tra le pareti ripide della valle avanzando pochissimo
+    lungo il fondo. <mark>Vedrai questo effetto nel widget della prossima sezione</mark>: alza il
+    condizionamento e guarda la traiettoria impazzire.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>L'ottimizzazione basata sul gradiente</h2>
+
+  <p class="lead">
+    Ecco il cuore di tutto. Vogliamo il minimo di \(f(\vv{x})\). La derivata dice come cambia \(f\) se muovo
+    \(\vv{x}\); per ridurre \(f\), mi muovo nella direzione <em>opposta</em> alla derivata. Ripeti. Fine.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La discesa del gradiente <span class="tag">la regola che addestra ogni rete</span></div>
+    <div class="f-body">
+      \[ \vv{x}_{t+1} = \vv{x}_t - \hB{\eta}\,\hA{\grad f(\vv{x}_t)} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\grad f(\vv{x})}\) — il <b>gradiente</b></dt>
+        <dd>il vettore delle derivate parziali \(\left(\pdv{f}{x_1},\dots,\pdv{f}{x_n}\right)\). Punta nella
+            direzione di <b>massima salita</b>; il suo opposto \(-\grad f\) è la <b>massima discesa</b>. Dove il
+            gradiente è nullo siamo in un punto <b>critico</b> (minimo, massimo o sella).</dd>
+        <dt>\(\hB{\eta}\) — il <b>tasso di apprendimento</b></dt>
+        <dd>(<em>learning rate</em>) la lunghezza del passo. <mark>Il singolo iperparametro più importante e più
+            delicato:</mark> troppo piccolo e l'addestramento è lentissimo; troppo grande e il costo oscilla o
+            <b>diverge</b>, scavalcando il minimo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché funziona: localmente ogni funzione liscia somiglia a un piano inclinato, e la direzione di massima
+      discesa di un piano è \(-\grad f\). Facendo passi piccoli, «rotoli» verso il basso. Il prezzo: ti fermi al
+      primo <b>minimo locale</b> che incontri, non necessariamente quello globale. In pratica, nelle reti
+      profonde, questo si è rivelato sorprendentemente poco grave (Cap. 8).
+    </div>
+  </div>
+
+  <p>
+    Il widget mostra la discesa su una <b>valle quadratica</b>. Trascina il punto di partenza, regola il
+    <b>learning rate</b> \(\eta\) e il <b>condizionamento</b> \(\kappa\) (quanto la valle è allungata), poi
+    guarda la traiettoria. Prova i tre regimi: \(\eta\) piccolo (lento ma sicuro), \(\eta\) giusto (dritto al
+    fondo), \(\eta\) troppo grande (<mark>rimbalza e diverge</mark>). Poi alza \(\kappa\) e osserva lo zig-zag
+    del malcondizionamento.
+  </p>
+
+  <div class="widget" id="w-gd">
+    <div class="w-head">
+      <span>La discesa del gradiente</span>
+      <span class="hint">trascina il punto · regola η e κ</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wd-svg" viewBox="0 0 560 420" role="img" aria-label="La traiettoria della discesa del gradiente su una valle quadratica, al variare del tasso di apprendimento e del condizionamento"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>η</label><input type="range" id="wd-lr" min="0.02" max="1.05" step="0.01" value="0.15"><output id="wd-lr-o">0.15</output></div>
+      <div class="w-ctrl"><label>κ</label><input type="range" id="wd-k" min="1" max="20" step="0.5" value="1"><output id="wd-k-o">1</output></div>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Oltre il gradiente: Jacobiana e Hessiana</h2>
+
+  <p class="lead">
+    Il gradiente è la derivata prima. Salendo di un ordine si trovano la <b>Jacobiana</b> (derivate prime di una
+    funzione vettoriale) e la <b>Hessiana</b> (derivate seconde), che descrivono la <em>curvatura</em>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Le derivate di ordine superiore</div>
+    <p style="margin-bottom:0">
+      La <span class="termine">Jacobiana</span> \(\mm{J}\) di una funzione \(\vv{f}:\R^n\to\R^m\) è la matrice
+      \(m\times n\) di tutte le derivate parziali \(J_{i,j}=\pdv{f_i}{x_j}\). La <span
+      class="termine">Hessiana</span> \(\mm{H}\) di una funzione scalare è la matrice delle derivate seconde,
+      \(H_{i,j}=\frac{\partial^2 f}{\partial x_i\,\partial x_j}\): dice come <b>cambia il gradiente</b>, cioè la
+      curvatura. <mark>Gli autovalori dell'Hessiana sono le curvature lungo le direzioni proprie</mark>, e il
+      loro rapporto è esattamente il condizionamento di §4.2.
+    </p>
+  </div>
+
+  <p>
+    A che serve? La Hessiana spiega <em>perché</em> un dato learning rate va bene o male: se la curvatura è
+    forte, un passo che sembrava ragionevole scavalca il minimo. I <b>metodi del secondo ordine</b> (Newton)
+    usano \(\mm{H}\inv\) per fare il passo «perfetto» in una quadratica — ma per una rete con milioni di
+    parametri la Hessiana ha (milioni)² elementi: impraticabile. Da qui gli approcci approssimati del Cap. 8. Un
+    punto critico si classifica dal segno degli autovalori di \(\mm{H}\): tutti positivi = minimo, tutti
+    negativi = massimo, segni misti = <b>sella</b> (il caso dominante in alta dimensione).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>L'ottimizzazione vincolata</h2>
+
+  <p class="lead">
+    A volte non vogliamo il minimo ovunque, ma solo dentro una <b>regione</b> ammessa: pesi di norma limitata,
+    probabilità che sommano a 1. Entrano in gioco i <b>moltiplicatori di Lagrange</b>.
+  </p>
+
+  <p>
+    Per minimizzare \(f(\vv{x})\) sotto un vincolo \(g(\vv{x})=0\), si costruisce la <b>lagrangiana</b>
+    \(\mathcal{L}(\vv{x},\lambda)=f(\vv{x})+\lambda\,g(\vv{x})\) e si cercano i suoi punti critici. Il
+    moltiplicatore \(\lambda\) misura «quanto costa» il vincolo. Con disuguaglianze (\(g(\vv{x})\le 0\)) si
+    generalizza alle condizioni <b>KKT</b>. <mark>Questa è la macchina dietro la regolarizzazione L2 vista come
+    vincolo</mark> (Cap. 7) e dietro le SVM: penalizzare la norma dei pesi equivale a ottimizzare dentro una
+    pallina.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Esempio: minimi quadrati lineari</h2>
+
+  <p class="lead">
+    Mettiamo tutto insieme sul problema più classico: trovare \(\vv{x}\) che minimizza
+    \(f(\vv{x})=\frac12\norm{\mm{A}\vv{x}-\vv{b}}_2^2\). Due strade — chiusa e iterativa — che si incontrano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Minimi quadrati <span class="tag">soluzione chiusa vs discesa del gradiente</span></div>
+    <div class="f-body">
+      \[ \grad f(\vv{x}) = \mm{A}\T(\mm{A}\vv{x}-\vv{b}), \qquad
+         \underbrace{\mm{A}\T\mm{A}\,\vv{x}=\mm{A}\T\vv{b}}_{\text{equazioni normali}}, \qquad
+         \vv{x}_{t+1}=\vv{x}_t-\eta\,\mm{A}\T(\mm{A}\vv{x}_t-\vv{b}) \]
+    </div>
+    <div class="f-note">
+      Ponendo il gradiente a zero si ottengono le <b>equazioni normali</b>, risolte in forma chiusa dalla
+      pseudoinversa (§2.9): \(\vv{x}=\mm{A}^{+}\vv{b}\). Ma la stessa soluzione si raggiunge <b>iterando</b> la
+      discesa del gradiente — ed è questa la via che scaleremo alle reti, dove la forma chiusa non esiste. La
+      velocità di convergenza dipende dal condizionamento di \(\mm{A}\T\mm{A}\): ecco perché il §4.2 non era una
+      digressione. Questo problema <em>è</em> la regressione lineare, il primo modello del Cap. 5.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li>I numeri finiti causano <b>overflow/underflow</b>; le librerie si difendono (es. il softmax che
+          sottrae il massimo, §4.1). Sono la fonte tipica dei <code>NaN</code>.</li>
+      <li>La <b>discesa del gradiente</b> \(\vv{x}\leftarrow\vv{x}-\eta\grad f\) minimizza qualsiasi funzione
+          liscia a piccoli passi in discesa (§4.3). È il motore di ogni rete.</li>
+      <li>Il <b>learning rate</b> \(\eta\) è l'iperparametro critico: piccolo = lento, grande = diverge. Il
+          <b>condizionamento</b> \(\kappa\) fa zig-zagare la discesa (§4.2–4.3, widget).</li>
+      <li>La <b>Hessiana</b> (curvatura) spiega perché; i metodi del secondo ordine la userebbero, ma è troppo
+          grande per le reti (§4.4). I minimi quadrati uniscono forma chiusa e iterazione (§4.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora abbiamo i tre attrezzi: algebra lineare (2), probabilità (3) e ottimizzazione (4). Il
+    <strong>Capitolo 5</strong> li fonde nel primo quadro completo del <b>machine learning</b>: cos'è imparare,
+    overfitting e capacità, la massima verosimiglianza, e — decisivo — le <b>sfide</b> che i metodi classici non
+    superano e che motivano il salto al <em>deep</em>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Sia \(f(x)=x^2\). Scrivi il passo di discesa del gradiente partendo da \(x_0=4\) con \(\eta=0{,}1\).
+      Calcola \(x_1, x_2, x_3\). Verso quale valore converge? Cosa succederebbe con \(\eta=1{,}1\)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Perché nel softmax si sottrae \(\max_k z_k\) e non, per esempio, la media? Mostra che sottrarre una
+      qualsiasi costante \(c\) da tutti gli \(z_i\) non cambia l'output, e spiega perché il massimo è la scelta
+      che evita l'overflow.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Una valle è descritta da \(f(x,y)=\frac12(x^2+100\,y^2)\). Qual è il numero di condizionamento?
+      Qualitativamente, come si muove la discesa del gradiente partendo da un punto generico? Perché è un
+      problema?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Il gradiente di \(f\) è nullo in un punto. Come stabilisci se è un minimo, un massimo o una sella, usando
+      l'Hessiana? In alta dimensione, quale dei tre casi è di gran lunga il più comune, e perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Il gradiente punta nella direzione in cui la funzione <b>decresce</b> più rapidamente. &nbsp;
+      (b) Con un learning rate sufficientemente piccolo, la discesa del gradiente su una funzione convessa
+      converge. &nbsp;
+      (c) I metodi del secondo ordine (Newton) sono sempre preferibili per addestrare reti profonde. &nbsp;
+      (d) In un minimo locale il gradiente è nullo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">Sezione 4.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      \(f'(x)=2x\), quindi \(x_{t+1}=x_t-0{,}1\cdot2x_t=0{,}8\,x_t\). Da \(x_0=4\): \(x_1=3{,}2\),
+      \(x_2=2{,}56\), \(x_3=2{,}048\). Converge a \(0\) (il minimo), moltiplicando per \(0{,}8\) ogni volta. Con
+      \(\eta=1{,}1\): \(x_{t+1}=x_t-1{,}1\cdot2x_t=-1{,}2\,x_t\), che <b>diverge</b> oscillando di segno
+      (\(4\to-4{,}8\to5{,}76\to\dots\)): il passo scavalca il minimo e ogni volta peggio. <mark>Learning rate
+      troppo grande = divergenza.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      \(\softmax(\vv{z}-c)_i=\frac{\eu^{z_i-c}}{\sum_j\eu^{z_j-c}}=\frac{\eu^{-c}\eu^{z_i}}{\eu^{-c}\sum_j\eu^{z_j}}
+      =\softmax(\vv{z})_i\): la costante \(\eu^{-c}\) si semplifica. Scegliendo \(c=\max_k z_k\), l'esponente più
+      grande diventa \(\eu^0=1\), quindi <b>nessun termine può andare in overflow</b>; il denominatore contiene
+      almeno un 1, quindi non va in underflow a zero. La media non garantirebbe che il massimo esponente sia
+      \(\le 0\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      L'Hessiana è \(\diag(1,100)\), autovalori \(1\) e \(100\): condizionamento \(\kappa=100/1=\mathbf{100}\).
+      La funzione è 100 volte più ripida lungo \(y\) che lungo \(x\): una valle stretta. La discesa del
+      gradiente <b>zig-zaga</b> avanti e indietro tra le pareti ripide (direzione \(y\)) avanzando lentissimo
+      lungo il fondo (direzione \(x\)). È un problema perché servono moltissimi passi per convergere: il
+      malcondizionamento rallenta l'ottimizzazione (motiva momentum e Adam, Cap. 8).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      Si guardano gli <b>autovalori dell'Hessiana</b> nel punto: tutti \(&gt;0\) → minimo locale; tutti
+      \(&lt;0\) → massimo; <b>segni misti</b> → sella. In alta dimensione dominano le <b>selle</b>: perché tutti
+      gli autovalori siano dello stesso segno servono \(n\) «coincidenze» concordi, sempre più improbabili al
+      crescere di \(n\). È una buona notizia: le selle si possono lasciare, i minimi locali profondi sono rari
+      (Cap. 8).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Il gradiente punta nella direzione di massima <b>crescita</b>; per minimizzare ci si
+      muove nel suo <em>opposto</em>. <br>
+      <b>(b) VERO.</b> Su una funzione convessa e liscia, con \(\eta\) abbastanza piccolo la discesa converge al
+      minimo globale. <br>
+      <b>(c) FALSO.</b> La Hessiana ha (n. parametri)² elementi: per reti con milioni di parametri è
+      impraticabile; si usano metodi del primo ordine (SGD, Adam). <br>
+      <b>(d) VERO.</b> In ogni punto critico — minimo, massimo o sella — il gradiente è nullo (ma «nullo» non
+      basta a garantire un minimo: serve l'Hessiana).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §4.3 — discesa del gradiente su una valle quadratica
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wd-out');
+  const lrI = document.getElementById('wd-lr'), kI = document.getElementById('wd-k');
+  const lrO = document.getElementById('wd-lr-o'), kO = document.getElementById('wd-k-o');
+  let start = [-3.2, 2.1];
+
+  function draw() {
+    const eta = parseFloat(lrI.value), kap = parseFloat(kI.value);
+    lrO.textContent = fmt(eta, 2); kO.textContent = fmt(kap, kap < 10 ? 1 : 0);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -3, ymax: 3, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // f(x,y) = 0.5 (x^2 + kap y^2); curve di livello ellittiche
+    const f = (x, y) => 0.5 * (x * x + kap * y * y);
+    p.contour(f, [0.4, 1.2, 2.5, 4.5, 7, 10], { color: 'color-mix(in srgb, var(--accent) 45%, var(--paper))', width: 1.3 });
+    // traiettoria della discesa del gradiente
+    let x = start[0], y = start[1];
+    const path = [[x, y]];
+    let diverged = false, steps = 0;
+    for (let i = 0; i < 60; i++) {
+      const gx = x, gy = kap * y;                 // gradiente di f
+      x = x - eta * gx; y = y - eta * gy;
+      path.push([x, y]); steps++;
+      if (!isFinite(x) || Math.hypot(x, y) > 12) { diverged = true; break; }
+      if (Math.hypot(x, y) < 0.02) break;
+    }
+    // disegna il cammino
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1], b = path[i];
+      p.line(a[0], a[1], Math.max(-4, Math.min(4, b[0])), Math.max(-3, Math.min(3, b[1])),
+        { color: 'var(--warm)', width: 1.8 });
+    }
+    for (const q of path) {
+      if (Math.abs(q[0]) <= 4 && Math.abs(q[1]) <= 3) p.dot(q[0], q[1], { color: 'var(--warm)', r: 2.6 });
+    }
+    p.dot(0, 0, { color: 'var(--green)', r: 5 });          // minimo
+    p.handle(start[0], start[1], { color: 'var(--accent)' }, (x, y) => { start = [x, y]; draw(); });
+
+    const conv = !diverged && Math.hypot(path[path.length - 1][0], path[path.length - 1][1]) < 0.05;
+    out.innerHTML = `
+      <div class="big">
+        η = <b>${fmt(eta, 2)}</b> &nbsp; κ = <b>${fmt(kap, kap < 10 ? 1 : 0)}</b> &nbsp;·&nbsp;
+        ${diverged ? '<b style="color:var(--warm)">DIVERGE ✗</b>' : conv ? `<b style="color:var(--green)">converge in ${steps} passi ✓</b>` : `<b style="color:var(--gold)">lento: ${steps} passi, non ancora al minimo</b>`}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il punto <b style="color:var(--warm)">rosso</b> rotola lungo l'anti-gradiente verso il minimo
+        <b style="color:var(--green)">verde</b>.
+        ${diverged ? '<mark>η troppo grande: ogni passo scavalca il minimo e si allontana. Abbassa η.</mark>'
+          : kap >= 6 ? '<mark>κ alto: la valle è stretta, la traiettoria zig-zaga tra le pareti ripide.</mark> È il malcondizionamento (§4.2).'
+          : conv ? 'Prova ad alzare η fino a farlo divergere, o κ per vedere lo zig-zag.'
+          : 'η piccolo: sicuro ma lento. Alzalo un po\' per andare più dritto.'}
+      </div>`;
+  }
+  lrI.addEventListener('input', draw); kI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
