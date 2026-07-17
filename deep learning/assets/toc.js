@@ -114,7 +114,7 @@ const TOC = [
     titolo: "Reti feedforward profonde",
     file: "cap06-feedforward.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Esempio: imparare lo XOR" },
       { id: "s6-2", n: "6.2", t: "L'apprendimento basato sul gradiente" },
