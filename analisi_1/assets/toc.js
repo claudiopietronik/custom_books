@@ -45,7 +45,7 @@ const TOC = [
     n: 3,
     titolo: "Numeri complessi",
     file: "cap03-numeri-complessi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Perché servono: chiudere l'algebra" },
       { id: "s3-2", n: "3.2", t: "Il piano complesso" },
