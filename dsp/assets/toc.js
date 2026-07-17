@@ -372,7 +372,7 @@ const TOC = [
     n: 25,
     titolo: "Tecniche speciali di imaging",
     file: "cap25-imaging-speciale.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s25-1", n: "25.1", t: "Misurare la qualità di un'immagine" },
       { id: "s25-2", n: "25.2", t: "Risoluzione e MTF" },

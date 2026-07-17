@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>25 · Tecniche speciali di imaging — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="25">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.25 — Capitolo 25</div>
+    <h1>Tecniche speciali di imaging</h1>
+    <p class="standfirst">
+      Oltre la convoluzione lineare c'è un mondo di tecniche più specializzate: come si <em>misura</em> davvero la
+      qualità di un'immagine, come si manipolano le <b>forme</b> con la morfologia (che non è lineare), e come si
+      ricostruisce l'interno di un corpo da tante radiografie — la <b>tomografia</b>, forse il trionfo più
+      spettacolare del DSP. Il capitolo in cui il DSP impara a vedere <em>attraverso</em> le cose.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude la sezione immagini (Cap. 23–25) con le tecniche avanzate. Alcune (morfologia) escono per la prima
+      volta dal mondo lineare che ci ha accompagnato finora; altre (tomografia) mostrano il DSP al suo apice
+      applicativo. Poi il libro passa a temi trasversali: reti neurali (Cap. 26) e compressione (Cap. 27).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La tomografia computerizzata ha rivoluzionato la medicina: guardare dentro il corpo senza aprirlo era
+      impensabile prima del DSP. E la morfologia è il pane della visione artificiale industriale (ispezione,
+      OCR, conteggio). Sono esempi di come <strong>il DSP renda possibile ciò che sembrava impossibile</strong> —
+      non migliorando un segnale, ma ricostruendo informazione da misure indirette.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-1"><span class="secnum">SEZIONE 25.1</span>Misurare la qualità di un'immagine</h2>
+
+  <p class="lead">
+    «Questa immagine è buona» non è un giudizio unico: dipende da <em>cosa</em> devi farci. La qualità ha più
+    dimensioni, e ridurle a un solo numero è sempre un compromesso.
+  </p>
+
+  <p>
+    Le dimensioni principali sono tre, e le conosciamo già: la <b>risoluzione</b> (quanto fine il dettaglio, §23.4),
+    il <b>contrasto</b> (quanto si distinguono i toni) e il <b>rumore</b> (quanto disturbo, §25.3). Un'immagine
+    può eccellere in una e fallire in un'altra: nitidissima ma rumorosa, o pulita ma senza dettaglio. Non esiste
+    «la migliore» in assoluto — esiste la migliore <em>per un compito</em>. Un radiologo e un fotografo giudicano
+    la stessa immagine con metri diversi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-2"><span class="secnum">SEZIONE 25.2</span>Risoluzione e MTF</h2>
+
+  <p class="lead">
+    Come si misura oggettivamente quanto un sistema di imaging preserva il dettaglio? Con la <b class="termine">MTF</b>
+    (Modulation Transfer Function) — che è, semplicemente, la <b>risposta in frequenza</b> del sistema ottico.
+  </p>
+
+  <p>
+    L'idea: dai in ingresso al sistema motivi (righe) di frequenza spaziale crescente — prima larghi, poi sempre
+    più fitti — e misura quanto contrasto sopravvive all'uscita. Alle basse frequenze (righe larghe) il contrasto
+    passa quasi intatto; alle alte (righe fittissime) il sistema le «impasta» e il contrasto crolla. La curva del
+    contrasto in funzione della frequenza spaziale <em>è</em> la MTF. È lo stesso concetto di risposta in frequenza
+    dei filtri (Cap. 14), applicato all'ottica: <mark>la MTF è la trasformata di Fourier della point-spread
+    function</mark> (Cap. 23), esattamente come la risposta in frequenza di un filtro è la trasformata della sua
+    risposta all'impulso. Tutto torna.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-3"><span class="secnum">SEZIONE 25.3</span>Rumore nelle immagini</h2>
+
+  <p class="lead">
+    Come ogni segnale, le immagini sono rumorose. Il rumore viene dai sensori, dall'elettronica e — soprattutto
+    in poca luce — dalla natura stessa della luce.
+  </p>
+
+  <p>
+    In condizioni di scarsa illuminazione domina il <b>rumore fotonico</b> (shot noise): la luce arriva in
+    «pacchetti» discreti (i fotoni), e quando ne arrivano pochi le fluttuazioni casuali sono grandi rispetto al
+    segnale. È il motivo per cui le foto al buio sono «granulose». Il rimedio è quello di sempre (Cap. 2): fare
+    la <b>media</b>. Mediando più scatti della stessa scena immobile, il rumore casuale cala di \(\sqrt{M}\)
+    mentre il segnale resta — è ciò che fanno le fotocamere in modalità notturna, e come si ottengono le immagini
+    pulite di oggetti celesti debolissimi (sommando lunghe esposizioni).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Lo stesso trucco, ovunque</div>
+    <p style="margin-bottom:0">
+      Nota come la lezione del Cap. 2 — «il rumore casuale si combatte con la media, calando di \(\sqrt{M}\)» —
+      ritorni identica dall'audio alle immagini all'astronomia. <mark>È forse l'idea più riusata di tutto il
+      DSP.</mark> Cambia il segnale, cambia il dominio, ma il rumore casuale si batte sempre allo stesso modo:
+      accumulando misure indipendenti e mediando.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-4"><span class="secnum">SEZIONE 25.4</span>Morfologia: erosione e dilatazione</h2>
+
+  <p class="lead">
+    Ecco le nostre prime operazioni <b>non lineari</b> sulle immagini. La morfologia matematica lavora sulle
+    <b>forme</b> — tipicamente su immagini in bianco e nero — con due gesti base: rimpicciolire e ingrandire.
+  </p>
+
+  <ul>
+    <li><b>Erosione:</b> «lima» i bordi delle forme, rimpicciolendole. Un pixel bianco sopravvive solo se è
+        circondato da bianco. Effetto: elimina i puntini isolati e assottiglia.</li>
+    <li><b>Dilatazione:</b> l'opposto, «gonfia» le forme. Un pixel diventa bianco se ha almeno un vicino bianco.
+        Effetto: riempie i buchi e ispessisce.</li>
+    <li><b>Apertura</b> (erosione poi dilatazione): rimuove i <b>puntini di disturbo</b> senza rimpicciolire la
+        forma principale — prima li cancella con l'erosione, poi ripristina la taglia con la dilatazione.</li>
+    <li><b>Chiusura</b> (dilatazione poi erosione): <b>riempie i buchetti</b> dentro le forme senza ingrossarle.</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Perché non è convoluzione</div>
+    <p style="margin-bottom:0">
+      Erosione e dilatazione usano il <b>minimo</b> e il <b>massimo</b> del vicinato, non una somma pesata: sono
+      operazioni <b>non lineari</b>. Non vale la sovrapposizione (Cap. 5), non c'è una «risposta all'impulso», non
+      c'è teorema di convoluzione. <mark>È un mondo diverso da quello lineare</mark> — e serve proprio quando il
+      lineare non basta: pulire una scansione, contare oggetti, separare forme attaccate, preparare un'immagine
+      per il riconoscimento.
+    </p>
+  </div>
+
+  <h3>Provalo: ripulisci una forma</h3>
+
+  <p>
+    Un'immagine binaria «sporca»: una forma con dei buchi dentro e dei puntini di disturbo fuori. Applica le
+    operazioni e guarda: l'<b>apertura</b> spazza via i puntini, la <b>chiusura</b> tappa i buchi. Combinandole
+    si ripulisce la forma senza deformarla.
+  </p>
+
+  <div class="widget" id="w-morph">
+    <div class="w-head">
+      <span>Morfologia binaria</span>
+      <span class="hint">apri per togliere i puntini, chiudi per tappare i buchi</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap">
+      <div style="text-align:center">
+        <svg id="wmo-orig" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="Immagine binaria sporca originale"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">originale (sporca)</div>
+      </div>
+      <div style="text-align:center">
+        <svg id="wmo-out" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="Immagine binaria dopo l'operazione morfologica"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem" id="wmo-lab">erosa</div>
+      </div>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wmo-ero">erosione</button>
+      <button class="w-btn" id="wmo-dil">dilatazione</button>
+      <button class="w-btn" id="wmo-open">apertura</button>
+      <button class="w-btn" id="wmo-close">chiusura</button>
+    </div>
+    <div class="w-readout" id="wmo-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-5"><span class="secnum">SEZIONE 25.5</span>Tomografia computerizzata</h2>
+
+  <p class="lead">
+    La TAC risolve un problema che sembra magia: <b>ricostruire una fetta dell'interno del corpo</b> senza
+    aprirlo, a partire da tante radiografie prese da angolazioni diverse. È DSP allo stato puro, e cambiò la
+    medicina.
+  </p>
+
+  <p>
+    Ogni radiografia è una <b>proiezione</b>: misura quanta radiazione viene assorbita lungo ogni linea che
+    attraversa il corpo. Una singola proiezione «schiaccia» tutto in una direzione e non basta a ricostruire
+    l'interno. Ma prendendone <em>molte</em>, da tanti angoli attorno al paziente, si accumula abbastanza
+    informazione. La ricostruzione avviene con la <b class="termine">retroproiezione filtrata</b>: si «spalma»
+    all'indietro ogni proiezione attraverso l'immagine e si sommano tutte, dopo averle opportunamente filtrate.
+    Più angoli, più nitida la fetta ricostruita.
+  </p>
+
+  <h3>Provalo: ricostruisci da tante proiezioni</h3>
+
+  <p>
+    Un «fantasma» (una fetta di prova con due strutture interne). Aumenta il numero di proiezioni — cioè da
+    quante angolazioni «radiografi» — e guarda la ricostruzione emergere dal nulla: con poche proiezioni è un
+    fantasma sfocato e striato, con molte la fetta diventa nitida. È la magia della TAC in miniatura.
+  </p>
+
+  <div class="widget" id="w-ct">
+    <div class="w-head">
+      <span>Ricostruzione tomografica</span>
+      <span class="hint">più proiezioni = fetta più nitida</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap">
+      <div style="text-align:center">
+        <svg id="wct-orig" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="Il fantasma originale da ricostruire"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">fantasma vero</div>
+      </div>
+      <div style="text-align:center">
+        <svg id="wct-rec" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="La ricostruzione per retroproiezione"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">ricostruzione</div>
+      </div>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>proiezioni</label><input type="range" id="wct-a" min="1" max="60" step="1" value="4"><output id="wct-av">4</output></div>
+    </div>
+    <div class="w-readout" id="wct-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-6"><span class="secnum">SEZIONE 25.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.1</div>
+    <p style="margin-bottom:0">Cos'è la MTF di un sistema di imaging, e con quale concetto già noto dei filtri
+      coincide?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La MTF è la curva del <b>contrasto in funzione della frequenza spaziale</b>: quanto bene il sistema
+          preserva i dettagli fini. Coincide con la <b>risposta in frequenza</b> di un filtro (Cap. 14) ed è la
+          <b>trasformata di Fourier della point-spread function</b> (Cap. 23). La stessa idea, dal filo del tempo
+          al piano dei pixel.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.2</div>
+    <p style="margin-bottom:0">Una foto notturna è granulosa (rumore fotonico). Come la ripulisci se la scena è
+      immobile?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Scatti <b>più immagini</b> e le <b>medii</b>: il rumore casuale cala di \(\sqrt{M}\) (Cap. 2), il
+          segnale resta. È la modalità notturna dei telefoni e il metodo dell'astrofotografia. Con 16 scatti il
+          rumore si divide per 4.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.3</div>
+    <p style="margin-bottom:0">Hai un'immagine binaria con dei puntini di disturbo sparsi nel fondo. Quale
+      operazione morfologica li elimina senza rimpicciolire l'oggetto principale?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>L'<b>apertura</b> (erosione seguita da dilatazione): l'erosione cancella i puntini isolati, la
+          dilatazione successiva ripristina la taglia dell'oggetto principale. Per tappare invece i buchi
+          <em>dentro</em> le forme si usa la <b>chiusura</b> (§25.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.4</div>
+    <p style="margin-bottom:0">Perché una TAC ha bisogno di molte proiezioni da angoli diversi, e non di una sola
+      radiografia?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Una singola proiezione «schiaccia» l'interno in una direzione: strutture diverse lungo la stessa linea
+          si sommano e non si distinguono. Servono <b>molte proiezioni</b> da angoli diversi per accumulare
+          abbastanza informazione e, con la retroproiezione filtrata, ricostruire in quale punto preciso del
+          piano si trova ciascuna struttura. Più angoli, più nitida la ricostruzione (§25.5).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-7"><span class="secnum">SEZIONE 25.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 25</div>
+    <ol style="margin-bottom:0">
+      <li><b>Qualità</b> = risoluzione + contrasto + rumore; non riducibile a un numero, dipende dal compito.</li>
+      <li><b>MTF</b> = risposta in frequenza del sistema ottico = trasformata di Fourier della PSF.</li>
+      <li><b>Rumore fotonico</b> in poca luce; si batte come sempre <b>mediando</b> più scatti (\(\sqrt{M}\)).</li>
+      <li><b>Morfologia</b> (non lineare): erosione/dilatazione, apertura (togli puntini) e chiusura (tappa
+          buchi). Usa min/max, non somme.</li>
+      <li><b>Tomografia:</b> ricostruisce una fetta interna da molte proiezioni (retroproiezione filtrata). Più
+          angoli, più nitidezza. Il DSP che vede dentro le cose.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la tomografia il DSP tocca uno dei suoi vertici. Ma c'è un confine che i metodi «classici» faticano a
+    varcare: riconoscere <em>cosa</em> c'è in un segnale o in un'immagine — una voce, un volto, una malattia.
+    Lì entra in gioco un altro paradigma, che con il DSP ha un rapporto strettissimo. Il <strong>Capitolo
+    26</strong> introduce le <b>reti neurali</b>: cosa sono, come «imparano» dai dati, e perché rappresentano il
+    naturale prolungamento del DSP verso il riconoscimento dei pattern.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function grayM(v) { const l = Math.round(Math.max(0, Math.min(1, v)) * 255); return `rgb(${l},${l},${l})`; }
+function renderM(svg, A, size) {
+  const NS = 'http://www.w3.org/2000/svg'; svg.innerHTML = '';
+  const N = A.length, cell = size / N;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', j * cell); r.setAttribute('y', i * cell);
+    r.setAttribute('width', Math.ceil(cell) + 0.5); r.setAttribute('height', Math.ceil(cell) + 0.5);
+    r.setAttribute('fill', grayM(A[i][j])); svg.appendChild(r);
+  }
+}
+
+/* ============================================================================
+   WIDGET §25.4 — morfologia binaria
+   ========================================================================= */
+(function () {
+  const sOrig = document.getElementById('wmo-orig'), sOut = document.getElementById('wmo-out');
+  if (!sOrig) return;
+  const out = document.getElementById('wmo-out'), lab = document.getElementById('wmo-lab');
+  const btns = { ero: document.getElementById('wmo-ero'), dil: document.getElementById('wmo-dil'), open: document.getElementById('wmo-open'), close: document.getElementById('wmo-close') };
+  const N = 40;
+  // immagine binaria sporca: una "C" spessa + puntini + buchi
+  const B0 = [];
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(7);
+  for (let i = 0; i < N; i++) { B0.push([]); for (let j = 0; j < N; j++) {
+    const dx = j - 20, dy = i - 20, r = Math.sqrt(dx * dx + dy * dy);
+    let v = (r > 8 && r < 15 && !(dx > 4 && Math.abs(dy) < 6)) ? 1 : 0;   // anello con apertura
+    if (v === 1 && rng() < 0.12) v = 0;                                   // buchi
+    if (v === 0 && rng() < 0.04) v = 1;                                   // puntini
+    B0[i].push(v);
+  } }
+  renderM(sOrig, B0, 200);
+
+  function erode(B) { const N = B.length, R = []; for (let i = 0; i < N; i++) { R.push([]); for (let j = 0; j < N; j++) { let m = 1; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const ii = i + di, jj = j + dj; const val = (ii < 0 || jj < 0 || ii >= N || jj >= N) ? 0 : B[ii][jj]; m = Math.min(m, val); } R[i].push(m); } } return R; }
+  function dilate(B) { const N = B.length, R = []; for (let i = 0; i < N; i++) { R.push([]); for (let j = 0; j < N; j++) { let m = 0; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const ii = i + di, jj = j + dj; const val = (ii < 0 || jj < 0 || ii >= N || jj >= N) ? 0 : B[ii][jj]; m = Math.max(m, val); } R[i].push(m); } } return R; }
+
+  const OP = {
+    ero: { fn: B => erode(B), name: 'erosa', desc: 'l\'erosione rimpicciolisce: spariscono i puntini isolati, ma anche l\'anello si assottiglia.' },
+    dil: { fn: B => dilate(B), name: 'dilatata', desc: 'la dilatazione gonfia: si tappano i buchi, ma i puntini crescono e l\'anello ingrossa.' },
+    open: { fn: B => dilate(erode(B)), name: 'aperta', desc: 'apertura = erosione poi dilatazione: <mark>via i puntini</mark>, forma principale intatta.' },
+    close: { fn: B => erode(dilate(B)), name: 'chiusa', desc: 'chiusura = dilatazione poi erosione: <mark>buchi tappati</mark>, taglia della forma invariata.' }
+  };
+  let sel = 'ero';
+
+  function draw() {
+    const o = OP[sel];
+    renderM(sOut, o.fn(B0), 200);
+    lab.textContent = o.name;
+    out.innerHTML = `
+      <div class="big">operazione: <b>${sel}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${o.desc}
+        Sono operazioni <b>non lineari</b> (usano min/max del vicinato), diverse dalla convoluzione del Cap. 24.</div>`;
+  }
+  function setSel(s) { sel = s; for (const k in btns) btns[k].classList.toggle('on', k === s); draw(); }
+  btns.ero.addEventListener('click', () => setSel('ero'));
+  btns.dil.addEventListener('click', () => setSel('dil'));
+  btns.open.addEventListener('click', () => setSel('open'));
+  btns.close.addEventListener('click', () => setSel('close'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §25.5 — ricostruzione tomografica (retroproiezione filtrata)
+   ========================================================================= */
+(function () {
+  const sOrig = document.getElementById('wct-orig'), sRec = document.getElementById('wct-rec');
+  if (!sOrig) return;
+  const out = document.getElementById('wct-out');
+  const aS = document.getElementById('wct-a'), aV = document.getElementById('wct-av');
+  const N = 48, R = N / 2;
+  // fantasma: disco grande (0.5) con due strutture interne
+  const P = [];
+  for (let i = 0; i < N; i++) { P.push([]); for (let j = 0; j < N; j++) {
+    const x = j - R + 0.5, y = i - R + 0.5, r = Math.sqrt(x * x + y * y);
+    let v = 0;
+    if (r < R - 2) v = 0.45;
+    if (Math.sqrt((x + 7) * (x + 7) + (y + 4) * (y + 4)) < 6) v = 0.95;
+    if (Math.sqrt((x - 8) * (x - 8) + (y - 6) * (y - 6)) < 4) v = 0.12;
+    P[i].push(v);
+  } }
+  renderM(sOrig, P, 200);
+
+  const NB = Math.ceil(N * 1.5);   // bin di proiezione
+  function project(theta) {
+    const c = Math.cos(theta), s = Math.sin(theta), proj = new Array(NB).fill(0);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const x = j - R + 0.5, y = i - R + 0.5;
+      const t = x * c + y * s;
+      const b = Math.round(t + NB / 2);
+      if (b >= 0 && b < NB) proj[b] += P[i][j];
+    }
+    // filtro a rampa "lite": high-pass 1D (seconda differenza attenuata)
+    const f = new Array(NB).fill(0);
+    for (let b = 0; b < NB; b++) f[b] = proj[b] - 0.5 * (proj[Math.max(0, b - 1)] + proj[Math.min(NB - 1, b + 1)]);
+    return f;
+  }
+
+  function draw() {
+    const A = parseInt(aS.value, 10);
+    aV.textContent = A;
+    const rec = []; for (let i = 0; i < N; i++) { rec.push(new Array(N).fill(0)); }
+    for (let a = 0; a < A; a++) {
+      const theta = Math.PI * a / A, c = Math.cos(theta), s = Math.sin(theta);
+      const f = project(theta);
+      for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+        const x = j - R + 0.5, y = i - R + 0.5, t = x * c + y * s, b = Math.round(t + NB / 2);
+        if (b >= 0 && b < NB) rec[i][j] += f[b];
+      }
+    }
+    // normalizza al range visibile
+    let mn = Infinity, mx = -Infinity;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const x = j - R + 0.5, y = i - R + 0.5; if (x * x + y * y < (R - 1) * (R - 1)) { mn = Math.min(mn, rec[i][j]); mx = Math.max(mx, rec[i][j]); } }
+    const norm = []; for (let i = 0; i < N; i++) { norm.push([]); for (let j = 0; j < N; j++) { const x = j - R + 0.5, y = i - R + 0.5; norm[i].push(x * x + y * y < (R - 1) * (R - 1) ? (rec[i][j] - mn) / (mx - mn + 1e-9) : 0); } }
+    renderM(sRec, norm, 200);
+
+    out.innerHTML = `
+      <div class="big"><b>${A}</b> proiezioni</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${A < 4 ? 'Pochissime proiezioni: solo <mark>strisce</mark>, la fetta non si riconosce.'
+          : A < 15 ? 'La forma comincia a emergere, ma è ancora striata e sfocata.'
+            : 'Con molte proiezioni la fetta è <mark>nitida</mark>: si distinguono le due strutture interne.'}
+        È la retroproiezione filtrata: spalma indietro ogni radiografia e somma. Più angoli, più nitidezza — la TAC in miniatura.
+      </div>`;
+  }
+  aS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
