@@ -145,7 +145,7 @@ const TOC = [
     n: 9,
     titolo: "Rotazione dei corpi rigidi",
     file: "cap09-rotazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Le grandezze angolari" },
       { id: "s9-2", n: "9.2", t: "Rotazione uniformemente accelerata" },

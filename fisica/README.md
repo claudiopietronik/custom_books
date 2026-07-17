@@ -32,7 +32,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 6 — Lavoro ed energia cinetica
 - [x] 7 — Energia potenziale e conservazione
 - [x] 8 — Quantità di moto, impulso e urti
-- [ ] 9 — Rotazione dei corpi rigidi
+- [x] 9 — Rotazione dei corpi rigidi
 - [ ] 10 — Dinamica rotazionale
 - [ ] 11 — Equilibrio ed elasticità
 - [ ] 12 — Gravitazione
