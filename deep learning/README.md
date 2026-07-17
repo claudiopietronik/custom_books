@@ -34,7 +34,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 
 ## Stato
 
-- [ ] 1 — Introduzione
+- [x] 1 — Introduzione
 - [ ] 2 — Algebra lineare
 - [ ] 3 — Probabilità e teoria dell'informazione
 - [ ] 4 — Calcolo numerico

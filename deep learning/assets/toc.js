@@ -18,7 +18,7 @@ const TOC = [
     titolo: "Introduzione",
     file: "cap01-introduzione.html",
     parte: "Prologo",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Che cos'è il deep learning" },
       { id: "s1-2", n: "1.2", t: "L'intelligenza artificiale e il problema della conoscenza" },
