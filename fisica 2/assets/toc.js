@@ -282,7 +282,7 @@ const TOC = [
     n: 19,
     titolo: "La struttura dell'atomo",
     file: "cap19-atomo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "Gli spettri a righe" },
       { id: "s19-2", n: "19.2", t: "Il modello di Bohr" },
