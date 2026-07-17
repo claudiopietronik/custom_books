@@ -244,7 +244,7 @@ const TOC = [
     n: 14,
     titolo: "Minimi quadrati",
     file: "cap14-minimi-quadrati.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Introduzione" },
       { id: "s14-2", n: "14.2", t: "I 5 passi del model fitting" },
