@@ -46,7 +46,7 @@ const TOC = [
   },
   {
     n: 4, parte: "I · Statistica descrittiva",
-    titolo: "Misure di dispersione", file: "cap04-dispersione.html", stato: "da-fare",
+    titolo: "Misure di dispersione", file: "cap04-dispersione.html", stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Lo scarto dalla media" },
       { id: "s4-2", n: "4.2", t: "La varianza" },

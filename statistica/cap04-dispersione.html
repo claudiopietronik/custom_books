@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Misure di dispersione — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte I · Statistica descrittiva</div>
+    <h1>Misure di dispersione</h1>
+    <p class="standfirst">
+      Il centro è metà della storia. La domanda gemella è: <b>«quanto sono sparsi i dati?»</b>. Due dataset con
+      la stessa media possono essere uno concentratissimo e l'altro sparpagliato ovunque. Qui costruiamo la
+      misura di dispersione per eccellenza — la deviazione standard — passo per passo, e affrontiamo il
+      misterioso \(n-1\) che tutti scrivono e in pochi sanno spiegare.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il Cap. 3 ha trovato il centro. Insieme, centro (Cap. 3) e dispersione (qui) sono le due coordinate che
+      riassumono qualunque distribuzione. La deviazione standard che costruiamo ora è il mattone di quasi tutto
+      ciò che segue: z-score (Cap. 10), errore standard (Cap. 23), t-test (Cap. 30).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Temperatura media 20°C» descrive tanto una serra costante quanto un deserto che oscilla tra 0 e 40. La
+      differenza — la <em>dispersione</em> — è spesso ciò che conta davvero: in finanza è il rischio, in
+      produzione è il difetto, in un esperimento è il rumore che nasconde il segnale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">SEZIONE 4.1</span>Lo scarto dalla media</h2>
+
+  <p class="lead">
+    Tutto parte da una domanda locale: <b>quanto dista ogni dato dal centro?</b> Questa distanza si chiama
+    <b>scarto</b> (deviation).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Lo scarto di un dato <span class="tag">distanza dal centro</span></div>
+    <div class="f-body">
+      \[ \text{scarto}_i \;=\; \hC{x_i} - \hD{\bar{x}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{x_i}\)</dt><dd>il singolo dato.</dd>
+        <dt>\(\hD{\bar{x}}\)</dt><dd>la media (il centro da cui misuriamo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se un dato vale 9 e la media è 5, lo scarto è \(+4\) (sta sopra). Se vale 2, lo scarto è \(-3\) (sta sotto).
+      Il segno dice <em>da che parte</em>, il valore assoluto <em>quanto lontano</em>.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La prima idea ingenua non funziona</div>
+    <p style="margin-bottom:0">
+      Verrebbe da fare la <b>media degli scarti</b>. Ma è inutile: gli scarti positivi e negativi si annullano e
+      la loro somma fa <mark>sempre esattamente zero</mark> — è la definizione stessa di baricentro (§3.1). Serve
+      un trucco per eliminare i segni <em>prima</em> di sommare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">SEZIONE 4.2</span>La varianza</h2>
+
+  <p class="lead">
+    Il trucco è <b>elevare al quadrato</b> ogni scarto prima di sommare. Il quadrato è sempre positivo (i segni
+    spariscono) e punisce di più gli scarti grandi. La media di questi quadrati è la <b>varianza</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La varianza della popolazione <span class="tag">media degli scarti²</span></div>
+    <div class="f-body">
+      \[ \sigma^2 \;=\; \frac{1}{\hB{N}} \hA{\sum_{i=1}^{N}} \big(\hC{x_i} - \hD{\mu}\big)^{2} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\sigma^2\)</dt><dd>«sigma quadro»: la varianza della <b>popolazione</b>.</dd>
+        <dt>\(\hC{x_i}-\hD{\mu}\)</dt><dd>lo scarto del dato dalla media della popolazione \(\mu\).</dd>
+        <dt>\((\ldots)^{2}\)</dt><dd>il <b>quadrato</b>: rende tutto positivo e pesa di più gli scarti grandi.</dd>
+        <dt>\(\hA{\sum}\)</dt><dd>somma tutti gli scarti quadrati.</dd>
+        <dt>\(\dfrac{1}{\hB{N}}\)</dt><dd>divide per il conteggio → <b>media</b> degli scarti quadrati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      A parole: <mark>la varianza è la media degli scarti al quadrato</mark>. Un solo difetto: essendo fatta di
+      quadrati, è in <b>unità al quadrato</b> (se misuri in cm, la varianza è in cm²) — poco intuitiva. La §4.4
+      rimedia.
+    </div>
+  </div>
+
+  <h3>Provalo: la varianza come area media</h3>
+
+  <p>
+    Ecco la varianza resa <em>visibile</em>. Per ogni dato disegniamo un quadrato il cui lato è lo scarto: la sua
+    <b>area</b> è lo scarto². La varianza è l'<b>area media</b> di questi quadrati. Allarga o stringi i dati e
+    guarda i quadrati (e la varianza) gonfiarsi o sgonfiarsi.
+  </p>
+
+  <div class="widget" id="w-var">
+    <div class="w-head">
+      <span>Gli scarti al quadrato, letteralmente</span>
+      <span class="hint">la varianza è l'area media dei quadrati</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wvr-svg" viewBox="0 0 620 300" role="img" aria-label="Ogni scarto disegnato come un quadrato; la varianza è la loro area media"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>dispersione</label><input type="range" id="wvr-s" min="4" max="34" step="1" value="14"><output id="wvr-sv">14</output></div>
+    </div>
+    <div class="w-readout" id="wvr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">SEZIONE 4.3</span>Campione contro popolazione: il famigerato n−1</h2>
+
+  <p class="lead">
+    Quando i dati sono un <b>campione</b> (non l'intera popolazione), la formula cambia in un punto solo: si
+    divide per \(n-1\) invece che per \(n\). Piccola modifica, grande significato.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La varianza campionaria <span class="tag">correzione di Bessel</span></div>
+    <div class="f-body">
+      \[ s^2 \;=\; \frac{1}{\hB{n-1}} \sum_{i=1}^{n} \big(x_i - \bar{x}\big)^2 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(s^2\)</dt><dd>la varianza del <b>campione</b> (lettera latina).</dd>
+        <dt>\(\bar{x}\)</dt><dd>la media <b>campionaria</b>, calcolata dai dati stessi.</dd>
+        <dt>\(\hB{n-1}\)</dt><dd>la <b>correzione di Bessel</b>: dividiamo per uno in meno. Perché? È il cuore della sezione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Dividere per un numero più piccolo <mark>gonfia</mark> il risultato. Serve a compensare una sottostima
+      sistematica: senza correzione, la varianza campionaria tenderebbe a essere troppo piccola.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché n−1: l'intuizione profonda</div>
+    <p>
+      La media campionaria \(\bar{x}\) si posiziona esattamente nel <b>punto di equilibrio dei tuoi dati</b>: è
+      il valore che rende gli scarti quadrati totali <em>il più piccolo possibile per quel campione specifico</em>
+      (nessun altro centro dà una somma di quadrati minore). Ma la vera media della popolazione \(\mu\) sta
+      altrove — non la conosci — e rispetto a quel \(\mu\) vero i tuoi dati sarebbero in generale un po' <b>più
+      lontani</b>.
+    </p>
+    <p style="margin-bottom:0">
+      Misurando la dispersione da \(\bar{x}\) invece che da \(\mu\), quindi, <b>sottostimi</b> sistematicamente.
+      Dividere per \(n-1\) (anziché \(n\)) gonfia il risultato quel tanto che basta a compensare, e restituisce
+      una stima <b>non distorta</b> di \(\sigma^2\). Un altro modo di dirlo: fissata \(\bar{x}\), gli scarti non
+      sono più tutti liberi — noti \(n-1\) scarti, l'ultimo è già determinato (devono sommare a zero). Hai
+      «consumato» un <b>grado di libertà</b> (tutto il Cap. 27).
+    </p>
+  </div>
+
+  <p>
+    Il caso estremo <b>\(n=1\)</b> lo dimostra da solo. Con un unico dato, \(\bar{x}\) coincide col dato e l'unico
+    scarto è 0:
+  </p>
+
+  <ul>
+    <li>Con \(\frac{1}{n}\): varianza \(= 0/1 = 0\). Dice «dispersione zero» — <b>assurdo</b>: un solo punto non
+      dice nulla sulla variabilità.</li>
+    <li>Con \(\frac{1}{n-1}\): varianza \(= 0/0 = \) <b>indefinita</b>. La risposta onesta: un solo dato non
+      contiene informazione sullo spread.</li>
+  </ul>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Campione o popolazione? Lo decide la domanda</div>
+    <p style="margin-bottom:0">
+      Non lo leggi dai numeri. Gli stessi \([2,4,9]\) usano \(N\) se quei valori sono <em>tutto ciò che ti
+      interessa</em> (i 3 voti di quei 3 studenti, punto); usano \(n-1\) se sono un <em>estratto</em> da un
+      gruppo più grande a cui vuoi generalizzare. Nell'analisi dati reale hai <b>quasi sempre un campione</b>,
+      quindi <b>\(n-1\) è il default</b>.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🐍</span> Nota di programmazione: il bug del ddof</div>
+    <p style="margin-bottom:0">
+      Le librerie non concordano sul default, ed è una fonte classica di bug silenziosi:
+      <br>• <b>NumPy</b>: <code>np.std()</code> / <code>np.var()</code> usano \(n\) (<code>ddof=0</code>, popolazione).
+      <br>• <b>pandas</b>: <code>.std()</code> / <code>.var()</code> usano \(n-1\) (<code>ddof=1</code>, campione).
+      <br>Il parametro <code>ddof</code> («delta degrees of freedom») controlla tutto: <code>ddof=1</code> →
+      formula con \(n-1\). Passare gli stessi dati alle due librerie può darti due numeri diversi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">SEZIONE 4.4</span>La deviazione standard</h2>
+
+  <p class="lead">
+    La varianza è in unità al quadrato. Basta farne la <b>radice quadrata</b> per tornare alle unità originali:
+    è la <b>deviazione standard</b>, la misura di dispersione che userai il 90% delle volte.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Deviazione standard <span class="tag">dispersione «leggibile»</span></div>
+    <div class="f-body">
+      \[ \sigma = \sqrt{\sigma^2} \qquad\qquad s = \sqrt{s^2} \]
+    </div>
+    <div class="f-note">
+      La radice riporta tutto nelle stesse unità dei dati: se misuri altezze in cm, \(s\) è in cm. Leggila così:
+      <mark>di quanto, in media, i valori si discostano dal centro</mark>. Una deviazione standard di 3 cm su
+      altezze significa che il tipico scostamento dalla media è di circa 3 cm.
+    </div>
+  </div>
+
+  <p>
+    <b>Esempio numerico completo.</b> Dati \([2,4,9]\), media \(\bar{x}=5\).
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>\(x_i\)</th><th>scarto \(x_i-\bar{x}\)</th><th>scarto²</th></tr></thead>
+    <tbody>
+      <tr><td>2</td><td>−3</td><td>9</td></tr>
+      <tr><td>4</td><td>−1</td><td>1</td></tr>
+      <tr><td>9</td><td>+4</td><td>16</td></tr>
+      <tr><td></td><td><b>somma</b></td><td><b>26</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <ul>
+    <li><b>Come popolazione:</b> \(\sigma^2 = 26/3 \approx 8{,}67\) → \(\sigma = \sqrt{8{,}67} \approx
+      \mathbf{2{,}94}\).</li>
+    <li><b>Come campione:</b> \(s^2 = 26/2 = 13\) → \(s = \sqrt{13} \approx \mathbf{3{,}61}\).</li>
+  </ul>
+
+  <p>
+    La versione campionaria (con \(n-1=2\)) è più grande: è la correzione di Bessel all'opera. Con soli 3 dati la
+    differenza è vistosa; con \(n=1000\), dividere per 999 o 1000 cambia pochissimo — la correzione conta
+    soprattutto sui campioni piccoli.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">SEZIONE 4.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">Per i dati \([4, 8, 6, 2]\) (trattali come <b>popolazione</b>) calcola media,
+      varianza e deviazione standard.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Media: \((4+8+6+2)/4 = 20/4 = 5\). Scarti: \(-1, +3, +1, -3\); quadrati: \(1, 9, 1, 9\); somma \(=20\).</p>
+        <p style="margin-bottom:0">Varianza (popolazione): \(\sigma^2 = 20/4 = 5\). Deviazione standard:
+          \(\sigma = \sqrt{5} \approx \mathbf{2{,}24}\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">Stessi dati \([4, 8, 6, 2]\), ma ora come <b>campione</b>. Quanto vale \(s^2\)?
+      È più grande o più piccola della varianza dell'esercizio precedente? Perché?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Stessa somma degli scarti quadrati (20), ma si divide per \(n-1 = 3\): \(s^2 = 20/3 \approx 6{,}67\),
+          \(s \approx 2{,}58\).</p>
+        <p style="margin-bottom:0"><b>Più grande</b> della versione-popolazione (5). Dividere per un numero più
+          piccolo (3 invece di 4) gonfia il risultato: è la correzione di Bessel, che compensa la sottostima
+          dovuta all'uso di \(\bar{x}\) al posto di \(\mu\) (§4.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">Un collega calcola la deviazione standard di 12 misure con <code>np.std()</code> e
+      ottiene 4,00; tu la calcoli con <code>pandas .std()</code> e ottieni 4,18. Chi ha sbagliato?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Nessuno.</b> È il tranello del <code>ddof</code> (§4.3): NumPy divide per \(n=12\) (popolazione),
+          pandas per \(n-1=11\) (campione). Il rapporto tra le due è \(\sqrt{12/11} = \sqrt{1{,}091} \approx
+          1{,}045\); e infatti \(4{,}00 \times 1{,}045 \approx 4{,}18\). Coincide.</p>
+        <p style="margin-bottom:0">Trattandosi di un campione, la stima corretta è quella di pandas (4,18). Con
+          NumPy si sarebbe usato <code>np.std(x, ddof=1)</code>.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">Perché elevare al quadrato gli scarti, e non prendere semplicemente il loro valore
+      assoluto? Che vantaggio e che svantaggio ha il quadrato?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Entrambi eliminano i segni. Il valore assoluto dà la <b>deviazione media assoluta</b> (MAD), una misura
+          legittima. Il <b>quadrato</b> però: (1) è matematicamente più maneggevole — derivabile ovunque, si
+          combina bene con media e con la teoria (varianze che si sommano, minimi quadrati, ecc.); (2) pesa di
+          più gli scarti grandi.</p>
+        <p style="margin-bottom:0">Lo svantaggio è proprio quel «pesa di più»: il quadrato rende varianza e
+          deviazione standard <b>sensibili agli outlier</b> (come la media, §3.1). Su dati con estremi, misure di
+          dispersione robuste come l'IQR (Cap. 5) sono preferibili.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">SEZIONE 4.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><b>Scarto</b> = \(x_i - \bar{x}\). La media degli scarti fa sempre 0 → serve il quadrato.</li>
+      <li><b>Varianza</b> = media degli scarti al quadrato. In unità al quadrato.</li>
+      <li><b>n−1 (Bessel):</b> su un campione si divide per \(n-1\), per compensare la sottostima dovuta all'uso
+        di \(\bar{x}\) invece di \(\mu\). È il default nell'analisi dati.</li>
+      <li><b>Deviazione standard</b> = \(\sqrt{\text{varianza}}\): riporta alle unità originali. La misura di
+        dispersione di riferimento.</li>
+      <li><b>Attenzione al codice:</b> <code>ddof</code> decide tra \(n\) e \(n-1\). NumPy default \(n\), pandas
+        default \(n-1\).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Varianza e deviazione standard sono potenti ma, come la media, si fanno trascinare dagli estremi. Quando i
+    dati sono storti o pieni di outlier serve un'altra famiglia di misure, basata non sui valori ma sulle
+    <em>posizioni</em>: quantili, scarto interquartile, box plot. È il <strong>Capitolo 5</strong> — e lì
+    scopriremo anche come capire, con un colpo d'occhio, se dei dati sono «normali».
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.2 — la varianza come area media dei quadrati degli scarti
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wvr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wvr-out');
+  const sS = document.getElementById('wvr-s'), sV = document.getElementById('wvr-sv');
+  // 5 offset fissi (media 0), riscalati dal cursore
+  const base = [-1.5, -0.6, 0.1, 0.7, 1.3];
+
+  function draw() {
+    const spread = parseInt(sS.value, 10);
+    sV.textContent = spread;
+    const center = 50;
+    const data = base.map(b => center + b * spread);
+    const m = data.reduce((a, b) => a + b, 0) / data.length;
+    const sqdev = data.map(x => (x - m) ** 2);
+    const varr = sqdev.reduce((a, b) => a + b, 0) / data.length;    // popolazione (media delle aree)
+    const sd = Math.sqrt(varr);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: -2, ymax: 46 });
+    // asse dei dati
+    p.line(0, 0, 100, 0, { color: 'var(--rule)', width: 1.5 });
+    // media
+    p.line(m, -1.5, m, 44, { color: 'var(--accent)', width: 2.2, dash: '5 4' });
+    p.text(m, 45, 'media', { color: 'var(--accent)', size: 11 });
+    // per ogni dato: quadrato di lato |scarto| (area = scarto²), appoggiato sull'asse
+    data.forEach((x, i) => {
+      const dev = x - m, side = Math.abs(dev);
+      const x1 = Math.min(x, m), x2 = Math.max(x, m);
+      p.rect(x1, 0, x2, side, { fill: 'color-mix(in srgb, var(--violet) 22%, transparent)', color: 'var(--violet)', width: 1 });
+      p.dot(x, 0, { r: 4.5, color: 'var(--green)', stroke: 'var(--paper)', sw: 1.5 });
+    });
+    // barra: varianza = area media
+    p.text(6, 40, 'ogni quadrato = scarto²', { color: 'var(--violet)', anchor: 'start', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">varianza ≈ <b>${varr.toFixed(0)}</b> &nbsp;·&nbsp; deviazione standard ≈ <b>${sd.toFixed(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La varianza è l'<b>area media</b> dei ${data.length} quadrati viola. Allarga la dispersione: i quadrati
+        crescono col <mark>quadrato</mark> dello scarto, perciò la varianza esplode in fretta. La deviazione
+        standard (la sua radice) cresce invece in proporzione allo spread — ed è nelle stesse unità dei dati.
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
