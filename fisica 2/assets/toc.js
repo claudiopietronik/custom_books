@@ -116,7 +116,7 @@ const TOC = [
     n: 8,
     titolo: "Le sorgenti del campo magnetico",
     file: "cap08-sorgenti-magnetiche.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Il campo di una carica in moto" },
       { id: "s8-2", n: "8.2", t: "La legge di Biot-Savart" },
