@@ -294,7 +294,7 @@ const TOC = [
     n: 18,
     titolo: "Le proprietà termiche della materia",
     file: "cap18-proprieta-termiche.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "L'equazione di stato del gas ideale" },
       { id: "s18-2", n: "18.2", t: "Il modello cinetico del gas" },

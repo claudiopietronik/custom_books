@@ -41,7 +41,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 15 — Le onde meccaniche
 - [x] 16 — Il suono e l'acustica
 - [x] 17 — Temperatura e calore
-- [ ] 18 — Le proprietà termiche della materia
+- [x] 18 — Le proprietà termiche della materia
 - [ ] 19 — La prima legge della termodinamica
 - [ ] 20 — La seconda legge della termodinamica
 
