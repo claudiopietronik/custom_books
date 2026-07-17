@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Metodologia pratica — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11 · Parte II</div>
+    <h1>Metodologia pratica</h1>
+    <p class="standfirst">
+      Saper costruire una rete non basta: bisogna saperla <b>far funzionare</b>. Questo capitolo è il più
+      pratico del libro — un metodo di lavoro. <mark>Scegliere la metrica giusta, partire da una baseline
+      sensata, capire se serve più dati o un modello più grande, cercare gli iperparametri e — soprattutto —
+      fare debug</mark> quando qualcosa non torna. Spesso è la metodologia, non l'architettura, a decidere il
+      successo di un progetto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La cosa più importante e più trascurata: la <b>metrica</b> giusta (§11.1, widget precisione/recall). Da
+      dove partire: le <b>baseline</b> (§11.2). La domanda ricorrente: <b>più dati o modello più grande?</b>
+      (§11.3). Come <b>cercare gli iperparametri</b> (§11.4) e come fare <b>debug</b> (§11.5). Infine un caso
+      reale end-to-end (§11.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La differenza tra chi «gioca» con le reti e chi le porta in produzione è tutta qui. <mark>Ottimizzare la
+      metrica sbagliata è il modo più comune di fallire con successo</mark>: un modello con il 99% di accuratezza
+      su una malattia rara che colpisce l'1% può essere inutile (basta dire «sano» a tutti). Precisione, recall,
+      baseline, un metodo di debug: sono ciò che distingue un progetto che funziona da uno che sembra funzionare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Le metriche di prestazione</h2>
+
+  <p class="lead">
+    Prima di ottimizzare, decidi <em>cosa</em> ottimizzare. L'accuratezza è spesso ingannevole; per classi
+    sbilanciate servono <b>precisione</b> e <b>recall</b>.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'inganno dell'accuratezza</div>
+    <p style="margin-bottom:0">
+      Se il 99% degli esempi è «negativo», un modello che dice <em>sempre</em> «negativo» ha il 99% di
+      accuratezza — e cattura zero casi positivi. <mark>Con classi sbilanciate l'accuratezza è quasi inutile.</mark>
+      Servono metriche che guardino separatamente i due tipi di errore.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Precisione, recall, F1 <span class="tag">due errori diversi, un compromesso</span></div>
+    <div class="f-body">
+      \[ \text{precisione} = \frac{\text{VP}}{\text{VP}+\text{FP}}, \qquad
+         \text{recall} = \frac{\text{VP}}{\text{VP}+\text{FN}}, \qquad
+         F_1 = \frac{2\,\text{P}\cdot\text{R}}{\text{P}+\text{R}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Precisione</b></dt>
+        <dd>dei casi che ho segnalato come positivi, quanti lo erano davvero? Alta precisione = pochi
+            <b>falsi allarmi</b>.</dd>
+        <dt><b>Recall</b> (sensibilità)</dt>
+        <dd>dei casi positivi veri, quanti ne ho trovati? Alto recall = pochi <b>positivi mancati</b>.</dd>
+        <dt>\(F_1\)</dt>
+        <dd>la media armonica delle due: un solo numero che le bilancia. Alta solo se <em>entrambe</em> lo sono.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      C'è un <b>compromesso</b>: alzando la soglia di decisione la precisione sale ma il recall scende, e
+      viceversa. Quale privilegiare dipende dal costo degli errori: per lo <b>screening di un tumore</b> vuoi
+      recall altissimo (meglio un falso allarme che un caso mancato); per un <b>filtro anti-spam</b> vuoi
+      precisione alta (meglio far passare uno spam che cestinare un'email vera). Il widget: muovi la soglia e
+      guarda le due metriche muoversi in direzioni opposte.
+    </div>
+  </div>
+
+  <div class="widget" id="w-pr">
+    <div class="w-head">
+      <span>Soglia di decisione: precisione ↔ recall</span>
+      <span class="hint">muovi la soglia</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpr-svg" viewBox="0 0 560 340" role="img" aria-label="Le distribuzioni di punteggio di positivi e negativi con una soglia mobile; precisione e recall cambiano in senso opposto"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>soglia</label><input type="range" id="wpr-t" min="0.05" max="0.95" step="0.01" value="0.5"><output id="wpr-t-o">0.50</output></div>
+    </div>
+    <div class="w-readout" id="wpr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>I modelli di base predefiniti</h2>
+
+  <p class="lead">
+    Non partire dal modello più sofisticato: parti da una <b>baseline</b> ragionevole e collaudata, e miglioria
+    solo se serve.
+  </p>
+
+  <p>
+    Regole pratiche: per problemi con struttura nota, usa l'architettura standard (CNN per immagini, transformer
+    o LSTM per sequenze). Per l'ottimizzatore, <b>Adam</b> con learning rate di default. Aggiungi <b>batch
+    normalization</b> e una regolarizzazione base (dropout o weight decay). <mark>Una baseline solida ti dice
+    subito se il problema è affrontabile</mark>, e diventa il metro di paragone per ogni miglioria successiva.
+    Solo dopo, guardando gli errori, si decide dove investire.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Serve raccogliere più dati?</h2>
+
+  <p class="lead">
+    La domanda da un milione di dollari. La risposta si legge dal <b>gap</b> tra errore di training e di
+    validation — cioè da bias e varianza (§5.4).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔎</span> La diagnosi in due passi</div>
+    <p style="margin-bottom:0">
+      1. L'errore di <b>training</b> è alto? Allora il modello è troppo debole (<b>underfitting</b>, alto bias):
+         non servono più dati, serve un <b>modello più grande</b>, più addestramento, o feature migliori.<br>
+      2. L'errore di training è basso ma quello di <b>validation</b> è alto (gap grande)? È <b>overfitting</b>
+         (alta varianza): qui <b>più dati aiutano</b> (o più regolarizzazione).<br>
+      <mark>Prima si guarda il training error, poi il gap.</mark> Raccogliere dati è costoso: falla solo quando
+      la diagnosi dice che serve davvero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>La selezione degli iperparametri</h2>
+
+  <p class="lead">
+    Learning rate, dimensione della rete, dropout, weight decay: come li si sceglie? A mano, a griglia, o a
+    caso — e, sorprendentemente, il caso spesso vince.
+  </p>
+
+  <p>
+    L'iperparametro più importante è quasi sempre il <b>learning rate</b>: sbagliato, niente funziona. La
+    ricerca può essere <b>manuale</b> (capendo cosa fa ogni iperparametro), a <b>griglia</b> (prova tutte le
+    combinazioni) o <b>casuale</b> (campiona a caso). <mark>La ricerca casuale batte quasi sempre la griglia</mark>:
+    se solo pochi iperparametri contano davvero, la griglia spreca prove ripetendo gli stessi valori di quelli
+    importanti, mentre il caso li esplora meglio. Metodi più avanzati (ottimizzazione bayesiana) modellano quale
+    combinazione provare dopo, ma la ricerca casuale resta una baseline sorprendentemente forte.
+  </p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 480 200" role="img" aria-label="Ricerca a griglia contro ricerca casuale: la casuale esplora più valori dell'iperparametro importante">
+      <g font-family="var(--sans)">
+        <text x="115" y="20" class="lbl-b" text-anchor="middle">A griglia</text>
+        <text x="365" y="20" class="lbl-b" text-anchor="middle">Casuale</text>
+        <!-- griglia -->
+        <rect x="35" y="35" width="160" height="150" fill="none" stroke="var(--rule)"/>
+        <g fill="var(--accent)">
+          <circle cx="75" cy="75" r="5"/><circle cx="115" cy="75" r="5"/><circle cx="155" cy="75" r="5"/>
+          <circle cx="75" cy="115" r="5"/><circle cx="115" cy="115" r="5"/><circle cx="155" cy="115" r="5"/>
+          <circle cx="75" cy="155" r="5"/><circle cx="115" cy="155" r="5"/><circle cx="155" cy="155" r="5"/>
+        </g>
+        <text x="115" y="197" class="lbl" text-anchor="middle" font-size="11">iperpar. importante →</text>
+        <!-- casuale -->
+        <rect x="285" y="35" width="160" height="150" fill="none" stroke="var(--rule)"/>
+        <g fill="var(--warm)">
+          <circle cx="300" cy="60" r="5"/><circle cx="330" cy="150" r="5"/><circle cx="355" cy="95" r="5"/>
+          <circle cx="380" cy="45" r="5"/><circle cx="400" cy="130" r="5"/><circle cx="345" cy="170" r="5"/>
+          <circle cx="420" cy="80" r="5"/><circle cx="310" cy="110" r="5"/><circle cx="435" cy="155" r="5"/>
+        </g>
+        <text x="365" y="197" class="lbl" text-anchor="middle" font-size="11">iperpar. importante →</text>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="n">Figura 11.1.</span> Con 9 prove, la griglia esplora solo <b>3</b> valori distinti
+      dell'iperparametro importante (asse orizzontale); la ricerca casuale ne esplora <b>9</b>. Se un solo
+      iperparametro conta davvero, il caso ha il triplo delle chance di trovare il valore giusto.
+    </figcaption>
+  </figure>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Le strategie di debug</h2>
+
+  <p class="lead">
+    Le reti sbagliano <b>silenziosamente</b>: un bug non dà errore, dà solo prestazioni mediocri. Servono
+    strategie apposite per stanare i problemi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🐛</span> Il kit di sopravvivenza del debug</div>
+    <p style="margin-bottom:0">
+      • <b>Overfitta un piccolo campione.</b> Se la rete non riesce a memorizzare 10 esempi (loss → 0), c'è un
+        <b>bug</b>, non un problema di generalizzazione.<br>
+      • <b>Guarda i casi peggiori.</b> Ispeziona gli esempi con l'errore più alto: spesso rivelano etichette
+        sbagliate o un pattern che il modello non vede.<br>
+      • <b>Monitora le curve</b> di training e validation nel tempo: dicono se è underfitting, overfitting, o
+        learning rate sbagliato.<br>
+      • <b>Verifica i gradienti</b> (numericamente) e le <b>attivazioni</b> (esplodono? tutte a zero?).<br>
+      <mark>Il primo test — overfittare pochi esempi — smaschera la maggior parte dei bug.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esempio: riconoscere numeri a più cifre</h2>
+
+  <p class="lead">
+    Un caso reale (leggere i numeri civici dalle foto di Street View) mostra come i pezzi si mettono insieme, e
+    come la metodologia guida le decisioni.
+  </p>
+
+  <p>
+    Il compito: trascrivere una sequenza di cifre da una foto. Prima decisione, la <b>metrica</b>: non basta
+    l'accuratezza per cifra, serve la trascrizione <em>intera</em> corretta (e magari una soglia di confidenza,
+    per lasciar decidere a un umano i casi incerti — un compromesso precisione/copertura). Poi la <b>baseline</b>:
+    una CNN che estrae feature dall'immagine, seguita da più uscite (una per cifra). Poi il <b>ciclo</b>:
+    addestra, guarda dove sbaglia, decide se il collo di bottiglia è capacità, dati o ottimizzazione, e
+    itera. <mark>Nessun singolo trucco fa la differenza: la fa il ciclo diagnostico ripetuto</mark> —
+    esattamente il metodo di questo capitolo.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>Scegli la <b>metrica</b> giusta <em>prima</em> di ottimizzare: l'accuratezza inganna con classi
+          sbilanciate; usa <b>precisione/recall/F1</b> (§11.1). Il loro compromesso dipende dal costo degli
+          errori.</li>
+      <li>Parti da una <b>baseline</b> solida (CNN/transformer + Adam + batch norm) e migliora da lì (§11.2).</li>
+      <li><b>Più dati o modello più grande?</b> Guarda prima il training error (bias), poi il gap con la
+          validation (varianza) (§11.3). La ricerca <b>casuale</b> di iperparametri batte la griglia (§11.4).</li>
+      <li>Fai <b>debug</b> in modo attivo: overfitta pochi esempi, guarda i casi peggiori, monitora le curve
+          (§11.5). Il metodo, ripetuto, conta più di ogni singolo trucco (§11.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con architetture e metodo, siamo pronti a vedere il deep learning <em>al lavoro</em>. Il
+    <strong>Capitolo 12</strong> chiude la Parte II con le <b>applicazioni</b>: visione, parlato, linguaggio
+    naturale — e come si addestra su scala enorme. È dove tutta la teoria diventa i sistemi che usiamo ogni
+    giorno.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Un dataset ha il 95% di esempi «negativi». Un modello dice sempre «negativo». Qual è la sua accuratezza?
+      E la sua recall sui positivi? Cosa insegna questo esempio?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Per ciascun caso, diresti di privilegiare precisione o recall? (a) Screening di un tumore aggressivo; (b)
+      filtro anti-spam per email di lavoro; (c) sistema che segnala frodi da far controllare a un umano. Motiva.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Il tuo modello ha errore di training 25% ed errore di validation 27%. È un problema di bias o di varianza?
+      Raccogliere più dati aiuterebbe? Cosa proveresti?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Con classi bilanciate 50/50, l'accuratezza è una metrica sensata. &nbsp;
+      (b) Alzare la soglia di decisione aumenta il recall. &nbsp;
+      (c) Se una rete non riesce a overfittare 10 esempi, probabilmente c'è un bug. &nbsp;
+      (d) La ricerca casuale di iperparametri è di solito peggiore della ricerca a griglia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-8"><span class="secnum">Sezione 11.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      Accuratezza = <b>95%</b> (indovina tutti i negativi, che sono il 95%). Recall sui positivi = <b>0%</b> (non
+      ne trova nessuno: VP = 0). Insegna che <mark>un'accuratezza alta può nascondere un modello inutile</mark>
+      quando le classi sono sbilanciate: bisogna guardare precisione e recall della classe minoritaria.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      (a) <b>Recall</b>: meglio un falso allarme (poi si approfondisce) che mancare un tumore. (b) <b>Precisione</b>:
+      meglio far passare qualche spam che cestinare un'email di lavoro vera (un falso positivo è costoso). (c)
+      <b>Recall</b> (con soglia tarata): visto che a controllare è un umano, conviene segnalare tutte le
+      possibili frodi, accettando qualche falso allarme — ma senza sommergere l'umano, quindi si bilancia con la
+      precisione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      L'errore di training è <b>alto</b> (25%) e il gap con la validation è piccolo (2 punti): è un problema di
+      <b>bias/underfitting</b>, non di varianza. <mark>Più dati non aiuterebbero</mark> (il modello non riesce
+      già a sfruttare quelli che ha). Proverei un <b>modello più grande</b>/profondo, più addestramento, un
+      learning rate migliore, o feature/architettura più adatte.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> Con classi bilanciate l'accuratezza è informativa (§11.1). <br>
+      <b>(b) FALSO.</b> Alzare la soglia rende il modello più «esigente»: aumenta la <b>precisione</b> e
+      <b>abbassa</b> il recall (§11.1). <br>
+      <b>(c) VERO.</b> Non riuscire a memorizzare pochi esempi indica un bug, non un problema di generalizzazione
+      (§11.5). <br>
+      <b>(d) FALSO.</b> La ricerca casuale è di solito <b>migliore</b> della griglia, perché esplora più valori
+      degli iperparametri che contano (§11.4).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §11.1 — soglia di decisione, precisione e recall
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpr-out');
+  const tI = document.getElementById('wpr-t'), tO = document.getElementById('wpr-t-o');
+  // due gaussiane di punteggio: negativi ~0.35, positivi ~0.65
+  const gauss = (x, mu, s) => Math.exp(-((x - mu) ** 2) / (2 * s * s));
+  const neg = x => gauss(x, 0.36, 0.14);
+  const pos = x => gauss(x, 0.64, 0.14);
+  // conteggi (integrali discreti)
+  function counts(thr) {
+    let TP = 0, FP = 0, FN = 0, TN = 0;
+    const N = 400;
+    for (let i = 0; i <= N; i++) {
+      const x = i / N;
+      const p = pos(x), n = neg(x);
+      if (x >= thr) { TP += p; FP += n; } else { FN += p; TN += n; }
+    }
+    return { TP, FP, FN, TN };
+  }
+
+  function draw() {
+    const thr = parseFloat(tI.value); tO.textContent = fmt(thr, 2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 1, ymin: -0.12, ymax: 1.15 });
+    p.axes({ numbers: true, stepX: 0.2, stepY: 0.5, xname: 'punteggio del modello', yname: '' });
+    // aree: positivi (destra=TP) e negativi (destra=FP)
+    p.area(pos, thr, 1, { fill: 'color-mix(in srgb, var(--warm) 26%, transparent)' });
+    p.area(neg, thr, 1, { fill: 'color-mix(in srgb, var(--accent) 30%, transparent)' });
+    p.func(neg, { color: 'var(--accent)', width: 2.4 });
+    p.func(pos, { color: 'var(--warm)', width: 2.4 });
+    p.line(thr, -0.12, thr, 1.12, { color: 'var(--violet)', width: 2.4, dash: '6 4' });
+    p.text(0.18, 1.02, 'negativi', { color: 'var(--accent)', bold: true });
+    p.text(0.82, 1.02, 'positivi', { color: 'var(--warm)', bold: true });
+
+    const c = counts(thr);
+    const prec = c.TP / (c.TP + c.FP + 1e-9);
+    const rec = c.TP / (c.TP + c.FN + 1e-9);
+    const f1 = 2 * prec * rec / (prec + rec + 1e-9);
+    out.innerHTML = `
+      <div class="big">
+        precisione <b style="color:var(--accent)">${fmt(prec * 100, 0)}%</b> &nbsp;·&nbsp;
+        recall <b style="color:var(--warm)">${fmt(rec * 100, 0)}%</b> &nbsp;·&nbsp;
+        F1 <b style="color:var(--violet)">${fmt(f1, 2)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Tutto ciò che sta a <b>destra</b> della soglia viene classificato «positivo». A destra: i
+        <b style="color:var(--warm)">veri positivi</b> (arancione) ma anche i <b style="color:var(--accent)">falsi
+        positivi</b> (blu). ${thr > 0.6 ? '<mark>Soglia alta: precisione su, recall giù (perdi positivi a sinistra della soglia).</mark>'
+          : thr < 0.4 ? '<mark>Soglia bassa: recall su, precisione giù (peschi molti falsi positivi).</mark>'
+          : 'Muovi la soglia: precisione e recall vanno in direzioni opposte. Non puoi massimizzarle entrambe.'}
+      </div>`;
+  }
+  tI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

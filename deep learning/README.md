@@ -44,7 +44,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 8 — Ottimizzazione per l'addestramento
 - [x] 9 — Reti convoluzionali
 - [x] 10 — Modellazione di sequenze: reti ricorrenti
-- [ ] 11 — Metodologia pratica
+- [x] 11 — Metodologia pratica
 - [ ] 12 — Applicazioni
 - [ ] 13 — Modelli a fattori lineari
 - [ ] 14 — Autoencoder

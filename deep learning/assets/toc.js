@@ -209,7 +209,7 @@ const TOC = [
     titolo: "Metodologia pratica",
     file: "cap11-metodologia.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Le metriche di prestazione" },
       { id: "s11-2", n: "11.2", t: "I modelli di base predefiniti" },
