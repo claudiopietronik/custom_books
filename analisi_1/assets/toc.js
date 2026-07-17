@@ -127,7 +127,7 @@ const TOC = [
     n: 7,
     titolo: "Teoremi sulle funzioni continue",
     file: "cap07-funzioni-continue.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Perché la continuità è potente" },
       { id: "s7-2", n: "7.2", t: "Il teorema degli zeri" },
