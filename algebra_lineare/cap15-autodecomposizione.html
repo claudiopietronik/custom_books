@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Autodecomposizione — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>Autodecomposizione</h1>
+    <p class="standfirst">
+      Una matrice quadrata prende ogni vettore e lo <em>ruota e lo allunga</em>. Ma per qualche vettore
+      speciale la rotazione sparisce: la matrice li lascia sulla loro retta e si limita a scalarli. Quei
+      vettori — gli <b>autovettori</b> — e i loro fattori di scala — gli <b>autovalori</b> — sono le
+      <mark>direzioni proprie</mark> della matrice, la sua struttura nascosta. Trovarli è l'autodecomposizione,
+      ed è la porta d'ingresso della seconda metà del libro: SVD, forme quadratiche, PCA.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il libro cambia marcia. Fin qui abbiamo <em>risolto</em> sistemi; da qui in poi <em>guardiamo dentro</em>
+      le matrici. Partiamo dall'idea geometrica (§15.1), poi impariamo a trovare gli autovalori con il
+      polinomio caratteristico (§15.2) e gli autovettori con lo spazio nullo (§15.3). Da lì costruiamo la
+      <b>diagonalizzazione</b> \(\mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\) (§15.4) e ne studiamo le
+      condizioni e i casi limite (§§15.5–15.7). Il gioiello è la sezione sulle <b>matrici simmetriche</b>
+      (§15.8), dove tutto diventa perfetto — e nascono ortogonalità (Cap. 13) e proiezioni. Chiudiamo con
+      applicazioni (§§15.9–15.12), esercizi e soluzioni. È lungo: è il capitolo cardine.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire una matrice, non solo usarla</div>
+    <p>
+      Elevare una matrice alla centesima potenza, capire se un sistema dinamico esplode o si stabilizza,
+      trovare le direzioni di massima varianza di un dataset, comprimere un'immagine: tutte queste domande
+      hanno la stessa risposta. <mark>Scomponi la matrice nelle sue direzioni proprie</mark> e ogni operazione
+      difficile diventa una moltiplicazione di numeri, un asse alla volta.
+    </p>
+    <p style="margin-bottom:0">
+      È il salto da «la matrice fa <em>qualcosa</em> ai vettori» a «la matrice <em>è fatta di</em> queste
+      direzioni, con questi pesi». Google (PageRank), la meccanica quantistica, la statistica multivariata e
+      mezzo machine learning vivono qui. E la PCA del Capitolo 19 è, letteralmente, questo capitolo applicato a
+      una matrice di covarianza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Eigen-che?</h2>
+
+  <p class="lead">
+    <em>Eigen</em> è tedesco per «proprio», «caratteristico». Un autovettore è una direzione <b>propria</b>
+    della matrice: quella su cui la matrice non ruota, ma solo allunga o accorcia. Cominciamo dall'immagine,
+    poi mettiamo la formula.
+  </p>
+
+  <p>
+    Prendi una matrice \(\mm{A}\) e falla agire su tutti i vettori del piano. In generale ogni vettore viene
+    <b>spostato e girato</b>: \(\mm{A}\vv{v}\) punta da un'altra parte rispetto a \(\vv{v}\). Ma per certe
+    direzioni magiche l'immagine \(\mm{A}\vv{v}\) resta <em>sulla stessa retta</em> di \(\vv{v}\): stesso verso
+    (allungato o accorciato) o verso opposto. Quelle direzioni sono gli <b>autovettori</b>; il fattore di
+    scala è l'<b>autovalore</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'equazione degli autovalori</div>
+    <p style="margin:.2rem 0 .4rem">
+      Un vettore <b>non nullo</b> \(\vv{v}\) è un <span class="termine">autovettore</span> di \(\mm{A}\) con
+      <span class="termine">autovalore</span> \(\lambda\) se
+      \[ \boxed{\;\mm{A}\vv{v} = \lambda\vv{v}\;} \]
+    </p>
+    <p style="margin:0">
+      A sinistra c'è un lavoro da <em>matrice</em> (moltiplicazione matrice-vettore, §6.5); a destra un lavoro
+      da <em>scalare</em> (allunga e basta, §2.5). L'equazione dice: <mark>su questa direzione, la matrice si
+      comporta come un semplice numero.</mark> \(\lambda\) può essere positivo (allunga), tra 0 e 1
+      (accorcia), negativo (ribalta), o zero (annienta: \(\vv{v}\) sta in \(\Null(\mm{A})\), §8.6). Escludiamo
+      \(\vv{v} = \vv{0}\), che soddisferebbe l'equazione per ogni \(\lambda\) senza dire niente.
+    </p>
+  </div>
+
+  <div class="widget" id="w-eig">
+    <div class="w-head">
+      <span>Cerca la direzione che non ruota</span>
+      <span class="hint">trascina v attorno al cerchio</span>
+    </div>
+    <div class="w-stage">
+      <svg id="we-svg" viewBox="0 0 560 400" role="img" aria-label="Un vettore e la sua immagine sotto A: quando sono allineati, v è un autovettore"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="we-a">A = [[2,1],[1,2]]</button>
+      <button class="w-btn" id="we-b">A = [[2,0],[0,-1]]</button>
+      <button class="w-btn" id="we-c">rotazione (nessuno)</button>
+    </div>
+    <div class="w-readout" id="we-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Un autovettore è una <em>direzione</em>, non un vettore preciso</div>
+    <p style="margin-bottom:0">
+      Se \(\mm{A}\vv{v} = \lambda\vv{v}\), allora anche \(\mm{A}(3\vv{v}) = \lambda(3\vv{v})\): qualunque
+      multiplo di \(\vv{v}\) è ancora un autovettore, con lo <em>stesso</em> \(\lambda\). Gli autovettori
+      vivono a gruppi — una retta intera (o un sottospazio) per ogni autovalore, l'<b>autospazio</b>. Per
+      questo di solito li <b>normalizziamo</b> a lunghezza 1 (§3.9): scegliamo un rappresentante per la
+      direzione. La <em>direzione</em> è ciò che conta; la lunghezza è una nostra convenzione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Trovare gli autovalori</h2>
+
+  <p class="lead">
+    L'equazione \(\mm{A}\vv{v} = \lambda\vv{v}\) ha due incognite intrecciate, \(\lambda\) e \(\vv{v}\). Il
+    trucco è staccarle: prima si trovano i \(\lambda\), e il determinante del Capitolo 11 è la chiave.
+  </p>
+
+  <p>
+    Porta tutto a sinistra: \(\mm{A}\vv{v} - \lambda\vv{v} = \vv{0}\). Per raccogliere \(\vv{v}\) serve
+    scrivere \(\lambda\vv{v} = \lambda\mm{I}\vv{v}\) (lo <em>shifting</em> del §5.8 — ecco perché serviva), e
+    diventa \((\mm{A} - \lambda\mm{I})\vv{v} = \vv{0}\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dall'equazione al determinante <span class="tag">cerca la matrice che «schiaccia» v</span></div>
+    <div class="f-body">
+      \[
+        (\mm{A} - \lambda\mm{I})\vv{v} = \vv{0}, \quad \vv{v} \neq \vv{0}
+        \;\Longrightarrow\;
+        \det(\mm{A} - \lambda\mm{I}) = 0
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\((\mm{A} - \lambda\mm{I})\vv{v} = \vv{0}\) con \(\vv{v} \neq \vv{0}\)</dt>
+        <dd>vogliamo che questa matrice mandi un vettore <em>non nullo</em> in \(\vv{0}\): deve avere uno
+            <b>spazio nullo non banale</b> (§8.6). Cioè dev'essere <b>singolare</b>, non invertibile.</dd>
+        <dt>\(\det(\mm{A} - \lambda\mm{I}) = 0\)</dt>
+        <dd>e «singolare» ha un nome preciso dal §11.1: determinante <b>zero</b>. <mark>Gli autovalori sono i
+            \(\lambda\) che rendono \(\mm{A} - \lambda\mm{I}\) singolare.</mark> Questa è l'equazione che li
+            pesca tutti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Espandendo il determinante esce un <b>polinomio in \(\lambda\)</b> di grado \(N\) (per una matrice
+      \(N\times N\)): il <span class="termine">polinomio caratteristico</span>, già incontrato nel §11.3. Le
+      sue radici sono gli autovalori. Una \(N\times N\) ne ha \(N\) (contati con molteplicità, eventualmente
+      complessi, §15.7).
+    </div>
+  </div>
+
+  <p>
+    Facciamolo su una \(2\times 2\), \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\). Sottraggo
+    \(\lambda\) dalla diagonale e impongo determinante nullo:
+  </p>
+
+  <ol class="passi">
+    <li>
+      \(\mm{A} - \lambda\mm{I} = \begin{bmatrix} 2-\lambda &amp; 1 \\ 1 &amp; 2-\lambda \end{bmatrix}\).
+    </li>
+    <li>
+      \(\det = (2-\lambda)^2 - (1)(1) = \lambda^2 - 4\lambda + 3\) — il polinomio caratteristico.
+    </li>
+    <li>
+      \(\lambda^2 - 4\lambda + 3 = (\lambda - 1)(\lambda - 3) = 0\) &nbsp;→&nbsp;
+      \(\lambda_1 = 1,\ \lambda_2 = 3\).
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Due controlli lampo: traccia e determinante</div>
+    <p style="margin-bottom:0">
+      Prima di fidarti dei tuoi \(\lambda\), verifica con due identità che valgono <em>sempre</em>:
+      \[ \sum_i \lambda_i = \tr(\mm{A}), \qquad \prod_i \lambda_i = \det(\mm{A}). \]
+      La <b>somma</b> degli autovalori è la traccia (§5.9), il loro <b>prodotto</b> è il determinante (§11.1).
+      Sul nostro esempio: \(1 + 3 = 4 = \tr(\mm{A})\) ✔ e \(1 \cdot 3 = 3 = \det(\mm{A})\) ✔. Un secondo di
+      conto che smaschera quasi ogni errore. (E vedi subito il §15.9: se un \(\lambda\) è \(0\), il prodotto è
+      \(0\), quindi \(\det = 0\), quindi la matrice è singolare.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Trovare gli autovettori</h2>
+
+  <p class="lead">
+    Trovato un autovalore \(\lambda\), il suo autovettore è quasi regalato: è un vettore dello spazio nullo di
+    \(\mm{A} - \lambda\mm{I}\). Un autovalore alla volta.
+  </p>
+
+  <p>
+    Per ogni \(\lambda\), rimetti il numero nella matrice \(\mm{A} - \lambda\mm{I}\) e cerca il suo spazio
+    nullo (§8.6): i vettori \(\vv{v}\) con \((\mm{A} - \lambda\mm{I})\vv{v} = \vv{0}\). Quella matrice è
+    <em>singolare</em> per costruzione (è così che abbiamo scelto \(\lambda\)), quindi lo spazio nullo non è
+    banale: c'è almeno una direzione. Continuiamo con \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\).
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>\(\lambda_1 = 1\):</b> \(\mm{A} - \mm{I} = \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}\). Lo
+      spazio nullo: \(v_1 + v_2 = 0\), cioè \(\vv{v}_1 = \begin{bmatrix} 1 \\ -1 \end{bmatrix}\) (o multipli).
+      Controllo: \(\mm{A}\vv{v}_1 = (2-1,\ 1-2) = (1, -1) = 1\cdot\vv{v}_1\) ✔.
+    </li>
+    <li>
+      <b>\(\lambda_2 = 3\):</b> \(\mm{A} - 3\mm{I} = \begin{bmatrix} -1 &amp; 1 \\ 1 &amp; -1 \end{bmatrix}\). Lo
+      spazio nullo: \(-v_1 + v_2 = 0\), cioè \(\vv{v}_2 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}\). Controllo:
+      \(\mm{A}\vv{v}_2 = (2+1,\ 1+2) = (3, 3) = 3\cdot\vv{v}_2\) ✔.
+    </li>
+  </ol>
+
+  <p>
+    Nota una cosa bellissima che tornerà nel §15.8: i due autovettori \((1, -1)\) e \((1, 1)\) sono
+    <b>perpendicolari</b> (\(\vv{v}_1\T\vv{v}_2 = 1 - 1 = 0\)). Non è un caso: \(\mm{A}\) è
+    <em>simmetrica</em>, e le matrici simmetriche regalano sempre autovettori ortogonali. Tienilo a mente.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> La ricetta completa, in due tempi</div>
+    <p style="margin-bottom:0">
+      <b>(1) Autovalori:</b> risolvi \(\det(\mm{A} - \lambda\mm{I}) = 0\) (§15.2). <b>(2) Autovettori:</b> per
+      ogni \(\lambda\), trova lo spazio nullo di \(\mm{A} - \lambda\mm{I}\) con la riduzione per righe del
+      §10.3 (§15.3). Sempre in quest'ordine: prima i numeri, poi le direzioni. Con \(3\times 3\) e oltre, il
+      polinomio caratteristico si fa duro a mano — in pratica lo fanno gli algoritmi (§15.13 rimanda alla
+      teoria vs pratica del §11.9), ma il <em>significato</em> è questo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Diagonalizzazione</h2>
+
+  <p class="lead">
+    Ecco il colpo grosso. Se raccogli tutti gli autovettori come colonne di una matrice e tutti gli autovalori
+    su una diagonale, le \(N\) equazioni \(\mm{A}\vv{v}_i = \lambda_i\vv{v}_i\) si impacchettano in una sola,
+    e la matrice si <b>apre</b>.
+  </p>
+
+  <p>
+    Metti gli autovettori nelle colonne di \(\mm{V} = [\,\vv{v}_1\ \vv{v}_2\ \cdots\ \vv{v}_N\,]\) e gli
+    autovalori sulla diagonale di \(\boldsymbol{\Lambda} = \diag(\lambda_1, \dots, \lambda_N)\). Le singole
+    \(\mm{A}\vv{v}_i = \lambda_i\vv{v}_i\), affiancate, diventano \(\mm{A}\mm{V} = \mm{V}\boldsymbol{\Lambda}\)
+    (la diagonale a destra scala <em>ogni colonna</em> di \(\mm{V}\) per il suo \(\lambda\), §6.3). Se gli
+    autovettori sono indipendenti, \(\mm{V}\) è invertibile e possiamo isolare \(\mm{A}\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'autodecomposizione <span class="tag">la matrice, aperta nelle sue direzioni</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\mm{V} = \mm{V}\boldsymbol{\Lambda}
+        \;\Longrightarrow\;
+        \boxed{\;\mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\;}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{V}\)</dt>
+        <dd>ha per colonne gli autovettori. È il <b>cambio di base</b> (§4.7): dalle coordinate «naturali» al
+            linguaggio in cui \(\mm{A}\) è semplice.</dd>
+        <dt>\(\boldsymbol{\Lambda}\)</dt>
+        <dd>diagonale con gli autovalori. È \(\mm{A}\) <em>vista nella base giusta</em>: in quel linguaggio la
+            matrice non fa altro che <b>scalare ogni asse</b> per il suo \(\lambda\). Nessuna mescolanza.</dd>
+        <dt>\(\mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\)</dt>
+        <dd>leggila da destra a sinistra come tre gesti: \(\mm{V}\inv\) <em>traduce</em> il vettore nella base
+            degli autovettori, \(\boldsymbol{\Lambda}\) <em>scala</em> ogni componente, \(\mm{V}\)
+            <em>ritraduce</em> indietro. <mark>Applicare \(\mm{A}\) = cambia lingua, scala, torna.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È lo stesso schema «\(\mm{V}\,(\text{cosa semplice})\,\mm{V}\inv\)» che governerà tutta la seconda metà
+      del libro. La QR (§13.6) spezzava in ortonormale × triangolare; qui spezziamo in <b>direzioni × scale</b>.
+    </div>
+  </div>
+
+  <p>
+    Sull'esempio \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\), con \(\vv{v}_1 = (1, -1)\),
+    \(\vv{v}_2 = (1, 1)\) e \(\lambda = 1, 3\):
+    \[
+      \mm{V} = \begin{bmatrix} 1 &amp; 1 \\ -1 &amp; 1 \end{bmatrix}, \quad
+      \boldsymbol{\Lambda} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 3 \end{bmatrix}, \quad
+      \mm{V}\inv = \tfrac12\begin{bmatrix} 1 &amp; -1 \\ 1 &amp; 1 \end{bmatrix}.
+    \]
+    Verifica: \(\mm{V}\boldsymbol{\Lambda} = \begin{bmatrix} 1 &amp; 3 \\ -1 &amp; 3 \end{bmatrix}\), poi
+    \(\mm{V}\boldsymbol{\Lambda}\mm{V}\inv = \tfrac12\begin{bmatrix} 1 &amp; 3 \\ -1 &amp; 3 \end{bmatrix}
+    \begin{bmatrix} 1 &amp; -1 \\ 1 &amp; 1 \end{bmatrix} = \tfrac12\begin{bmatrix} 4 &amp; 2 \\ 2 &amp; 4 \end{bmatrix}
+    = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix} = \mm{A}\) ✔.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Condizioni per la diagonalizzazione</h2>
+
+  <p class="lead">
+    Il passaggio \(\mm{A}\mm{V} = \mm{V}\boldsymbol{\Lambda} \Rightarrow \mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\)
+    ha usato \(\mm{V}\inv\). Ma \(\mm{V}\inv\) esiste solo se \(\mm{V}\) è invertibile — e non è garantito.
+    Ecco la condizione, esatta.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Quando una matrice è diagonalizzabile</div>
+    <p style="margin-bottom:0">
+      \(\mm{A}\) (quadrata \(N\times N\)) è <span class="termine">diagonalizzabile</span> se e solo se ha
+      <b>\(N\) autovettori linearmente indipendenti</b> (§4.6) — cioè se \(\mm{V}\) ha rango pieno ed è
+      invertibile (§7.7). In quel caso \(\mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\). Se gli autovettori
+      indipendenti sono meno di \(N\), la matrice è <span class="termine">difettosa</span> e
+      <em>non</em> si diagonalizza (non in questo modo — la SVD del Capitolo 16 non si arrende mai).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Non confondere due «invertibili»</div>
+    <p style="margin-bottom:0">
+      Sono due proprietà <b>indipendenti</b>, ed è l'errore più comune del capitolo:
+      <br>• <b>\(\mm{A}\) invertibile</b> ↔ nessun autovalore è \(0\) (perché \(\det\mm{A} = \prod\lambda_i\),
+      §15.2). Riguarda i \(\lambda\).
+      <br>• <b>\(\mm{A}\) diagonalizzabile</b> ↔ \(\mm{V}\) invertibile, cioè autovettori indipendenti.
+      Riguarda i \(\vv{v}\).
+      <br>Esistono matrici invertibili non diagonalizzabili (\(\begin{bmatrix}1&amp;1\\0&amp;1\end{bmatrix}\):
+      \(\det = 1\), ma un solo autovettore) e matrici singolari diagonalizzabilissime
+      (\(\begin{bmatrix}0&amp;0\\0&amp;0\end{bmatrix}\)). <mark>Autovalori e autovettori raccontano cose diverse.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Autovalori distinti e ripetuti</h2>
+
+  <p class="lead">
+    Quand'è che i \(N\) autovettori indipendenti ci sono? La regola pratica è semplice, e ruota attorno alle
+    radici <b>ripetute</b> del polinomio caratteristico.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Autovalori distinti ⟹ autovettori indipendenti</div>
+    <p style="margin-bottom:0">
+      Se \(\mm{A}\) ha \(N\) autovalori <b>tutti diversi</b>, i loro autovettori sono automaticamente
+      indipendenti — e \(\mm{A}\) è diagonalizzabile, senza altro da controllare. <mark>Autovalori distinti è
+      il biglietto d'ingresso.</mark> I guai possono nascere <em>solo</em> quando un autovalore si
+      <b>ripete</b>.
+    </p>
+  </div>
+
+  <p>
+    Quando \(\lambda\) ha molteplicità \(m\) (compare \(m\) volte come radice), la domanda diventa: quanti
+    autovettori indipendenti offre? Due possibilità:
+  </p>
+
+  <ul>
+    <li>
+      <b>Caso fortunato</b> — l'autospazio ha dimensione piena \(m\). Esempio: l'identità
+      \(\mm{I} = \begin{bmatrix} 1 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}\) ha \(\lambda = 1\) ripetuto due volte, ma
+      <em>ogni</em> vettore è autovettore: due direzioni indipendenti, diagonalizzabile (è già diagonale!).
+    </li>
+    <li>
+      <b>Caso difettoso</b> — l'autospazio è più piccolo di \(m\). Esempio:
+      \(\begin{bmatrix} 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix}\) ha \(\lambda = 1\) doppio, ma \(\mm{A} - \mm{I} =
+      \begin{bmatrix} 0 &amp; 1 \\ 0 &amp; 0 \end{bmatrix}\) ha spazio nullo di dimensione <b>1</b> sola: un unico
+      autovettore \((1, 0)\). Manca una direzione: non diagonalizzabile.
+    </li>
+  </ul>
+
+  <p>
+    In gergo: la <em>molteplicità algebrica</em> (quante volte \(\lambda\) è radice) può superare la
+    <em>molteplicità geometrica</em> (dimensione dell'autospazio). Quando sono uguali per <em>ogni</em>
+    autovalore, la matrice si diagonalizza. La buona notizia è che il protagonista del capitolo — le matrici
+    simmetriche — non ha mai questo problema.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni complesse</h2>
+
+  <p class="lead">
+    Il polinomio caratteristico è un polinomio come gli altri: le sue radici possono essere <b>complesse</b>
+    (Capitolo 9). Geometricamente non è un incidente — è la firma di una <em>rotazione</em>.
+  </p>
+
+  <p>
+    Prendi la rotazione di \(90°\), \(\mm{A} = \begin{bmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{bmatrix}\). Nessun
+    vettore reale resta sulla sua retta (una rotazione gira <em>tutti</em>: il widget del §15.1 lo mostra dal
+    vivo). E infatti:
+    \[
+      \det(\mm{A} - \lambda\mm{I}) = \lambda^2 + 1 = 0 \;\Longrightarrow\; \lambda = \pm i.
+    \]
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Autovalori complessi = rotazione</div>
+    <p style="margin-bottom:0">
+      Gli autovalori immaginari \(\pm i\) dicono «qui c'è una rotazione pura, nessuna direzione fissa reale».
+      In generale un autovalore complesso \(\lambda = a + bi\) codifica una rotazione (l'angolo, dalla parte
+      immaginaria) più una scala (il modulo \(\abs{\lambda}\), §9.2): se \(\abs{\lambda} = 1\) ruota senza
+      crescere, se \(> 1\) è una spirale che si allarga. Per le matrici <b>reali</b> gli autovalori complessi
+      arrivano sempre in <b>coppie coniugate</b> \(a \pm bi\) (§9.3), perché il polinomio ha coefficienti
+      reali. E un'ottima notizia per dopo: le matrici <b>simmetriche</b> reali hanno autovalori
+      <em>sempre reali</em> — niente rotazioni, solo scale (§15.8).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-8"><span class="secnum">Sezione 15.8</span>Matrici simmetriche</h2>
+
+  <p class="lead">
+    Qui il capitolo tocca il suo vertice. Le matrici simmetriche (\(\mm{A}\T = \mm{A}\), §5.5) hanno
+    un'autodecomposizione <b>perfetta</b> — e da quella perfezione discendono ortogonalità, proiezioni e metà
+    dei capitoli che restano.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il teorema spettrale</div>
+    <p style="margin:.2rem 0 .4rem">
+      Se \(\mm{A}\) è <b>simmetrica</b> reale, allora:
+    </p>
+    <ol style="margin:0 0 .5rem">
+      <li>i suoi autovalori sono tutti <b>reali</b> (niente numeri complessi, §15.7);</li>
+      <li>i suoi autovettori sono (o si possono scegliere) <b>ortogonali</b> fra loro;</li>
+      <li>è <b>sempre diagonalizzabile</b>, anche con autovalori ripetuti (nessun caso difettoso, §15.6).</li>
+    </ol>
+    <p style="margin:0">
+      Normalizzando gli autovettori a lunghezza 1, la matrice \(\mm{V}\) diventa <b>ortogonale</b> (§13.4):
+      colonne ortonormali, quindi \(\mm{V}\inv = \mm{V}\T\). La chiamiamo \(\mm{Q}\), e l'autodecomposizione
+      diventa la <span class="termine">decomposizione spettrale</span>:
+      \[ \boxed{\;\mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\;} \]
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché è così bello: sparisce l'inversa</div>
+    <p style="margin:.2rem 0 .4rem">
+      Il passaggio da \(\mm{V}\inv\) a \(\mm{Q}\T\) non è cosmetica. L'inversa era il pezzo fragile e costoso
+      (§12.1); la trasposta è <b>gratis</b> e stabile (§13.4). Per una simmetrica, aprire la matrice non costa
+      quasi niente. E c'è di più: sviluppando \(\mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\) come somma di prodotti
+      esterni (§3.6),
+      \[ \mm{A} = \sum_{i} \lambda_i\,\vv{q}_i\vv{q}_i\T, \]
+      ogni \(\vv{q}_i\vv{q}_i\T\) è la <b>matrice di proiezione</b> sulla retta di \(\vv{q}_i\) (§13.1)! <mark>Una
+      matrice simmetrica è una somma pesata di proiezioni ortogonali</mark>, con pesi \(\lambda_i\). È l'anteprima
+      degli «eigenlayer» del §15.10 e della PCA del Capitolo 19.
+    </p>
+    <p style="margin-bottom:0">
+      Perché gli autovettori sono ortogonali? In una riga: se \(\mm{A}\vv{v}_1 = \lambda_1\vv{v}_1\) e
+      \(\mm{A}\vv{v}_2 = \lambda_2\vv{v}_2\), allora \(\lambda_1\vv{v}_1\T\vv{v}_2 = (\mm{A}\vv{v}_1)\T\vv{v}_2 =
+      \vv{v}_1\T\mm{A}\T\vv{v}_2 = \vv{v}_1\T\mm{A}\vv{v}_2 = \lambda_2\vv{v}_1\T\vv{v}_2\) (ho usato
+      \(\mm{A}\T = \mm{A}\)). Quindi \((\lambda_1 - \lambda_2)\vv{v}_1\T\vv{v}_2 = 0\): se
+      \(\lambda_1 \neq \lambda_2\), allora \(\vv{v}_1\T\vv{v}_2 = 0\). Perpendicolari.
+    </p>
+  </div>
+
+  <p>
+    Il nostro esempio \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) era simmetrico, ed ecco
+    perché \((1, -1) \perp (1, 1)\) (§15.3). Normalizzando: \(\vv{q}_1 = \tfrac{1}{\sqrt2}(1, -1)\),
+    \(\vv{q}_2 = \tfrac{1}{\sqrt2}(1, 1)\), e \(\mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\) con
+    \(\mm{Q} = \tfrac{1}{\sqrt2}\begin{bmatrix} 1 &amp; 1 \\ -1 &amp; 1 \end{bmatrix}\) ortogonale.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-9"><span class="secnum">Sezione 15.9</span>Autovalori di matrici singolari</h2>
+
+  <p class="lead">
+    C'è un ponte diretto fra questo capitolo e tutto ciò che sappiamo su rango e spazio nullo. Passa per un
+    autovalore particolare: lo <b>zero</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Lo zero come autovalore <span class="tag">l'autospazio di 0 è lo spazio nullo</span></div>
+    <div class="f-body">
+      \[ \mm{A}\vv{v} = 0\cdot\vv{v} = \vv{0} \quad\Longleftrightarrow\quad \vv{v} \in \Null(\mm{A}) \]
+    </div>
+    <div class="f-note">
+      «\(\lambda = 0\) è un autovalore» significa esattamente «esiste \(\vv{v} \neq \vv{0}\) con
+      \(\mm{A}\vv{v} = \vv{0}\)», cioè «\(\mm{A}\) ha spazio nullo non banale» (§8.6), cioè «\(\mm{A}\) è
+      <b>singolare</b>» (§11.1). L'autospazio dello zero <em>è</em> lo spazio nullo. Tutto torna.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il rango, letto dagli autovalori</div>
+    <p style="margin-bottom:0">
+      Conseguenza immediata: \(\mm{A}\) è invertibile ⟺ nessun autovalore è \(0\) ⟺ \(\det\mm{A} = \prod\lambda_i
+      \neq 0\) (§15.2). E per una matrice <b>diagonalizzabile</b>, il numero di autovalori <em>non</em> nulli
+      è il <mark>rango</mark> (§7.1): gli autovalori zero contano la dimensione dello spazio nullo (§8.10). Il
+      Capitolo 7 e il Capitolo 15 si stringono la mano. (Attenzione: questo vale per le diagonalizzabili — per
+      il caso generale servirà la SVD del Capitolo 16, dove il rango è il numero di <em>valori singolari</em>
+      non nulli, che non mente mai.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-10"><span class="secnum">Sezione 15.10</span>Gli «eigenlayer» di una matrice</h2>
+
+  <p class="lead">
+    La decomposizione spettrale non è solo una formula: è un modo di <b>vedere</b> la matrice come una pila di
+    strati, ciascuno una direzione con il suo peso. È l'idea che, portata all'estremo, diventa compressione.
+  </p>
+
+  <p>
+    Riprendi la somma di proiezioni del §15.8, per una simmetrica:
+    \(\mm{A} = \sum_i \lambda_i\,\vv{q}_i\vv{q}_i\T\). Ogni addendo \(\lambda_i\,\vv{q}_i\vv{q}_i\T\) è uno
+    <span class="termine">strato</span> (un «eigenlayer»): una matrice di <b>rango 1</b> (§7.1), l'ombra su una
+    sola direzione, moltiplicata per la sua importanza \(\lambda_i\). La matrice intera è la loro somma.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Tenere solo gli strati che contano</div>
+    <p style="margin-bottom:0">
+      Se ordini gli autovalori dal più grande al più piccolo (in modulo) e tieni <b>solo i primi</b>, buttando
+      gli strati con \(\abs{\lambda}\) piccolo, ottieni un'<b>approssimazione</b> di \(\mm{A}\) con pochi
+      strati:
+      \[ \mm{A} \approx \sum_{i=1}^{k} \lambda_i\,\vv{q}_i\vv{q}_i\T \qquad (k \ll N). \]
+      È l'idea dietro la compressione, il denoising e la PCA: <mark>le direzioni con \(\lambda\) grande portano
+      il segnale, quelle con \(\lambda\) piccolo il rumore.</mark> Qui la vediamo per le simmetriche; il
+      Capitolo 16 (SVD) e §16.8 la generalizzano a <em>qualsiasi</em> matrice, con i valori singolari al posto
+      degli autovalori.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-11"><span class="secnum">Sezione 15.11</span>Potenze e inversa di una matrice</h2>
+
+  <p class="lead">
+    Ecco il pagamento più immediato dell'autodecomposizione: operazioni che sarebbero un incubo diventano
+    banali, perché una diagonale si maneggia numero per numero.
+  </p>
+
+  <p>
+    La chiave è che i termini \(\mm{V}\inv\mm{V}\) al centro si <b>elidono</b> (\(= \mm{I}\)). Elevando al
+    quadrato:
+    \(\mm{A}^2 = (\mm{V}\boldsymbol{\Lambda}\mm{V}\inv)(\mm{V}\boldsymbol{\Lambda}\mm{V}\inv) =
+    \mm{V}\boldsymbol{\Lambda}(\mm{V}\inv\mm{V})\boldsymbol{\Lambda}\mm{V}\inv = \mm{V}\boldsymbol{\Lambda}^2\mm{V}\inv\).
+    Il pattern si ripete per ogni potenza:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Potenze, inversa e oltre <span class="tag">agisci solo sulla diagonale</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}^k = \mm{V}\boldsymbol{\Lambda}^k\mm{V}\inv, \qquad
+        \mm{A}\inv = \mm{V}\boldsymbol{\Lambda}\inv\mm{V}\inv, \qquad
+        f(\mm{A}) = \mm{V}\,f(\boldsymbol{\Lambda})\,\mm{V}\inv
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\boldsymbol{\Lambda}^k\)</dt>
+        <dd>una diagonale elevata a potenza è solo \(\diag(\lambda_1^k, \dots, \lambda_N^k)\) — ogni elemento
+            per conto suo (§6.3). \(\mm{A}^{100}\) senza cento moltiplicazioni di matrici: cento potenze di
+            <em>numeri</em>.</dd>
+        <dt>\(\boldsymbol{\Lambda}\inv\)</dt>
+        <dd>l'inversa di una diagonale è \(\diag(1/\lambda_1, \dots, 1/\lambda_N)\) (§12.2). Esiste sse nessun
+            \(\lambda\) è \(0\) — di nuovo il §15.9.</dd>
+        <dt>\(f(\boldsymbol{\Lambda})\)</dt>
+        <dd>vale per <em>qualsiasi</em> funzione: \(\sqrt{\mm{A}}\), \(e^{\mm{A}}\) (le equazioni differenziali!),
+            il logaritmo di matrice. Applichi \(f\) ai singoli \(\lambda\) e basta. <mark>La diagonalizzazione
+            trasforma l'algebra delle matrici nell'aritmetica dei numeri.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È anche il modo di prevedere un sistema dinamico \(\vv{x}_{k+1} = \mm{A}\vv{x}_k\): dopo \(k\) passi
+      \(\vv{x}_k = \mm{A}^k\vv{x}_0 = \mm{V}\boldsymbol{\Lambda}^k\mm{V}\inv\vv{x}_0\). Se qualche
+      \(\abs{\lambda} > 1\) il sistema <b>esplode</b> lungo quella direzione; se tutti \(\abs{\lambda} < 1\),
+      <b>si spegne</b>. Gli autovalori decidono il destino.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-12"><span class="secnum">Sezione 15.12</span>Autodecomposizione generalizzata</h2>
+
+  <p class="lead">
+    Un'ultima variante, che serve appena i dati diventano due (statistica, machine learning): il problema
+    <b>agli autovalori generalizzato</b>, con due matrici in gioco invece di una.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Due matrici, un autoproblema <span class="tag">A al posto di λI diventa λB</span></div>
+    <div class="f-body">
+      \[ \mm{A}\vv{v} = \lambda\,\mm{B}\vv{v} \qquad\Longleftrightarrow\qquad \mm{B}\inv\mm{A}\,\vv{v} = \lambda\vv{v} \]
+    </div>
+    <div class="f-note">
+      Se \(\mm{B}\) è invertibile, il problema generalizzato \(\mm{A}\vv{v} = \lambda\mm{B}\vv{v}\) è
+      l'autodecomposizione ordinaria di \(\mm{B}\inv\mm{A}\). Compare quando confronti <b>due</b> matrici di
+      covarianza (Cap. 18): «quale direzione massimizza \(\mm{A}\) <em>rispetto a</em> \(\mm{B}\)?». È il
+      motore dell'analisi discriminante di Fisher e di molte tecniche di riduzione della dimensionalità —
+      cugine della PCA (Cap. 19). Con \(\mm{B} = \mm{I}\) si torna al caso di sempre.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li><b>Autovettore e autovalore:</b> \(\mm{A}\vv{v} = \lambda\vv{v}\) — la direzione su cui \(\mm{A}\)
+          <mark>solo scala, non ruota</mark> (§15.1). È una direzione (una retta), non un vettore preciso.</li>
+      <li><b>Come trovarli:</b> autovalori da \(\det(\mm{A} - \lambda\mm{I}) = 0\) (polinomio caratteristico,
+          §15.2); autovettori dallo spazio nullo di \(\mm{A} - \lambda\mm{I}\) (§15.3). Controlli:
+          \(\sum\lambda_i = \tr\mm{A}\), \(\prod\lambda_i = \det\mm{A}\).</li>
+      <li><b>Diagonalizzazione:</b> \(\mm{A} = \mm{V}\boldsymbol{\Lambda}\mm{V}\inv\) (§15.4), possibile ⟺ ci
+          sono \(N\) autovettori indipendenti (§15.5). Autovalori <b>distinti</b> la garantiscono; le radici
+          <b>ripetute</b> possono renderla difettosa (§15.6). Attenzione a non confondere invertibile e
+          diagonalizzabile: sono cose diverse.</li>
+      <li><b>Complessi = rotazione</b> (§15.7). Ma le <b>simmetriche</b> (teorema spettrale, §15.8) hanno
+          \(\lambda\) reali, autovettori <b>ortogonali</b> e sono sempre diagonalizzabili:
+          <mark>\(\mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\)</mark>, l'inversa sparisce, e \(\mm{A} =
+          \sum_i \lambda_i\vv{q}_i\vv{q}_i\T\) è una somma di proiezioni.</li>
+      <li><b>Applicazioni:</b> \(\lambda = 0\) ⟺ singolare (§15.9); strati di rango 1 → compressione (§15.10);
+          \(\mm{A}^k = \mm{V}\boldsymbol{\Lambda}^k\mm{V}\inv\) e \(f(\mm{A}) = \mm{V}f(\boldsymbol{\Lambda})\mm{V}\inv\)
+          rendono banali potenze, inversa e sistemi dinamici (§15.11); il problema generalizzato confronta due
+          matrici (§15.12).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai aperto la matrice e ne hai visto le direzioni proprie. Ma l'autodecomposizione ha due nei: pretende una
+    matrice <b>quadrata</b>, e a volte <b>fallisce</b> (matrici difettose, autovalori complessi). I dati veri
+    sono rettangolari e disordinati. Serve una decomposizione che funzioni <em>sempre</em>, per
+    <em>qualunque</em> matrice — quadrata o no, con o senza inversa. Esiste, è la più importante di tutta
+    l'algebra lineare, e prende il meglio di questo capitolo (le due matrici ortogonali del teorema spettrale)
+    e lo estende a ogni matrice del mondo. È la <b>SVD</b>, il <b>Capitolo 16</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-13"><span class="secnum">Sezione 15.13</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Trova autovalori e autovettori di \(\mm{A} = \begin{bmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{bmatrix}\).
+      (Suggerimento: è triangolare — che cosa dice il §11.6 sul suo determinante, e quindi sui \(\lambda\)?)
+      Verifica con traccia e determinante.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      La matrice \(\mm{A} = \begin{bmatrix} 4 &amp; 2 \\ 1 &amp; 3 \end{bmatrix}\) ha \(\lambda_1 = 5\),
+      \(\lambda_2 = 2\). Trova gli autovettori, scrivi \(\mm{V}\), \(\boldsymbol{\Lambda}\), \(\mm{V}\inv\), e
+      verifica che \(\mm{V}\boldsymbol{\Lambda}\mm{V}\inv = \mm{A}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Sia \(\mm{A} = \begin{bmatrix} 5 &amp; 4 \\ 4 &amp; 5 \end{bmatrix}\) (simmetrica). Trova \(\lambda\) e gli
+      autovettori, e verifica che questi ultimi sono <b>ortogonali</b>. Poi scrivi la decomposizione spettrale
+      \(\mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\) con \(\mm{Q}\) ortogonale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Usando la diagonalizzazione dell'Esercizio 15.2, calcola \(\mm{A}^3\) tramite
+      \(\mm{V}\boldsymbol{\Lambda}^3\mm{V}\inv\), senza moltiplicare \(\mm{A}\) per sé stessa tre volte.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.5</div>
+    <p style="margin-bottom:0">
+      Per ciascuna, di' se è diagonalizzabile e perché:
+      <br>(a) \(\begin{bmatrix} 2 &amp; 0 \\ 0 &amp; 5 \end{bmatrix}\) &nbsp;
+      (b) \(\begin{bmatrix} 3 &amp; 1 \\ 0 &amp; 3 \end{bmatrix}\) &nbsp;
+      (c) \(\begin{bmatrix} 0 &amp; -2 \\ 2 &amp; 0 \end{bmatrix}\) &nbsp;
+      (d) \(\begin{bmatrix} 7 &amp; 0 \\ 0 &amp; 7 \end{bmatrix}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.6</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga di motivazione:
+      <br>(a) Ogni matrice quadrata ha almeno un autovalore reale.
+      <br>(b) Se \(\lambda = 0\) è un autovalore di \(\mm{A}\), allora \(\mm{A}\) non è invertibile.
+      <br>(c) Gli autovettori di una matrice simmetrica sono sempre ortogonali.
+      <br>(d) Una matrice invertibile è sempre diagonalizzabile.
+      <br>(e) \(\mm{A}\) e \(\mm{A}\T\) hanno gli stessi autovalori.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-14"><span class="secnum">Sezione 15.14</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Triangolare: gli autovalori sono gli elementi diagonali (§11.6, \(\det(\mm{A} - \lambda\mm{I})\) di una
+      triangolare è il prodotto dei \((a_{ii} - \lambda)\)): \(\lambda_1 = 3,\ \lambda_2 = 2\). Controlli:
+      \(3 + 2 = 5 = \tr\), \(3 \cdot 2 = 6 = \det\) ✔.
+      <br><b>\(\lambda = 3\):</b> \(\mm{A} - 3\mm{I} = \begin{bmatrix} 0 &amp; 1 \\ 0 &amp; -1 \end{bmatrix}\),
+      spazio nullo \(v_2 = 0\): \(\vv{v}_1 = (1, 0)\).
+      <br><b>\(\lambda = 2\):</b> \(\mm{A} - 2\mm{I} = \begin{bmatrix} 1 &amp; 1 \\ 0 &amp; 0 \end{bmatrix}\),
+      \(v_1 + v_2 = 0\): \(\vv{v}_2 = (1, -1)\). (Non ortogonali: \(\mm{A}\) non è simmetrica.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      <b>\(\lambda = 5\):</b> \(\mm{A} - 5\mm{I} = \begin{bmatrix} -1 &amp; 2 \\ 1 &amp; -2 \end{bmatrix}\),
+      \(-v_1 + 2v_2 = 0\): \(\vv{v}_1 = (2, 1)\).
+      <b>\(\lambda = 2\):</b> \(\mm{A} - 2\mm{I} = \begin{bmatrix} 2 &amp; 2 \\ 1 &amp; 1 \end{bmatrix}\),
+      \(v_1 + v_2 = 0\): \(\vv{v}_2 = (1, -1)\). Quindi
+      \[
+        \mm{V} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; -1 \end{bmatrix}, \quad
+        \boldsymbol{\Lambda} = \begin{bmatrix} 5 &amp; 0 \\ 0 &amp; 2 \end{bmatrix}, \quad
+        \mm{V}\inv = \tfrac{1}{-3}\begin{bmatrix} -1 &amp; -1 \\ -1 &amp; 2 \end{bmatrix}
+        = \tfrac13\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; -2 \end{bmatrix}.
+      \]
+      \(\mm{V}\boldsymbol{\Lambda} = \begin{bmatrix} 10 &amp; 2 \\ 5 &amp; -2 \end{bmatrix}\), e
+      \(\mm{V}\boldsymbol{\Lambda}\mm{V}\inv = \tfrac13\begin{bmatrix} 10 &amp; 2 \\ 5 &amp; -2 \end{bmatrix}
+      \begin{bmatrix} 1 &amp; 1 \\ 1 &amp; -2 \end{bmatrix} = \tfrac13\begin{bmatrix} 12 &amp; 6 \\ 3 &amp; 9 \end{bmatrix}
+      = \begin{bmatrix} 4 &amp; 2 \\ 1 &amp; 3 \end{bmatrix} = \mm{A}\) ✔.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      \(\det(\mm{A} - \lambda\mm{I}) = (5-\lambda)^2 - 16 = \lambda^2 - 10\lambda + 9 = (\lambda-1)(\lambda-9)\):
+      \(\lambda_1 = 9,\ \lambda_2 = 1\).
+      <br><b>\(\lambda = 9\):</b> \(\begin{bmatrix} -4 &amp; 4 \\ 4 &amp; -4 \end{bmatrix}\), \(v_1 = v_2\):
+      \(\vv{v}_1 = (1, 1)\). <b>\(\lambda = 1\):</b> \(\begin{bmatrix} 4 &amp; 4 \\ 4 &amp; 4 \end{bmatrix}\),
+      \(v_1 = -v_2\): \(\vv{v}_2 = (1, -1)\). Ortogonali: \(\vv{v}_1\T\vv{v}_2 = 1 - 1 = 0\) ✔.
+      Normalizzati (÷\(\sqrt2\)):
+      \[
+        \mm{Q} = \tfrac{1}{\sqrt2}\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; -1 \end{bmatrix}, \quad
+        \boldsymbol{\Lambda} = \begin{bmatrix} 9 &amp; 0 \\ 0 &amp; 1 \end{bmatrix}, \quad
+        \mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T \ (\mm{Q}\T = \mm{Q}\inv).
+      \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      \(\boldsymbol{\Lambda}^3 = \begin{bmatrix} 125 &amp; 0 \\ 0 &amp; 8 \end{bmatrix}\) (\(5^3 = 125\),
+      \(2^3 = 8\)). Con \(\mm{V}, \mm{V}\inv\) della Soluzione 15.2:
+      \(\mm{V}\boldsymbol{\Lambda}^3 = \begin{bmatrix} 250 &amp; 8 \\ 125 &amp; -8 \end{bmatrix}\), e
+      \[
+        \mm{A}^3 = \tfrac13\begin{bmatrix} 250 &amp; 8 \\ 125 &amp; -8 \end{bmatrix}\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; -2 \end{bmatrix}
+        = \tfrac13\begin{bmatrix} 258 &amp; 234 \\ 117 &amp; 141 \end{bmatrix}
+        = \begin{bmatrix} 86 &amp; 78 \\ 39 &amp; 47 \end{bmatrix}.
+      \]
+      (Controllo traccia: \(86 + 47 = 133 = 125 + 8 = \lambda_1^3 + \lambda_2^3\) ✔.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) Sì:</b> già diagonale, autovalori \(2, 5\) distinti — banalmente diagonalizzabile.
+      <br><b>(b) No:</b> triangolare, \(\lambda = 3\) doppio, ma \(\mm{A} - 3\mm{I} = \begin{bmatrix} 0 &amp; 1 \\ 0 &amp; 0 \end{bmatrix}\)
+      ha un solo autovettore \((1,0)\): difettosa (§15.6).
+      <br><b>(c) Sì</b> (sui complessi): autovalori \(\pm 2i\), distinti, quindi diagonalizzabile con
+      autovettori complessi (§15.7). Sui reali non ha autovettori (è una rotazione + scala).
+      <br><b>(d) Sì:</b> \(= 7\mm{I}\), \(\lambda = 7\) doppio ma <em>ogni</em> vettore è autovettore
+      (autospazio di dimensione 2): diagonalizzabile (già diagonale). Confronta con (b): stessa molteplicità,
+      esito opposto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.6</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Una matrice reale può avere solo autovalori complessi: la rotazione di \(90°\) ha
+      \(\pm i\) (§15.7). (Vero però per le simmetriche, e per ogni matrice di dimensione dispari.)
+      <br><b>(b) VERO.</b> \(\lambda = 0\) ⟺ \(\Null(\mm{A})\) non banale ⟺ singolare (§15.9). Equivalente:
+      \(\det = \prod\lambda_i = 0\).
+      <br><b>(c) VERO</b> (a meno di scelta negli autospazi ripetuti): è il teorema spettrale (§15.8). La
+      dimostrazione in una riga sta nel §15.8.
+      <br><b>(d) FALSO.</b> \(\begin{bmatrix} 1 &amp; 1 \\ 0 &amp; 1 \end{bmatrix}\) è invertibile (\(\det = 1\)) ma
+      difettosa (§15.5). Invertibile e diagonalizzabile sono proprietà indipendenti.
+      <br><b>(e) VERO.</b> \(\det(\mm{A}\T - \lambda\mm{I}) = \det((\mm{A} - \lambda\mm{I})\T) =
+      \det(\mm{A} - \lambda\mm{I})\) (§11.1: il determinante non cambia per trasposizione): stesso polinomio
+      caratteristico, stessi \(\lambda\). (Gli autovettori invece in genere cambiano.)
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise.
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+const norm = a => Math.hypot(...a);
+
+
+/* ============================================================================
+   WIDGET §15.1 — cerca la direzione che non ruota
+   Mostra v (unitario, sul cerchio) e la sua immagine Av. Quando Av è allineato
+   a v (stessa retta), v è un autovettore: si accende il segnale.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('we-svg');
+  if (!svg) return;
+  const out = document.getElementById('we-out');
+  const p = new Plot(svg, { xmin: -3.2, xmax: 3.2, ymin: -2.3, ymax: 2.3 });
+
+  const MATS = {
+    a: { M: [[2, 1], [1, 2]], nome: 'A = [[2,1],[1,2]] (simmetrica)' },
+    b: { M: [[2, 0], [0, -1]], nome: 'A = [[2,0],[0,−1]] (diagonale)' },
+    c: { M: [[0, -1], [1, 0]], nome: 'A = rotazione di 90° (nessun autovettore reale)' }
+  };
+  let cur = 'a';
+  let th = 0.6;                                  // angolo di v (unitario)
+
+  const apply = (M, x) => [M[0][0] * x[0] + M[0][1] * x[1], M[1][0] * x[0] + M[1][1] * x[1]];
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: false });
+    const M = MATS[cur].M;
+    const v = [Math.cos(th), Math.sin(th)];
+    const Av = apply(M, v);
+
+    // cerchio unitario (le possibili direzioni di v)
+    const circ = [];
+    for (let a = 0; a <= 6.29; a += 0.15) circ.push([Math.cos(a), Math.sin(a)]);
+    p.poly(circ, { color: 'var(--ink-faint)', width: 1.1, close: false });
+
+    // allineamento: |sin dell'angolo tra v e Av| piccolo → autovettore
+    const cross = v[0] * Av[1] - v[1] * Av[0];
+    const nAv = norm(Av) || 1e-9;
+    const sinAng = Math.abs(cross) / nAv;         // ‖v‖ = 1
+    const aligned = sinAng < 0.035;
+    const lam = (v[0] * Av[0] + v[1] * Av[1]);    // proiezione = λ se allineato (v unitario)
+
+    // se (quasi) allineato, disegna la retta della direzione
+    if (aligned) p.line(-3 * v[0], -3 * v[1], 3 * v[0], 3 * v[1],
+      { color: 'var(--accent)', width: 1.4, dash: '2 4' });
+
+    p.arrow(0, 0, Av[0], Av[1], { color: 'var(--warm)', width: 2.6, label: 'Av' });
+    p.arrow(0, 0, v[0], v[1], { color: 'var(--violet)', width: 3, label: 'v' });
+    p.handle(v[0], v[1], { color: 'var(--violet)' }, (x, y) => { th = Math.atan2(y, x); draw(); });
+
+    out.innerHTML = `
+      <div class="big">
+        ${MATS[cur].nome}
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${aligned
+          ? `<mark>Autovettore trovato!</mark> Av è sulla stessa retta di v: Av = λv con
+             λ ≈ <b style="color:var(--accent)">${nfmt(lam)}</b>. Su questa direzione A non ruota, solo scala.`
+          : `Ora Av (<span style="color:var(--warm)">arancione</span>) punta <b>altrove</b> rispetto a v: non
+             è un autovettore. Ruota v finché i due si <b>allineano</b>${cur === 'c'
+               ? ' — ma con una rotazione pura non succede mai (autovalori ±i, §15.7).'
+               : '.'}`}
+      </div>`;
+  }
+
+  document.getElementById('we-a').onclick = () => { cur = 'a'; draw(); };
+  document.getElementById('we-b').onclick = () => { cur = 'b'; draw(); };
+  document.getElementById('we-c').onclick = () => { cur = 'c'; draw(); };
+  draw();
+})();
+</script>
+</body>
+</html>

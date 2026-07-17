@@ -260,7 +260,7 @@ const TOC = [
     n: 15,
     titolo: "Autodecomposizione",
     file: "cap15-autodecomposizione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Eigen-che?" },
       { id: "s15-2", n: "15.2", t: "Trovare gli autovalori" },
