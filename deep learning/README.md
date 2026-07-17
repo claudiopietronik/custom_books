@@ -42,7 +42,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 6 — Reti feedforward profonde
 - [x] 7 — Regolarizzazione per il deep learning
 - [x] 8 — Ottimizzazione per l'addestramento
-- [ ] 9 — Reti convoluzionali
+- [x] 9 — Reti convoluzionali
 - [ ] 10 — Modellazione di sequenze: reti ricorrenti
 - [ ] 11 — Metodologia pratica
 - [ ] 12 — Applicazioni

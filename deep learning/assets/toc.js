@@ -171,7 +171,7 @@ const TOC = [
     titolo: "Reti convoluzionali",
     file: "cap09-convoluzionali.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "L'operazione di convoluzione" },
       { id: "s9-2", n: "9.2", t: "Le tre idee: sparsità, condivisione, equivarianza" },

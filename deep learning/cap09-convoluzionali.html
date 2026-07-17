@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Reti convoluzionali — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9 · Parte II</div>
+    <h1>Reti convoluzionali</h1>
+    <p class="standfirst">
+      Un'immagine ha una struttura che un MLP ignora: i pixel vicini sono correlati, e un oggetto è lo stesso
+      ovunque appaia. Le <b>reti convoluzionali</b> (CNN) sfruttano proprio questo, sostituendo la
+      moltiplicazione matriciale con la <b>convoluzione</b>: piccoli filtri che scorrono sull'immagine, gli
+      stessi in ogni posizione. <mark>È la condivisione dei parametri (§7.7) portata al trionfo</mark> — e
+      l'architettura che nel 2012 ha fatto esplodere la visione artificiale.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'operazione: cos'è la <b>convoluzione</b> (§9.1, widget) e le <b>tre idee</b> che la rendono potente
+      (§9.2). Il compagno inseparabile: il <b>pooling</b> (§9.3) e cosa significa vederli come <b>prior forte</b>
+      (§9.4). Le <b>varianti</b> pratiche — stride, padding, canali (§9.5) — e i tipi di dato e output (§9.6).
+      Efficienza (§9.7) e radici neuroscientifiche (§9.8).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni sistema di visione — riconoscimento di oggetti, volti, guida autonoma, imaging medico — è costruito su
+      convoluzioni. E l'idea (un'operazione locale, con pesi condivisi, ripetuta ovunque) riappare ben oltre le
+      immagini. <mark>La convoluzione è, dopo la moltiplicazione matriciale, l'operazione più importante del deep
+      learning.</mark> Il widget qui sotto ti fa vedere <em>esattamente</em> cosa calcola.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>L'operazione di convoluzione</h2>
+
+  <p class="lead">
+    Un <b>filtro</b> (o kernel) è una piccola matrice di pesi — tipicamente \(3\times3\). Lo si fa
+    <b>scorrere</b> su tutta l'immagine; in ogni posizione calcola un prodotto scalare tra il filtro e la
+    finestra di pixel che copre, producendo un numero. L'insieme di quei numeri è la <b>mappa di feature</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La convoluzione (2D, discreta) <span class="tag">un prodotto scalare che scorre</span></div>
+    <div class="f-body">
+      \[ S(i,j) = (\tens{I} * \tens{K})(i,j) = \sum_{m}\sum_{n} \tens{I}(i+m,\,j+n)\,\hA{\tens{K}(m,n)} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\tens{I}\) — l'<b>immagine</b> (input)</dt>
+        <dd>una griglia di valori (l'intensità dei pixel, o la mappa di feature dello strato precedente).</dd>
+        <dt>\(\hA{\tens{K}}\) — il <b>kernel</b></dt>
+        <dd>i pochi pesi del filtro, gli <b>unici parametri da imparare</b>. Un kernel «bordo verticale» reagisce
+            ai contrasti verticali, uno «sfocatura» media i vicini.</dd>
+        <dt>\(S\) — la <b>mappa di feature</b></dt>
+        <dd>l'output: dice <em>dove</em> nell'immagine il pattern del filtro è presente. Un valore alto in
+            \((i,j)\) significa «qui c'è ciò che il filtro cerca».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      A differenza di un livello denso, dove ogni uscita dipende da <em>tutti</em> gli ingressi, qui ogni uscita
+      dipende solo da una <b>piccola finestra locale</b>, e <mark>lo stesso kernel è usato in ogni
+      posizione</mark>. Un filtro \(3\times3\) ha 9 pesi, punto — non 9 pesi per ogni pixel. Nel widget: scegli
+      un kernel e muovi la finestra per vedere come nasce, cella per cella, la mappa di feature.
+    </div>
+  </div>
+
+  <div class="widget" id="w-conv">
+    <div class="w-head">
+      <span>La convoluzione, cella per cella</span>
+      <span class="hint">scegli il filtro · muovi la finestra</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-svg" viewBox="0 0 560 300" role="img" aria-label="Un kernel 3x3 scorre su un'immagine e produce una mappa di feature"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wc-edge">Bordo verticale</button>
+      <button class="w-btn" id="wc-edgeh">Bordo orizzontale</button>
+      <button class="w-btn" id="wc-blur">Sfocatura</button>
+      <button class="w-btn" id="wc-sharp">Nitidezza</button>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>finestra</label><input type="range" id="wc-pos" min="0" max="24" step="1" value="12"><output id="wc-pos-o">12</output></div>
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Le tre idee: sparsità, condivisione, equivarianza</h2>
+
+  <p class="lead">
+    La convoluzione porta tre vantaggi che, insieme, spiegano perché le CNN funzionano così bene sulle immagini.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> I tre pilastri</div>
+    <p style="margin-bottom:0">
+      1. <b>Connessioni sparse.</b> Ogni uscita dipende solo da una piccola finestra, non da tutta l'immagine:
+         <b>pochissimi</b> parametri e calcoli rispetto a un livello denso.<br>
+      2. <b>Condivisione dei parametri.</b> Lo stesso filtro è usato ovunque: si imparano 9 pesi invece di
+         milioni. Meno parametri = meno overfitting e meno memoria.<br>
+      3. <b>Equivarianza alla traslazione.</b> <mark>Se l'oggetto si sposta nell'immagine, la sua feature si
+         sposta allo stesso modo nell'output.</mark> Un rilevatore di bordi funziona in alto a sinistra come in
+         basso a destra: un bordo è un bordo ovunque.<br>
+      Insieme incarnano un <b>prior</b> giusto per le immagini: le statistiche locali sono le stesse in ogni
+      punto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>Il pooling</h2>
+
+  <p class="lead">
+    Dopo la convoluzione, il <b>pooling</b> riassume regioni vicine in un solo valore — tipicamente il massimo.
+    Riduce la risoluzione e rende la rete <b>robusta a piccole traslazioni</b>.
+  </p>
+
+  <p>
+    Il <span class="termine">max pooling</span> divide la mappa in finestrelle (per esempio \(2\times2\)) e ne
+    tiene solo il valore massimo, dimezzando altezza e larghezza. Due effetti: <b>meno calcolo</b> negli strati
+    successivi e <b>invarianza locale</b> — se la feature si sposta di un pixel, il massimo della finestra spesso
+    non cambia. <mark>Convoluzione (che <em>trova dove</em>) + pooling (che <em>rende robusto</em>) è il mattone
+    ripetuto di ogni CNN</mark>: strato dopo strato, le mappe diventano più piccole ma più «astratte» (bordi →
+    parti → oggetti, §1.3).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>Convoluzione e pooling come prior infinitamente forte</h2>
+
+  <p class="lead">
+    C'è un modo elegante di vedere una CNN: è un MLP a cui abbiamo imposto un <b>prior fortissimo</b> sui pesi.
+  </p>
+
+  <p>
+    Immagina un livello denso in cui obblighiamo certi pesi a essere <b>zero</b> (le connessioni fuori dalla
+    finestra locale) e altri a essere <b>uguali tra loro</b> (lo stesso filtro ovunque). È esattamente una
+    convoluzione. Vista così, <mark>una CNN è un MLP con un prior «infinitamente forte»</mark>: dice alla rete,
+    prima ancora di vedere i dati, che le feature sono locali e invarianti per traslazione. Se questo prior è
+    <em>giusto</em> (e per le immagini lo è), la rete generalizza benissimo con pochissimi parametri. Se fosse
+    sbagliato (dati senza struttura spaziale), sarebbe controproducente.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Varianti della convoluzione (stride, padding)</h2>
+
+  <p class="lead">
+    Tre manopole pratiche che ogni strato convoluzionale espone: passo, bordo e canali.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Manopola</th><th>Cosa fa</th><th>Effetto</th></tr></thead>
+    <tbody>
+      <tr><td><b>Stride</b> (passo)</td><td>di quanti pixel salta la finestra ad ogni passo</td>
+        <td>Stride 2 dimezza la risoluzione dell'output (un'alternativa al pooling).</td></tr>
+      <tr><td><b>Padding</b> (bordo)</td><td>aggiunge cornici di zeri attorno all'immagine</td>
+        <td>«Same»: mantiene la dimensione; «valid»: la riduce (l'output è più piccolo dell'input).</td></tr>
+      <tr><td><b>Canali</b></td><td>l'input ha profondità (RGB = 3), l'output ha \(N\) filtri</td>
+        <td>Ogni filtro produce una mappa; \(N\) filtri = \(N\) mappe = \(N\) tipi di pattern rilevati.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    In una CNN reale, ogni strato applica <b>decine o centinaia di filtri</b> in parallelo (uno per «cosa da
+    cercare»), producendo un tensore con tanti canali. Il tensore \(altezza\times larghezza\times canali\) è il
+    formato universale che scorre nella rete.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Output strutturati e tipi di dati</h2>
+
+  <p class="lead">
+    Le convoluzioni non servono solo a classificare: possono produrre <b>output strutturati</b>, e si applicano
+    a dati in 1D, 2D e 3D.
+  </p>
+
+  <p>
+    Oltre alla classificazione (un'etichetta per immagine), una CNN può produrre una <b>mappa</b> come output:
+    nella <b>segmentazione semantica</b> assegna una classe a ogni pixel («qui c'è strada, qui c'è pedone»). E
+    la convoluzione si generalizza per dimensione: <b>1D</b> per serie temporali e audio, <b>2D</b> per immagini,
+    <b>3D</b> per video o volumi medici. La stessa idea — filtro locale condiviso — funziona ogni volta che i
+    dati hanno una <b>struttura a griglia</b> con località.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Algoritmi di convoluzione efficienti</h2>
+
+  <p class="lead">
+    Le convoluzioni sono l'operazione più costosa di una CNN: renderle veloci è cruciale, ed è metà del motivo
+    per cui servono le GPU.
+  </p>
+
+  <p>
+    Una convoluzione si può calcolare in molti modi: direttamente, come una grande <b>moltiplicazione
+    matriciale</b> (il trucco <em>im2col</em>, che riusa le librerie di algebra lineare ottimizzate), o via
+    <b>FFT</b> per kernel grandi (la convoluzione diventa una moltiplicazione nel dominio della frequenza).
+    <mark>Le GPU eccellono proprio nelle moltiplicazioni matriciali massicce</mark>, ed è per questo che hanno
+    reso pratico il deep learning. La scelta dell'algoritmo giusto per ogni caso è un lavoro di ingegneria
+    nascosto dentro le librerie (cuDNN e simili).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-8"><span class="secnum">Sezione 9.8</span>Le basi neuroscientifiche</h2>
+
+  <p class="lead">
+    Le CNN sono, tra i modelli di deep learning, quello più direttamente ispirato alla biologia — alla
+    <b>corteccia visiva</b>.
+  </p>
+
+  <p>
+    Negli anni '60, Hubel e Wiesel scoprirono che i neuroni della corteccia visiva primaria hanno piccoli
+    <b>campi recettivi</b> e rispondono a orientamenti specifici (bordi a un dato angolo) in una data posizione —
+    esattamente come i filtri del primo strato di una CNN. Alcune cellule («semplici») fanno da rilevatori di
+    bordi, altre («complesse») sono più tolleranti alla posizione, come il pooling. Il <b>Neocognitron</b> di
+    Fukushima (1980) tradusse queste idee in un modello, poi diventato la CNN moderna con LeCun (1998).
+    <mark>È uno dei pochi casi in cui una scoperta neuroscientifica ha guidato direttamente un'architettura di
+    successo</mark> — anche se, come sempre, la CNN non è un modello realistico del cervello.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>La <b>convoluzione</b> fa scorrere un piccolo filtro sull'immagine: ogni uscita è un prodotto scalare
+          locale, e la mappa di feature dice <em>dove</em> c'è il pattern (§9.1).</li>
+      <li>Tre vantaggi: <b>connessioni sparse</b>, <b>condivisione dei parametri</b>, <b>equivarianza alla
+          traslazione</b> (§9.2). Un bordo è un bordo ovunque.</li>
+      <li>Il <b>pooling</b> (max) riassume e rende robusti a piccole traslazioni (§9.3). Convoluzione + pooling è
+          il mattone ripetuto: mappe sempre più piccole e astratte.</li>
+      <li>Una CNN è un MLP con un <b>prior fortissimo</b> (locale + invariante), giusto per le immagini (§9.4).
+          Stride/padding/canali sono le manopole pratiche (§9.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Le CNN sfruttano la struttura <em>spaziale</em>. Ma testo, audio e serie temporali hanno una struttura
+    <em>sequenziale</em>: l'ordine conta, e la lunghezza varia. Il <strong>Capitolo 10</strong> introduce le
+    <b>reti ricorrenti</b> (RNN), che condividono i pesi <em>nel tempo</em> e portano una memoria da un passo al
+    successivo — fino alle LSTM.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-9"><span class="secnum">Sezione 9.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Un'immagine \(32\times32\) passa in un livello convoluzionale con filtri \(3\times3\), stride 1, senza
+      padding. Quanto è grande la mappa di feature di uscita? E con padding «same»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Un livello denso che collega \(1000\) pixel a \(1000\) uscite ha un milione di pesi. Un livello
+      convoluzionale con un filtro \(3\times3\) quanti pesi ha? Cosa ci dice questo sulla condivisione dei
+      parametri?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Spiega con parole tue la differenza tra <b>equivarianza</b> (della convoluzione) e <b>invarianza</b> (che
+      il pooling aiuta a ottenere) rispetto alla traslazione. Quale delle due vuoi nell'output finale di un
+      classificatore di oggetti?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) In una CNN ogni pixel di output dipende da tutti i pixel di input. &nbsp;
+      (b) Lo stesso filtro viene usato in tutte le posizioni dell'immagine. &nbsp;
+      (c) Il max pooling aumenta la risoluzione della mappa. &nbsp;
+      (d) Le CNN sono ispirate alla corteccia visiva.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-10"><span class="secnum">Sezione 9.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      Senza padding (convoluzione «valid»), un filtro \(3\times3\) toglie 2 pixel per lato: l'uscita è
+      \((32-3+1)\times(32-3+1)=\mathbf{30\times30}\). Con padding «same» (una cornice di 1 pixel di zeri),
+      l'uscita mantiene la dimensione: \(\mathbf{32\times32}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      Un filtro \(3\times3\) ha <b>9 pesi</b> (più un bias), indipendentemente dalla dimensione dell'immagine:
+      contro il milione del livello denso. La <b>condivisione dei parametri</b> riduce i pesi di ordini di
+      grandezza — meno memoria, meno overfitting — perché lo stesso filtro serve in ogni posizione (§9.2). (Uno
+      strato reale usa molti filtri, ma sempre pochissimi pesi rispetto a un denso equivalente.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      <b>Equivarianza</b>: se sposto l'input, l'output si sposta <em>allo stesso modo</em> (la feature segue
+      l'oggetto). <b>Invarianza</b>: se sposto l'input (di poco), l'output <em>non cambia</em>. La convoluzione è
+      equivariante; il pooling costruisce un po' di invarianza locale. <mark>Nell'output finale di un
+      classificatore vuoi l'invarianza</mark>: «gatto» deve dire gatto ovunque sia il gatto nell'immagine.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Ogni uscita dipende solo da una <b>finestra locale</b> (connessioni sparse, §9.1–9.2). <br>
+      <b>(b) VERO.</b> È la condivisione dei parametri: un filtro, usato ovunque (§9.2). <br>
+      <b>(c) FALSO.</b> Il pooling <b>riduce</b> la risoluzione (riassume regioni), non la aumenta (§9.3). <br>
+      <b>(d) VERO.</b> Nascono dai campi recettivi della corteccia visiva (Hubel-Wiesel, Neocognitron) (§9.8).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §9.1 — la convoluzione cella per cella
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wc-out');
+  const posI = document.getElementById('wc-pos'), posO = document.getElementById('wc-pos-o');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+  // immagine 7x7: una "L" luminosa su sfondo scuro
+  const IMG = [
+    [0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0]
+  ];
+  const kernels = {
+    edge: { k: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], name: 'Bordo verticale' },
+    edgeh: { k: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]], name: 'Bordo orizzontale' },
+    blur: { k: [[1, 1, 1], [1, 1, 1], [1, 1, 1]].map(r => r.map(v => v / 9)), name: 'Sfocatura' },
+    sharp: { k: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]], name: 'Nitidezza' }
+  };
+  const btns = { edge: 'wc-edge', edgeh: 'wc-edgeh', blur: 'wc-blur', sharp: 'wc-sharp' };
+  let cur = 'edge';
+
+  function convAll(K) {
+    const O = [];
+    for (let i = 0; i < 5; i++) { O[i] = []; for (let j = 0; j < 5; j++) { let s = 0; for (let m = 0; m < 3; m++) for (let n = 0; n < 3; n++) s += IMG[i + m][j + n] * K[m][n]; O[i][j] = s; } }
+    return O;
+  }
+  // colore per valore [-maxv, maxv]: negativi blu, positivi arancioni
+  function col(v, maxv) {
+    if (Math.abs(v) < 1e-6) return 'var(--paper-3)';
+    const t = Math.min(1, Math.abs(v) / maxv);
+    return v > 0 ? `color-mix(in srgb, var(--warm) ${Math.round(20 + 75 * t)}%, var(--paper))`
+      : `color-mix(in srgb, var(--accent) ${Math.round(20 + 75 * t)}%, var(--paper))`;
+  }
+  function gray(v) { const g = Math.round(255 * (1 - v)); return `rgb(${g},${g},${g})`; }
+
+  function draw() {
+    const pos = parseInt(posI.value, 10); posO.textContent = pos;
+    const or = Math.floor(pos / 5), oc = pos % 5;
+    const K = kernels[cur].k;
+    const O = convAll(K);
+    let maxv = 1e-6; for (const r of O) for (const v of r) maxv = Math.max(maxv, Math.abs(v));
+    svg.innerHTML = '';
+    const g = el('g', {}); svg.appendChild(g);
+    const cell = 26;
+    // --- immagine (7x7) ---
+    const ix = 20, iy = 55;
+    const tI = el('text', { x: ix + 3.5 * cell, y: iy - 12, class: 'lbl-b', 'text-anchor': 'middle' }); tI.textContent = 'immagine'; g.appendChild(tI);
+    for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) {
+      g.appendChild(el('rect', { x: ix + j * cell, y: iy + i * cell, width: cell - 1, height: cell - 1, fill: gray(IMG[i][j]), stroke: 'var(--rule)', 'stroke-width': 0.5 }));
+    }
+    // finestra evidenziata
+    g.appendChild(el('rect', { x: ix + oc * cell - 1, y: iy + or * cell - 1, width: 3 * cell, height: 3 * cell, fill: 'none', stroke: 'var(--violet)', 'stroke-width': 2.5 }));
+    // --- output (5x5) ---
+    const ox = 380, oy = 68;
+    const tO = el('text', { x: ox + 2.5 * cell, y: oy - 12, class: 'lbl-b', 'text-anchor': 'middle' }); tO.textContent = 'mappa di feature'; g.appendChild(tO);
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) {
+      const hl = (i === or && j === oc);
+      g.appendChild(el('rect', { x: ox + j * cell, y: oy + i * cell, width: cell - 1, height: cell - 1, fill: col(O[i][j], maxv), stroke: hl ? 'var(--violet)' : 'var(--rule)', 'stroke-width': hl ? 2.5 : 0.5 }));
+    }
+    // freccia
+    g.appendChild(el('text', { x: 340, y: oy + 2.6 * cell, class: 'lbl', 'text-anchor': 'middle', 'font-size': 22, fill: 'var(--ink-faint)' })).textContent = '→';
+
+    // arit. della finestra selezionata
+    let terms = [], sum = 0;
+    for (let m = 0; m < 3; m++) for (let n = 0; n < 3; n++) { const p = IMG[or + m][oc + n], k = K[m][n]; if (Math.abs(k) > 1e-6 && Math.abs(p) > 1e-6) terms.push(`${fmt(p, 1)}·${fmt(k, 2)}`); sum += p * k; }
+    out.innerHTML = `
+      <div class="big"><b style="color:var(--violet)">${kernels[cur].name}</b> &nbsp;·&nbsp; uscita (${or},${oc}) = <b>${fmt(sum, 2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il filtro (riquadro <b style="color:var(--violet)">viola</b>) copre una finestra 3×3 dell'immagine e ne
+        fa il prodotto scalare: ${terms.length ? terms.join(' + ') + ' = <b>' + fmt(sum, 2) + '</b>' : '<b>0</b> (finestra su sfondo)'}. Il risultato riempie la cella corrispondente della mappa.
+        <mark>Muovi la finestra su tutta l'immagine: il filtro «bordo» si accende (arancione/blu) proprio dove il chiaro incontra lo scuro.</mark>
+      </div>`;
+  }
+  for (const k in btns) document.getElementById(btns[k]).addEventListener('click', () => {
+    cur = k; for (const j in btns) document.getElementById(btns[j]).classList.toggle('on', j === k); draw();
+  });
+  posI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
