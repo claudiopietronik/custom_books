@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>44 · Multipla e polinomiale — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="44">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Multipla e polinomiale</h1>
+    <p class="standfirst">
+      La realtà ha molte cause e forme curve. La <b>regressione multipla</b> prevede \(y\) da <em>più</em>
+      predittori insieme, isolando l'effetto di ciascuno «a parità degli altri»; la <b>regressione polinomiale</b>
+      piega la retta in una curva per catturare relazioni non lineari. Due estensioni potenti — e la porta
+      d'ingresso al pericolo dell'overfitting.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Generalizza la regressione semplice (Cap. 43). Il «controllare per» della multipla è la correlazione parziale
+      (Cap. 37) in versione predittiva; la flessibilità della polinomiale prepara il tema centrale del capitolo
+      finale, l'equilibrio tra troppo semplice e troppo complesso (Cap. 46).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Nessun fenomeno reale dipende da una sola cosa. La regressione multipla è lo strumento quotidiano di
+      economisti, epidemiologi e data scientist per districare l'effetto di molte variabili intrecciate. E la
+      polinomiale mostra, in miniatura, il dilemma centrale di tutto il machine learning: quanta flessibilità è
+      troppa?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s44-1"><span class="secnum">SEZIONE 44.1</span>Più predittori</h2>
+
+  <p class="lead">
+    La <b>regressione multipla</b> estende la retta a un modello con \(k\) predittori: ogni variabile ha la sua
+    pendenza, e insieme prevedono \(y\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regressione lineare multipla <span class="tag">molti predittori insieme</span></div>
+    <div class="f-body">
+      \[ \hat{y} \;=\; b_0 + \hA{b_1} x_1 + \hB{b_2} x_2 + \dots + b_k x_k \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{b_1}, \hB{b_2}, \dots\)</dt><dd>i <b>coefficienti</b>: uno per predittore. Ciascuno è l'effetto della sua variabile <b>tenendo fisse le altre</b>.</dd>
+        <dt>\(x_1, x_2, \dots\)</dt><dd>i predittori (metratura, stanze, età…).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Geometricamente non è più una retta ma un <b>piano</b> (o iperpiano) in più dimensioni. Si adatta ancora coi
+      minimi quadrati (Cap. 43). La potenza sta nella clausola <mark>«a parità delle altre variabili»</mark>: il
+      coefficiente di ogni predittore misura il suo effetto <em>al netto</em> degli altri — proprio come la
+      correlazione parziale (Cap. 37).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s44-2"><span class="secnum">SEZIONE 44.2</span>Coefficienti e interpretazione</h2>
+
+  <p class="lead">
+    Il fascino e l'insidia della multipla stanno tutti nell'interpretazione dei coefficienti «a parità degli
+    altri».
+  </p>
+
+  <p>
+    Il coefficiente \(b_1\) dice: «se aumento \(x_1\) di 1 <em>mantenendo costanti tutti gli altri predittori</em>,
+    \(\hat{y}\) cambia di \(b_1\)». Questo permette di <b>isolare</b> l'effetto di una variabile dal groviglio
+    delle altre — è come «controllare per» le confondenti (Cap. 37) all'interno del modello. Ma attento a due
+    trappole: la <b>collinearità</b> (se due predittori sono molto correlati tra loro, i loro coefficienti
+    diventano instabili e difficili da interpretare, perché il modello non sa a chi «attribuire» l'effetto
+    comune); e il fatto che «a parità degli altri» può essere <em>irrealistico</em> se le variabili nella pratica
+    si muovono sempre insieme.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Aggiungere predittori non è gratis</div>
+    <p style="margin-bottom:0">
+      Ogni predittore in più fa <em>sempre</em> salire (o almeno non scendere) l'\(R^2\) sui dati di
+      addestramento, anche se è puro rumore. Perciò <mark>un \(R^2\) più alto non significa un modello migliore</mark>:
+      si usa l'\(R^2\) <b>aggiustato</b> (che penalizza i predittori inutili) e, soprattutto, la validazione su
+      dati nuovi (Cap. 46). Più variabili = più rischio di overfitting.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s44-3"><span class="secnum">SEZIONE 44.3</span>La regressione polinomiale</h2>
+
+  <p class="lead">
+    Quando la relazione è <b>curva</b>, una retta non basta. La regressione <b>polinomiale</b> aggiunge potenze di
+    \(x\) (\(x^2\), \(x^3\), …) come predittori, piegando la linea in una curva.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regressione polinomiale <span class="tag">la retta si piega</span></div>
+    <div class="f-body">
+      \[ \hat{y} \;=\; b_0 + b_1 x + \hA{b_2 x^2} + \hB{b_3 x^3} + \dots \]
+    </div>
+    <div class="f-note">
+      Sorpresa: è <b>ancora regressione lineare</b>! «Lineare» si riferisce ai <em>coefficienti</em> \(b\), non a
+      \(x\): trattando \(x^2, x^3\) come nuovi predittori, si applica la stessa macchina dei minimi quadrati. Il
+      <b>grado</b> del polinomio controlla la flessibilità: grado 1 = retta; grado alto = curva capace di
+      contorcersi per passare vicino a ogni punto. <mark>Ed è proprio qui che si annida il pericolo.</mark>
+    </div>
+  </div>
+
+  <h3>Provalo: quanta flessibilità?</h3>
+
+  <p>
+    Gli stessi dati (una relazione dolcemente curva + rumore). Alza il <b>grado</b> del polinomio: da una retta
+    troppo rigida (sotto-adattamento), a una curva che coglie la forma, a un mostro ondulato che insegue ogni
+    singolo punto — rumore compreso (sovra-adattamento). L'errore sui dati cala sempre, ma il modello peggiora.
+  </p>
+
+  <div class="widget" id="w-poly">
+    <div class="w-head">
+      <span>Grado del polinomio</span>
+      <span class="hint">rigido → giusto → contorto</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpl-svg" viewBox="0 0 420 300" role="img" aria-label="Regressione polinomiale di grado variabile, da retta a curva sovra-adattata"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>grado</label><input type="range" id="wpl-d" min="1" max="12" step="1" value="1"><output id="wpl-dv">1</output></div>
+    </div>
+    <div class="w-readout" id="wpl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s44-4"><span class="secnum">SEZIONE 44.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 44.1</div>
+    <p style="margin-bottom:0">In una regressione multipla, il coefficiente della metratura è \(+2\) (prezzo in
+      migliaia). Come si interpreta esattamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">«Per ogni metro quadro in più, <b>a parità di tutti gli altri predittori</b>
+          (stanze, età, zona…), il prezzo previsto aumenta di 2 mila» (§44.2). La clausola «a parità degli altri»
+          è essenziale: senza di essa staresti confondendo l'effetto della metratura con quello delle variabili
+          correlate (case grandi hanno anche più stanze). È il «controllare per» in versione predittiva (Cap. 37).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 44.2</div>
+    <p style="margin-bottom:0">Perché la regressione polinomiale è considerata «ancora lineare»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché «lineare» si riferisce ai <b>coefficienti</b> \(b\), non alla forma in
+          \(x\) (§44.3). Trattando \(x^2, x^3, \dots\) come nuovi predittori (\(x_2 = x^2\), ecc.), il modello è
+          lineare nei parametri e si stima con gli stessi minimi quadrati della regressione multipla. La curva
+          nell'aspetto nasce dalle potenze di \(x\), ma la matematica sottostante è quella lineare.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 44.3</div>
+    <p style="margin-bottom:0">Aggiungendo un predittore casuale (rumore puro) a un modello, l'\(R^2\)
+      sull'addestramento sale un pochino. Perché? È un miglioramento reale?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Sale perché i minimi quadrati sfruttano qualunque correlazione <b>casuale</b>
+          tra il rumore e \(y\) presente <em>in quel campione</em>, riducendo un po' i residui (§44.2). <b>Non è un
+          miglioramento reale:</b> su dati nuovi quel predittore non aiuterà (era rumore). È overfitting in
+          miniatura — per questo si usano \(R^2\) aggiustato e validazione (Cap. 46), non l'\(R^2\) grezzo, per
+          giudicare un modello.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s44-5"><span class="secnum">SEZIONE 44.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 44</div>
+    <ol style="margin-bottom:0">
+      <li><b>Regressione multipla:</b> \(\hat{y} = b_0 + b_1 x_1 + \dots\). Ogni coefficiente = effetto del suo
+        predittore <b>a parità degli altri</b>.</li>
+      <li>Attento alla <b>collinearità</b> (predittori correlati → coefficienti instabili) e all'\(R^2\) che sale
+        sempre.</li>
+      <li><b>Regressione polinomiale:</b> aggiungi \(x^2, x^3, \dots\) per curvare. È ancora lineare nei
+        coefficienti.</li>
+      <li>Il <b>grado</b> controlla la flessibilità: troppo poco → sotto-adatta, troppo → sovra-adatta. Il dilemma
+        del Cap. 46.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Finora \(y\) era un numero. Ma spesso vogliamo prevedere una <b>categoria</b>: spam o no, malato o sano, clic o
+    no. La retta non serve: serve una curva che stimi una <em>probabilità</em> tra 0 e 1. È la <b>regressione
+    logistica</b>, nel <strong>Capitolo 45</strong> — dove torneranno le odds del Cap. 15.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §44.3 — regressione polinomiale di grado variabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpl-out');
+  const dS = document.getElementById('wpl-d'), dV = document.getElementById('wpl-dv');
+  // dati: relazione dolcemente curva + rumore, x in [0,1]
+  let seed = 321;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const N = 14, X = [], Y = [];
+  for (let i = 0; i < N; i++) { const x = (i + 0.5) / N; X.push(x); Y.push(0.35 + 0.5 * Math.sin(2.3 * x) + 0.09 * g()); }
+
+  // regressione polinomiale via minimi quadrati (equazioni normali risolte con eliminazione)
+  function fitPoly(deg) {
+    const m = deg + 1;
+    // matrice A (m×m) e vettore b
+    const A = Array.from({ length: m }, () => new Array(m).fill(0));
+    const B = new Array(m).fill(0);
+    for (let p = 0; p < N; p++) {
+      const powers = []; let xp = 1; for (let k = 0; k < 2 * m; k++) { powers.push(xp); xp *= X[p]; }
+      for (let i = 0; i < m; i++) { B[i] += powers[i] * Y[p]; for (let j = 0; j < m; j++) A[i][j] += powers[i + j]; }
+    }
+    // Gauss con pivoting parziale
+    for (let i = 0; i < m; i++) {
+      let piv = i; for (let r = i + 1; r < m; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+      [A[i], A[piv]] = [A[piv], A[i]]; [B[i], B[piv]] = [B[piv], B[i]];
+      const d = A[i][i] || 1e-9;
+      for (let j = i; j < m; j++) A[i][j] /= d; B[i] /= d;
+      for (let r = 0; r < m; r++) if (r !== i) { const f = A[r][i]; for (let j = i; j < m; j++) A[r][j] -= f * A[i][j]; B[r] -= f * B[i]; }
+    }
+    return B;   // coefficienti
+  }
+  function evalPoly(c, x) { let s = 0, xp = 1; for (let k = 0; k < c.length; k++) { s += c[k] * xp; xp *= x; } return s; }
+
+  function draw() {
+    const deg = parseInt(dS.value, 10);
+    dV.textContent = deg;
+    const c = fitPoly(deg);
+    let sse = 0; for (let i = 0; i < N; i++) sse += (Y[i] - evalPoly(c, X[i])) ** 2;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.02, xmax: 1.02, ymin: -0.2, ymax: 1.1, iso: false });
+    p.axes({ numbers: false, names: true, xname: 'x', yname: 'y' });
+    // curva
+    const curve = []; for (let t = 0; t <= 1.001; t += 0.008) curve.push([t, evalPoly(c, t)]);
+    p.poly(curve, { color: 'var(--accent)', width: 2.4, close: false });
+    // punti
+    for (let i = 0; i < N; i++) p.dot(X[i], Y[i], { r: 3.4, color: 'var(--ink)', stroke: 'var(--paper)', sw: 0.8 });
+
+    let msg;
+    if (deg === 1) msg = 'Grado 1 (retta): troppo <mark>rigida</mark> per la curva dei dati — sotto-adattamento (underfitting).';
+    else if (deg <= 4) msg = 'Grado moderato: la curva coglie la <mark>forma vera</mark> senza inseguire il rumore. Circa il punto giusto.';
+    else msg = 'Grado alto: la curva si <mark>contorce</mark> per passare vicino a ogni punto, rumore compreso — sovra-adattamento (overfitting). L’errore sui dati cala, ma su dati nuovi sarebbe pessimo.';
+    out.innerHTML = `
+      <div class="big">grado ${deg} &nbsp;·&nbsp; errore sui dati (SSE) = <b>${sse.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${msg}</div>`;
+  }
+  dS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

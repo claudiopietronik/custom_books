@@ -517,7 +517,7 @@ const TOC = [
   },
   {
     n: 44, parte: "IV · Statistica inferenziale",
-    titolo: "Multipla e polinomiale", file: "cap44-regressione-multipla.html", stato: "da-fare",
+    titolo: "Multipla e polinomiale", file: "cap44-regressione-multipla.html", stato: "pronto",
     sezioni: [
       { id: "s44-1", n: "44.1", t: "Più predittori" },
       { id: "s44-2", n: "44.2", t: "Coefficienti e interpretazione" },
