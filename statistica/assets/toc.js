@@ -203,7 +203,7 @@ const TOC = [
   },
   {
     n: 17, parte: "III · Probabilità",
-    titolo: "La CDF", file: "cap17-cdf.html", stato: "da-fare",
+    titolo: "La CDF", file: "cap17-cdf.html", stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Probabilità cumulata" },
       { id: "s17-2", n: "17.2", t: "Dalla PDF alla CDF e ritorno" },
