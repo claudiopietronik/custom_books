@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>38 · Spearman e Kendall — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="38">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Spearman e Kendall</h1>
+    <p class="standfirst">
+      Pearson vede solo relazioni <em>lineari</em> ed è fragile agli outlier. Ma spesso due variabili si muovono
+      insieme in modo <b>monotòno ma curvo</b> — cresce l'una, cresce l'altra, non su una retta. Le correlazioni di
+      <b>rango</b> (Spearman e Kendall) catturano <em>qualunque</em> relazione monotòna, e con la robustezza dei
+      metodi non parametrici.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La controparte robusta di Pearson (Cap. 36), figlia dell'idea dei ranghi (Cap. 33). Quando lo scatter non è
+      lineare o ci sono outlier — situazioni segnalate dal QQ plot (Cap. 5) e dal semaforo del Cap. 28 — queste
+      sono le correlazioni da usare.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Molte relazioni reali sono monotòne ma non lineari (dose–risposta, esperienza–stipendio) o piene di outlier.
+      Affidarsi al solo Pearson qui fa sottostimare associazioni fortissime. Spearman e Kendall le rivelano — e
+      sono spesso ciò che davvero vuoi sapere: «al crescere di una, cresce l'altra?».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-1"><span class="secnum">SEZIONE 38.1</span>Correlazione di rango</h2>
+
+  <p class="lead">
+    L'idea è quella del Cap. 33: sostituisci ogni valore col suo <b>rango</b> e correla i ranghi. Così conta solo
+    l'<b>ordine</b>, non i valori esatti — né la forma della relazione.
+  </p>
+
+  <p>
+    Se al crescere di \(x\) cresce sempre \(y\), i loro ranghi vanno di pari passo (il più piccolo di \(x\) si
+    accoppia col più piccolo di \(y\), ecc.), a prescindere dal fatto che la relazione sia una retta, una curva
+    esponenziale o logaritmica. La correlazione di rango misura la <b>monotonia</b>: «quando una sale, l'altra
+    sale (o scende) in modo coerente?». È una domanda più generale della linearità di Pearson, e più robusta,
+    perché un outlier diventa solo «l'ultimo rango» (Cap. 5).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-2"><span class="secnum">SEZIONE 38.2</span>Il ρ di Spearman</h2>
+
+  <p class="lead">
+    Il <b>\(\rho\) di Spearman</b> è, semplicemente, la correlazione di Pearson calcolata <b>sui ranghi</b> invece
+    che sui valori.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">ρ di Spearman <span class="tag">Pearson sui ranghi</span></div>
+    <div class="f-body">
+      \[ \rho \;=\; r_{\text{Pearson}}\big(\hA{\text{rank}(x)},\; \hB{\text{rank}(y)}\big) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{rank}(x)}\)</dt><dd>i ranghi (posizioni ordinate) dei valori di \(x\).</dd>
+        <dt>\(\hB{\text{rank}(y)}\)</dt><dd>i ranghi dei valori di \(y\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Anche \(\rho \in [-1, +1]\). Vale <b>+1</b> per <em>qualunque</em> relazione monotòna crescente (non solo
+      lineare!): se ogni volta che \(x\) sale anche \(y\) sale, i ranghi coincidono e \(\rho = 1\), pur potendo
+      Pearson essere ben sotto 1. <mark>Spearman misura la monotonia; Pearson la linearità.</mark>
+    </div>
+  </div>
+
+  <h3>Provalo: la curva che inganna Pearson</h3>
+
+  <p>
+    Una relazione monotòna la cui <b>curvatura</b> puoi regolare. A curvatura zero è una retta e i due coefficienti
+    coincidono; curvandola, <b style="color:var(--accent)">Pearson</b> cala (non è più lineare) mentre
+    <b style="color:var(--green)">Spearman</b> resta a 1 (è sempre monotòna). Aggiungi un outlier e vedi Pearson
+    crollare mentre Spearman tiene.
+  </p>
+
+  <div class="widget" id="w-sp">
+    <div class="w-head">
+      <span>Pearson contro Spearman</span>
+      <span class="hint">monotòna ma non lineare</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsp-svg" viewBox="0 0 400 320" role="img" aria-label="Relazione monotòna curva: Pearson cala, Spearman resta alto"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>curvatura</label><input type="range" id="wsp-c" min="0" max="100" step="1" value="60"><output id="wsp-cv">0.60</output></div>
+      <button class="w-btn" id="wsp-o">aggiungi outlier</button>
+    </div>
+    <div class="w-readout" id="wsp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-3"><span class="secnum">SEZIONE 38.3</span>Il τ di Kendall</h2>
+
+  <p class="lead">
+    Il <b>\(\tau\) di Kendall</b> misura la stessa monotonia, ma con un'idea diversa e ancora più diretta: conta
+    le coppie <b>concordanti</b> e <b>discordanti</b>.
+  </p>
+
+  <p>
+    Prendi due osservazioni qualsiasi. Sono <b>concordanti</b> se quella con \(x\) più grande ha anche \(y\) più
+    grande (l'ordine è coerente); <b>discordanti</b> se l'ordine si inverte. Kendall è, in sostanza, la
+    <em>proporzione</em> di coppie concordanti meno quella di discordanti:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">τ di Kendall <span class="tag">coppie d'accordo vs in disaccordo</span></div>
+    <div class="f-body">
+      \[ \tau \;=\; \frac{(\text{coppie concordanti}) - (\text{coppie discordanti})}{\text{numero totale di coppie}} \]
+    </div>
+    <div class="f-note">
+      \(\tau = +1\): tutte le coppie concordano (monotòna crescente perfetta). \(\tau = -1\): tutte discordano
+      (decrescente). \(\tau = 0\): metà e metà, nessuna tendenza. È ancora più <b>robusto</b> di Spearman e ha
+      un'interpretazione limpida (una probabilità di concordanza), ma è un po' più laborioso da calcolare. Su
+      dataset piccoli o con molti pari-merito, spesso si preferisce Kendall.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-4"><span class="secnum">SEZIONE 38.4</span>Quando preferirle a Pearson</h2>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Situazione</th><th>Usa…</th></tr></thead>
+    <tbody>
+      <tr><td>relazione lineare, dati ~normali, pochi outlier</td><td><b>Pearson</b> (più potente)</td></tr>
+      <tr><td>relazione monotòna ma <b>curva</b></td><td><b>Spearman / Kendall</b></td></tr>
+      <tr><td>presenza di <b>outlier</b></td><td><b>Spearman / Kendall</b> (robusti)</td></tr>
+      <tr><td>dati <b>ordinali</b> (classifiche, giudizi)</td><td><b>Spearman / Kendall</b></td></tr>
+      <tr><td>campione piccolo o molti pari-merito</td><td><b>Kendall</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Nessuna coglie le relazioni non monotòne</div>
+    <p style="margin-bottom:0">
+      Attenzione: Spearman e Kendall catturano la <b>monotonia</b>, non qualunque dipendenza. Una relazione a
+      <b>U</b> (prima scende, poi sale) non è monotòna, e darà <mark>\(\rho \approx 0\) e \(\tau \approx 0\)</mark>
+      proprio come Pearson — pur essendoci una dipendenza fortissima. Per quelle serve altro (o, banalmente,
+      guardare lo scatter). La regola d'oro resta: <b>disegna sempre i dati</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-5"><span class="secnum">SEZIONE 38.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 38.1</div>
+    <p style="margin-bottom:0">La relazione tra \(x\) e \(y\) è \(y = e^x\) (esponenziale, quindi monotòna
+      crescente ma molto curva). Cosa ti aspetti da Pearson e da Spearman?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Spearman \(\rho = 1\)</b> (esatto): la relazione è perfettamente monotòna
+          crescente, i ranghi di \(x\) e \(y\) coincidono (§38.2). <b>Pearson \(r < 1\)</b> (magari 0,7–0,8): la
+          relazione non è lineare, e Pearson «vede» solo la componente lineare, sottostimando l'associazione. È
+          l'esempio classico del perché servono le correlazioni di rango.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 38.2</div>
+    <p style="margin-bottom:0">Kendall τ = 0,6. Interpreta questo numero in termini di coppie.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Significa che la differenza tra la proporzione di coppie <b>concordanti</b> e
+          quella di coppie <b>discordanti</b> è 0,6 (§38.3). In pratica: prendendo due osservazioni a caso, è molto
+          più probabile che il loro ordine su \(x\) concordi con quello su \(y\) (concordanti) che il contrario.
+          Una forte tendenza monotòna crescente, con un'interpretazione diretta come «eccesso di accordo».</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 38.3</div>
+    <p style="margin-bottom:0">Confronti classifiche di 10 film fatte da due critici (dati ordinali). Pearson,
+      Spearman o Kendall?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Spearman o Kendall.</b> Le classifiche sono dati <b>ordinali</b> (ranghi
+          puri): Pearson non è appropriato perché presume una scala numerica con distanze significative (§38.4,
+          Cap. 2). Le correlazioni di rango sono fatte apposta per misurare quanto due ordinamenti concordano.
+          Con soli 10 elementi e possibili pari-merito, <b>Kendall</b> è spesso la scelta più solida (§38.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s38-6"><span class="secnum">SEZIONE 38.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 38</div>
+    <ol style="margin-bottom:0">
+      <li><b>Correlazioni di rango:</b> Pearson sui ranghi. Misurano la <b>monotonia</b>, non la linearità; robuste
+        a outlier e forma.</li>
+      <li><b>Spearman ρ:</b> Pearson sui ranghi. <b>+1</b> per qualunque relazione monotòna crescente.</li>
+      <li><b>Kendall τ:</b> (coppie concordanti − discordanti) / totali. Interpretazione diretta, molto robusto.</li>
+      <li>Usa Pearson se lineare e pulito; Spearman/Kendall se curvo, con outlier o ordinale. Nessuna coglie le
+        relazioni <b>non monotòne</b> (guarda lo scatter!).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Un ultimo modo di misurare la somiglianza tra due sequenze di numeri, diffusissimo nel machine learning e nel
+    trattamento del testo: guardarle come <b>vettori</b> e misurarne l'<em>angolo</em>. È la <b>similarità del
+    coseno</b>, sorprendentemente imparentata con la correlazione, nel <strong>Capitolo 39</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §38.2 — Pearson vs Spearman su relazione monotòna curva + outlier
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsp-out');
+  const cS = document.getElementById('wsp-c'), cV = document.getElementById('wsp-cv');
+  const oBtn = document.getElementById('wsp-o');
+  let withOut = false;
+  const xs = []; for (let i = 0; i < 30; i++) xs.push(8 + i * 2.8);
+
+  function rankOf(arr) {
+    const idx = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+    const r = new Array(arr.length);
+    idx.forEach((p, k) => r[p[1]] = k + 1);
+    return r;
+  }
+  function pearson(a, b) {
+    const n = a.length, ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+    let sab = 0, saa = 0, sbb = 0;
+    for (let i = 0; i < n; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; }
+    return sab / Math.sqrt(saa * sbb);
+  }
+
+  function draw() {
+    const c = parseInt(cS.value, 10) / 100;
+    cV.textContent = c.toFixed(2);
+    // y monotòna crescente con curvatura c: mix di lineare ed esponenziale
+    const X = [...xs], Y = xs.map(x => { const lin = x; const cur = 8 * Math.exp(x / 30); return (1 - c) * lin + c * cur; });
+    if (withOut) { X.push(70); Y.push(15); }   // outlier controcorrente
+    // scala Y in 0..100 per il disegno
+    const ymin = Math.min(...Y), ymax = Math.max(...Y);
+    const Yv = Y.map(v => 8 + 84 * (v - ymin) / (ymax - ymin));
+    const rP = pearson(X, Y);
+    const rS = pearson(rankOf(X), rankOf(Y));
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 100, iso: false });
+    p.axes({ numbers: false, names: true, xname: 'x', yname: 'y' });
+    X.forEach((x, i) => p.dot(x, Yv[i], { r: 3, color: (withOut && i === X.length - 1) ? 'var(--warm)' : 'color-mix(in srgb, var(--accent) 60%, transparent)', stroke: 'var(--paper)', sw: 0.5 }));
+    out.innerHTML = `
+      <div class="big">Pearson r = <b style="color:var(--accent)">${rP.toFixed(2)}</b> &nbsp;·&nbsp; Spearman ρ = <b style="color:var(--green)">${rS.toFixed(2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${withOut ? 'Un <mark>outlier</mark> controcorrente affossa Pearson, ma Spearman (sui ranghi) resta alto: la robustezza dei ranghi (§38.1).'
+                  : c < 0.1 ? 'Relazione quasi lineare: i due coefficienti quasi coincidono.'
+                  : 'Relazione <mark>monotòna ma curva</mark>: Pearson cala (non è una retta), Spearman resta ≈1 (è sempre crescente). Spearman coglie ciò che Pearson perde.'}
+      </div>`;
+  }
+  cS.addEventListener('input', draw);
+  oBtn.addEventListener('click', () => { withOut = !withOut; oBtn.classList.toggle('on', withOut); oBtn.textContent = withOut ? 'togli outlier' : 'aggiungi outlier'; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

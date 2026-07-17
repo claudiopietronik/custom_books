@@ -448,7 +448,7 @@ const TOC = [
   },
   {
     n: 38, parte: "IV · Statistica inferenziale",
-    titolo: "Spearman e Kendall", file: "cap38-spearman-kendall.html", stato: "da-fare",
+    titolo: "Spearman e Kendall", file: "cap38-spearman-kendall.html", stato: "pronto",
     sezioni: [
       { id: "s38-1", n: "38.1", t: "Correlazione di rango" },
       { id: "s38-2", n: "38.2", t: "Il ρ di Spearman" },
