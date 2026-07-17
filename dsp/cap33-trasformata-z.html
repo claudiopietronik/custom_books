@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>33 · La trasformata z — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="33">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.33 — Capitolo 33</div>
+    <h1>La trasformata z</h1>
+    <p class="standfirst">
+      L'ultimo strumento teorico, e la chiusura del cerchio. La trasformata z è l'analogo <b>discreto</b> di
+      Laplace: fa per i filtri digitali ricorsivi (Cap. 19–20) ciò che Laplace fa per i sistemi analogici. Vive
+      nel <b>piano \(z\)</b>, e con essa la misteriosa condizione di stabilità degli IIR — «poli dentro il cerchio
+      unitario» — diventa finalmente ovvia e visiva.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Ultimo capitolo teorico. Chiude i conti aperti nel Cap. 19 (la stabilità degli IIR) e nel Cap. 20 (il
+      progetto dei filtri) dando loro il fondamento. È il gemello discreto di Laplace (Cap. 32) e usa i numeri
+      complessi (Cap. 30). Dopo, resta solo la curiosità del Cap. 34.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La trasformata z è <em>il</em> linguaggio dei filtri digitali ricorsivi: dai suoi poli e zeri leggi
+      risposta in frequenza e stabilità a colpo d'occhio, e progetti il filtro piazzandoli dove servono. La regola
+      «poli dentro il cerchio unitario» — che nel Cap. 19 era una formula da accettare — qui diventa
+      <strong>un'immagine geometrica che non dimenticherai più.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-1"><span class="secnum">SEZIONE 33.1</span>L'analogo discreto di Laplace: il piano z</h2>
+
+  <p class="lead">
+    Laplace descriveva i segnali continui con \(\eu^{st}\); la trasformata z descrive i segnali <b>discreti</b>
+    con le potenze di una variabile complessa \(z\). Il legame tra i due mondi è una mappa elegante.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La trasformata z <span class="tag">il Laplace del discreto</span></div>
+    <div class="f-body">
+      \[
+        X(\hA{z}) \;=\; \sum_{n=0}^{\infty} \sig{x}[n]\; \hA{z}^{-n}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{z}\)</dt><dd>una variabile <b>complessa</b>, come \(s\) in Laplace. Il legame è \(z = \eu^{sT}\)
+            (con \(T\) il periodo di campionamento).</dd>
+        <dt>\(\hA{z}^{-n}\)</dt><dd>una potenza: \(z^{-1}\) rappresenta un <b>ritardo di un campione</b> (il
+            mattone di ogni filtro discreto).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La mappa \(z = \eu^{sT}\) trasforma il piano \(s\) nel piano \(z\) in modo bellissimo: <mark>il semipiano
+      <b>sinistro</b> di Laplace (stabile) diventa l'<b>interno del cerchio unitario</b> del piano \(z\)</mark>, e
+      l'asse immaginario (dove vive Fourier) diventa il <b>cerchio unitario</b> stesso. Ecco perché la risposta in
+      frequenza di un filtro digitale si legge <em>sul cerchio</em>, e la stabilità si legge <em>dentro</em>.
+    </div>
+  </div>
+
+  <h3>Provalo: come il piano s diventa il piano z</h3>
+
+  <p>
+    Trascina un punto nel piano \(s\) (a sinistra) e guarda dove finisce nel piano \(z\) (a destra) attraverso la
+    mappa \(z = \eu^{s}\). Il <b>semipiano sinistro</b> (stabile) si arrotola <b>dentro il cerchio unitario</b>;
+    l'<b>asse immaginario</b> diventa il <b>cerchio</b>; il semipiano destro (instabile) finisce <b>fuori</b>. È
+    la traduzione geometrica tra i due mondi.
+  </p>
+
+  <div class="widget" id="w-map">
+    <div class="w-head">
+      <span>Dal piano s al piano z</span>
+      <span class="hint">sinistra → dentro il cerchio</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap">
+      <svg id="wmap-s" viewBox="0 0 260 260" style="max-width:260px" role="img" aria-label="Un punto nel piano s"></svg>
+      <svg id="wmap-z" viewBox="0 0 260 260" style="max-width:260px" role="img" aria-label="Lo stesso punto mappato nel piano z"></svg>
+    </div>
+    <div class="w-readout" id="wmap-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-2"><span class="secnum">SEZIONE 33.2</span>Poli e zeri nel piano z</h2>
+
+  <p class="lead">
+    Tutto ciò che sappiamo di poli e zeri (Cap. 32) si trasferisce, con la geometria del cerchio al posto di
+    quella del semipiano.
+  </p>
+
+  <ul>
+    <li><b>Risposta in frequenza:</b> si legge valutando \(H(z)\) <b>sul cerchio unitario</b> (\(z = \eu^{\ii\omega}\),
+        con \(\omega\) da \(0\) a \(\pi\), cioè da continua a Nyquist). Girare attorno al cerchio = scorrere le
+        frequenze.</li>
+    <li><b>Poli</b> vicini al cerchio → <b>risonanza</b> (picco a quella frequenza): è il risonatore del Cap. 19.
+        <b>Zeri</b> sul cerchio → <b>notch</b> (annullano quella frequenza).</li>
+    <li><b>Stabilità:</b> il filtro è stabile <b>se e solo se tutti i poli sono dentro il cerchio unitario</b>
+        (\(\abs{z} < 1\)). Un polo fuori → uscita che esplode. È la versione discreta del «poli a sinistra» di
+        Laplace.</li>
+  </ul>
+
+  <h3>Provalo: piano z, risonanza e stabilità</h3>
+
+  <p>
+    Trascina il <b style="color:var(--warm)">polo</b> nel piano \(z\) (col suo coniugato). Avvicinalo al
+    <b>cerchio unitario</b> e nella <b style="color:var(--accent)">risposta in frequenza</b> compare un picco di
+    risonanza sempre più acuto — è il risonatore del Cap. 19! Spingi il polo <b>fuori</b> dal cerchio e il
+    sistema diventa instabile.
+  </p>
+
+  <div class="widget" id="w-zpz">
+    <div class="w-head">
+      <span>Piano z: poli e stabilità</span>
+      <span class="hint">dentro il cerchio = stabile</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap">
+      <svg id="wzpz-plane" viewBox="0 0 260 260" style="max-width:260px" role="img" aria-label="Il piano z con una coppia di poli coniugati trascinabili e il cerchio unitario"></svg>
+      <svg id="wzpz-resp" viewBox="0 0 320 260" style="max-width:320px" role="img" aria-label="La risposta in frequenza letta sul cerchio unitario"></svg>
+    </div>
+    <div class="w-readout" id="wzpz-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-3"><span class="secnum">SEZIONE 33.3</span>Dalla funzione di trasferimento ai coefficienti</h2>
+
+  <p class="lead">
+    Il ponte tra la teoria (poli e zeri) e la pratica (i coefficienti del filtro del Cap. 19) è diretto, e passa
+    per il significato di \(z^{-1}\): un <b>ritardo di un campione</b>.
+  </p>
+
+  <p>
+    La funzione di trasferimento di un filtro digitale è un rapporto di polinomi in \(z^{-1}\):
+    \(H(z) = \frac{b_0 + b_1 z^{-1} + b_2 z^{-2} + \cdots}{1 + a_1 z^{-1} + a_2 z^{-2} + \cdots}\). E poiché
+    \(z^{-1}\) significa «ritarda di uno», questa frazione si traduce <b>direttamente</b> nell'equazione ricorsiva
+    del Cap. 19: i coefficienti \(b\) del numeratore sono i pesi degli <b>ingressi</b> ritardati, quelli \(a\) del
+    denominatore i pesi delle <b>uscite</b> ritardate (la retroazione). <mark>Poli e zeri, coefficienti ed
+    equazione ricorsiva sono la stessa cosa, scritta in tre modi.</mark> Progetti nel piano \(z\), converti i
+    poli/zeri in polinomi, leggi i coefficienti, e hai il filtro pronto da programmare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-4"><span class="secnum">SEZIONE 33.4</span>Analizzare i filtri ricorsivi</h2>
+
+  <p class="lead">
+    Ora tutti i filtri ricorsivi dei capitoli precedenti trovano la loro spiegazione unificata nel piano \(z\).
+  </p>
+
+  <ul>
+    <li>Il <b>polo singolo</b> (Cap. 19) è un unico polo sull'asse reale, dentro il cerchio: vicino a \(1\)
+        leviga molto (passa-basso dolce), vicino a \(0\) leviga poco.</li>
+    <li>Il <b>risonatore e il notch</b> (Cap. 19) sono coppie di poli (risonatore) o di zeri (notch) posizionati
+        all'angolo \(\omega_0\) della frequenza scelta, a raggio prossimo a \(1\) per la selettività.</li>
+    <li>I <b>filtri di Chebyshev</b> (Cap. 20) sono configurazioni precise di poli dentro il cerchio, ottenute
+        trasportando i poli analogici (piano \(s\), Cap. 32) con la <b>trasformazione bilineare</b>.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il libro si chiude su sé stesso</div>
+    <p style="margin-bottom:0">
+      Guarda quante fila si riannodano qui: la <b>stabilità</b> promessa nel Cap. 14 e temuta nel Cap. 19 è
+      «poli dentro il cerchio»; il <b>risonatore</b> del Cap. 19 è una coppia di poli vicini al cerchio; i
+      <b>Chebyshev</b> del Cap. 20 sono poli trasportati da Laplace (Cap. 32); la <b>risposta in frequenza</b> è
+      la DFT (Cap. 8) letta sul cerchio; e i <b>coefficienti ricorsivi</b> sono i polinomi di \(H(z)\).
+      <mark>La trasformata z è la lente che mette a fuoco, tutto insieme, ciò che avevamo visto a pezzi.</mark> È
+      la ricompensa teorica dell'intero libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-5"><span class="secnum">SEZIONE 33.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.1</div>
+    <p style="margin-bottom:0">Nel piano \(z\), dove si legge la risposta in frequenza di un filtro digitale? E
+      dove si legge la sua stabilità?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La <b>risposta in frequenza</b> si legge <b>sul cerchio unitario</b> (\(z = \eu^{\ii\omega}\), da
+          \(\omega=0\) a \(\pi\)). La <b>stabilità</b> si legge <b>dentro</b>: tutti i poli devono stare
+          <em>dentro</em> il cerchio unitario (\(\abs{z}<1\)). È l'immagine del §33.1–33.2.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.2</div>
+    <p style="margin-bottom:0">Un filtro ricorsivo ha un polo a \(\abs{z} = 1{,}05\) (fuori dal cerchio). È
+      stabile? E come si collega alla regola di Laplace?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Instabile:</b> il polo è <b>fuori</b> dal cerchio unitario, l'uscita esplode. Si collega
+          direttamente a Laplace tramite la mappa \(z=\eu^{sT}\): il semipiano sinistro (stabile in \(s\)) diventa
+          l'<b>interno</b> del cerchio (stabile in \(z\)). «Poli a sinistra» e «poli dentro il cerchio» sono la
+          stessa condizione nei due mondi (§33.1).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.3</div>
+    <p style="margin-bottom:0">Cosa rappresenta \(z^{-1}\) in un filtro digitale, e come collega \(H(z)\)
+      all'equazione ricorsiva?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(z^{-1}\) è un <b>ritardo di un campione</b>. In \(H(z)=\frac{b_0+b_1 z^{-1}+\cdots}{1+a_1 z^{-1}+\cdots}\),
+          i coefficienti \(b\) (numeratore) sono i pesi degli <b>ingressi</b> ritardati e gli \(a\) (denominatore)
+          i pesi delle <b>uscite</b> ritardate (retroazione) — esattamente l'equazione ricorsiva del Cap. 19
+          (§33.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.4</div>
+    <p style="margin-bottom:0">Come si spiega, nel piano \(z\), il risonatore stretto del Cap. 19?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>È una <b>coppia di poli coniugati</b> posizionati all'angolo corrispondente alla frequenza centrale
+          \(\omega_0\), a un <b>raggio vicino a 1</b> (ma dentro il cerchio). Più il raggio è vicino a 1, più il
+          polo è vicino al cerchio, più la risonanza è acuta (Q alto) — ma anche più il filtro è delicato. È il
+          §33.2 e §33.4.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-6"><span class="secnum">SEZIONE 33.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 33</div>
+    <ol style="margin-bottom:0">
+      <li><b>Trasformata z</b> = Laplace del discreto: \(X(z)=\sum x[n]z^{-n}\), con \(z = \eu^{sT}\).
+          \(z^{-1}\) = ritardo di un campione.</li>
+      <li><b>La mappa \(s \to z\):</b> semipiano sinistro → <b>interno</b> del cerchio unitario; asse immaginario
+          → <b>cerchio</b>.</li>
+      <li><b>Risposta in frequenza</b> = \(H(z)\) sul cerchio unitario; <b>stabilità</b> = poli <b>dentro</b> il
+          cerchio.</li>
+      <li><b>Poli vicini al cerchio</b> = risonanza; <b>zeri sul cerchio</b> = notch. Coefficienti = polinomi di
+          \(H(z)\) = equazione ricorsiva.</li>
+      <li><b>Unifica tutto:</b> polo singolo, risonatore, notch, Chebyshev — tutti si leggono come poli/zeri nel
+          piano \(z\). La lente che mette a fuoco l'intero libro.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la trasformata z il quadro teorico del DSP è completo: tempo e frequenza, continuo e discreto, Fourier,
+    Laplace e z. Resta un ultimo capitolo, diverso da tutti: una <b>curiosità</b> affascinante che intreccia
+    statistica, logaritmi e DSP. Il <strong>Capitolo 34</strong> spiega la <b>legge di Benford</b> — perché, in
+    moltissimi dati reali, la prima cifra è «1» molto più spesso che «9» — e come il modo di pensare del DSP la
+    illumini. Un finale leggero, ma con un'idea profonda.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §33.1 — mappa piano s → piano z
+   ========================================================================= */
+(function () {
+  const ss = document.getElementById('wmap-s'), sz = document.getElementById('wmap-z');
+  if (!ss) return;
+  const out = document.getElementById('wmap-out');
+  let s = [-0.5, 1.2];
+
+  function draw() {
+    ss.innerHTML = '';
+    const ps = new Plot(ss, { xmin: -2.4, xmax: 1.2, ymin: -Math.PI - 0.3, ymax: Math.PI + 0.3, iso: false });
+    ps.rect(-2.4, -Math.PI - 0.3, 0, Math.PI + 0.3, { fill: 'color-mix(in srgb, var(--green) 8%, transparent)', color: 'none' });
+    ps.rect(0, -Math.PI - 0.3, 1.2, Math.PI + 0.3, { fill: 'color-mix(in srgb, var(--warm) 8%, transparent)', color: 'none' });
+    ps.axes({ numbers: false, names: true, xname: 'σ', yname: 'iω' });
+    ps.text(-1.3, Math.PI, 'sinistra', { color: 'var(--green)', size: 10 });
+    ps.text(0.6, Math.PI, 'destra', { color: 'var(--warm)', size: 10 });
+    ps.handle(s[0], s[1], { color: 'var(--violet)' }, (x, y) => { s = [x, y]; draw(); });
+
+    // z = e^s
+    const zr = Math.exp(s[0]) * Math.cos(s[1]), zi = Math.exp(s[0]) * Math.sin(s[1]);
+    const mag = Math.hypot(zr, zi), inside = mag < 1;
+    sz.innerHTML = '';
+    const pz = new Plot(sz, { xmin: -1.6, xmax: 1.6, ymin: -1.6, ymax: 1.6, iso: true });
+    pz.axes({ numbers: false, names: true, xname: 'Re', yname: 'Im' });
+    pz.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--accent)', width: 2 });
+    pz.dot(zr, zi, { color: inside ? 'var(--green)' : 'var(--warm)', r: 6 });
+    pz.text(0, 1.35, 'cerchio unitario', { color: 'var(--accent)', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">s = ${s[0].toFixed(2)} + i·${s[1].toFixed(2)} &nbsp;→&nbsp; |z| = <b style="color:${inside ? 'var(--green)' : 'var(--warm)'}">${mag.toFixed(2)}</b> (${inside ? 'dentro' : 'fuori'})</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La mappa z = e<sup>s</sup>: <mark>σ&lt;0 (sinistra) → |z|&lt;1 (dentro il cerchio)</mark>, σ=0 (asse) → sul
+        cerchio, σ&gt;0 (destra) → fuori. La parte immaginaria ω diventa l'angolo. Ecco perché «stabile a sinistra»
+        (Laplace) diventa «stabile dentro il cerchio» (z).
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §33.2 — piano z: poli, risonanza, stabilità
+   ========================================================================= */
+(function () {
+  const sp = document.getElementById('wzpz-plane'), sr = document.getElementById('wzpz-resp');
+  if (!sp) return;
+  const out = document.getElementById('wzpz-out');
+  let pole = [0.55, 0.55];   // polo superiore (Re, Im); l'altro è il coniugato
+
+  function draw() {
+    sp.innerHTML = '';
+    const pl = new Plot(sp, { xmin: -1.5, xmax: 1.5, ymin: -1.5, ymax: 1.5, iso: true });
+    pl.grid(0.5); pl.axes({ numbers: false, names: true, xname: 'Re', yname: 'Im' });
+    pl.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--accent)', width: 2 });
+    const drawX = (x, y) => { const s = 0.1; pl.line(x - s, y - s, x + s, y + s, { color: 'var(--warm)', width: 2.4 }); pl.line(x - s, y + s, x + s, y - s, { color: 'var(--warm)', width: 2.4 }); };
+    drawX(pole[0], -pole[1]);
+    pl.handle(pole[0], pole[1], { color: 'var(--warm)' }, (x, y) => { pole = [x, y]; draw(); });
+    drawX(pole[0], pole[1]);
+
+    const r = Math.hypot(pole[0], pole[1]), stable = r < 1;
+    // risposta in frequenza sul cerchio: H(e^jω) = 1/((e^jω - p)(e^jω - p*))
+    sr.innerHTML = '';
+    const pr = new Plot(sr, { xmin: 0, xmax: Math.PI, ymin: 0, ymax: 1.15 });
+    pr.grid(Math.PI / 4, 0.5); pr.axes({ numbers: false, names: true, xname: 'frequenza ω (0 → π)', yname: '|H|' });
+    const mag = w => { const er = Math.cos(w), ei = Math.sin(w); const d1 = Math.hypot(er - pole[0], ei - pole[1]), d2 = Math.hypot(er - pole[0], ei + pole[1]); return 1 / (d1 * d2); };
+    let peak = 0; for (let w = 0; w <= Math.PI; w += 0.01) peak = Math.max(peak, mag(w));
+    pr.func(w => mag(w) / peak, { color: stable ? 'var(--accent)' : 'var(--warm)', width: 2.6, samples: 400, from: 0, to: Math.PI });
+
+    const ang = Math.atan2(pole[1], pole[0]);
+    out.innerHTML = `
+      <div class="big">polo a raggio <b>${r.toFixed(2)}</b>, angolo <b>${(ang * 180 / Math.PI).toFixed(0)}°</b> &nbsp;·&nbsp;
+        <b style="color:${stable ? 'var(--green)' : 'var(--warm)'}">${stable ? 'STABILE' : 'INSTABILE'}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${stable ? `Polo <b>dentro</b> il cerchio: stabile. ${r > 0.85 ? 'Vicinissimo al cerchio → <mark>risonanza acuta</mark> (il risonatore del Cap. 19!).' : 'Lontano dal cerchio → risposta dolce.'}`
+          : 'Polo <mark>fuori</mark> dal cerchio: <b>instabile</b>, l\'uscita esplode. Riportalo dentro.'}
+        Il picco cade all'angolo del polo (≈ ω = ${ang.toFixed(2)}). La risposta si legge <em>sul cerchio</em>.
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

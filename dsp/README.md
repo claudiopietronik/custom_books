@@ -59,7 +59,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 30 — I numeri complessi
 - [x] 31 — La trasformata di Fourier complessa
 - [x] 32 — La trasformata di Laplace
-- [ ] 33 — La trasformata z
+- [x] 33 — La trasformata z
 - [ ] 34 — Spiegare la legge di Benford
 
 ## Nota

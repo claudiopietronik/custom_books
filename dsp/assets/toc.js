@@ -486,7 +486,7 @@ const TOC = [
     n: 33,
     titolo: "La trasformata z",
     file: "cap33-trasformata-z.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s33-1", n: "33.1", t: "L'analogo discreto di Laplace: il piano z" },
       { id: "s33-2", n: "33.2", t: "Poli e zeri nel piano z" },
