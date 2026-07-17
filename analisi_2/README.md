@@ -35,7 +35,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 - [x] 12 — Integrali multipli
 - [x] 13 — Superfici e integrali di superficie
 - [x] 14 — I teoremi del calcolo vettoriale
-- [ ] 15 — Equazioni differenziali ordinarie
+- [x] 15 — Equazioni differenziali ordinarie
 - [ ] 16 — La fine
 
 ## Nota

@@ -231,7 +231,7 @@ const TOC = [
     n: 15,
     titolo: "Equazioni differenziali ordinarie",
     file: "cap15-edo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Cosa sono e a cosa servono" },
       { id: "s15-2", n: "15.2", t: "Il problema di Cauchy" },
