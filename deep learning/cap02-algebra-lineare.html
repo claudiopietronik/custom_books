@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Algebra lineare — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2 · Parte I</div>
+    <h1>Algebra lineare</h1>
+    <p class="standfirst">
+      Ogni operazione di una rete neurale è, sotto il cofano, una moltiplicazione tra matrici. I dati sono
+      vettori, i parametri sono matrici, un livello è una mappa lineare seguita da una nonlinearità. Prima di
+      costruire qualsiasi cosa, ci serve il <b>vocabolario</b>: cosa sono vettori, matrici e tensori, come si
+      moltiplicano, e — soprattutto — le <b>decomposizioni</b> (autovalori, SVD) che ci diranno cosa una
+      matrice «fa» davvero. <mark>Chiuderemo con la PCA</mark>: il primo, piccolo algoritmo di apprendimento del
+      libro, costruito con soli mattoni di algebra lineare.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Gli oggetti: <b>scalari, vettori, matrici, tensori</b> (§2.1) e come si <b>moltiplicano</b> (§2.2, con il
+      widget della trasformazione). Poi <b>identità e inverse</b> (§2.3) per risolvere sistemi, e quando
+      un'inversa esiste: <b>dipendenza lineare e span</b> (§2.4). Le <b>norme</b> per misurare i vettori (§2.5)
+      e i <b>tipi speciali</b> di matrici (§2.6). Il cuore geometrico: <b>autodecomposizione</b> (§2.7) e
+      <b>SVD</b> (§2.8), con la <b>pseudoinversa</b> (§2.9) e i due scalari riassuntivi, <b>traccia e
+      determinante</b> (§2.10). Infine l'esempio che tira le fila: la <b>PCA</b> (§2.11).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Un livello di rete calcola \(\vv{h} = g(\mm{W}\vv{x} + \vv{b})\): una <b>matrice</b> \(\mm{W}\) che
+      moltiplica il vettore d'ingresso, più un bias, il tutto passato in una funzione \(g\). Addestrare la rete
+      significa cercare le matrici \(\mm{W}\) giuste. Capire <em>cosa fa</em> una matrice a un vettore — la
+      allunga? la ruota? la schiaccia lungo certe direzioni? — è capire cosa fa la rete. E le due grandi
+      decomposizioni (autovalori e SVD) sono esattamente la risposta a questa domanda. <mark>Sono anche il
+      motore di PCA, SVD troncata, whitening, e di metà della matematica dei capitoli successivi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Scalari, vettori, matrici e tensori</h2>
+
+  <p class="lead">
+    Quattro tipi di oggetti, distinti solo da <em>quanti indici</em> servono per pescare un numero al loro
+    interno: zero, uno, due, o più.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> I quattro oggetti</div>
+    <p style="margin-bottom:0">
+      • Uno <span class="termine">scalare</span> è un singolo numero, \(x \in \R\). Zero indici.<br>
+      • Un <span class="termine">vettore</span> è una lista ordinata di numeri, \(\vv{x} \in \R^n\); l'elemento
+        \(i\)-esimo è \(x_i\). Un indice. Lo immaginiamo come un <b>punto</b> (o una freccia) nello spazio a
+        \(n\) dimensioni.<br>
+      • Una <span class="termine">matrice</span> è una griglia di numeri, \(\mm{A} \in \R^{m\times n}\);
+        l'elemento in riga \(i\), colonna \(j\) è \(A_{i,j}\). Due indici.<br>
+      • Un <span class="termine">tensore</span> è la generalizzazione a un numero qualunque di indici: un
+        «array» a \(k\) dimensioni. Tre indici o più.
+    </p>
+  </div>
+
+  <p>
+    In deep learning i tensori sono ovunque, perché i dati lo sono naturalmente. Un'immagine a colori è un
+    tensore a 3 indici: <em>altezza × larghezza × canali</em> (rosso, verde, blu). Un <b>batch</b> di immagini
+    aggiunge un quarto indice. Il nome della libreria <em>TensorFlow</em> non è un caso. L'operazione
+    fondamentale che li lega è la <b>trasposta</b>, che ribalta una matrice attorno alla sua diagonale:
+    \((\mm{A}\T)_{i,j} = A_{j,i}\). Un vettore colonna trasposto diventa un vettore riga.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>Moltiplicare matrici e vettori</h2>
+
+  <p class="lead">
+    Il prodotto matrice-vettore è <em>l'</em>operazione dell'algebra lineare, e ha due letture: una
+    algebrica (righe per colonne) e una geometrica (una trasformazione dello spazio). La seconda è quella che
+    conta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prodotto matrice-vettore <span class="tag">combinazione delle colonne</span></div>
+    <div class="f-body">
+      \[ \vv{y} = \mm{A}\vv{x}, \qquad y_i = \sum_{j} A_{i,j}\,x_j \qquad\Longleftrightarrow\qquad
+         \mm{A}\vv{x} = x_1 \hA{\vv{a}_1} + x_2 \hA{\vv{a}_2} + \dots + x_n \hA{\vv{a}_n} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la lettura <b>algebrica</b></dt>
+        <dd>\(y_i\) è il <b>prodotto scalare</b> tra la riga \(i\) di \(\mm{A}\) e il vettore \(\vv{x}\). Perché
+            il prodotto esista, le colonne di \(\mm{A}\) devono essere tante quante le righe di \(\vv{x}\):
+            \(\mm{A}\in\R^{m\times n}\), \(\vv{x}\in\R^n\), risultato in \(\R^m\).</dd>
+        <dt>la lettura <b>geometrica</b></dt>
+        <dd>\(\mm{A}\vv{x}\) è una <b>combinazione lineare delle colonne</b> \(\hA{\vv{a}_j}\) di \(\mm{A}\),
+            con pesi \(x_j\). <mark>Le colonne di \(\mm{A}\) dicono dove finiscono i versori degli assi</mark>:
+            \(\mm{A}\vv{e}_1\) è la prima colonna, \(\mm{A}\vv{e}_2\) la seconda. Conosci le colonne, conosci
+            tutta la trasformazione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il prodotto <b>matrice-matrice</b> \(\mm{C} = \mm{A}\mm{B}\) compone due trasformazioni: prima \(\mm{B}\),
+      poi \(\mm{A}\). È <b>associativo</b> e <b>distributivo</b>, ma <mark>non commutativo</mark>: in generale
+      \(\mm{A}\mm{B} \ne \mm{B}\mm{A}\) (ruotare-poi-scalare ≠ scalare-poi-ruotare). Un livello di rete
+      \(\mm{W}\vv{x}\) è esattamente questo: le righe di \(\mm{W}\) sono i «rilevatori», ognuno fa un prodotto
+      scalare con l'ingresso.
+    </div>
+  </div>
+
+  <p>
+    Nel widget qui sotto trascini le punte delle due colonne \(\mm{A}\vv{e}_1\) e \(\mm{A}\vv{e}_2\): stai
+    componendo la matrice a mano. La griglia si deforma di conseguenza — quadretti che diventano
+    parallelogrammi — e il quadrato unitario mostra l'<b>area</b>, cioè il <b>determinante</b> (§2.10). Se lo
+    porti a zero (colonne allineate) la trasformazione «schiaccia» il piano su una retta: la matrice diventa
+    <b>singolare</b>.
+  </p>
+
+  <div class="widget" id="w-lin">
+    <div class="w-head">
+      <span>La matrice come trasformazione</span>
+      <span class="hint">trascina A·e₁ (blu) e A·e₂ (rosso)</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wl-svg" viewBox="0 0 560 420" role="img" aria-label="Una matrice 2x2 deforma la griglia del piano; le colonne sono le immagini dei versori degli assi"></svg>
+    </div>
+    <div class="w-readout" id="wl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>Matrici identità e inverse</h2>
+
+  <p class="lead">
+    Se una matrice trasforma lo spazio, la sua <b>inversa</b> lo riporta indietro. Non tutte le matrici ne
+    hanno una — e capire quando è la stessa cosa che risolvere sistemi lineari.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Identità e inversa <span class="tag">la trasformazione che «non fa nulla», e come annullarla</span></div>
+    <div class="f-body">
+      \[ \mm{I}_n\vv{x} = \vv{x} \quad\forall\vv{x}, \qquad \mm{A}\inv\mm{A} = \mm{I}_n,
+         \qquad \mm{A}\vv{x} = \vv{b}\ \Rightarrow\ \vv{x} = \mm{A}\inv\vv{b} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{I}_n\) — l'<b>identità</b></dt>
+        <dd>\(1\) sulla diagonale, \(0\) altrove. Geometricamente non muove nulla; è l'«1» delle matrici.</dd>
+        <dt>\(\mm{A}\inv\) — l'<b>inversa</b></dt>
+        <dd>la trasformazione che <b>disfa</b> \(\mm{A}\): applicarle in fila torna al punto di partenza.
+            Esiste solo se \(\mm{A}\) è quadrata e <b>non</b> schiaccia lo spazio (determinante \(\ne 0\)).</dd>
+        <dt>risolvere \(\mm{A}\vv{x}=\vv{b}\)</dt>
+        <dd>è la domanda «quale ingresso \(\vv{x}\) la trasformazione manda in \(\vv{b}\)?». Se \(\mm{A}\inv\)
+            esiste, la risposta è unica: \(\vv{x}=\mm{A}\inv\vv{b}\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In pratica <mark>non si inverte quasi mai una matrice esplicitamente</mark>: è costoso e numericamente
+      instabile. Si risolve \(\mm{A}\vv{x}=\vv{b}\) direttamente (eliminazione, fattorizzazioni). Ma
+      \(\mm{A}\inv\) resta lo strumento teorico per <em>ragionare</em> sulle soluzioni.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>Dipendenza lineare e span</h2>
+
+  <p class="lead">
+    Quante soluzioni ha \(\mm{A}\vv{x}=\vv{b}\)? Zero, una, o infinite — mai due, mai cinque. La risposta sta in
+    due parole: <b>span</b> e <b>indipendenza</b>.
+  </p>
+
+  <p>
+    Lo <span class="termine">span</span> di un insieme di vettori è l'insieme di <em>tutti</em> i punti
+    raggiungibili come loro combinazione lineare. Il sistema \(\mm{A}\vv{x}=\vv{b}\) ha soluzione se e solo se
+    \(\vv{b}\) sta nello span delle colonne di \(\mm{A}\) (il <b>column space</b>). Un insieme di vettori è
+    <span class="termine">linearmente indipendente</span> se nessuno di essi è combinazione degli altri: ognuno
+    aggiunge una direzione nuova. Il numero di direzioni davvero indipendenti è il <b>rango</b> della matrice.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Conta le direzioni, non le colonne</div>
+    <p style="margin-bottom:0">
+      Perché \(\mm{A}\vv{x}=\vv{b}\) abbia soluzione <b>per ogni</b> \(\vv{b}\in\R^m\), lo span delle colonne
+      deve riempire tutto \(\R^m\): servono almeno \(m\) colonne <b>indipendenti</b>. Perché la soluzione sia
+      <b>unica</b>, le colonne devono essere indipendenti (nessuna direzione ridondante). Entrambe le cose
+      insieme richiedono una matrice <b>quadrata</b> con colonne indipendenti — cioè invertibile. Nel widget di
+      §2.2, quando trascini le due colonne fino a farle coincidere su una retta, lo span crolla da un piano a
+      una retta: <mark>hai perso una dimensione, e la matrice non è più invertibile.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>Le norme</h2>
+
+  <p class="lead">
+    Una <b>norma</b> misura «quanto è grande» un vettore — la sua lunghezza. Ne useremo diverse, e la scelta ha
+    conseguenze concrete: la norma con cui penalizzi i pesi decide che tipo di rete ottieni (Cap. 7).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La famiglia delle norme \(L^p\) <span class="tag">e le tre che useremo</span></div>
+    <div class="f-body">
+      \[ \norm{\vv{x}}_p = \left(\sum_i \abs{x_i}^p\right)^{1/p}, \qquad
+         \norm{\vv{x}}_2 = \sqrt{\textstyle\sum_i x_i^2}, \quad
+         \norm{\vv{x}}_1 = \sum_i \abs{x_i}, \quad
+         \norm{\vv{x}}_\infty = \max_i \abs{x_i} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\norm{\vv{x}}_2\) — norma <b>euclidea</b></dt>
+        <dd>la lunghezza «geometrica», Pitagora in \(n\) dimensioni. È la più comune; il suo quadrato
+            \(\norm{\vv{x}}_2^2 = \vv{x}\T\vv{x}\) è comodo perché derivabile ovunque e senza radice.</dd>
+        <dt>\(\norm{\vv{x}}_1\) — norma <b>di Manhattan</b></dt>
+        <dd>somma dei valori assoluti. <mark>Cresce allo stesso ritmo in ogni direzione e «preferisce» soluzioni
+            sparse</mark> (con molti zeri): sarà la chiave della regolarizzazione L1 e del sparse coding.</dd>
+        <dt>\(\norm{\vv{x}}_\infty\) — norma <b>del massimo</b></dt>
+        <dd>guarda solo la componente più grande.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per le matrici, l'analoga euclidea è la norma di <b>Frobenius</b>, \(\norm{\mm{A}}_F = \sqrt{\sum_{i,j}
+      A_{i,j}^2}\): tratta la matrice come un lungo vettore. Ogni norma soddisfa la disuguaglianza triangolare
+      \(\norm{\vv{x}+\vv{y}} \le \norm{\vv{x}}+\norm{\vv{y}}\).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Matrici e vettori speciali</h2>
+
+  <p class="lead">
+    Alcune matrici hanno una struttura che le rende speciali — e computazionalmente amiche. Tre nomi che
+    torneranno di continuo.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Tipo</th><th>Definizione</th><th>Perché ci interessa</th></tr></thead>
+    <tbody>
+      <tr><td><b>Diagonale</b></td><td>\(D_{i,j}=0\) per \(i\ne j\)</td>
+        <td>Moltiplicare per essa scala ogni asse indipendentemente; invertirla è banale (invertì i numeri sulla
+            diagonale). Massima efficienza.</td></tr>
+      <tr><td><b>Simmetrica</b></td><td>\(\mm{A}=\mm{A}\T\)</td>
+        <td>Le matrici di covarianza e i Gram \(\mm{A}\T\mm{A}\) lo sono. <b>Hanno autovettori reali e
+            ortogonali</b> (§2.7): la base per PCA.</td></tr>
+      <tr><td><b>Ortogonale</b></td><td>\(\mm{Q}\T\mm{Q}=\mm{I}\), cioè \(\mm{Q}\inv=\mm{Q}\T\)</td>
+        <td>Righe e colonne sono versori mutuamente perpendicolari. <b>Conserva lunghezze e angoli</b>: è una
+            rotazione (o riflessione). Invertirla è gratis: basta trasporla.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Un vettore si dice <b>unitario</b> se \(\norm{\vv{x}}_2 = 1\); due vettori sono <b>ortogonali</b> se
+    \(\vv{x}\T\vv{y}=0\), e <b>ortonormali</b> se in più sono unitari. Una base ortonormale è la situazione da
+    sogno: proiettare, misurare e invertire diventano tutte operazioni banali.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>L'autodecomposizione</h2>
+
+  <p class="lead">
+    Ecco la domanda che sblocca tutto: quando una matrice trasforma lo spazio, ci sono direzioni che
+    <em>non</em> vengono ruotate, solo allungate o accorciate? Sì — sono gli <b>autovettori</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Autovettori e autovalori <span class="tag">le direzioni che la matrice non ruota</span></div>
+    <div class="f-body">
+      \[ \mm{A}\,\hA{\vv{v}} = \hB{\lambda}\,\hA{\vv{v}}, \qquad \hA{\vv{v}}\ne\vv{0} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\vv{v}}\) — un <b>autovettore</b></dt>
+        <dd>una direzione speciale: applicandole \(\mm{A}\), il vettore resta sulla <em>stessa retta</em>. Non
+            gira, viene solo riscalato.</dd>
+        <dt>\(\hB{\lambda}\) — l'<b>autovalore</b></dt>
+        <dd>il fattore di scala lungo quella direzione. \(\lambda&gt;1\) allunga, \(0&lt;\lambda&lt;1\)
+            accorcia, \(\lambda&lt;0\) capovolge, \(\lambda=0\) schiaccia a zero (matrice singolare).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se \(\mm{A}\in\R^{n\times n}\) è <b>simmetrica</b>, si può scrivere per intero come
+      \(\mm{A} = \mm{Q}\,\mm{\Lambda}\,\mm{Q}\T\), con \(\mm{Q}\) <b>ortogonale</b> (le colonne sono gli
+      autovettori, perpendicolari tra loro) e \(\mm{\Lambda}\) <b>diagonale</b> (gli autovalori). Lettura:
+      <mark>ogni matrice simmetrica è «ruota → scala lungo gli assi → ruota indietro»</mark>. Tutta la sua
+      azione è catturata da \(n\) direzioni e \(n\) numeri.
+    </div>
+  </div>
+
+  <p>
+    Nel widget la matrice (simmetrica) è fissa; tu ruoti il vettore d'ingresso \(\vv{v}\) sul cerchio unitario e
+    guardi dove finisce \(\mm{A}\vv{v}\). Quasi sempre \(\mm{A}\vv{v}\) punta altrove — la matrice ha
+    <em>ruotato</em> \(\vv{v}\). Ma in <b>quattro posizioni</b> (le due direzioni proprie, avanti e indietro)
+    \(\mm{A}\vv{v}\) è perfettamente <b>allineato</b> con \(\vv{v}\): lì \(\vv{v}\) è un autovettore, e la
+    lunghezza di \(\mm{A}\vv{v}\) è \(\abs{\lambda}\).
+  </p>
+
+  <div class="widget" id="w-eig">
+    <div class="w-head">
+      <span>Gli autovettori: le direzioni fisse</span>
+      <span class="hint">ruota v sul cerchio · cerca l'allineamento</span>
+    </div>
+    <div class="w-stage">
+      <svg id="we-svg" viewBox="0 0 560 420" role="img" aria-label="Ruotando il vettore d'ingresso, l'uscita A·v è allineata a v solo lungo gli autovettori"></svg>
+    </div>
+    <div class="w-readout" id="we-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-8"><span class="secnum">Sezione 2.8</span>La decomposizione ai valori singolari (SVD)</h2>
+
+  <p class="lead">
+    L'autodecomposizione vale solo per matrici quadrate (e diagonalizzabili). La <b>SVD</b> è la sua sorella
+    universale: funziona per <em>qualsiasi</em> matrice, anche rettangolare. È forse lo strumento più utile di
+    tutta l'algebra lineare applicata.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Singular Value Decomposition <span class="tag">ruota · scala · ruota, per ogni matrice</span></div>
+    <div class="f-body">
+      \[ \mm{A} = \mm{U}\,\mm{\Sigma}\,\mm{V}\T \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{U}\), \(\mm{V}\) — <b>ortogonali</b></dt>
+        <dd>due rotazioni. Le colonne di \(\mm{V}\) (vettori singolari <em>destri</em>) sono le direzioni
+            d'ingresso privilegiate; quelle di \(\mm{U}\) (<em>sinistri</em>) le direzioni d'uscita.</dd>
+        <dt>\(\mm{\Sigma}\) — <b>diagonale, \(\ge 0\)</b></dt>
+        <dd>i <span class="termine">valori singolari</span> \(\sigma_1\ge\sigma_2\ge\dots\ge 0\): quanto ogni
+            direzione viene allungata. Sono le radici degli autovalori di \(\mm{A}\T\mm{A}\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ogni matrice, letta con gli occhiali giusti, è «ruota (\(\mm{V}\T\)) → scala lungo gli assi (\(\mm{\Sigma}\))
+      → ruota (\(\mm{U}\))». <mark>Tenendo solo i \(k\) valori singolari più grandi si ottiene la migliore
+      approssimazione di rango \(k\) di \(\mm{A}\)</mark> (teorema di Eckart-Young): è la base della compressione,
+      del denoising e di innumerevoli metodi. La SVD esiste sempre, il che la rende il coltellino svizzero del
+      campo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-9"><span class="secnum">Sezione 2.9</span>La pseudoinversa di Moore-Penrose</h2>
+
+  <p class="lead">
+    E se il sistema \(\mm{A}\vv{x}=\vv{b}\) non ha soluzione (troppe equazioni) o ne ha infinite (troppe poche)?
+    La <b>pseudoinversa</b> dà comunque una risposta «migliore», e la costruisce dalla SVD.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Pseudoinversa <span class="tag">l'inversa quando l'inversa non c'è</span></div>
+    <div class="f-body">
+      \[ \mm{A}^{+} = \mm{V}\,\mm{\Sigma}^{+}\,\mm{U}\T, \qquad \vv{x} = \mm{A}^{+}\vv{b} \]
+    </div>
+    <div class="f-note">
+      \(\mm{\Sigma}^{+}\) si ottiene invertendo i valori singolari non nulli (e trasponendo). Quando le
+      equazioni sono <b>più delle incognite</b> (sistema sovradeterminato), \(\vv{x}=\mm{A}^{+}\vv{b}\) dà la
+      soluzione ai <b>minimi quadrati</b>, quella che minimizza \(\norm{\mm{A}\vv{x}-\vv{b}}_2\) — la ritroveremo
+      nella regressione lineare (§5.1) e come esempio del Cap. 4. Quando sono <b>meno</b>, dà la soluzione di
+      <b>norma minima</b>. In entrambi i casi: la risposta più ragionevole possibile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-10"><span class="secnum">Sezione 2.10</span>Traccia e determinante</h2>
+
+  <p class="lead">
+    Due numeri che riassumono un'intera matrice: la <b>traccia</b> (somma della diagonale) e il
+    <b>determinante</b> (il fattore di volume).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Traccia e determinante <span class="tag">due riassunti scalari di una matrice</span></div>
+    <div class="f-body">
+      \[ \tr(\mm{A}) = \sum_i A_{i,i} = \sum_i \lambda_i, \qquad
+         \det(\mm{A}) = \prod_i \lambda_i \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\tr(\mm{A})\) — la <b>traccia</b></dt>
+        <dd>somma degli elementi diagonali, uguale alla <b>somma degli autovalori</b>. È ciclica:
+            \(\tr(\mm{A}\mm{B})=\tr(\mm{B}\mm{A})\), comodissima nei conti. La norma di Frobenius è
+            \(\norm{\mm{A}}_F=\sqrt{\tr(\mm{A}\T\mm{A})}\).</dd>
+        <dt>\(\det(\mm{A})\) — il <b>determinante</b></dt>
+        <dd>il <b>prodotto degli autovalori</b>, e geometricamente il fattore di cui la trasformazione
+            <b>moltiplica i volumi</b> (le aree, in 2D — quello che vedi nel widget di §2.2). <mark>Se
+            \(\det(\mm{A})=0\), la matrice schiaccia lo spazio e non è invertibile.</mark> Il segno dice se
+            l'orientazione viene ribaltata.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-11"><span class="secnum">Sezione 2.11</span>Esempio: l'analisi delle componenti principali (PCA)</h2>
+
+  <p class="lead">
+    Chiudiamo mettendo insieme tutto: la <b>PCA</b> è un algoritmo che comprime dati ad alta dimensione in
+    poche direzioni, e non è altro che l'<b>autodecomposizione della matrice di covarianza</b>. È il primo
+    algoritmo di apprendimento del libro.
+  </p>
+
+  <p>
+    Idea: hai una nuvola di punti in \(\R^n\). Vuoi rappresentarli con <b>meno</b> numeri, perdendo il meno
+    possibile. La PCA cerca le direzioni lungo cui i dati <b>variano di più</b> (portano più informazione) e
+    scarta quelle lungo cui variano poco. Quelle direzioni sono gli <b>autovettori della matrice di
+    covarianza</b>, ordinati per autovalore (la varianza spiegata).
+  </p>
+
+  <div class="passi">
+    <li><b>Centra i dati.</b> Sottrai la media \(\vv{\mu}\) da ogni punto, così la nuvola è centrata
+        nell'origine.</li>
+    <li><b>Calcola la covarianza</b> \(\mm{\Sigma} = \frac{1}{m}\mm{X}\T\mm{X}\) (con \(\mm{X}\) centrata):
+        una matrice \(n\times n\) <b>simmetrica</b> che dice come le coordinate variano insieme.</li>
+    <li><b>Autodecomponi</b> \(\mm{\Sigma} = \mm{Q}\mm{\Lambda}\mm{Q}\T\). Gli autovettori (colonne di
+        \(\mm{Q}\)) sono le <b>componenti principali</b>; gli autovalori la varianza lungo ciascuna.</li>
+    <li><b>Proietta</b> i dati sui primi \(k\) autovettori (i più grandi). Hai ridotto da \(n\) a \(k\)
+        dimensioni tenendo la massima varianza possibile.</li>
+  </div>
+
+  <p>
+    Nel widget: una nuvola di punti correlati. La PCA trova i due assi principali (la freccia lunga è la
+    direzione di massima varianza, PC1; quella corta, PC2, le è perpendicolare). Premi «proietta su PC1» e
+    guarda i punti collassare sulla prima componente: <mark>da 2 numeri a 1, buttando via la direzione che
+    conta meno.</mark> Il readout mostra quanta varianza (informazione) hai conservato.
+  </p>
+
+  <div class="widget" id="w-pca">
+    <div class="w-head">
+      <span>PCA: le direzioni di massima varianza</span>
+      <span class="hint">proietta e guarda cosa resta</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-svg" viewBox="0 0 560 420" role="img" aria-label="Una nuvola di punti, i suoi assi principali, e la proiezione sulla prima componente principale"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wp-full">Dati 2D</button>
+      <button class="w-btn" id="wp-proj">Proietta su PC1</button>
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>Scalari, vettori, matrici, <b>tensori</b>: oggetti con 0, 1, 2, \(k\) indici (§2.1). I dati del deep
+          learning sono tensori.</li>
+      <li>\(\mm{A}\vv{x}\) è una <b>trasformazione</b>: le colonne di \(\mm{A}\) dicono dove vanno i versori
+          (§2.2). L'inversa la disfa, se il determinante è \(\ne 0\) (§2.3, §2.10).</li>
+      <li>Le <b>norme</b> misurano i vettori; L2 è la lunghezza, L1 «preferisce» gli zeri (§2.5) — conta per la
+          regolarizzazione.</li>
+      <li><b>Autodecomposizione</b> (matrici simmetriche) e <b>SVD</b> (qualsiasi matrice) rivelano cosa fa
+          davvero una matrice: ruota, scala lungo direzioni proprie, ruota (§2.7–2.8). La <b>PCA</b> è
+          l'autodecomposizione della covarianza (§2.11).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo il vocabolario deterministico. Ma il mondo — e i dati — sono rumorosi, incerti, ambigui. Il
+    <strong>Capitolo 3</strong> aggiunge il secondo pilastro: la <b>probabilità</b> come linguaggio
+    dell'incertezza, e la <b>teoria dell'informazione</b> per misurarla. Da lì nasceranno quasi tutte le
+    funzioni di costo del libro — a partire dalla cross-entropy.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-12"><span class="secnum">Sezione 2.12</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Sia \(\mm{A}=\left(\begin{smallmatrix}2&0\\0&3\end{smallmatrix}\right)\) e \(\vv{x}=\left(\begin{smallmatrix}1\\1\end{smallmatrix}\right)\).
+      Calcola \(\mm{A}\vv{x}\). Che cosa fa geometricamente questa matrice al piano? Quanto vale
+      \(\det(\mm{A})\), e come lo interpreti in termini di area?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Dato \(\vv{x}=(3,-4)\), calcola \(\norm{\vv{x}}_1\), \(\norm{\vv{x}}_2\) e \(\norm{\vv{x}}_\infty\).
+      Quale delle tre è la più grande? Vale sempre così?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Trova gli autovalori di \(\mm{A}=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)\) (simmetrica).
+      <em>Suggerimento:</em> risolvi \(\det(\mm{A}-\lambda\mm{I})=0\). Che direzioni ti aspetti per gli
+      autovettori, guardando la simmetria della matrice?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      Perché in una rete neurale la matrice dei pesi \(\mm{W}\) di un livello è quasi sempre <b>rettangolare</b>
+      e non quadrata? Che relazione c'è tra le sue dimensioni e il numero di neuroni in ingresso e in uscita?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga di motivazione:
+      (a) \(\mm{A}\mm{B}=\mm{B}\mm{A}\) per ogni coppia di matrici. &nbsp;
+      (b) Una matrice ortogonale conserva la norma euclidea: \(\norm{\mm{Q}\vv{x}}_2=\norm{\vv{x}}_2\). &nbsp;
+      (c) Se \(\det(\mm{A})=0\), il sistema \(\mm{A}\vv{x}=\vv{b}\) ha sempre zero soluzioni. &nbsp;
+      (d) La SVD esiste solo per matrici quadrate.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-13"><span class="secnum">Sezione 2.13</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      \(\mm{A}\vv{x}=(2\cdot1,\ 3\cdot1)=(2,3)\). È una matrice <b>diagonale</b>: scala l'asse \(x\) di un
+      fattore 2 e l'asse \(y\) di un fattore 3, senza ruotare. \(\det(\mm{A})=2\cdot3=6\): ogni area viene
+      moltiplicata per 6 (un quadrato unitario diventa un rettangolo \(2\times3\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      \(\norm{\vv{x}}_1=3+4=7\); \(\norm{\vv{x}}_2=\sqrt{9+16}=\sqrt{25}=5\); \(\norm{\vv{x}}_\infty=\max(3,4)=4\).
+      Qui la più grande è la L1. In generale, per lo stesso vettore vale sempre
+      \(\norm{\vv{x}}_\infty \le \norm{\vv{x}}_2 \le \norm{\vv{x}}_1\): la L1 «somma tutto», la L∞ «tiene solo il
+      massimo», la L2 sta in mezzo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      \(\det\left(\begin{smallmatrix}2-\lambda&1\\1&2-\lambda\end{smallmatrix}\right)=(2-\lambda)^2-1=0
+      \Rightarrow (2-\lambda)=\pm1 \Rightarrow \lambda_1=3,\ \lambda_2=1\). Gli autovettori sono
+      \((1,1)/\sqrt2\) (per \(\lambda=3\)) e \((1,-1)/\sqrt2\) (per \(\lambda=1\)): <b>ortogonali</b>, come
+      garantito dalla simmetria della matrice. La matrice allunga di 3 lungo la diagonale principale e lascia
+      invariata (\(\times1\)) l'anti-diagonale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      Perché un livello mappa un vettore di \(n_{\text{in}}\) ingressi in uno di \(n_{\text{out}}\) uscite, e
+      questi due numeri sono in generale diversi: \(\mm{W}\in\R^{n_{\text{out}}\times n_{\text{in}}}\). La
+      \(\vv{h}=\mm{W}\vv{x}\) porta da \(\R^{n_{\text{in}}}\) a \(\R^{n_{\text{out}}}\). Ogni <b>riga</b> di
+      \(\mm{W}\) è un neurone (fa un prodotto scalare con l'ingresso), quindi ci sono \(n_{\text{out}}\) righe e
+      \(n_{\text{in}}\) colonne.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Il prodotto matriciale non è commutativo in generale (comporre trasformazioni in ordine
+      diverso dà risultati diversi; e le dimensioni potrebbero neanche combaciare). <br>
+      <b>(b) VERO.</b> \(\norm{\mm{Q}\vv{x}}_2^2=(\mm{Q}\vv{x})\T(\mm{Q}\vv{x})=\vv{x}\T\mm{Q}\T\mm{Q}\vv{x}
+      =\vv{x}\T\vv{x}=\norm{\vv{x}}_2^2\): le ortogonali sono rotazioni/riflessioni, conservano la lunghezza. <br>
+      <b>(c) FALSO.</b> Può avere <b>zero</b> soluzioni (se \(\vv{b}\) è fuori dal column space) oppure
+      <b>infinite</b> (se \(\vv{b}\) è dentro): mai una sola, ma non «sempre zero». <br>
+      <b>(d) FALSO.</b> La SVD esiste per <b>qualsiasi</b> matrice, anche rettangolare: è proprio il suo pregio
+      rispetto all'autodecomposizione.
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §2.2 — la matrice come trasformazione lineare
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wl-out');
+  let c1 = [1.3, 0.35], c2 = [-0.5, 1.15];
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3.4, xmax: 3.4, ymin: -2.6, ymax: 2.6, iso: true });
+    const map = (x, y) => [c1[0] * x + c2[0] * y, c1[1] * x + c2[1] * y];
+    // griglia trasformata
+    for (let k = -3; k <= 3; k++) {
+      let a = map(k, -3), b = map(k, 3);
+      p.line(a[0], a[1], b[0], b[1], { color: 'var(--rule)', width: 1 });
+      let c = map(-3, k), d = map(3, k);
+      p.line(c[0], c[1], d[0], d[1], { color: 'var(--rule)', width: 1 });
+    }
+    p.axes({ numbers: false });
+    // immagine del quadrato unitario
+    p.poly([[0, 0], c1, [c1[0] + c2[0], c1[1] + c2[1]], c2],
+      { fill: 'color-mix(in srgb, var(--accent) 15%, transparent)', close: true });
+    p.arrow(0, 0, c1[0], c1[1], { color: 'var(--accent)', width: 3.2, label: 'A e₁' });
+    p.arrow(0, 0, c2[0], c2[1], { color: 'var(--warm)', width: 3.2, label: 'A e₂' });
+    p.handle(c1[0], c1[1], { color: 'var(--accent)', snap: 0.1 }, (x, y) => { c1 = [x, y]; draw(); });
+    p.handle(c2[0], c2[1], { color: 'var(--warm)', snap: 0.1 }, (x, y) => { c2 = [x, y]; draw(); });
+
+    const det = c1[0] * c2[1] - c2[0] * c1[1];
+    const sing = Math.abs(det) < 0.06;
+    out.innerHTML = `
+      <div class="big">
+        A = <span class="minimat c2"><span>${fmt(c1[0])}</span><span>${fmt(c2[0])}</span><span>${fmt(c1[1])}</span><span>${fmt(c2[1])}</span></span>
+        &nbsp;·&nbsp; det A = <b style="color:${sing ? 'var(--warm)' : 'var(--accent)'}">${fmt(det)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le <b>colonne</b> di A sono le immagini dei versori: <b style="color:var(--accent)">A e₁</b> e
+        <b style="color:var(--warm)">A e₂</b>. Il <b>determinante</b> è l'area del parallelogramma (il quadrato
+        unitario trasformato): dice di quanto la matrice moltiplica le aree.
+        ${sing ? '<mark>Qui det ≈ 0: le colonne sono quasi allineate, la matrice schiaccia il piano su una retta ed è (quasi) singolare — nessuna inversa.</mark>' : det < 0 ? '<mark>det &lt; 0: la trasformazione ribalta l\'orientazione (una riflessione).</mark>' : 'Trascina le colonne fino ad allinearle: vedrai det → 0.'}
+      </div>`;
+  }
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §2.7 — autovettori: le direzioni fisse
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('we-svg');
+  if (!svg) return;
+  const out = document.getElementById('we-out');
+  const A = [[1.6, 0.55], [0.55, 1.0]];       // simmetrica
+  let ang = 0.7;
+
+  // autodecomposizione analitica di una 2x2 simmetrica [[a,b],[b,d]]
+  function eigSym(a, b, d) {
+    const tr = a + d, det = a * d - b * b;
+    const disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+    const l1 = tr / 2 + disc, l2 = tr / 2 - disc;
+    const ev = (l) => {
+      // (A - lI) v = 0  →  v ∝ (b, l - a)  (o (l - d, b))
+      let vx = b, vy = l - a;
+      if (Math.hypot(vx, vy) < 1e-9) { vx = l - d; vy = b; }
+      const n = Math.hypot(vx, vy) || 1; return [vx / n, vy / n];
+    };
+    return { l1, l2, v1: ev(l1), v2: ev(l2) };
+  }
+  const E = eigSym(A[0][0], A[0][1], A[1][1]);
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -2.6, xmax: 2.6, ymin: -2.4, ymax: 2.4, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // cerchio unitario
+    p.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--rule)', width: 1.5 });
+    // direzioni proprie (rette tenui)
+    for (const v of [E.v1, E.v2]) {
+      p.line(-2.4 * v[0], -2.4 * v[1], 2.4 * v[0], 2.4 * v[1], { color: 'var(--green)', width: 1.4, dash: '5 4' });
+    }
+    const v = [Math.cos(ang), Math.sin(ang)];
+    const Av = [A[0][0] * v[0] + A[0][1] * v[1], A[1][0] * v[0] + A[1][1] * v[1]];
+    p.arrow(0, 0, Av[0], Av[1], { color: 'var(--warm)', width: 3, label: 'A v' });
+    p.arrow(0, 0, v[0], v[1], { color: 'var(--accent)', width: 3, label: 'v' });
+    p.handle(v[0], v[1], { color: 'var(--accent)' }, (x, y) => { ang = Math.atan2(y, x); draw(); });
+
+    // allineamento: |v × Av| piccolo ⇒ autovettore
+    const cross = Math.abs(v[0] * Av[1] - v[1] * Av[0]);
+    const aligned = cross < 0.05;
+    const lenAv = Math.hypot(...Av);
+    out.innerHTML = `
+      <div class="big">
+        |A v| = <b style="color:var(--warm)">${fmt(lenAv)}</b>
+        ${aligned ? ` &nbsp;·&nbsp; <b style="color:var(--green)">v è un autovettore!</b> λ ≈ ${fmt(Av[0] * v[0] + Av[1] * v[1])}` : ''}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b style="color:var(--accent)">v</b> (blu) è unitario; <b style="color:var(--warm)">A v</b> (rosso) è la
+        sua immagine. Di solito A <em>ruota</em> v. Lungo le due <b style="color:var(--green)">direzioni
+        proprie</b> (tratteggiate) l'uscita è allineata all'ingresso: lì v è un <b>autovettore</b> e |A v| = |λ|.
+        ${aligned ? '<mark>Allineati: A ha solo riscalato v, non l\'ha ruotato.</mark>' : 'Ruota v finché rosso e blu sono sulla stessa retta.'}
+        &nbsp; Autovalori: λ₁ ≈ ${fmt(E.l1)}, λ₂ ≈ ${fmt(E.l2)}.
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §2.11 — PCA su una nuvola di punti
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wp-out');
+  const bFull = document.getElementById('wp-full');
+  const bProj = document.getElementById('wp-proj');
+
+  // nuvola correlata, deterministica
+  const dir = [Math.cos(0.5), Math.sin(0.5)];          // asse "vero" dei dati
+  const perp = [-dir[1], dir[0]];
+  const raw = [];
+  const M = 60;
+  for (let i = 0; i < M; i++) {
+    const t = (i / (M - 1) - 0.5) * 6.4;
+    const s = 0.9 * Math.sin(i * 2.399) * Math.cos(i * 0.7 + 1);   // rumore perpendicolare deterministico
+    raw.push([dir[0] * t + perp[0] * s, dir[1] * t + perp[1] * s]);
+  }
+  // media
+  const mean = raw.reduce((a, p) => [a[0] + p[0], a[1] + p[1]], [0, 0]).map(v => v / M);
+  const cx = raw.map(p => [p[0] - mean[0], p[1] - mean[1]]);
+  // covarianza 2x2
+  let sxx = 0, syy = 0, sxy = 0;
+  for (const p of cx) { sxx += p[0] * p[0]; syy += p[1] * p[1]; sxy += p[0] * p[1]; }
+  sxx /= M; syy /= M; sxy /= M;
+  // autodecomposizione simmetrica
+  const tr = sxx + syy, det = sxx * syy - sxy * sxy;
+  const disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  const l1 = tr / 2 + disc, l2 = tr / 2 - disc;
+  const evec = (l) => { let vx = sxy, vy = l - sxx; if (Math.hypot(vx, vy) < 1e-9) { vx = l - syy; vy = sxy; } const n = Math.hypot(vx, vy) || 1; return [vx / n, vy / n]; };
+  const pc1 = evec(l1), pc2 = evec(l2);
+  const varTot = l1 + l2;
+
+  let projected = false;
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -3, ymax: 3, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true });
+    if (!projected) {
+      for (const q of cx) p.dot(q[0], q[1], { color: 'var(--accent)', r: 3.5 });
+    } else {
+      // proiezione su PC1: q' = (q·pc1) pc1
+      for (const q of cx) {
+        const t = q[0] * pc1[0] + q[1] * pc1[1];
+        const qp = [t * pc1[0], t * pc1[1]];
+        p.line(q[0], q[1], qp[0], qp[1], { color: 'var(--ink-faint)', width: 0.8, dash: '2 2' });
+        p.dot(q[0], q[1], { color: 'color-mix(in srgb, var(--accent) 35%, transparent)', r: 3 });
+        p.dot(qp[0], qp[1], { color: 'var(--warm)', r: 3.5 });
+      }
+    }
+    // assi principali (scalati da √varianza)
+    const s1 = 2.2 * Math.sqrt(l1), s2 = 2.2 * Math.sqrt(l2);
+    p.arrow(0, 0, pc1[0] * s1, pc1[1] * s1, { color: 'var(--violet)', width: 3.4, label: 'PC1' });
+    if (!projected) p.arrow(0, 0, pc2[0] * s2, pc2[1] * s2, { color: 'var(--green)', width: 3, label: 'PC2' });
+
+    const pct = 100 * l1 / varTot;
+    out.innerHTML = `
+      <div class="big">
+        Varianza spiegata da <b style="color:var(--violet)">PC1</b>: <b>${fmt(pct, 1)}%</b>
+        &nbsp;·&nbsp; da PC2: ${fmt(100 - pct, 1)}%
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${projected
+          ? `<mark>Proiettati su PC1: da 2 numeri a 1.</mark> I punti <b style="color:var(--warm)">arancioni</b> sono la versione compressa; le linee tratteggiate sono l'informazione buttata via (la direzione PC2). Conservi comunque il <b>${fmt(pct, 1)}%</b> della varianza totale.`
+          : 'La nuvola varia molto lungo <b style="color:var(--violet)">PC1</b> (l\'autovettore col λ più grande della covarianza) e poco lungo <b style="color:var(--green)">PC2</b>. Le due frecce sono lunghe come √(varianza) nella loro direzione. Premi «Proietta su PC1».'}
+      </div>`;
+  }
+  bFull.addEventListener('click', () => { projected = false; bFull.classList.add('on'); bProj.classList.remove('on'); draw(); });
+  bProj.addEventListener('click', () => { projected = true; bProj.classList.add('on'); bFull.classList.remove('on'); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

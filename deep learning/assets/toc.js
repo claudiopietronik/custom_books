@@ -33,7 +33,7 @@ const TOC = [
     titolo: "Algebra lineare",
     file: "cap02-algebra-lineare.html",
     parte: P1,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Scalari, vettori, matrici e tensori" },
       { id: "s2-2", n: "2.2", t: "Moltiplicare matrici e vettori" },
