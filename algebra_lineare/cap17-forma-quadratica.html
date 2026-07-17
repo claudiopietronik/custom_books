@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17 · Forma quadratica — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="17">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 17</div>
+    <h1>Forma quadratica</h1>
+    <p class="standfirst">
+      Prendi una matrice e un vettore, e costruisci il numero \(\vv{x}\T\mm{A}\vv{x}\). Al variare della
+      direzione di \(\vv{x}\) quel numero disegna una <b>superficie</b>: una scodella, una sella, una cupola.
+      La <mark>forma</mark> di quella superficie — dove sale, dove scende — è scritta negli autovalori del
+      Capitolo 15. È il ponte tra l'algebra delle matrici e la geometria dell'ottimizzazione, e la porta
+      d'ingresso di covarianza e PCA.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un solo oggetto, \(\vv{x}\T\mm{A}\vv{x}\), guardato da due lati: <b>algebrico</b> (un polinomio di
+      secondo grado, §17.1) e <b>geometrico</b> (una superficie, §17.2). Poi lo <b>normalizziamo</b> per
+      togliere l'effetto della lunghezza (§17.3) e scopriamo che i suoi valori estremi <em>sono</em> gli
+      autovalori, raggiunti lungo gli autovettori (§17.4) — la spina dorsale della PCA. Da lì definiamo la
+      <b>definitezza</b> di una matrice (§17.5), dimostriamo che \(\mm{A}\T\mm{A}\) è sempre semidefinita
+      positiva (§17.6) — chiudendo i conti in sospeso di minimi quadrati e SVD — e leggiamo tutto negli
+      autovalori (§17.7).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la forma dei problemi</div>
+    <p>
+      Quando minimizzi qualcosa — l'errore di un modello (§14.4), l'energia di un sistema fisico, una
+      funzione di costo in machine learning — <mark>vicino al minimo tutto è una forma quadratica.</mark> Se
+      la matrice associata è «a scodella» (definita positiva), c'è un vero minimo e la discesa converge; se è
+      «a sella», no. La definitezza è il test che dice se un punto critico è un minimo, un massimo o né l'uno
+      né l'altro.
+    </p>
+    <p style="margin-bottom:0">
+      Ed è la stessa struttura che rende una <b>matrice di covarianza</b> (Cap. 18) sempre a scodella, e che
+      permette alla <b>PCA</b> (Cap. 19) di cercare «la direzione di massima varianza» come massimo di una
+      forma quadratica — cioè come autovettore. Tre capitoli, una superficie.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-1"><span class="secnum">Sezione 17.1</span>Prospettiva algebrica</h2>
+
+  <p class="lead">
+    Al livello più elementare, una forma quadratica è il modo giusto di scrivere «\(a x^2\)» quando al posto
+    di un numero \(x\) c'è un vettore \(\vv{x}\) e al posto del coefficiente \(a\) c'è una matrice \(\mm{A}\).
+    Il risultato è un <b>singolo numero</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La forma quadratica <span class="tag">vettore · matrice · vettore = scalare</span></div>
+    <div class="f-body">
+      \[
+        \vv{x}\T\mm{A}\vv{x} \;=\; \sum_{i}\sum_{j} a_{ij}\,x_i x_j
+        \qquad\xrightarrow{\ 2\times 2\ }\qquad
+        \begin{bmatrix} x_1 &amp; x_2 \end{bmatrix}
+        \begin{bmatrix} a &amp; b \\ b &amp; c \end{bmatrix}
+        \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}
+        = a\,x_1^2 + 2b\,x_1 x_2 + c\,x_2^2
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{x}\T\mm{A}\vv{x}\)</dt>
+        <dd>controlla le dimensioni (§6.5): \((1\times n)(n\times n)(n\times 1) = (1\times 1)\), cioè
+            <b>un numero</b>. Una forma quadratica mangia un vettore e sputa uno scalare.</dd>
+        <dt>\(a\,x_1^2 + 2b\,x_1x_2 + c\,x_2^2\)</dt>
+        <dd>un polinomio <b>omogeneo di secondo grado</b>: ogni termine ha grado totale 2. Niente termini
+            lineari, niente costante — solo quadrati e prodotti misti. Il \(2b\) nasce perché il termine
+            \(x_1x_2\) compare due volte (posizioni \((1,2)\) e \((2,1)\), entrambe uguali a \(b\)).</dd>
+        <dt>\(\mm{A}\) simmetrica</dt>
+        <dd>possiamo <b>sempre</b> assumerla simmetrica (§5.5): la parte antisimmetrica di una matrice non
+            contribuisce mai alla forma quadratica (si cancella da sé), quindi tanto vale prendere
+            \(\tfrac12(\mm{A} + \mm{A}\T)\). Da qui in poi, <mark>\(\mm{A}\) è simmetrica</mark> — ed è per
+            questo che entra in gioco tutto il Capitolo 15.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un caso che già conosci: con \(\mm{A} = \mm{I}\), la forma quadratica è
+      \(\vv{x}\T\mm{I}\vv{x} = \vv{x}\T\vv{x} = \norm{\vv{x}}^2\) (§3.1) — la lunghezza al quadrato. Ogni
+      forma quadratica è una <em>deformazione</em> di questa: misura la «lunghezza» del vettore secondo il
+      metro storto imposto da \(\mm{A}\).
+    </div>
+  </div>
+
+  <p>
+    Il nostro esempio-guida per tutto il capitolo sarà \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\),
+    la simmetrica del Capitolo 15 (autovalori \(\lambda = 1\) e \(\lambda = 3\), autovettori \((1,-1)\) e
+    \((1,1)\)). La sua forma quadratica è
+    \[
+      \vv{x}\T\mm{A}\vv{x} = 2x_1^2 + 2x_1x_2 + 2x_2^2.
+    \]
+    Provala su \(\vv{x} = (1, 0)\): dà \(2\). Su \(\vv{x} = (1, 1)\): \(2 + 2 + 2 = 6\). Su
+    \(\vv{x} = (1, -1)\): \(2 - 2 + 2 = 2\). <em>Tre direzioni, tre valori diversi</em>: la forma quadratica
+    «sente» la direzione. Capire quel pattern è tutto il capitolo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-2"><span class="secnum">Sezione 17.2</span>Prospettiva geometrica</h2>
+
+  <p class="lead">
+    A ogni punto \(\vv{x} = (x_1, x_2)\) del piano, la forma quadratica associa un'altezza
+    \(z = \vv{x}\T\mm{A}\vv{x}\). Il risultato è una <b>superficie</b> in 3D — e la sua forma dipende tutta
+    dai segni degli autovalori.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le quattro forme possibili</div>
+    <ul style="margin-bottom:0">
+      <li><b>Scodella</b> (definita positiva): la superficie sale in <em>ogni</em> direzione dall'origine.
+          Il fondo è un minimo. Autovalori tutti positivi.</li>
+      <li><b>Cupola</b> (definita negativa): scende in ogni direzione. La cima è un massimo. Autovalori tutti
+          negativi.</li>
+      <li><b>Sella</b> (indefinita): sale in certe direzioni e scende in altre — come un valico di montagna, o
+          una patatina. Autovalori di segni <em>discordi</em>.</li>
+      <li><b>Grondaia</b> (semidefinita): sale (o scende) in alcune direzioni ed è <em>piatta</em> lungo
+          altre. Un autovalore è zero.</li>
+    </ul>
+  </div>
+
+  <p>
+    Vedere una superficie 3D su una pagina è scomodo; conviene guardarla <em>dall'alto</em>, tramite le sue
+    <b>curve di livello</b> — gli insiemi \(\vv{x}\T\mm{A}\vv{x} = \text{costante}\), come le isoipse di una
+    carta topografica. Per una scodella sono <b>ellissi</b> concentriche; per una sella, <b>iperboli</b>. Il
+    widget disegna queste curve: blu dove la forma è positiva, rosso dove è negativa.
+  </p>
+
+  <div class="widget" id="w-quad">
+    <div class="w-head">
+      <span>Le curve di livello di xᵀAx</span>
+      <span class="hint">scegli la matrice · blu = positivo, rosso = negativo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wq-svg" viewBox="0 0 560 400" role="img" aria-label="Le curve di livello di una forma quadratica: ellissi per una matrice definita, iperboli per una indefinita"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wq-a">scodella [[2,1],[1,2]]</button>
+      <button class="w-btn" id="wq-b">sella [[1,0],[0,−1]]</button>
+      <button class="w-btn" id="wq-c">grondaia [[1,1],[1,1]]</button>
+    </div>
+    <div class="w-readout" id="wq-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-3"><span class="secnum">Sezione 17.3</span>La forma quadratica normalizzata</h2>
+
+  <p class="lead">
+    C'è un problema con \(\vv{x}\T\mm{A}\vv{x}\): cresce con la <em>lunghezza</em> di \(\vv{x}\). Raddoppia
+    \(\vv{x}\) e il valore quadruplica (\((2\vv{x})\T\mm{A}(2\vv{x}) = 4\,\vv{x}\T\mm{A}\vv{x}\)). Per
+    studiare solo l'effetto della <b>direzione</b>, dobbiamo normalizzare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il quoziente di Rayleigh <span class="tag">togli l'effetto della lunghezza</span></div>
+    <div class="f-body">
+      \[
+        R(\vv{x}) = \frac{\vv{x}\T\mm{A}\vv{x}}{\vv{x}\T\vv{x}}
+        \qquad\Longrightarrow\qquad
+        \text{se } \norm{\vv{x}} = 1: \quad R(\vv{x}) = \vv{x}\T\mm{A}\vv{x}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>numeratore \(\vv{x}\T\mm{A}\vv{x}\)</dt>
+        <dd>la forma quadratica: cresce come la lunghezza al quadrato.</dd>
+        <dt>denominatore \(\vv{x}\T\vv{x} = \norm{\vv{x}}^2\)</dt>
+        <dd>anch'esso cresce come la lunghezza al quadrato (§3.1). Dividendo, <b>i due effetti si
+            cancellano</b>: \(R(\lambda\vv{x}) = R(\vv{x})\). Il quoziente dipende <em>solo dalla
+            direzione</em>.</dd>
+        <dt>\(R(\vv{x})\) — <b>quoziente di Rayleigh</b></dt>
+        <dd>è la forma quadratica «pura», ripulita dalla scala. Poiché conta solo la direzione, basta
+            studiarlo sui vettori <b>unitari</b> (\(\norm{\vv{x}} = 1\), §3.9), dove si riduce a
+            \(\vv{x}\T\mm{A}\vv{x}\). <mark>Studiare la superficie = studiare \(R\) sul cerchio unitario.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Geometricamente: invece di guardare tutta la superficie infinita, la «tagliamo» lungo il cerchio
+      unitario e guardiamo solo l'anello di quote lì sopra. Non perdiamo niente — per omogeneità, ogni altra
+      direzione è solo una copia riscalata.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-4"><span class="secnum">Sezione 17.4</span>Autovettori e superficie della forma quadratica</h2>
+
+  <p class="lead">
+    Ecco il teorema che collega tutto. I valori <b>estremi</b> del quoziente di Rayleigh sul cerchio unitario
+    sono l'autovalore più grande e il più piccolo, raggiunti <em>esattamente</em> lungo i rispettivi
+    autovettori. Gli autovettori sono gli assi della superficie.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Rayleigh vive tra λ_min e λ_max <span class="tag">via decomposizione spettrale, §15.8</span></div>
+    <div class="f-body">
+      \[
+        \lambda_{\min} \;\le\; \frac{\vv{x}\T\mm{A}\vv{x}}{\vv{x}\T\vv{x}} \;\le\; \lambda_{\max},
+        \qquad
+        \max_{\norm{\vv{x}}=1} \vv{x}\T\mm{A}\vv{x} = \lambda_{\max} \ \text{(su } \vv{x} = \vv{q}_{\max}\text{)}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>perché è vero</dt>
+        <dd>usa il teorema spettrale (§15.8): \(\mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\), autovettori
+            ortonormali. Scrivi \(\vv{x}\) nella loro base, \(\vv{x} = \sum_i c_i\vv{q}_i\). Allora, poiché
+            \(\mm{A}\vv{q}_i = \lambda_i\vv{q}_i\) e le \(\vv{q}_i\) sono ortonormali:
+            \[ \vv{x}\T\mm{A}\vv{x} = \sum_i \lambda_i c_i^2, \qquad \vv{x}\T\vv{x} = \sum_i c_i^2. \]</dd>
+        <dt>\(R = \dfrac{\sum_i \lambda_i c_i^2}{\sum_i c_i^2}\)</dt>
+        <dd>è una <b>media pesata</b> degli autovalori, con pesi \(c_i^2 \ge 0\)! E una media pesata non può
+            uscire dall'intervallo tra il più piccolo e il più grande dei valori. Il massimo (\(\lambda_{\max}\))
+            si ottiene mettendo tutto il peso sull'autovalore più grande, cioè scegliendo
+            \(\vv{x} = \vv{q}_{\max}\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una frase: <mark>gli autovettori sono le direzioni dove la superficie è più ripida (in su e in giù),
+      e gli autovalori sono quanto è ripida.</mark> Sono gli assi principali dell'ellisse delle curve di
+      livello. Il semiasse lungo l'autovettore \(\vv{q}_i\) è \(1/\sqrt{\lambda_i}\): autovalore grande →
+      ellisse stretta in quella direzione (la superficie sale in fretta).
+    </div>
+  </div>
+
+  <p>
+    Sul nostro \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\): lungo l'autovettore
+    \(\vv{q}_1 = \tfrac{1}{\sqrt2}(1, 1)\) la forma vale \(\lambda = 3\) (il massimo); lungo
+    \(\vv{q}_2 = \tfrac{1}{\sqrt2}(1, -1)\) vale \(\lambda = 1\) (il minimo). Ogni altra direzione sta in
+    mezzo — ricordi \((1,0)\) che dava \(2\)? Sta tra \(1\) e \(3\). Nel widget, trascina il vettore e
+    guardalo toccare il massimo e il minimo <em>proprio</em> sugli autovettori.
+  </p>
+
+  <div class="widget" id="w-ray">
+    <div class="w-head">
+      <span>Rayleigh sul cerchio: il massimo è λ_max</span>
+      <span class="hint">trascina x attorno al cerchio unitario</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wr-svg" viewBox="0 0 560 400" role="img" aria-label="Il quoziente di Rayleigh al variare della direzione, con massimo e minimo sugli autovettori"></svg>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> È già la PCA</div>
+    <p style="margin-bottom:0">
+      «Trova la direzione che <b>massimizza</b> \(\vv{x}\T\mm{A}\vv{x}\) tra i vettori unitari» ha come
+      risposta «l'autovettore di \(\lambda_{\max}\)». Se \(\mm{A}\) è una matrice di <b>covarianza</b> (Cap. 18),
+      quella forma quadratica è la <em>varianza dei dati lungo la direzione \(\vv{x}\)</em>, e la direzione che
+      la massimizza è la <b>prima componente principale</b> (Cap. 19). <mark>La PCA è questo teorema applicato
+      alla covarianza.</mark> Lo stai già guardando.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-5"><span class="secnum">Sezione 17.5</span>Definitezza di una matrice</h2>
+
+  <p class="lead">
+    Diamo un nome alle quattro forme del §17.2. La <b>definitezza</b> classifica una matrice simmetrica in
+    base al segno che la sua forma quadratica assume — ed è una delle proprietà più usate in tutta la
+    matematica applicata.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le classi di definitezza <span class="tag">che segno ha xᵀAx?</span></div>
+    <div class="f-body">
+      \[
+        \begin{array}{ll}
+          \textbf{definita positiva} & \vv{x}\T\mm{A}\vv{x} \gt 0 \ \ \forall\,\vv{x} \neq \vv{0} \\[3pt]
+          \textbf{semidefinita positiva} & \vv{x}\T\mm{A}\vv{x} \ge 0 \ \ \forall\,\vv{x} \\[3pt]
+          \textbf{indefinita} & \vv{x}\T\mm{A}\vv{x} \ \text{cambia segno} \\[3pt]
+          \textbf{semidefinita negativa} & \vv{x}\T\mm{A}\vv{x} \le 0 \ \ \forall\,\vv{x} \\[3pt]
+          \textbf{definita negativa} & \vv{x}\T\mm{A}\vv{x} \lt 0 \ \ \forall\,\vv{x} \neq \vv{0}
+        \end{array}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>definita <b>positiva</b> (scodella)</dt>
+        <dd>strettamente positiva in ogni direzione: c'è un minimo <em>vero</em> nell'origine. È la classe
+            d'oro — quella che rende un problema di minimo «facile». \(\mm{I}\) ne è l'esempio base.</dd>
+        <dt><b>semi</b>definita positiva (grondaia)</dt>
+        <dd>positiva o nulla: come la definita positiva, ma con qualche direzione <em>piatta</em> (dove vale
+            \(0\)). Il minimo c'è ma non è unico. Nasce ogni volta che compare \(\mm{A}\T\mm{A}\) (§17.6).</dd>
+        <dt><b>indefinita</b> (sella)</dt>
+        <dd>positiva in certe direzioni, negativa in altre. Nessun minimo né massimo: un punto di sella. È il
+            caso che rovina la vita a chi ottimizza.</dd>
+        <dt>negative</dt>
+        <dd>specularmente: \(-\mm{A}\) definita positiva. Cupola, con un massimo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel widget del §17.2: la scodella \([[2,1],[1,2]]\) è definita positiva (solo ellissi blu), la sella
+      \([[1,0],[0,-1]]\) è indefinita (iperboli blu <em>e</em> rosse), la grondaia \([[1,1],[1,1]]\) è
+      semidefinita positiva (blu, con una direzione piatta a valore zero).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-6"><span class="secnum">Sezione 17.6</span>La definitezza di AᵀA</h2>
+
+  <p class="lead">
+    Adesso il conto in sospeso da tre capitoli. Perché \(\mm{A}\T\mm{A}\) era sempre invertibile «quando le
+    colonne sono indipendenti»? Perché è <b>semidefinita positiva</b> — e la forma quadratica lo dimostra in
+    una riga.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">AᵀA è sempre semidefinita positiva <span class="tag">la forma quadratica è una norma²</span></div>
+    <div class="f-body">
+      \[
+        \vv{x}\T(\mm{A}\T\mm{A})\vv{x}
+        = (\mm{A}\vv{x})\T(\mm{A}\vv{x})
+        = \norm{\mm{A}\vv{x}}^2 \ \ge\ 0
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>il passaggio chiave</dt>
+        <dd>\(\vv{x}\T\mm{A}\T\mm{A}\vv{x}\): raggruppa \((\mm{A}\vv{x})\T(\mm{A}\vv{x})\) usando LIVE EVIL
+            (§6.4). È il prodotto scalare di \(\mm{A}\vv{x}\) con sé stesso, cioè la sua <b>lunghezza al
+            quadrato</b> (§3.1) — e una lunghezza al quadrato non è <em>mai</em> negativa.</dd>
+        <dt>\(\ge 0\), quindi PSD</dt>
+        <dd>per <em>ogni</em> \(\vv{x}\): \(\mm{A}\T\mm{A}\) è semidefinita positiva, sempre, per qualunque
+            \(\mm{A}\) (anche rettangolare). Idem \(\mm{A}\mm{A}\T\).</dd>
+        <dt>quando è definita positiva?</dt>
+        <dd>serve \(\norm{\mm{A}\vv{x}}^2 \gt 0\) per ogni \(\vv{x} \neq \vv{0}\), cioè
+            \(\mm{A}\vv{x} \neq \vv{0}\): nessun vettore non nullo finisce nello zero. È dire
+            \(\Null(\mm{A}) = \{\vv{0}\}\), cioè <mark>colonne indipendenti</mark> (§8.6, §7.7). Esattamente la
+            condizione dei minimi quadrati (§14.4).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco perché \((\mm{A}\T\mm{A})\inv\) esiste sse e solo se le colonne di \(\mm{A}\) sono indipendenti:
+      colonne indipendenti \(\Rightarrow\) \(\mm{A}\T\mm{A}\) definita positiva \(\Rightarrow\) autovalori
+      tutti \(\gt 0\) (§17.7) \(\Rightarrow\) nessun autovalore nullo \(\Rightarrow\) invertibile (§15.9). La
+      catena di implicazioni che teneva in piedi minimi quadrati (Cap. 14) e SVD (Cap. 16) era questa.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-7"><span class="secnum">Sezione 17.7</span>λ e definitezza</h2>
+
+  <p class="lead">
+    Come si controlla la definitezza in pratica, senza provare tutte le infinite direzioni? Si guardano gli
+    <b>autovalori</b>. Il §17.4 ce lo ha già regalato: la forma quadratica vive tra \(\lambda_{\min}\) e
+    \(\lambda_{\max}\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La definitezza è nel segno degli autovalori <span class="tag">il test definitivo</span></div>
+    <div class="f-body">
+      \[
+        \begin{array}{ll}
+          \text{tutti } \lambda_i \gt 0 & \Longleftrightarrow \ \text{definita positiva} \\[3pt]
+          \text{tutti } \lambda_i \ge 0 & \Longleftrightarrow \ \text{semidefinita positiva} \\[3pt]
+          \lambda_i \ \text{di segni misti} & \Longleftrightarrow \ \text{indefinita} \\[3pt]
+          \text{tutti } \lambda_i \lt 0 & \Longleftrightarrow \ \text{definita negativa}
+        \end{array}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>perché</dt>
+        <dd>sul cerchio unitario \(\lambda_{\min} \le \vv{x}\T\mm{A}\vv{x} \le \lambda_{\max}\) (§17.4). Se
+            \(\lambda_{\min} \gt 0\), la forma è positiva ovunque: definita positiva. Se \(\lambda_{\min} \lt 0 \lt \lambda_{\max}\),
+            la forma tocca valori di entrambi i segni: indefinita. <mark>Il segno degli autovalori è la
+            definitezza.</mark></dd>
+        <dt>scorciatoia per le \(2\times 2\)</dt>
+        <dd>ricorda \(\lambda_1\lambda_2 = \det\) e \(\lambda_1 + \lambda_2 = \tr\) (§15.2). Allora:
+            \(\det \gt 0\) e \(\tr \gt 0\) \(\Rightarrow\) definita positiva; \(\det \lt 0\) \(\Rightarrow\)
+            indefinita (autovalori di segno opposto); \(\det = 0\) \(\Rightarrow\) semidefinita (un autovalore
+            nullo). Un test in due conti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Verifica sull'esempio: \(\mm{A} = \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{bmatrix}\) ha \(\det = 3 \gt 0\)
+      e \(\tr = 4 \gt 0\): definita positiva ✔ (autovalori \(1, 3\), entrambi positivi). La sella
+      \(\begin{bmatrix} 1 &amp; 0 \\ 0 &amp; -1 \end{bmatrix}\) ha \(\det = -1 \lt 0\): indefinita ✔. La grondaia
+      \(\begin{bmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{bmatrix}\) ha \(\det = 0\): semidefinita ✔.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 17</div>
+    <ol style="margin-bottom:0">
+      <li><b>La forma quadratica</b> \(\vv{x}\T\mm{A}\vv{x}\) (con \(\mm{A}\) simmetrica) è un numero: un
+          polinomio omogeneo di 2° grado (§17.1). Geometricamente è una <b>superficie</b> — scodella, sella,
+          cupola o grondaia (§17.2).</li>
+      <li><b>Normalizzata</b> (quoziente di Rayleigh \(R = \vv{x}\T\mm{A}\vv{x}/\vv{x}\T\vv{x}\), §17.3)
+          dipende solo dalla direzione, e sul cerchio unitario coincide con \(\vv{x}\T\mm{A}\vv{x}\).</li>
+      <li><b>Gli autovettori sono gli assi</b> della superficie: \(R\) varia tra
+          <mark>\(\lambda_{\min}\) e \(\lambda_{\max}\)</mark>, raggiunti sugli autovettori (§17.4). È il cuore
+          della PCA (Cap. 19).</li>
+      <li><b>Definitezza</b> (§17.5): il segno di \(\vv{x}\T\mm{A}\vv{x}\). Definita positiva = scodella =
+          minimo vero; indefinita = sella. Si legge <mark>nel segno degli autovalori</mark> (§17.7): tutti
+          \(\gt 0\) ⟺ definita positiva.</li>
+      <li><b>\(\mm{A}\T\mm{A}\) è sempre semidefinita positiva</b> perché \(\vv{x}\T\mm{A}\T\mm{A}\vv{x} =
+          \norm{\mm{A}\vv{x}}^2 \ge 0\) (§17.6); definita positiva ⟺ colonne indipendenti. È il conto che
+          reggeva minimi quadrati e SVD.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai imparato a leggere la <em>forma</em> di una matrice simmetrica: scodella o sella, secondo i suoi
+    autovalori. Ora arriva la matrice simmetrica più importante della statistica — quella che è definita
+    positiva <em>per costruzione</em>, perché è fatta come \(\mm{A}\T\mm{A}\). Misura come le variabili di un
+    dataset si muovono insieme, la sua forma quadratica <em>è</em> la varianza lungo una direzione, e i suoi
+    autovettori sono le direzioni in cui i dati si allargano di più. È la <b>matrice di covarianza</b>, il
+    <b>Capitolo 18</b>, e con essa entriamo nella parte del libro dove l'algebra lineare diventa scienza dei
+    dati.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise.
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+const dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
+const norm = a => Math.hypot(...a);
+
+/* autodecomposizione di una simmetrica 2×2 [[a,b],[b,d]] → [{lam,v}, {lam,v}]
+   con lam1 ≥ lam2 e autovettori unitari. */
+function eig2sym(A) {
+  const a = A[0][0], b = A[0][1], d = A[1][1];
+  if (Math.abs(b) < 1e-12) {
+    return a >= d
+      ? [{ lam: a, v: [1, 0] }, { lam: d, v: [0, 1] }]
+      : [{ lam: d, v: [0, 1] }, { lam: a, v: [1, 0] }];
+  }
+  const m = (a + d) / 2, disc = Math.hypot((a - d) / 2, b);
+  const l1 = m + disc, l2 = m - disc;
+  const vec = l => { const v = [l - d, b]; const n = norm(v) || 1; return [v[0] / n, v[1] / n]; };
+  return [{ lam: l1, v: vec(l1) }, { lam: l2, v: vec(l2) }];
+}
+const quad = (A, x) => A[0][0] * x[0] * x[0] + 2 * A[0][1] * x[0] * x[1] + A[1][1] * x[1] * x[1];
+
+
+/* ============================================================================
+   WIDGET §17.2 — curve di livello di xᵀAx
+   Disegna ellissi (definita) / iperboli (indefinita) / rette (semidefinita),
+   in coordinate degli autovettori. Blu = livello positivo, rosso = negativo.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wq-svg');
+  if (!svg) return;
+  const out = document.getElementById('wq-out');
+  const p = new Plot(svg, { xmin: -3.3, xmax: 3.3, ymin: -2.4, ymax: 2.4 });
+
+  const MATS = {
+    a: { M: [[2, 1], [1, 2]], nome: 'scodella — definita positiva', tipo: 'ellissi (solo blu): sale in ogni direzione' },
+    b: { M: [[1, 0], [0, -1]], nome: 'sella — indefinita', tipo: 'iperboli: blu dove sale, rosso dove scende' },
+    c: { M: [[1, 1], [1, 1]], nome: 'grondaia — semidefinita positiva', tipo: 'rette parallele: piatta lungo un autovettore' }
+  };
+  let cur = 'a';
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const A = MATS[cur].M;
+    const eig = eig2sym(A);
+    const [{ lam: l1, v: v1 }, { lam: l2, v: v2 }] = eig;
+    const toXY = (s, t) => [s * v1[0] + t * v2[0], s * v1[1] + t * v2[1]];   // coord. autovettori → xy
+    const col = sign => sign > 0 ? 'var(--accent)' : 'var(--warm)';
+
+    // assi degli autovettori (tratteggiati)
+    for (const { v } of eig) p.line(-3 * v[0], -3 * v[1], 3 * v[0], 3 * v[1],
+      { color: 'var(--violet)', width: 1.3, dash: '3 4' });
+
+    const T = 2.3;                                   // estensione parametro per iperboli/rette
+    for (const c of [0.5, 1.5, 3]) {
+      for (const cc of [c, -c]) {                    // livello +c e −c
+        const sign = cc > 0 ? 1 : -1;
+        if (l1 > 1e-9 && l2 > 1e-9) {                // definita positiva → ellisse per cc>0
+          if (cc > 0) {
+            const pts = [];
+            for (let i = 0; i <= 72; i++) { const th = 2 * Math.PI * i / 72; pts.push(toXY(Math.sqrt(cc / l1) * Math.cos(th), Math.sqrt(cc / l2) * Math.sin(th))); }
+            p.poly(pts, { color: col(sign), width: 1.8, close: true });
+          }
+        } else if (l1 > 1e-9 && Math.abs(l2) < 1e-9) { // semidefinita (l1>0, l2=0) → rette s = ±√(cc/l1)
+          if (cc > 0) {
+            const s0 = Math.sqrt(cc / l1);
+            for (const sgn of [1, -1]) p.poly([toXY(sgn * s0, -T), toXY(sgn * s0, T)], { color: col(sign), width: 1.8, close: false });
+          }
+        } else {                                     // indefinita l1>0>l2 → iperboli
+          const mu = -l2;
+          for (const sgn of [1, -1]) {
+            const pts = [];
+            for (let i = 0; i <= 48; i++) {
+              const tt = -T + 2 * T * i / 48;
+              if (cc > 0) pts.push(toXY(sgn * Math.sqrt(cc / l1) * Math.cosh(tt), Math.sqrt(cc / mu) * Math.sinh(tt)));
+              else pts.push(toXY(Math.sqrt(-cc / l1) * Math.sinh(tt), sgn * Math.sqrt(-cc / mu) * Math.cosh(tt)));
+            }
+            p.poly(pts, { color: col(sign), width: 1.8, close: false });
+          }
+        }
+      }
+    }
+
+    out.innerHTML = `
+      <div class="big">${MATS[cur].nome} &nbsp;·&nbsp; λ = <b>${nfmt(l1)}</b>, <b>${nfmt(l2)}</b></div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Curve di livello xᵀAx = costante (${MATS[cur].tipo}). Le rette <span style="color:var(--violet)">viola</span>
+        tratteggiate sono gli <b>autovettori</b>: gli assi della superficie. Il segno degli autovalori
+        (${nfmt(l1)}, ${nfmt(l2)}) decide la forma — <mark>${l2 > 1e-9 ? 'entrambi positivi ⇒ scodella' : (Math.abs(l2) < 1e-9 ? 'uno nullo ⇒ grondaia' : 'segni opposti ⇒ sella')}</mark>.
+      </div>`;
+  }
+
+  document.getElementById('wq-a').onclick = () => { cur = 'a'; draw(); };
+  document.getElementById('wq-b').onclick = () => { cur = 'b'; draw(); };
+  document.getElementById('wq-c').onclick = () => { cur = 'c'; draw(); };
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §17.4 — quoziente di Rayleigh sul cerchio unitario
+   Trascina x (unitario); mostra xᵀAx e come tocca λmax/λmin sugli autovettori.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wr-out');
+  const p = new Plot(svg, { xmin: -3.4, xmax: 3.4, ymin: -2.4, ymax: 2.4 });
+  const A = [[2, 1], [1, 2]];
+  const eig = eig2sym(A);
+  const [{ lam: lmax, v: qmax }, { lam: lmin, v: qmin }] = eig;
+  let th = 0.35;
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: false });
+    const x = [Math.cos(th), Math.sin(th)];
+    const val = quad(A, x);                          // = xᵀAx, con ‖x‖=1
+
+    // cerchio unitario
+    const circ = [];
+    for (let a = 0; a <= 6.2832; a += 0.12) circ.push([Math.cos(a), Math.sin(a)]);
+    p.poly(circ, { color: 'var(--ink-faint)', width: 1.1, close: false });
+
+    // "curva di energia": raggio = xᵀAx in ogni direzione (mostra i due lobi max/min)
+    const energy = [];
+    for (let a = 0; a <= 6.2832; a += 0.06) {
+      const u = [Math.cos(a), Math.sin(a)];
+      const r = quad(A, u) / lmax;                   // riscalata così il massimo tocca raggio 1... poi ×2 per vederla
+      energy.push([r * 2 * u[0], r * 2 * u[1]]);
+    }
+    p.poly(energy, { color: 'color-mix(in srgb, var(--accent) 45%, transparent)', width: 1.6, close: true });
+
+    // autovettori (assi): max in violetto, min in warm
+    p.line(-3 * qmax[0], -3 * qmax[1], 3 * qmax[0], 3 * qmax[1], { color: 'var(--violet)', width: 1.3, dash: '3 4' });
+    p.line(-3 * qmin[0], -3 * qmin[1], 3 * qmin[0], 3 * qmin[1], { color: 'var(--warm)', width: 1.3, dash: '3 4' });
+
+    // il vettore corrente
+    p.arrow(0, 0, x[0], x[1], { color: 'var(--accent)', width: 3, label: 'x' });
+    p.handle(x[0], x[1], { color: 'var(--accent)' }, (X, Y) => { th = Math.atan2(Y, X); draw(); });
+
+    const nearMax = Math.abs(Math.abs(dot(x, qmax)) - 1) < 0.02;
+    const nearMin = Math.abs(Math.abs(dot(x, qmin)) - 1) < 0.02;
+    out.innerHTML = `
+      <div class="big">
+        xᵀAx = <b style="color:var(--accent)">${nfmt(val)}</b>
+        &nbsp; (tra λ_min = <b>${nfmt(lmin)}</b> e λ_max = <b>${nfmt(lmax)}</b>)
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${nearMax
+          ? '<mark>Sei sull\'autovettore di λ_max:</mark> xᵀAx tocca il suo <b>massimo</b>, ' + nfmt(lmax) + '.'
+          : nearMin
+            ? '<mark>Sei sull\'autovettore di λ_min:</mark> xᵀAx tocca il suo <b>minimo</b>, ' + nfmt(lmin) + '.'
+            : 'Ruota x: il valore sale fino a <b>λ_max = ' + nfmt(lmax) + '</b> sull\'asse <span style="color:var(--violet)">viola</span> e scende a <b>λ_min = ' + nfmt(lmin) + '</b> su quello <span style="color:var(--warm)">rosso</span>.'}
+        La curva blu è l'«energia» in ogni direzione: più lontana dal centro = xᵀAx più grande.
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

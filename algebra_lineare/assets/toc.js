@@ -302,7 +302,7 @@ const TOC = [
     n: 17,
     titolo: "Forma quadratica",
     file: "cap17-forma-quadratica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Prospettiva algebrica" },
       { id: "s17-2", n: "17.2", t: "Prospettiva geometrica" },
