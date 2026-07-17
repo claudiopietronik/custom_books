@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Filtri a media mobile — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.15 — Capitolo 15</div>
+    <h1>Filtri a media mobile</h1>
+    <p class="standfirst">
+      Il filtro più semplice che esista: sostituisci ogni campione con la media dei suoi vicini. Banale — eppure
+      è il <b>migliore in assoluto</b> per ridurre il rumore casuale conservando la forma nel tempo, ed è
+      velocissimo. Il rovescio della medaglia è impietoso: nel dominio della frequenza è un vero <b>disastro</b>.
+      È il caso di scuola perfetto per toccare con mano il compromesso tempo–frequenza.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Primo filtro concreto, il rappresentante d'onore dei FIR nel dominio del tempo. Applica tutto il Cap. 14:
+      lo studieremo attraverso le sue tre facce e i suoi parametri. Poi il Cap. 16 costruirà l'opposto — un
+      filtro pensato per la frequenza — e il contrasto sarà illuminante.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La media mobile è il primo strumento che tiri fuori quando un segnale è sporco: due righe di codice, un
+      risultato immediato. Ma sapere <em>quando</em> usarlo — e quando invece è la scelta peggiore — è ciò che
+      distingue chi capisce il DSP da chi copia ricette. La lezione è più grande del filtro: <strong>ogni
+      strumento eccelle in un dominio e fallisce nell'altro.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">SEZIONE 15.1</span>Il filtro a media mobile</h2>
+
+  <p class="lead">
+    La regola è nel nome: ogni campione d'uscita è la <b>media</b> di \(M\) campioni d'ingresso vicini. Nient'altro.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il filtro a media mobile <span class="tag">media di M vicini</span></div>
+    <div class="f-body">
+      \[
+        \sig{y}[n] \;=\; \frac{1}{\hB{M}} \hA{\sum_{j=0}^{M-1}} \sig{x}[n-j]
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hB{M}\)</dt><dd>il numero di campioni su cui mediare: la <b>lunghezza</b> del filtro.</dd>
+        <dt>\(\hA{\sum}\)</dt><dd>si sommano \(M\) campioni d'ingresso consecutivi.</dd>
+        <dt>\(1/M\)</dt><dd>si divide per il numero, per farne una media.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È una <b>convoluzione</b> (Cap. 6) con risposta all'impulso \(h = [\tfrac1M, \ldots, \tfrac1M]\): \(M\)
+      valori tutti uguali. <mark>È il filtro ottimo per abbattere il rumore casuale bianco</mark> conservando la
+      forma nel tempo — nessun altro filtro fa meglio, a parità di velocità di risposta. La sua arma è la media:
+      il rumore, casuale, si cancella; il segnale, coerente, resta.
+    </div>
+  </div>
+
+  <h3>Provalo: leviga il rumore</h3>
+
+  <p>
+    Un segnale sporco (in <b style="color:var(--ink-faint)">grigio</b>). Aumenta \(M\) e guarda l'uscita (in
+    <b style="color:var(--accent)">teal</b>) farsi liscia: il rumore cala di un fattore \(\sqrt{M}\) (Cap. 2!),
+    ma il gradino si <b>sfuma</b> sempre di più. È il compromesso: più leviga, più impasta i fronti.
+  </p>
+
+  <div class="widget" id="w-smooth">
+    <div class="w-head">
+      <span>Media mobile: rumore contro nitidezza</span>
+      <span class="hint">più M = meno rumore ma fronti più molli</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsm-svg" viewBox="0 0 620 280" role="img" aria-label="Un segnale rumoroso levigato da una media mobile di lunghezza variabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>lunghezza M</label><input type="range" id="wsm-m" min="1" max="31" step="2" value="7"><output id="wsm-mv">7</output></div>
+    </div>
+    <div class="w-readout" id="wsm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">SEZIONE 15.2</span>L'implementazione ricorsiva</h2>
+
+  <p class="lead">
+    C'è un trucco che rende la media mobile <b>velocissima</b>, indipendentemente da quanto è lunga. È una delle
+    ottimizzazioni più eleganti del DSP.
+  </p>
+
+  <p>
+    Calcolare ogni uscita come somma di \(M\) valori costa \(M\) operazioni per campione: se \(M\) è grande,
+    diventa pesante. Ma osserva: due uscite consecutive condividono quasi tutti i campioni. Passando da
+    \(y[n]\) a \(y[n+1]\), la finestra si sposta di uno: entra un campione nuovo ed esce quello più vecchio.
+    Allora basta <b>tenere una somma corrente</b>: aggiungi il nuovo, sottrai il vecchio, dividi. <b>Due
+    operazioni per campione</b>, qualunque sia \(M\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La media mobile ricorsiva <span class="tag">costo O(1), indipendente da M</span></div>
+    <div class="f-body">
+      \[
+        \text{somma}[n] = \text{somma}[n-1] + \hA{\sig{x}[n]} - \hB{\sig{x}[n-M]}, \qquad \sig{y}[n] = \frac{\text{somma}[n]}{M}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(+\hA{\sig{x}[n]}\)</dt><dd>entra il <b>campione nuovo</b> nella finestra.</dd>
+        <dt>\(-\hB{\sig{x}[n-M]}\)</dt><dd>esce il <b>campione più vecchio</b>, quello che la finestra si lascia
+            alle spalle.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Attenzione: qui «ricorsivo» significa solo «riusa il risultato precedente», ed è <b>esatto</b> — non è un
+      filtro IIR con retroazione instabile. <mark>Una media mobile a 1000 punti costa quanto una a 3</mark>: è
+      questa efficienza a renderla insostituibile quando serve levigare in tempo reale.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">SEZIONE 15.3</span>Perché è pessimo in frequenza</h2>
+
+  <p class="lead">
+    Ora il lato oscuro. Se ti serve <b>separare bande di frequenza</b> — non levigare, ma togliere certe
+    frequenze lasciandone altre — la media mobile è una delle scelte peggiori possibili.
+  </p>
+
+  <p>
+    La sua risposta in frequenza è una <b>sinc</b> (la trasformata di un rettangolo, Cap. 11): un lobo centrale
+    che scende lentamente e una lunga scia di <b>lobi laterali</b> che lasciano passare parecchia energia alle
+    frequenze che dovrebbero essere bloccate. In termini del Cap. 14: <b>roll-off lentissimo</b>, <b>attenuazione
+    della banda oscura pessima</b>, e persino un po' di droop nella banda passante. Come separatore di frequenze,
+    è quasi inutile.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il migliore e il peggiore, insieme</div>
+    <p style="margin-bottom:0">
+      Ecco la lezione centrale: <mark>lo stesso filtro è il <b>migliore</b> nel dominio del tempo e il
+      <b>peggiore</b> in quello della frequenza.</mark> Non è un paradosso, è il compromesso tempo–frequenza del
+      Cap. 10: la media mobile è ottima a levigare (tempo) proprio <em>perché</em> ha una risposta all'impulso
+      compatta e rettangolare — e quel rettangolo, in frequenza, è la sinc con i suoi orribili lobi. Non puoi
+      avere l'uno senza l'altro. La morale pratica: <b>usa la media mobile per il rumore nel tempo, mai per
+      separare bande.</b>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">SEZIONE 15.4</span>Passaggi multipli e forma gaussiana</h2>
+
+  <p class="lead">
+    C'è un modo per migliorare (un po') la media mobile: <b>applicarla più volte di seguito</b>. Il risultato ha
+    una forma bellissima e frequenze più educate.
+  </p>
+
+  <p>
+    Convolvere un rettangolo con sé stesso dà un <b>triangolo</b>; convolvendo ancora si ottiene una curva sempre
+    più liscia, che dopo pochi passaggi è quasi indistinguibile da una <b>gaussiana</b> (la campana del Cap. 2!).
+    È il teorema del limite centrale in versione filtri: sommare tante finestre uguali tende alla campana. La
+    risposta in frequenza migliora di conseguenza — i lobi laterali si abbassano molto — pur restando lontana da
+    un vero taglio netto.
+  </p>
+
+  <h3>Provalo: verso la campana</h3>
+
+  <p>
+    Applica la media mobile più volte e osserva la risposta all'impulso trasformarsi: rettangolo → triangolo →
+    campana. E, sotto, la risposta in frequenza migliorare — i lobi laterali crollano. Con pochi passaggi hai un
+    levigatore quasi gaussiano, ancora velocissimo.
+  </p>
+
+  <div class="widget" id="w-passes">
+    <div class="w-head">
+      <span>Passaggi multipli → gaussiana</span>
+      <span class="hint">più passaggi, forma più liscia e frequenze migliori</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wps-imp" viewBox="0 0 620 140" role="img" aria-label="La risposta all'impulso di media mobili ripetute, da rettangolo a campana"></svg>
+      <svg id="wps-freq" viewBox="0 0 620 140" role="img" aria-label="La risposta in frequenza migliora con i passaggi multipli"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>passaggi</label><input type="range" id="wps-p" min="1" max="5" step="1" value="1"><output id="wps-pv">1</output></div>
+    </div>
+    <div class="w-readout" id="wps-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">SEZIONE 15.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">Un segnale ha rumore con \(\sigma = 0{,}6\). Applichi una media mobile a 9 punti.
+      Di quanto cala (circa) il rumore?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La media di \(M\) campioni riduce il rumore di \(\sqrt{M}\) (Cap. 2). Con \(M=9\): fattore
+          \(\sqrt{9}=3\). Il rumore scende a \(0{,}6/3 = \mathbf{0{,}2}\). Prezzo: i fronti si sfumano su ~9
+          campioni.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">Perché la versione ricorsiva della media mobile costa uguale per \(M=5\) e per
+      \(M=500\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché non ricalcola la somma da capo: tiene una <b>somma corrente</b> e a ogni passo aggiunge il
+          campione nuovo e sottrae quello uscito dalla finestra (§15.2). Sono due operazioni per campione,
+          indipendenti da \(M\): costo \(O(1)\). La media diretta invece costerebbe \(M\) operazioni per
+          campione.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">Devi separare un segnale a 1 kHz da un'interferenza a 3 kHz. La media mobile è una
+      buona scelta? Perché?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>No.</b> Separare bande di frequenza è un compito nel dominio della frequenza, dove la media mobile
+          è pessima (§15.3): i suoi lobi laterali lascerebbero passare buona parte dei 3 kHz. Serve un filtro
+          progettato per la frequenza, come un windowed-sinc (Cap. 16) o un Chebyshev (Cap. 20).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">Cosa ottieni convolvendo un filtro a media mobile con sé stesso? E ripetendo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Rettangolo ∗ rettangolo = <b>triangolo</b>. Ripetendo, la forma si liscia e dopo pochi passaggi
+          approssima una <b>gaussiana</b> (limite centrale, §15.4). La risposta in frequenza migliora (lobi
+          laterali più bassi), pur restando senza un taglio netto.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">SEZIONE 15.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li><b>Media mobile:</b> ogni uscita = media di \(M\) vicini. Risposta all'impulso rettangolare. È il
+          <b>migliore</b> filtro per il rumore casuale nel tempo (riduzione \(\sqrt{M}\)).</li>
+      <li><b>Ricorsiva = velocissima:</b> somma corrente (aggiungi il nuovo, togli il vecchio), costo \(O(1)\)
+          indipendente da \(M\). Esatta, non instabile.</li>
+      <li><b>Pessima in frequenza:</b> risposta sinc con lobi laterali enormi, roll-off lentissimo. Mai usarla
+          per separare bande.</li>
+      <li><b>Passaggi multipli</b> → forma triangolare poi gaussiana; frequenze migliori (lobi più bassi) ma
+          ancora niente taglio netto.</li>
+      <li><b>La grande lezione:</b> lo stesso filtro è ottimo nel tempo e pessimo in frequenza. È il compromesso,
+          non un difetto.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La media mobile è il campione del tempo. Il suo esatto opposto — un filtro progettato per <em>eccellere in
+    frequenza</em>, con banda passante piatta e taglio netto — è il protagonista del <strong>Capitolo 16</strong>:
+    il <b>filtro windowed-sinc</b>. Partiremo proprio dalla coppia rettangolo–sinc del Cap. 11, scoprendo perché
+    il filtro passa-basso ideale è irrealizzabile e come «finestrarlo» per ottenere un ottimo separatore di bande.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function dftMagHalf2(x, N) {
+  const half = N / 2, mag = [];
+  for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < x.length; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); }
+  return mag;
+}
+function convFull(x, h) { const y = new Array(x.length + h.length - 1).fill(0); for (let i = 0; i < x.length; i++) for (let j = 0; j < h.length; j++) y[i + j] += x[i] * h[j]; return y; }
+
+/* ============================================================================
+   WIDGET §15.1 — media mobile: levigatura
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsm-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsm-out');
+  const mS = document.getElementById('wsm-m'), mV = document.getElementById('wsm-mv');
+  const N = 120;
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(17);
+  const clean = [], noisy = [];
+  for (let n = 0; n < N; n++) { const base = n < 40 ? 0.3 : n < 80 ? 1.3 : 0.6; clean.push(base); noisy.push(base + (rng() - 0.5) * 0.7); }
+
+  function draw() {
+    const M = parseInt(mS.value, 10);
+    mV.textContent = M;
+    // media mobile centrata
+    const y = [];
+    for (let n = 0; n < N; n++) { let s = 0, c = 0; for (let j = -Math.floor(M / 2); j <= Math.floor(M / 2); j++) { const i = n + j; if (i >= 0 && i < N) { s += noisy[i]; c++; } } y.push(s / c); }
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: N, ymin: -0.3, ymax: 2 });
+    p.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    p.seq(noisy, { color: 'var(--ink-faint)', width: 1 });
+    p.seq(y, { color: 'var(--accent)', width: 2.6 });
+    p.text(2, 1.85, 'grigio: rumoroso · teal: levigato', { color: 'var(--ink-soft)', anchor: 'start', size: 10.5 });
+
+    // rumore residuo (dev std di y-clean nella zona piatta)
+    let ss = 0, cc = 0; for (let n = 5; n < 35; n++) { ss += (y[n] - clean[n]) ** 2; cc++; }
+    const resid = Math.sqrt(ss / cc);
+    out.innerHTML = `
+      <div class="big">M = <b>${M}</b> &nbsp;·&nbsp; riduzione rumore ≈ <b>√${M} = ${Math.sqrt(M).toFixed(1)}×</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${M === 1 ? 'M=1: nessuna media, l\'uscita è l\'ingresso col suo rumore.'
+          : 'Il rumore si è ridotto (residuo ≈ ' + resid.toFixed(2) + '), ma guarda i <mark>due gradini sfumarsi</mark>: più leviga, più impasta i fronti. Il compromesso in azione.'}
+      </div>`;
+  }
+  mS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §15.4 — passaggi multipli verso la gaussiana
+   ========================================================================= */
+(function () {
+  const sI = document.getElementById('wps-imp'), sF = document.getElementById('wps-freq');
+  if (!sI) return;
+  const out = document.getElementById('wps-out');
+  const pS = document.getElementById('wps-p'), pV = document.getElementById('wps-pv');
+  const M = 9;
+
+  function draw() {
+    const passes = parseInt(pS.value, 10);
+    pV.textContent = passes;
+    // h = rect(M) convoluto passes volte
+    let h = new Array(M).fill(1 / M);
+    for (let k = 1; k < passes; k++) h = convFull(h, new Array(M).fill(1 / M));
+    // normalizza il picco a 1 per la vista
+    const peak = Math.max(...h);
+    const hv = h.map(v => v / peak);
+
+    sI.innerHTML = '';
+    const pi = new Plot(sI, { xmin: -1, xmax: h.length, ymin: -0.1, ymax: 1.2 });
+    pi.line(-1, 0, h.length, 0, { color: 'var(--ink-faint)', width: 1 });
+    pi.seq(hv, { color: 'var(--accent)', width: 2 });
+    pi.stem(hv, { color: 'var(--accent)', r: 2, width: 0.8 });
+    pi.text(h.length - 1, 1.1, passes === 1 ? 'rettangolo' : passes === 2 ? 'triangolo' : 'verso la campana', { color: 'var(--accent)', anchor: 'end', size: 10.5 });
+
+    sF.innerHTML = '';
+    const NF = 256; const mag = dftMagHalf2(h, NF);
+    const peakF = mag[0];
+    const pf = new Plot(sF, { xmin: -1, xmax: NF / 2 + 1, ymin: 0, ymax: 1.1 });
+    pf.axes({ numbers: false, names: true, xname: 'frequenza →', yname: '' });
+    pf.seq(mag.map(v => v / peakF), { color: 'var(--warm)', width: 2 });
+    pf.text(NF / 2, 0.95, 'risposta in frequenza', { color: 'var(--warm)', anchor: 'end', size: 10.5 });
+
+    // stima dei lobi laterali (massimo oltre il primo zero)
+    out.innerHTML = `
+      <div class="big"><b>${passes}</b> passaggi di media a ${M}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--accent)">risposta all'impulso</b> si liscia: ${passes === 1 ? 'un rettangolo' : passes === 2 ? 'un triangolo' : 'quasi una campana'}.
+        La <b style="color:var(--warm)">risposta in frequenza</b> migliora — i lobi laterali
+        <mark>${passes >= 3 ? 'sono ormai bassissimi' : 'scendono'}</mark> — ma resta senza un vero taglio netto.
+        È il limite centrale (Cap. 2) applicato ai filtri.
+      </div>`;
+  }
+  pS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

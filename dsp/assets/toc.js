@@ -232,7 +232,7 @@ const TOC = [
     n: 15,
     titolo: "Filtri a media mobile",
     file: "cap15-media-mobile.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Il filtro a media mobile" },
       { id: "s15-2", n: "15.2", t: "L'implementazione ricorsiva" },
