@@ -146,7 +146,7 @@ const TOC = [
     n: 10,
     titolo: "L'induttanza",
     file: "cap10-induttanza.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "L'induttanza mutua" },
       { id: "s10-2", n: "10.2", t: "L'autoinduttanza" },
