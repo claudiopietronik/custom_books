@@ -277,7 +277,7 @@ const TOC = [
     titolo: "Apprendimento di rappresentazioni",
     file: "cap15-rappresentazioni.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Pretraining non supervisionato greedy" },
       { id: "s15-2", n: "15.2", t: "Transfer learning e domain adaptation" },

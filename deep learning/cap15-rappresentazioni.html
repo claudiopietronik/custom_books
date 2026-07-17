@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Apprendimento di rappresentazioni — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15 · Parte III</div>
+    <h1>Apprendimento di rappresentazioni</h1>
+    <p class="standfirst">
+      È il tema che percorre tutto il libro, dal Capitolo 1: cosa rende una <b>rappresentazione</b> buona, e
+      come impararla. Qui lo affrontiamo di petto. Perché la profondità aiuta (guadagni <b>esponenziali</b>),
+      perché conviene <b>riusare</b> una rappresentazione tra compiti diversi (transfer learning), e cosa
+      significa <b>districare</b> i fattori nascosti. <mark>La rappresentazione giusta trasforma un problema
+      difficile in uno facile</mark> — la stessa lezione delle coordinate polari del Capitolo 1, generalizzata.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Come <b>inizializzare</b> con rappresentazioni non supervisionate: il pretraining greedy (§15.1). Come
+      <b>riusarle</b>: transfer learning e domain adaptation (§15.2). Cosa vogliamo davvero: <b>districare</b> i
+      fattori causali (§15.3). Perché le reti sono efficienti: la <b>rappresentazione distribuita</b> (§15.4,
+      widget) e i <b>guadagni esponenziali dalla profondità</b> (§15.5). Infine come <b>guidare</b>
+      l'apprendimento verso le cause giuste (§15.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il <b>transfer learning</b> è oggi la norma: quasi nessuno addestra da zero, si parte da modelli
+      pre-addestrati e si adatta. E capire <em>perché</em> le reti profonde sono più efficienti dei modelli
+      piatti — la rappresentazione distribuita e i guadagni della profondità — spiega la scommessa centrale del
+      deep learning (§5.11). <mark>Questo capitolo dà il «perché» dietro il «come» di tutta la Parte II.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Pretraining non supervisionato greedy</h2>
+
+  <p class="lead">
+    L'idea storica che sbloccò le reti profonde nel 2006: addestrare gli strati <b>uno alla volta</b>, in modo
+    non supervisionato, prima di rifinire il tutto con le etichette.
+  </p>
+
+  <p>
+    Prima delle ReLU e delle buone inizializzazioni (Cap. 8), addestrare reti profonde dall'inizio era quasi
+    impossibile. La svolta fu il <span class="termine">pretraining greedy strato per strato</span>: si addestra
+    il primo strato come autoencoder (non supervisionato), poi si «congela» e si addestra il secondo sulle sue
+    uscite, e così via; infine si rifinisce l'intera rete con le etichette. <mark>Ogni strato parte già da una
+    rappresentazione sensata</mark>, non da rumore. Oggi, con ReLU/batch norm/inizializzazioni migliori, spesso
+    non serve più — ma l'idea resta viva ogni volta che si <b>pre-addestra</b> su dati non etichettati
+    (§15.2).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Transfer learning e domain adaptation</h2>
+
+  <p class="lead">
+    Una rappresentazione imparata su un compito ricco di dati si <b>riusa</b> per un compito con pochi dati. È il
+    segreto pratico di gran parte del deep learning applicato.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔁</span> Riusare ciò che è già stato imparato</div>
+    <p style="margin-bottom:0">
+      Il <span class="termine">transfer learning</span> prende una rete addestrata su un compito sorgente (es.
+      ImageNet, milioni di immagini), ne tiene le feature (i primi strati) e riaddestra solo gli ultimi sul
+      compito bersaglio (poche migliaia di esempi). La <span class="termine">domain adaptation</span> è il caso
+      in cui il compito è lo stesso ma cambia la distribuzione dei dati (foto diurne → notturne). <mark>Funziona
+      perché le feature di basso livello sono generali</mark>: bordi e texture servono a ogni compito visivo. È
+      la ragione per cui oggi si parte quasi sempre da un modello pre-addestrato — la versione moderna del
+      pretraining di §15.1, portata alla scala dei grandi modelli fondativi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Disentangling dei fattori causali</h2>
+
+  <p class="lead">
+    Cos'è una rappresentazione «buona»? Una risposta: una in cui i <b>fattori di variazione</b> del mondo sono
+    <b>separati</b>, ciascuno su un asse diverso.
+  </p>
+
+  <p>
+    Una foto di volto dipende da fattori indipendenti: identità, espressione, illuminazione, angolo. Una
+    rappresentazione <b>districata</b> (disentangled) mette ciascun fattore su una <b>direzione separata</b> del
+    codice: muovi un asse e cambi solo l'illuminazione, muovine un altro e cambi solo l'espressione. <mark>È il
+    sogno del representation learning</mark>: catturare le cause vere e indipendenti dei dati (§1.3). Una tale
+    rappresentazione rende facili tantissimi compiti a valle — perché il lavoro difficile (separare le cause) è
+    già stato fatto. I modelli generativi (Cap. 20) tentano di impararla senza supervisione.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>La rappresentazione distribuita</h2>
+
+  <p class="lead">
+    Il concetto chiave che spiega l'efficienza delle reti: rappresentare i concetti con <b>combinazioni</b> di
+    feature, non con una feature dedicata per concetto.
+  </p>
+
+  <p>
+    In una rappresentazione <b>simbolica</b> (one-hot) serve un neurone per ogni concetto: 1000 concetti, 1000
+    neuroni, ognuno acceso da solo. In una <b>distribuita</b>, ogni concetto è una <b>combinazione</b> di poche
+    feature: con soli \(n\) neuroni binari si distinguono fino a \(2^n\) concetti. <mark>La differenza è
+    esponenziale</mark>: 20 feature bastano per un milione di concetti. Il widget lo mostra geometricamente: pochi
+    «rilevatori» (rette che tagliano il piano) partizionano lo spazio in <em>molte</em> regioni distinte,
+    ciascuna col suo codice. Aggiungi rilevatori e conta le regioni crescere ben più in fretta.
+  </p>
+
+  <div class="widget" id="w-dist">
+    <div class="w-head">
+      <span>Rappresentazione distribuita: pochi rilevatori, molte regioni</span>
+      <span class="hint">aggiungi rilevatori</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wd-svg" viewBox="0 0 560 400" role="img" aria-label="Poche rette (rilevatori) partizionano il piano in molte regioni, ciascuna con un codice binario diverso"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>rilevatori</label><input type="range" id="wd-n" min="1" max="6" step="1" value="3"><output id="wd-n-o">3</output></div>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Guadagni esponenziali dalla profondità</h2>
+
+  <p class="lead">
+    La rappresentazione distribuita spiega la larghezza; la <b>composizione</b> a più livelli spiega la
+    profondità. Insieme, danno alle reti profonde un'efficienza esponenziale.
+  </p>
+
+  <p>
+    Se ogni livello combina le feature del precedente, il numero di pattern rappresentabili cresce
+    <b>esponenzialmente con la profondità</b>. Una rete profonda può descrivere funzioni molto complesse
+    (con moltissime «pieghe») usando un numero di neuroni che una rete piatta dovrebbe far crescere in modo
+    esponenziale per eguagliare (§6.4). <mark>Profondità + distribuzione = tante funzioni complesse con pochi
+    parametri</mark>, purché i dati abbiano una struttura composizionale — che è la scommessa del deep learning
+    (§5.11). È il motivo teorico per cui «deep» batte «wide» sui dati reali.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Fornire indizi per scoprire le cause</h2>
+
+  <p class="lead">
+    Imparare le cause giuste senza supervisione è difficile. Possiamo aiutare la rete dandole <b>indizi</b> —
+    ipotesi generali su come è fatto un buon modo di rappresentare il mondo.
+  </p>
+
+  <p>
+    Sono <b>prior</b> generici che orientano l'apprendimento verso rappresentazioni sensate: la <b>lentezza</b>
+    (le cause cambiano piano, §13.3), la <b>sparsità</b> (pochi fattori attivi per volta, §13.4), la
+    <b>indipendenza</b> dei fattori (§13.2), la <b>gerarchia</b> (concetti astratti da concetti semplici, §1.3),
+    la fede che poche cause spieghino molti dati. <mark>Nessuno di questi è specifico di un compito</mark>: sono
+    scommesse su come è fatto il mondo, e proprio la loro generalità permette a una singola architettura di
+    imparare rappresentazioni utili in domini diversissimi.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>pretraining</b> non supervisionato (§15.1) e soprattutto il <b>transfer learning</b> (§15.2) —
+          riusare feature imparate su un compito ricco di dati — sono la norma pratica.</li>
+      <li>Una buona rappresentazione <b>districa</b> i fattori causali: un asse per causa (§15.3). È il sogno del
+          campo, dal Capitolo 1.</li>
+      <li>La <b>rappresentazione distribuita</b> (combinazioni di feature) distingue \(2^n\) concetti con \(n\)
+          neuroni: efficienza <b>esponenziale</b> (§15.4, widget).</li>
+      <li>La <b>profondità</b> compone rappresentazioni, con guadagni esponenziali su dati composizionali (§15.5).
+          I <b>prior</b> generici (lentezza, sparsità, gerarchia) guidano verso le cause giuste (§15.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Fin qui i modelli imparavano rappresentazioni deterministiche. La parte finale del libro è probabilistica:
+    come si <b>modella la distribuzione</b> di dati complessi, con tante variabili interdipendenti? Il
+    <strong>Capitolo 16</strong> introduce i <b>modelli probabilistici strutturati</b> — i grafi che
+    fattorizzano distribuzioni enormi in pezzi trattabili, il linguaggio dei modelli generativi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §15.4, quante regioni distinte creano 6 rilevatori (rette in posizione generale)? Quanti
+      neuroni servirebbero a una rappresentazione simbolica (one-hot) per distinguere lo stesso numero di
+      regioni?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Con \(n\) feature binarie, quanti concetti distinti può rappresentare al massimo una codifica distribuita?
+      E una one-hot? Per \(n=20\), quanto vale la differenza?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Cosa significa che una rappresentazione di volti è «districata» (disentangled)? Fai un esempio di cosa
+      dovrebbe succedere muovendo un singolo asse del codice.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Nel transfer learning si riusano le feature di basso livello di una rete pre-addestrata. &nbsp;
+      (b) Una rappresentazione distribuita usa un neurone dedicato per ogni concetto. &nbsp;
+      (c) La profondità dà guadagni esponenziali su dati con struttura composizionale. &nbsp;
+      (d) I prior come sparsità e lentezza sono specifici di un singolo compito.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-8"><span class="secnum">Sezione 15.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Con \(n\) rette in posizione generale il piano si divide in \(1+n+\binom{n}{2}\) regioni: per \(n=6\),
+      \(1+6+15=\mathbf{22}\) regioni. Una rappresentazione <b>simbolica</b> ne servirebbe <b>22 neuroni</b> (uno
+      per regione), mentre la distribuita ne usa solo <b>6</b> (uno per retta): il codice binario «da che parte
+      di ogni retta» identifica la regione. <mark>6 rilevatori, 22 concetti.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      Distribuita: fino a <b>\(2^n\)</b> concetti (ogni combinazione di bit). One-hot: <b>\(n\)</b> concetti (un
+      bit acceso per volta). Per \(n=20\): distribuita \(2^{20}=1\,048\,576\) concetti, one-hot solo 20.
+      <mark>Un milione contro venti</mark>: la potenza della rappresentazione distribuita.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      «Districata» significa che ogni <b>fattore di variazione</b> indipendente (identità, espressione,
+      illuminazione, posa) è codificato su una <b>direzione separata</b>. Muovendo un singolo asse dovrebbe
+      cambiare <b>un solo fattore</b>: per esempio, spostarsi lungo l'asse «illuminazione» cambia solo la luce
+      sul volto, lasciando invariate identità ed espressione. <mark>Un asse, una causa.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> Le feature di basso livello (bordi, texture) sono generali e si riusano (§15.2). <br>
+      <b>(b) FALSO.</b> È la one-hot ad avere un neurone per concetto; la distribuita usa <b>combinazioni</b>
+      (§15.4). <br>
+      <b>(c) VERO.</b> Composizione a più livelli → guadagni esponenziali su dati composizionali (§15.5). <br>
+      <b>(d) FALSO.</b> Sono prior <b>generici</b>, non legati a un compito: è la loro generalità a renderli
+      utili (§15.6).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §15.4 — rappresentazione distribuita: rette che partizionano il piano
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wd-out');
+  const nI = document.getElementById('wd-n'), nO = document.getElementById('wd-n-o');
+  // rette fisse (a x + b y + c = 0), prese in ordine
+  const LINES = [
+    [1, 0.3, -0.4], [0.2, 1, -0.3], [-0.7, 0.8, 0.5], [1, -0.9, -0.2], [0.5, 1, 0.8], [-1, -0.4, 0.3]
+  ];
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  // palette per i codici delle regioni
+  const PAL = ['--accent', '--warm', '--green', '--violet', '--gold'];
+
+  function draw() {
+    const n = parseInt(nI.value, 10); nO.textContent = n;
+    svg.innerHTML = '';
+    const W = 560, H = 400, xm = -2.6, xM = 2.6, ym = -1.9, yM = 1.9;
+    const toPx = (x, y) => [30 + (x - xm) / (xM - xm) * (W - 60), 20 + (yM - y) / (yM - ym) * (H - 60)];
+    const g = el('g', {}); svg.appendChild(g);
+    // rasterizza per colorare le regioni per codice
+    const cols = 44, rows = 32;
+    const seen = {};
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      const x = xm + (i + 0.5) / cols * (xM - xm), y = ym + (j + 0.5) / rows * (yM - ym);
+      let code = 0; for (let k = 0; k < n; k++) { const L = LINES[k]; if (L[0] * x + L[1] * y + L[2] > 0) code |= (1 << k); }
+      seen[code] = true;
+      // colore deterministico dal codice
+      const hue = (code * 2654435761) % 5;
+      const light = 30 + ((code >> 2) % 3) * 22;
+      const [px] = toPx(x, y); const [, py] = toPx(x, y);
+      g.appendChild(el('rect', { x: px - (W - 60) / cols / 2, y: py - (H - 60) / rows / 2, width: (W - 60) / cols + 1, height: (H - 60) / rows + 1, fill: `color-mix(in srgb, var(${PAL[hue]}) ${light}%, var(--paper))`, opacity: 0.85 }));
+    }
+    // rette
+    for (let k = 0; k < n; k++) {
+      const L = LINES[k];
+      // due punti agli estremi
+      let pA, pB;
+      if (Math.abs(L[1]) > Math.abs(L[0])) { pA = [xm, -(L[0] * xm + L[2]) / L[1]]; pB = [xM, -(L[0] * xM + L[2]) / L[1]]; }
+      else { pA = [-(L[1] * ym + L[2]) / L[0], ym]; pB = [-(L[1] * yM + L[2]) / L[0], yM]; }
+      const a = toPx(pA[0], pA[1]), b = toPx(pB[0], pB[1]);
+      g.appendChild(el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: 'var(--ink)', 'stroke-width': 2 }));
+    }
+    const regions = Object.keys(seen).length;
+    const maxTheory = 1 + n + n * (n - 1) / 2;
+    out.innerHTML = `
+      <div class="big">
+        <b>${n}</b> rilevatori → <b style="color:var(--accent)">${regions}</b> regioni distinte
+        &nbsp;(una one-hot ne servirebbe <b>${regions}</b> neuroni)
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni <b>retta</b> è un rilevatore binario (da che parte sto?); il codice di \(n\) bit «da che parte di
+        ogni retta» identifica la regione. Con soli ${n} rilevatori distingui ${regions} concetti — e crescono
+        come \(1+n+\binom{n}{2}\) (fino a ${maxTheory}). <mark>Pochi rilevatori, esponenzialmente più concetti:
+        è la rappresentazione distribuita.</mark> Aggiungi rilevatori e conta le regioni.
+      </div>`;
+  }
+  nI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
