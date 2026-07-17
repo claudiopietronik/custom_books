@@ -144,7 +144,7 @@ const TOC = [
   },
   {
     n: 12, parte: "II · Normalizzazione e outlier",
-    titolo: "Dati multivariati", file: "cap12-multivariati.html", stato: "da-fare",
+    titolo: "Dati multivariati", file: "cap12-multivariati.html", stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Outlier in più dimensioni" },
       { id: "s12-2", n: "12.2", t: "La distanza di Mahalanobis" },

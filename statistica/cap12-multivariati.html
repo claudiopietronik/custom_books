@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Dati multivariati — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte II · Normalizzazione e outlier</div>
+    <h1>Dati multivariati</h1>
+    <p class="standfirst">
+      Finora una variabile alla volta. Ma i dati reali hanno molte colonne, e lì gli outlier si nascondono
+      meglio: un punto può essere <b>perfettamente normale su ogni singola variabile</b> e clamorosamente anomalo
+      nella loro <em>combinazione</em>. Serve una distanza che tenga conto di come le variabili variano insieme:
+      la <b>distanza di Mahalanobis</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude la Parte II generalizzando a più dimensioni tutto ciò che abbiamo fatto in una: scaling (Cap. 10) e
+      outlier (Cap. 11). Il concetto di «variare insieme» che appare qui — la correlazione — è il cuore della
+      Parte IV (Cap. 36); questo capitolo ne pianta il seme geometrico.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Un adulto alto 150 cm non è strano; uno che pesa 45 kg neppure; ma uno alto 150 cm <em>e</em> pesante
+      110 kg sì. Le frodi, i guasti, gli errori nei dati reali sono quasi sempre outlier <b>multivariati</b>:
+      normali su ogni colonna, impossibili nella combinazione. Vederli richiede strumenti nuovi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">SEZIONE 12.1</span>Outlier in più dimensioni</h2>
+
+  <p class="lead">
+    Il fatto sorprendente: un punto può stare nella norma su <em>ogni</em> variabile presa singolarmente, e
+    tuttavia essere un outlier evidente quando le guardi <b>insieme</b>.
+  </p>
+
+  <p>
+    Immagina altezza e peso di tante persone: le due variabili sono <b>correlate</b> (chi è più alto tende a
+    pesare di più), quindi la nuvola di punti è un'ellisse inclinata. Un individuo alto 150 cm e pesante 110 kg
+    ha un'altezza plausibile (tanti sono alti 150) e un peso plausibile (tanti pesano 110) — ma quella
+    <em>combinazione</em> cade lontanissima dall'ellisse: nessuno alto 150 pesa 110. Guardando istogramma per
+    istogramma non lo vedresti mai; nello scatter 2D salta all'occhio.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Outlier univariato e multivariato</div>
+    <p style="margin-bottom:0">
+      <b>Univariato:</b> estremo su una singola variabile (lo trovi con z-score o IQR, Cap. 11).
+      <b>Multivariato:</b> anomalo nella <em>relazione</em> tra variabili, pur essendo normale su ciascuna. I
+      criteri a una variabile sono ciechi a questo tipo — serve la struttura di correlazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">SEZIONE 12.2</span>La distanza di Mahalanobis</h2>
+
+  <p class="lead">
+    La distanza euclidea tratta tutte le direzioni allo stesso modo, e non sa nulla della correlazione. La
+    <b>distanza di Mahalanobis</b> la corregge: misura la distanza dal centro <em>in unità di deviazione
+    standard, tenendo conto di come le variabili variano insieme</em>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Distanza di Mahalanobis <span class="tag">distanza «consapevole» della forma</span></div>
+    <div class="f-body">
+      \[ D_M(\vv{x}) \;=\; \sqrt{(\vv{x} - \hA{\vv{\mu}})\T\, \hB{\Sigma^{-1}}\, (\vv{x} - \hA{\vv{\mu}})} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{x} - \hA{\vv{\mu}}\)</dt><dd>lo scarto (vettoriale) del punto dal centro della nuvola.</dd>
+        <dt>\(\hB{\Sigma^{-1}}\)</dt><dd>l'inversa della <b>matrice di covarianza</b>: codifica quanto ciascuna variabile varia e quanto le variabili sono correlate. È il pezzo che «conosce la forma dell'ellisse».</dd>
+        <dt>\(\sqrt{\;}\)</dt><dd>rende il tutto una distanza vera e propria (un numero puro).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'effetto: <mark>la distanza si misura lungo l'ellisse dei dati, non lungo cerchi</mark>. Un punto vicino in
+      linea d'aria ma «fuori dall'ellisse» ha grande distanza di Mahalanobis; uno lontano ma nella direzione della
+      correlazione ne ha poca. Se scegli \(\Sigma = \) identità (variabili scorrelate e a varianza 1), la
+      Mahalanobis torna a essere la comune distanza euclidea sugli z-score.
+    </div>
+  </div>
+
+  <h3>Provalo: l'outlier che nessun istogramma vede</h3>
+
+  <p>
+    Una nuvola di dati correlati (altezza–peso). Trascina il punto <b style="color:var(--warm)">rosso</b>: sotto
+    vedi la sua posizione rispetto agli istogrammi di ciascun asse <em>e</em> la sua distanza di Mahalanobis.
+    Portalo <b>dentro entrambi gli istogrammi ma fuori dall'ellisse</b>: sarà normale su ogni asse, ma marcato
+    come outlier multivariato.
+  </p>
+
+  <div class="widget" id="w-maha">
+    <div class="w-head">
+      <span>Outlier multivariato</span>
+      <span class="hint">normale su ogni asse, anomalo insieme</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wmh-svg" viewBox="0 0 460 340" role="img" aria-label="Scatter di dati correlati con ellisse; un punto trascinabile diventa outlier multivariato"></svg>
+    </div>
+    <div class="w-readout" id="wmh-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">SEZIONE 12.3</span>Scalare feature multiple</h2>
+
+  <p class="lead">
+    La normalizzazione del Cap. 10 si applica a ogni colonna, ma con più variabili nascono nuove scelte.
+  </p>
+
+  <p>
+    La prassi è normalizzare <b>ogni feature separatamente</b> (ognuna col suo \(\bar{x}\) e \(s\), oppure il suo
+    min e max), così tutte arrivano al modello sulla stessa scala. Attenzione però: normalizzare colonna per
+    colonna <em>non</em> rimuove la correlazione tra le colonne — sposta e stira gli assi, ma l'ellisse inclinata
+    resta inclinata. Se vuoi anche <b>scorrelare</b> le variabili (renderle indipendenti e a varianza 1), serve
+    una trasformazione più forte, lo <b>sbiancamento</b> (whitening), che è geometricamente la stessa idea della
+    Mahalanobis: applicare \(\Sigma^{-1/2}\) per trasformare l'ellisse in un cerchio.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> Verso la PCA</div>
+    <p style="margin-bottom:0">
+      Scorrelare le variabili trovando le direzioni di massima varianza è esattamente ciò che fa l'<b>analisi
+      delle componenti principali</b> (PCA). Non la trattiamo qui, ma sappi che la matrice di covarianza \(\Sigma\)
+      di questa sezione è il punto di partenza di quella tecnica — un ponte diretto verso l'algebra lineare
+      applicata ai dati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">SEZIONE 12.4</span>Strategie pratiche</h2>
+
+  <p class="lead">
+    Un promemoria operativo per affrontare un dataset multivariato reale, mettendo in fila la Parte II.
+  </p>
+
+  <ol>
+    <li><b>Guarda i dati</b> — istogrammi di ogni variabile e scatter a coppie. La maggior parte dei problemi si
+      vede a occhio (Cap. 7–8).</li>
+    <li><b>Cerca gli outlier</b> — univariati con z-score/IQR (Cap. 11), multivariati con la distanza di
+      Mahalanobis (§12.2).</li>
+    <li><b>Indaga, non cancellare</b> — capisci perché un punto è anomalo prima di decidere (Cap. 11).</li>
+    <li><b>Normalizza ogni feature</b> — z-score o min-max per colonna, con parametri calcolati sul solo train
+      (Cap. 10).</li>
+    <li><b>Considera metodi robusti</b> — se gli outlier sono veri, spesso è meglio un modello che li tollera che
+      un dato manomesso.</li>
+  </ol>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La maledizione delle dimensioni, in breve</div>
+    <p style="margin-bottom:0">
+      Con moltissime variabili, l'intuizione geometrica tradisce: in spazi ad alta dimensione <b>quasi tutti i
+      punti sembrano lontani da tutti</b>, e persino la nozione di «outlier» si fa scivolosa. È la
+      <em>curse of dimensionality</em>. Regola pratica: riduci le dimensioni (selezione di feature, PCA) prima di
+      cercare anomalie in decine di variabili contemporaneamente.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">SEZIONE 12.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">Spiega con parole tue perché un punto può non essere un outlier su nessuna singola
+      variabile e tuttavia esserlo nell'insieme.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché le variabili sono <b>correlate</b>: i dati non riempiono un rettangolo
+          ma un'<b>ellisse inclinata</b>. Un valore può cadere nel range «normale» di ciascun asse (dentro
+          entrambi gli istogrammi) ma finire in una zona dell'ellisse dove non c'è nessuno — una combinazione che
+          la correlazione rende improbabile (es. alto e leggerissimo). I criteri a una variabile guardano gli
+          assi uno per volta e non vedono la combinazione (§12.1).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">Cosa rende la distanza di Mahalanobis diversa dalla distanza euclidea? Quando le due
+      coincidono?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La Mahalanobis include \(\Sigma^{-1}\), la matrice di covarianza inversa: misura la distanza
+          <b>lungo l'ellisse</b> dei dati, in unità di deviazione standard e tenendo conto della correlazione. La
+          euclidea usa cerchi e ignora tutto ciò.</p>
+        <p style="margin-bottom:0">Coincidono (a meno di una scala) quando \(\Sigma\) è l'<b>identità</b>:
+          variabili scorrelate e con varianza 1 — cioè quando i dati sono già standardizzati e indipendenti. In
+          quel caso la Mahalanobis è la euclidea sugli z-score.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">Hai normalizzato ogni colonna con lo z-score. Le variabili sono ora scorrelate?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>No.</b> Lo z-score per colonna porta ciascuna variabile a media 0 e
+          deviazione 1, ma <b>non tocca la correlazione</b> tra le colonne (§12.3): l'ellisse resta inclinata,
+          solo ricentrata e riscalata. Per scorrelare serve una trasformazione che coinvolga la matrice di
+          covarianza (whitening / PCA).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">SEZIONE 12.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>Outlier multivariato:</b> normale su ogni asse, anomalo nella combinazione. I criteri a una variabile
+        non lo vedono.</li>
+      <li><b>Distanza di Mahalanobis:</b> distanza dal centro che tiene conto di varianza e correlazione (via
+        \(\Sigma^{-1}\)). Misura «lungo l'ellisse».</li>
+      <li><b>Normalizzare per colonna</b> non scorrela le variabili: serve il whitening/PCA per quello.</li>
+      <li><b>In alta dimensione</b> l'intuizione tradisce (curse of dimensionality): riduci le dimensioni prima di
+        cercare anomalie.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con questo chiudiamo la <strong>Parte II</strong>: i dati sono puliti, scalati, con gli outlier sotto
+    controllo. Ma per fare il salto dal descrivere all'<em>inferire</em> manca il linguaggio dell'incertezza.
+    La <b>Parte III</b> lo costruisce da zero: comincia dal significato stesso della parola più abusata della
+    statistica — «probabilità» — nel <strong>Capitolo 13</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.2 — outlier multivariato con ellisse di correlazione
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wmh-svg');
+  if (!svg) return;
+  const out = document.getElementById('wmh-out');
+
+  // nuvola correlata (altezza x, peso y), riproducibile
+  let seed = 7;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const gs = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const mx = 50, my = 50, sx = 13, sy = 13, rho = 0.8;
+  const pts = [];
+  for (let i = 0; i < 160; i++) { const z1 = gs(), z2 = gs(); const x = mx + sx * z1; const y = my + sy * (rho * z1 + Math.sqrt(1 - rho * rho) * z2); pts.push([x, y]); }
+  // Mahalanobis con Σ nota
+  const sxx = sx * sx, syy = sy * sy, sxy = rho * sx * sy;
+  const det = sxx * syy - sxy * sxy;
+  const iA = syy / det, iB = -sxy / det, iD = sxx / det;   // Σ^{-1} = [[iA,iB],[iB,iD]]
+  const maha = (x, y) => { const dx = x - mx, dy = y - my; return Math.sqrt(iA * dx * dx + 2 * iB * dx * dy + iD * dy * dy); };
+  let drag = [65, 35];   // parte come outlier multivariato
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 10, xmax: 90, ymin: 10, ymax: 90, iso: true });
+    p.axes({ numbers: false, names: true, xname: 'altezza →', yname: 'peso →' });
+    // ellisse di Mahalanobis a distanza 2 (contorno "regolare")
+    const ell = [];
+    for (let t = 0; t <= 2 * Math.PI + 0.01; t += 0.05) {
+      // punti a Mahalanobis = 2.5: parametrizza il cerchio e mappa con Σ^{1/2}
+      const cx = Math.cos(t), cy = Math.sin(t);
+      // Σ^{1/2} approssimato via decomposizione: usa correlazione
+      const R = 2.5;
+      const ex = mx + R * sx * cx;
+      const ey = my + R * sy * (rho * cx + Math.sqrt(1 - rho * rho) * cy);
+      ell.push([ex, ey]);
+    }
+    p.poly(ell, { color: 'var(--green)', width: 1.8, close: true, dash: '5 4' });
+    // punti
+    pts.forEach(q => p.dot(q[0], q[1], { r: 2.6, color: 'color-mix(in srgb, var(--accent) 60%, transparent)', stroke: 'var(--paper)', sw: 0.5 }));
+    // proiezioni sugli assi (righe guida)
+    p.line(drag[0], 10, drag[0], drag[1], { color: 'var(--ink-faint)', width: 0.8, dash: '2 3' });
+    p.line(10, drag[1], drag[0], drag[1], { color: 'var(--ink-faint)', width: 0.8, dash: '2 3' });
+    const dM = maha(drag[0], drag[1]);
+    const isOut = dM > 2.5;
+    p.handle(drag[0], drag[1], { r: 7, color: isOut ? 'var(--warm)' : 'var(--green)' }, (x, y) => { drag = [Math.max(12, Math.min(88, x)), Math.max(12, Math.min(88, y))]; draw(); });
+
+    // z-score su ogni asse
+    const zx = Math.abs((drag[0] - mx) / sx), zy = Math.abs((drag[1] - my) / sy);
+    out.innerHTML = `
+      <div class="big">Mahalanobis = <b style="color:${isOut ? 'var(--warm)' : 'var(--green)'}">${dM.toFixed(2)}</b> ${isOut ? '→ outlier' : '→ regolare'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Su ogni asse è normale: z(altezza) = ${zx.toFixed(1)}, z(peso) = ${zy.toFixed(1)} — entrambi piccoli.
+        ${isOut
+          ? 'Eppure il punto è <mark>fuori dall’ellisse</mark>: la combinazione è improbabile. Un outlier che nessun istogramma singolo rivelerebbe.'
+          : 'E infatti è dentro l’ellisse: un punto regolare. Trascinalo controcorrente alla nuvola (in alto a sinistra o in basso a destra) per renderlo un outlier multivariato.'}
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
