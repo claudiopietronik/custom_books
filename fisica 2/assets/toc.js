@@ -43,7 +43,7 @@ const TOC = [
     n: 3,
     titolo: "Il potenziale elettrico",
     file: "cap03-potenziale.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "L'energia potenziale elettrica" },
       { id: "s3-2", n: "3.2", t: "Il potenziale elettrico" },
