@@ -13,7 +13,7 @@ const TOC = [
   /* ===================== PARTE I — STATISTICA DESCRITTIVA ================= */
   {
     n: 1, parte: "I · Statistica descrittiva",
-    titolo: "Introduzione", file: "cap01-introduzione.html", stato: "da-fare",
+    titolo: "Introduzione", file: "cap01-introduzione.html", stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "A cosa serve la statistica" },
       { id: "s1-2", n: "1.2", t: "Descrittiva, probabilità, inferenza" },
