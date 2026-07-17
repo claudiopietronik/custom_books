@@ -89,7 +89,7 @@ const TOC = [
     n: 6,
     titolo: "Funzioni di più variabili: limiti e continuità",
     file: "cap06-piu-variabili.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Funzioni da ℝⁿ a ℝᵐ" },
       { id: "s6-2", n: "6.2", t: "Grafici e insiemi di livello" },

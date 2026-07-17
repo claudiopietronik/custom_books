@@ -26,7 +26,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 - [x] 3 — Serie di potenze
 - [x] 4 — Serie di Fourier
 - [x] 5 — Lo spazio ℝⁿ e la topologia
-- [ ] 6 — Funzioni di più variabili: limiti e continuità
+- [x] 6 — Funzioni di più variabili: limiti e continuità
 - [ ] 7 — Calcolo differenziale in più variabili
 - [ ] 8 — Taylor e ottimizzazione libera
 - [ ] 9 — Ottimizzazione vincolata
