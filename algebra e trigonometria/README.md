@@ -32,7 +32,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 2 — Equazioni e disequazioni
 - [x] 3 — Funzioni e relazioni
 - [x] 4 — Funzioni polinomiali e razionali
-- [ ] 5 — Funzioni esponenziali e logaritmiche
+- [x] 5 — Funzioni esponenziali e logaritmiche
 - [ ] 6 — Le funzioni trigonometriche
 - [ ] 7 — Trigonometria analitica
 - [ ] 8 — Applicazioni della trigonometria

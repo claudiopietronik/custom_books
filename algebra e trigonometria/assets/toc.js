@@ -84,7 +84,7 @@ const TOC = [
     n: 5,
     titolo: "Funzioni esponenziali e logaritmiche",
     file: "cap05-esponenziali-logaritmiche.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Funzioni inverse" },
       { id: "s5-2", n: "5.2", t: "Funzioni esponenziali" },
