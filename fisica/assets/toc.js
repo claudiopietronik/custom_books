@@ -67,7 +67,7 @@ const TOC = [
     n: 4,
     titolo: "Le leggi di Newton",
     file: "cap04-leggi-newton.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Forza e interazioni" },
       { id: "s4-2", n: "4.2", t: "La prima legge: l'inerzia" },
