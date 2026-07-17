@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Proprietà della convoluzione — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.07 — Capitolo 7</div>
+    <h1>Proprietà della convoluzione</h1>
+    <p class="standfirst">
+      La convoluzione non è solo un conto: è un'operazione algebrica con regole precise — commutativa,
+      associativa, distributiva — proprio come la moltiplicazione. Sembra formalismo, ma ogni regola nasconde una
+      conseguenza pratica sorprendente: perché l'ordine dei filtri non conta, perché due filtri in cascata sono
+      un filtro solo, come si <em>cerca</em> un pattern dentro un segnale. Qui la teoria diventa mestiere.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiudiamo il capitolo sul dominio del tempo. Con la convoluzione (Cap. 6) e le sue proprietà (qui) abbiamo
+      il primo strumento completo. Dal Cap. 8 cambiamo prospettiva radicalmente: entriamo nel <b>dominio della
+      frequenza</b> con Fourier — e scopriremo che la convoluzione, di là, si trasforma in qualcosa di
+      inaspettatamente semplice.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Queste proprietà sono gli attrezzi con cui si <em>progettano</em> sistemi complessi: combinare filtri,
+      riordinarli per efficienza, spezzarli in blocchi. E la <b>correlazione</b> — cugina della convoluzione —
+      è alla base del rilevamento: trovare un'eco radar, riconoscere una parola, individuare un segnale noto
+      sepolto nel rumore. Sono idee che useremo dal primo filtro all'ultima applicazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">SEZIONE 7.1</span>La delta come elemento neutro</h2>
+
+  <p class="lead">
+    Ogni operazione ha il suo elemento «che non fa niente»: per la somma è lo zero, per il prodotto è l'uno. Per
+    la convoluzione è la <b>funzione delta</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La delta e le sue parenti <span class="tag">l'identità della convoluzione</span></div>
+    <div class="f-body">
+      \[
+        \sig{x}[n] \conv \hA{\delta[n]} = \sig{x}[n] \qquad
+        \sig{x}[n] \conv \hB{\delta[n-s]} = \sig{x}[n-s] \qquad
+        \sig{x}[n] \conv \hC{k\,\delta[n]} = k\,\sig{x}[n]
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\delta[n]}\)</dt><dd>l'impulso unitario: convolvere con esso <b>lascia il segnale
+            invariato</b>. È l'elemento neutro.</dd>
+        <dt>\(\hB{\delta[n-s]}\)</dt><dd>un impulso <b>spostato</b> di \(s\): convolvere con esso <b>ritarda</b>
+            il segnale di \(s\) campioni, senza cambiarne la forma.</dd>
+        <dt>\(\hC{k\,\delta[n]}\)</dt><dd>un impulso <b>scalato</b> di \(k\): convolvere con esso è un puro
+            <b>amplificatore</b> di guadagno \(k\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Queste tre righe dicono che i sistemi più elementari — «non fare nulla», «ritarda», «amplifica» — sono
+      tutti convoluzioni con una delta opportuna. <mark>Ogni risposta all'impulso è, in fondo, una collezione di
+      delta scalate e traslate</mark> — ed è proprio così che il §5.6 vedeva i segnali.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">SEZIONE 7.2</span>Commutativa, associativa, distributiva</h2>
+
+  <p class="lead">
+    La convoluzione obbedisce alle stesse tre leggi della moltiplicazione ordinaria. Le enunciamo, e nella
+    prossima sezione ne leggiamo il significato fisico.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le tre leggi <span class="tag">come la moltiplicazione</span></div>
+    <div class="f-body">
+      \[
+        \begin{aligned}
+        \text{commutativa:}\quad & \sig{a} \conv \sig{b} = \sig{b} \conv \sig{a} \\[3pt]
+        \text{associativa:}\quad & (\sig{a} \conv \sig{b}) \conv \sig{c} = \sig{a} \conv (\sig{b} \conv \sig{c}) \\[3pt]
+        \text{distributiva:}\quad & \sig{a} \conv (\sig{b} + \sig{c}) = (\sig{a} \conv \sig{b}) + (\sig{a} \conv \sig{c})
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      <p style="margin-bottom:0"><b>Commutativa</b>: puoi scambiare i due segnali, il risultato non cambia.
+      <b>Associativa</b>: puoi raggruppare le convoluzioni come vuoi. <b>Distributiva</b>: la convoluzione si
+      «spalma» su una somma. Sembrano ovvietà da manuale — invece ciascuna, applicata ai sistemi, dice qualcosa
+      di concreto e utile.</p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">SEZIONE 7.3</span>Cosa significano per i sistemi reali</h2>
+
+  <p>
+    Traduciamo ogni legge in un fatto ingegneristico.
+  </p>
+
+  <ul>
+    <li><b>Commutativa → ingresso e sistema sono intercambiabili.</b> Poiché \(x \conv h = h \conv x\), è
+        matematicamente indifferente chiamare uno «il segnale» e l'altro «il filtro». Utile nei conti e nelle
+        dimostrazioni: puoi ribaltare i ruoli quando conviene.</li>
+    <li><b>Associativa → l'ordine in cascata non conta, e più filtri diventano uno.</b> Due filtri in serie,
+        \(h_1\) poi \(h_2\), danno lo stesso risultato di \(h_2\) poi \(h_1\). E l'intera cascata equivale a un
+        <em>unico</em> filtro con risposta \(h_1 \conv h_2\): puoi «pre-convolvere» i filtri e applicarne uno
+        solo.</li>
+    <li><b>Distributiva → i sistemi in parallelo si sommano.</b> Due filtri che elaborano lo stesso ingresso e
+        le cui uscite si sommano equivalgono a un unico filtro con risposta \(h_1 + h_2\). È il §5.7, ora
+        dimostrato.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché l'ordine non conta è meno ovvio di quanto sembri</div>
+    <p style="margin-bottom:0">
+      Che «leviga poi deriva» dia lo stesso di «deriva poi leviga» non è per niente scontato — con operazioni
+      non lineari sarebbe falso (prova: elevare al quadrato e poi raddoppiare ≠ raddoppiare e poi elevare al
+      quadrato). È un privilegio dei sistemi LTI, e discende <em>esattamente</em> dall'associatività e
+      commutatività della convoluzione. Il widget qui sotto ti fa toccare con mano questa libertà.
+    </p>
+  </div>
+
+  <h3>Provalo: l'ordine in cascata non conta</h3>
+
+  <p>
+    Due filtri, <b style="color:var(--accent)">A</b> (leviga) e <b style="color:var(--warm)">B</b> (deriva),
+    applicati in cascata. Scambia l'ordine e confronta: l'uscita <b>A→B</b> e l'uscita <b>B→A</b> sono
+    identiche, curva su curva. È l'associatività al lavoro.
+  </p>
+
+  <div class="widget" id="w-order">
+    <div class="w-head">
+      <span>A→B contro B→A</span>
+      <span class="hint">scambia l'ordine: l'uscita non cambia</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wo-svg" viewBox="0 0 620 280" role="img" aria-label="Due filtri in cascata danno la stessa uscita indipendentemente dall'ordine"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wo-ab">A → B</button>
+      <button class="w-btn" id="wo-ba">B → A</button>
+      <button class="w-btn" id="wo-both">sovrapponi</button>
+    </div>
+    <div class="w-readout" id="wo-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">SEZIONE 7.4</span>Derivata e integrale discreti</h2>
+
+  <p>
+    Due kernel meritano un posto d'onore, perché sono il «calcolo infinitesimale» del mondo discreto, e sono
+    l'uno l'inverso dell'altro.
+  </p>
+
+  <p>
+    La <b class="termine">derivata discreta</b> (o prima differenza) è la convoluzione con \(h = [1, -1]\):
+    \(y[n] = x[n] - x[n-1]\). Misura quanto il segnale <em>cambia</em> da un campione al successivo — l'analogo
+    discreto della derivata. L'<b class="termine">integrale discreto</b> (o somma corrente) fa l'opposto: accumula
+    tutti i campioni, \(y[n] = y[n-1] + x[n]\). E come derivata e integrale nel continuo, <mark>queste due
+    operazioni si annullano a vicenda</mark>: la somma corrente della prima differenza di un segnale ridà il
+    segnale (a meno di una costante). Deriva e poi integra, e torni al punto di partenza.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Un ponte con l'analisi</div>
+    <p style="margin-bottom:0">
+      Se conosci il calcolo differenziale, riconoscerai vecchi amici. La prima differenza è il rapporto
+      incrementale senza il limite; la somma corrente è l'integrale come somma di Riemann senza infinitesimi.
+      Il DSP <em>è</em> analisi, ma fatta con numeri finiti invece che con limiti — e per questo eseguibile da un
+      calcolatore. Molte intuizioni dell'Analisi si trasferiscono qui quasi identiche.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">SEZIONE 7.5</span>La correlazione incrociata</h2>
+
+  <p class="lead">
+    Cambiamo domanda. Finora abbiamo <em>filtrato</em>; adesso vogliamo <b>cercare</b>: «dov'è, in questo
+    segnale, il pezzo che assomiglia a questo modello?» Lo strumento è la <b>correlazione incrociata</b>, e
+    somiglia moltissimo alla convoluzione — con una differenza cruciale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Correlazione vs convoluzione <span class="tag">quasi uguali, ma senza il ribaltamento</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{(\sig{x}\corr \sig{t})[n] = \sum_{k} \sig{x}[k]\,\hA{\sig{t}[k-n]}}_{\text{correlazione}}
+        \qquad\ne\qquad
+        \underbrace{(\sig{x}\conv \sig{h})[n] = \sum_{k} \sig{x}[k]\,\hB{\sig{h}[n-k]}}_{\text{convoluzione}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\sig{t}[k-n]}\)</dt><dd>nella correlazione il modello \(t\) <b>non</b> viene ribaltato: si fa
+            solo scorrere. Confronta le due forme «così come sono».</dd>
+        <dt>\(\hB{\sig{h}[n-k]}\)</dt><dd>nella convoluzione il segno di \(k\) è invertito: la \(h\) viene
+            <b>ribaltata</b> (Cap. 6).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In pratica: <mark>la correlazione è una convoluzione in cui NON ribalti il secondo segnale</mark>. Misura la
+      <b>somiglianza</b> tra il modello e ogni tratto del segnale: dove il segnale «assomiglia» al modello, la
+      correlazione fa un picco. È il principio del <b>filtro adattato</b> (Cap. 17), l'arma ottimale per stanare
+      un segnale noto dentro il rumore.
+    </div>
+  </div>
+
+  <h3>Provalo: la correlazione trova il pattern</h3>
+
+  <p>
+    Nel segnale (in <b style="color:var(--ink-faint)">grigio</b>) è nascosto un piccolo modello, sepolto nel
+    rumore — quasi invisibile a occhio. Fai scorrere il modello e guarda la <b style="color:var(--accent)">curva
+    di correlazione</b>: resta bassa quasi ovunque, ma <b>schizza in un picco netto</b> esattamente dove il
+    modello combacia col segnale. È così che un radar trova un'eco che l'occhio non vede.
+  </p>
+
+  <div class="widget" id="w-corr">
+    <div class="w-head">
+      <span>Correlazione: caccia al pattern</span>
+      <span class="hint">scorri il modello e trova il picco</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcr-top" viewBox="0 0 620 150" role="img" aria-label="Un segnale rumoroso con un modello nascosto, e il modello che vi scorre sopra"></svg>
+      <svg id="wcr-bot" viewBox="0 0 620 130" role="img" aria-label="La curva di correlazione, con un picco netto dove il modello combacia"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>posizione</label><input type="range" id="wcr-p" min="0" max="1" step="1" value="0"><output id="wcr-pv">0</output></div>
+      <button class="w-btn" id="wcr-new">rigenera rumore</button>
+    </div>
+    <div class="w-readout" id="wcr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">SEZIONE 7.6</span>Il costo di calcolo</h2>
+
+  <p>
+    Un'ultima, importante osservazione pratica. La convoluzione diretta è potente ma <b>costosa</b>: per un
+    ingresso di \(N_x\) campioni e una risposta all'impulso di \(N_h\), servono circa \(N_x \times N_h\)
+    moltiplica-e-accumula. Con filtri corti va benissimo. Ma con \(h\) lunghe centinaia o migliaia di campioni —
+    come i filtri di alta qualità del Cap. 16 — il conto esplode.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Un'anticipazione che vale oro</div>
+    <p style="margin-bottom:0">
+      Qui la storia prende una piega sorprendente. Nel dominio della frequenza (Cap. 8–12) la convoluzione si
+      trasforma in una semplice <b>moltiplicazione</b> — un'operazione molto più economica. Combinando questo con
+      l'algoritmo FFT (Cap. 12), si può convolvere passando per la frequenza a una frazione del costo: è la
+      <b>convoluzione tramite FFT</b> del Cap. 18. <mark>A volte la strada più veloce per fare un'operazione è
+      cambiare dominio.</mark> Ma per capirlo, dobbiamo prima entrare nel dominio della frequenza — ed è ciò che
+      facciamo dal prossimo capitolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">SEZIONE 7.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">Quanto vale \(\sig{x} \conv \delta[n-3]\)? E \(\sig{x} \conv (2\,\delta[n] +
+      \delta[n-1])\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Il primo: \(x[n-3]\), il segnale ritardato di 3. Il secondo, per distributività:
+          \(2\,x[n] + x[n-1]\) — due copie sommate, una amplificata e una ritardata di 1.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">Hai due filtri in cascata: \(h_1 = [1, 1]\) e \(h_2 = [1, -1]\). Trova il filtro
+      unico equivalente. Cosa fa complessivamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Il filtro equivalente è \(h_1 \conv h_2\): \([1,1]\conv[1,-1] = [1,\ 0,\ -1]\)
+          (\(y[0]=1\cdot1=1\), \(y[1]=1\cdot(-1)+1\cdot1=0\), \(y[2]=1\cdot(-1)=-1\)).</p>
+        <p>Complessivamente \(y[n]=x[n]-x[n-2]\): una differenza «a distanza due». L'ordine dei due filtri è
+          irrilevante (associatività).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">Qual è la differenza pratica tra convolvere un segnale con un modello e
+      correlarlo con lo stesso modello?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Nella correlazione il modello <b>non viene ribaltato</b>. Conseguenza: la convoluzione «filtra»
+          (mescola l'ingresso secondo la ricetta \(h\) girata), la correlazione «confronta» (misura la
+          somiglianza col modello così com'è) e fa un <b>picco</b> dove il modello combacia. Se il modello è
+          simmetrico, ribaltato o no è uguale, e le due operazioni coincidono.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">Prendi \(\sig{x} = [\,4,\ 6,\ 5,\ 8\,]\), fanne la prima differenza
+      (\([1,-1]\)) e poi la somma corrente. Torni al segnale di partenza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Prima differenza: \([4,\ 2,\ -1,\ 3]\) (ogni valore meno il precedente, col primo che resta \(4\)).</p>
+        <p>Somma corrente: \(4,\ 4{+}2{=}6,\ 6{-}1{=}5,\ 5{+}3{=}8\) → \([4,\ 6,\ 5,\ 8]\). <b>Sì</b>, si torna
+          esattamente all'originale: le due operazioni sono inverse (§7.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">SEZIONE 7.8</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>La delta è l'elemento neutro:</b> \(x\conv\delta = x\). Delta spostata = ritardo; delta scalata =
+          amplificatore.</li>
+      <li><b>Tre leggi come la moltiplicazione:</b> commutativa, associativa, distributiva.</li>
+      <li><b>Conseguenze pratiche:</b> l'ordine dei filtri in cascata non conta e più filtri = un solo filtro
+          (\(h_1\conv h_2\)); i filtri in parallelo si sommano (\(h_1+h_2\)).</li>
+      <li><b>Derivata discreta \([1,-1]\) e integrale (somma corrente)</b> sono operazioni inverse.</li>
+      <li><b>Correlazione = convoluzione senza ribaltamento:</b> misura la somiglianza, fa un picco dove il
+          modello combacia. È il rilevamento di pattern.</li>
+      <li><b>La convoluzione diretta costa \(\propto N_x N_h\);</b> nel dominio della frequenza diventa una
+          moltiplicazione (Cap. 18).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Fin qui abbiamo guardato i segnali <em>nel tempo</em>: sequenze di campioni, convoluzioni che scorrono. Nel
+    <strong>Capitolo 8</strong> ruotiamo la testa di novanta gradi e guardiamo la stessa realtà da un'angolazione
+    completamente nuova — il <b>dominio della frequenza</b>. Con la <b>trasformata di Fourier discreta</b>
+    scopriremo che ogni segnale è una ricetta di sinusoidi, e che molte cose difficili nel tempo diventano
+    banali in frequenza. È forse il salto concettuale più grande del libro: preparati.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function conv7(x, h) {
+  const y = new Array(x.length + h.length - 1).fill(0);
+  for (let k = 0; k < x.length; k++) for (let j = 0; j < h.length; j++) y[k + j] += x[k] * h[j];
+  return y;
+}
+
+/* ============================================================================
+   WIDGET §7.3 — l'ordine in cascata non conta
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wo-svg');
+  if (!svg) return;
+  const out = document.getElementById('wo-out');
+  const btns = { ab: document.getElementById('wo-ab'), ba: document.getElementById('wo-ba'), both: document.getElementById('wo-both') };
+  let mode = 'ab';
+  const A = [0.2, 0.2, 0.2, 0.2, 0.2];   // leviga (media a 5)
+  const B = [1, -1];                     // deriva
+  // ingresso: gradino + gobba
+  const N = 44, xin = [];
+  for (let n = 0; n < N; n++) { const t = (n - 26) / 5; xin.push((n > 10 ? 0.9 : 0.15) + 0.8 * Math.exp(-t * t)); }
+  const yAB = conv7(conv7(xin, A), B);
+  const yBA = conv7(conv7(xin, B), A);
+
+  function draw() {
+    svg.innerHTML = '';
+    const all = [...yAB, ...yBA];
+    const ymin = Math.min(...all), ymax = Math.max(...all), pad = (ymax - ymin) * 0.2;
+    const p = new Plot(svg, { xmin: -1, xmax: N + 2, ymin: ymin - pad, ymax: ymax + pad });
+    p.line(-1, 0, N + 2, 0, { color: 'var(--ink-faint)', width: 1 });
+    p.axes({ numbers: false, names: true, xname: 'n', yname: '' });
+    if (mode === 'ab' || mode === 'both') p.seq(yAB, { color: 'var(--accent)', width: 2.6 });
+    if (mode === 'ba' || mode === 'both') p.seq(yBA, { color: 'var(--warm)', width: mode === 'both' ? 2 : 2.6, dash: mode === 'both' ? '5 4' : null });
+
+    // scarto massimo tra le due uscite
+    let d = 0; for (let i = 0; i < yAB.length; i++) d = Math.max(d, Math.abs(yAB[i] - yBA[i]));
+    out.innerHTML = `
+      <div class="big">${mode === 'ab' ? 'A → B (leviga poi deriva)' : mode === 'ba' ? 'B → A (deriva poi leviga)' : 'le due sovrapposte'}
+        &nbsp;·&nbsp; scarto max = <b>${d.toExponential(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b style="color:var(--accent)">A</b> è una media a 5 (leviga), <b style="color:var(--warm)">B</b> è la
+        differenza (deriva). Scegli «sovrapponi»: le uscite <b>A→B</b> e <b>B→A</b> <mark>coincidono</mark>
+        (scarto praticamente nullo, solo rumore numerico). L'ordine dei filtri LTI in cascata è indifferente —
+        è l'associatività della convoluzione.
+      </div>`;
+  }
+  function setMode(m) { mode = m; for (const k in btns) btns[k].classList.toggle('on', k === m); draw(); }
+  btns.ab.addEventListener('click', () => setMode('ab'));
+  btns.ba.addEventListener('click', () => setMode('ba'));
+  btns.both.addEventListener('click', () => setMode('both'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §7.5 — correlazione: caccia al pattern
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wcr-top'), bot = document.getElementById('wcr-bot');
+  if (!top) return;
+  const out = document.getElementById('wcr-out');
+  const pS = document.getElementById('wcr-p'), pV = document.getElementById('wcr-pv');
+  // modello: una piccola "W" caratteristica
+  const T = [0.2, 0.9, -0.6, 0.9, 0.2];
+  const N = 60, POS = 34;                 // posizione vera del modello
+  let seed = 5;
+  let sig = [];
+
+  function build() {
+    const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(seed);
+    sig = [];
+    for (let n = 0; n < N; n++) sig.push((rng() - 0.5) * 1.6);   // rumore forte
+    for (let j = 0; j < T.length; j++) sig[POS + j] += T[j];      // modello sepolto
+  }
+  build();
+  pS.max = N - T.length;
+
+  function correlation() {
+    const r = [];
+    for (let n = 0; n <= N - T.length; n++) {
+      let s = 0; for (let j = 0; j < T.length; j++) s += sig[n + j] * T[j];
+      r.push(s);
+    }
+    return r;
+  }
+
+  function draw() {
+    const pos = parseInt(pS.value, 10);
+    pV.textContent = pos;
+    const r = correlation();
+
+    // --- pannello alto: segnale + modello alla posizione corrente ---
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: -1, xmax: N + 1, ymin: -1.6, ymax: 1.6 });
+    pt.line(-1, 0, N + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    pt.seq(sig, { color: 'var(--ink-faint)', width: 1.4 });
+    pt.stem(sig, { color: 'var(--ink-faint)', r: 1.6, width: 0.7 });
+    // modello sovrapposto in posizione pos
+    for (let j = 0; j < T.length; j++) { pt.line(pos + j, 0, pos + j, T[j], { color: 'var(--warm)', width: 2.4 }); pt.dot(pos + j, T[j], { color: 'var(--warm)', r: 3 }); }
+    pt.text(pos + 2, 1.4, 'modello', { color: 'var(--warm)', bold: true, size: 11 });
+
+    // --- pannello basso: curva di correlazione ---
+    bot.innerHTML = '';
+    const rmax = Math.max(...r), rmin = Math.min(...r);
+    const pb = new Plot(bot, { xmin: -1, xmax: N + 1, ymin: rmin * 1.2, ymax: rmax * 1.25 });
+    pb.line(-1, 0, N + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    pb.seq(r, { color: 'var(--accent)', width: 2 });
+    pb.dot(pos, r[pos], { color: 'var(--warm)', r: 4.5 });
+    // picco
+    const peak = r.indexOf(rmax);
+    pb.dot(peak, rmax, { color: 'var(--green)', r: 4 });
+    pb.text(peak, rmax, 'picco!', { color: 'var(--green)', bold: true, dy: -10, size: 11 });
+
+    out.innerHTML = `
+      <div class="big">correlazione qui = <b style="color:var(--warm)">${r[pos].toFixed(2)}</b>
+        &nbsp;·&nbsp; picco a n = <b style="color:var(--green)">${peak}</b> (vero: ${POS})</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il modello è quasi invisibile nel <b style="color:var(--ink-faint)">rumore</b>, eppure la
+        <b style="color:var(--accent)">correlazione</b> lo stana: ${pos === peak
+          ? 'sei <mark>proprio sul picco</mark> — qui modello e segnale combaciano.'
+          : `bassa qui, ma guarda il <b style="color:var(--green)">picco</b> a n=${peak}: è lì che il modello è nascosto.`}
+        È il principio del filtro adattato (Cap. 17).
+      </div>`;
+  }
+  pS.addEventListener('input', draw);
+  document.getElementById('wcr-new').addEventListener('click', () => { seed = (seed * 7 + 3) & 0x7fffffff; build(); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

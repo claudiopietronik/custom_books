@@ -110,7 +110,7 @@ const TOC = [
     n: 7,
     titolo: "Proprietà della convoluzione",
     file: "cap07-proprieta-convoluzione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "La delta come elemento neutro" },
       { id: "s7-2", n: "7.2", t: "Commutativa, associativa, distributiva" },
