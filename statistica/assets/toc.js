@@ -191,7 +191,7 @@ const TOC = [
   },
   {
     n: 16, parte: "III · Probabilità",
-    titolo: "PMF e PDF", file: "cap16-pmf-pdf.html", stato: "da-fare",
+    titolo: "PMF e PDF", file: "cap16-pmf-pdf.html", stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Variabili discrete e continue" },
       { id: "s16-2", n: "16.2", t: "La funzione di massa (PMF)" },
