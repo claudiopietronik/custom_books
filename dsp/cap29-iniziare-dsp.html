@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>29 · Iniziare con i DSP — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style>
+  .code {
+    font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    background: var(--paper-3); border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: 1rem 1.2rem; overflow-x: auto; margin: 1.8rem auto; color: var(--ink);
+  }
+  .code .cm { color: var(--ink-faint); }
+  .code .kw { color: var(--violet); font-weight: 600; }
+</style>
+</head>
+<body data-chapter="29">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.29 — Capitolo 29</div>
+    <h1>Iniziare con i DSP</h1>
+    <p class="standfirst">
+      Il lato pratico: come si passa dalla teoria a un sistema che funziona davvero. Scegliere il processore
+      giusto, allestire l'ambiente di sviluppo, scrivere il primo filtro, e affrontare la decisione onnipresente
+      tra virgola fissa e mobile. Un capitolo di mestiere, con lo pseudo-codice di un vero filtro FIR e gli
+      strumenti per capire se un progetto «ci sta» in tempo reale.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude la parte pratica e, con essa, il corpo principale del libro. Dopo aver visto <em>come</em> è fatto un
+      DSP (Cap. 28), qui vediamo come lo si <em>usa</em>. Da qui in poi restano quattro capitoli di
+      approfondimento matematico (Cap. 30–33) e una curiosità (Cap. 34), per chi vuole andare a fondo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Tra «capisco la convoluzione» e «ho un filtro che gira su un chip» c'è un mondo di decisioni pratiche.
+      Sbagliare la scelta del processore o la strategia fissa/mobile può far fallire un progetto che sulla carta
+      era perfetto. Questo capitolo dà la <strong>bussola pratica</strong> per non incagliarsi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-1"><span class="secnum">SEZIONE 29.1</span>Scegliere un processore</h2>
+
+  <p class="lead">
+    La scelta parte da una domanda quantitativa: <b>quante operazioni al secondo</b> serve fare? La risposta
+    determina quasi tutto il resto.
+  </p>
+
+  <p>
+    Il calcolo è diretto: moltiplica le operazioni per campione (per esempio, la lunghezza di un filtro FIR) per
+    la frequenza di campionamento, per il numero di canali. Ottieni le <b>MAC al secondo</b> richieste. Poi
+    scegli un processore che le regga con un margine di sicurezza (mai al 100%: servono riserve per il resto del
+    programma). Attorno a questo numero ruotano gli altri criteri: <b>virgola fissa o mobile</b> (Cap. 28),
+    quanta <b>memoria</b> serve (per i coefficienti e i buffer), quali <b>periferiche</b> (convertitori,
+    interfacce), il <b>consumo</b> (critico a batteria), il <b>costo</b> (moltiplicato per grandi volumi) e la
+    maturità dell'<b>ecosistema</b> (strumenti, librerie, community).
+  </p>
+
+  <h3>Provalo: ci sta in tempo reale?</h3>
+
+  <p>
+    Imposta la frequenza di campionamento, la lunghezza del filtro e il numero di canali, e scopri quante MAC al
+    secondo servono. Confrontale con la potenza di un processore: il riquadro ti dice se il progetto «ci sta» e
+    con quanto margine. È il primo conto che ogni progettista DSP fa.
+  </p>
+
+  <div class="widget" id="w-budget">
+    <div class="w-head">
+      <span>Budget di calcolo in tempo reale</span>
+      <span class="hint">MAC richieste vs potenza del processore</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbg-svg" viewBox="0 0 620 160" role="img" aria-label="Barra che confronta le MAC al secondo richieste con la capacità del processore"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>f<sub>s</sub> (kHz)</label><input type="range" id="wbg-fs" min="8" max="192" step="1" value="48"><output id="wbg-fsv">48</output></div>
+      <div class="w-ctrl"><label>coeff.</label><input type="range" id="wbg-t" min="4" max="1024" step="4" value="128"><output id="wbg-tv">128</output></div>
+      <div class="w-ctrl"><label>canali</label><input type="range" id="wbg-c" min="1" max="8" step="1" value="2"><output id="wbg-cv">2</output></div>
+    </div>
+    <div class="w-controls" style="margin-top:.4rem">
+      <button class="w-btn" id="wbg-p1">DSP economico (100 MMAC/s)</button>
+      <button class="w-btn on" id="wbg-p2">DSP medio (600 MMAC/s)</button>
+      <button class="w-btn" id="wbg-p3">DSP potente (2,4 GMAC/s)</button>
+    </div>
+    <div class="w-readout" id="wbg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-2"><span class="secnum">SEZIONE 29.2</span>L'ambiente di sviluppo</h2>
+
+  <p class="lead">
+    Programmare un DSP non è come programmare un PC: il codice si scrive su un computer e poi si «trasferisce» sul
+    chip. Servono strumenti dedicati e una strategia di sviluppo accorta.
+  </p>
+
+  <p>
+    Gli attrezzi principali: un <b>compilatore incrociato</b> (gira sul PC ma produce codice per il DSP), un
+    <b>simulatore</b> (per provare senza hardware), una <b>scheda di sviluppo</b> con il chip vero, un
+    <b>debugger</b> collegato al chip e un <b>profiler</b> per misurare quanti cicli consuma davvero ogni parte.
+    La strategia vincente è <b>iterativa</b>: prima si prototipa l'algoritmo sul PC in un linguaggio comodo e in
+    virgola mobile (dove è facile), lo si valida su dati reali, e <em>solo dopo</em> lo si porta sul DSP,
+    ottimizzando e, se serve, convertendo a virgola fissa. <mark>Prima far funzionare, poi far andare veloce</mark>
+    — mai il contrario.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-3"><span class="secnum">SEZIONE 29.3</span>Un esempio pratico</h2>
+
+  <p class="lead">
+    Mettiamo insieme i pezzi con l'esempio-principe: un <b>filtro FIR</b> in tempo reale, che elabora i campioni
+    a flusso usando un buffer circolare (Cap. 28). Ecco il cuore del programma, in pseudo-codice.
+  </p>
+
+  <div class="code">
+<span class="cm"># Filtro FIR in tempo reale — un campione alla volta</span>
+<span class="cm"># coeff[0..M-1] : i coefficienti del filtro (la risposta all'impulso)</span>
+<span class="cm"># buffer[0..M-1]: linea di ritardo (buffer circolare), inizialmente a zero</span>
+<span class="cm"># ptr          : indice di scrittura nel buffer circolare</span>
+
+<span class="kw">ad</span> ogni nuovo campione x:
+    buffer[ptr] = x                 <span class="cm"># scrivi il campione nuovo</span>
+    y = 0
+    k = ptr
+    <span class="kw">per</span> j da 0 a M-1:              <span class="cm"># la moltiplica-e-accumula (MAC)</span>
+        y = y + coeff[j] * buffer[k]
+        k = (k - 1 + M) mod M       <span class="cm"># indietro nel buffer, con ritorno circolare</span>
+    ptr = (ptr + 1) mod M           <span class="cm"># avanza il puntatore (torna a 0 in fondo)</span>
+    emetti y                        <span class="cm"># y è l'uscita filtrata</span>
+  </div>
+
+  <p>
+    Guarda cosa contiene: la <b>MAC</b> nel ciclo interno (Cap. 4), il <b>buffer circolare</b> con la sua
+    aritmetica modulo (Cap. 28), e il fatto che ogni campione d'uscita è una <b>convoluzione</b> dell'ingresso
+    con i coefficienti (Cap. 6). Tre concetti del libro, in otto righe. Su un vero DSP, il ciclo interno diventa
+    <em>una singola istruzione</em> ripetuta, e il «modulo» lo fa l'hardware di indirizzamento circolare: ecco
+    perché un DSP filtra così in fretta.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Dallo pseudo-codice al chip</div>
+    <p style="margin-bottom:0">
+      Questo stesso pseudo-codice, in virgola mobile, lo provi prima sul PC per verificare che il filtro faccia
+      ciò che deve. Poi lo porti sul DSP: il compilatore mappa il ciclo MAC sulle istruzioni dedicate, e tu
+      controlli col profiler che ci stia nel tempo tra due campioni. <mark>La teoria del libro e il codice reale
+      sono più vicini di quanto sembri</mark>: la convoluzione «è» questo ciclo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-4"><span class="secnum">SEZIONE 29.4</span>Fissa vs mobile nella pratica</h2>
+
+  <p class="lead">
+    La decisione fissa/mobile (Cap. 4, 28) diventa concreta qui. In virgola fissa c'è un problema che il float
+    nasconde: la <b>scala</b> dei segnali va gestita a mano, e sbagliarla costa caro in entrambe le direzioni.
+  </p>
+
+  <p>
+    Se scali i segnali troppo <b>in alto</b>, rischi l'<b>overflow</b> (Cap. 4): i valori superano il massimo e
+    «traboccano» in numeri assurdi — il segnale si distrugge. Se li scali troppo <b>in basso</b>, sprechi range
+    e il <b>rumore di quantizzazione</b> diventa relativamente grande: il segnale si «impasta». La soluzione è
+    trovare la scala che tiene il segnale il più grande possibile <em>senza mai</em> traboccare — massimizzando
+    il rapporto segnale/rumore. È l'arte della virgola fissa.
+  </p>
+
+  <h3>Provalo: la scala giusta in virgola fissa</h3>
+
+  <p>
+    Regola il fattore di scala (l'<b>headroom</b>). Troppo alto → il segnale <b>tronca</b> (overflow), distorcendosi;
+    troppo basso → tanto <b>rumore</b> relativo. C'è una fascia giusta nel mezzo: segnale forte, nessun
+    troncamento. Cercala.
+  </p>
+
+  <div class="widget" id="w-scale">
+    <div class="w-head">
+      <span>La scala in virgola fissa</span>
+      <span class="hint">né troppo alta (overflow) né troppo bassa (rumore)</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsc-svg" viewBox="0 0 620 240" role="img" aria-label="Un segnale scalato per la virgola fissa, con overflow se la scala è troppo alta e rumore se troppo bassa"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>scala</label><input type="range" id="wsc-s" min="0.1" max="3" step="0.05" value="0.9"><output id="wsc-sv">0.90</output></div>
+    </div>
+    <div class="w-readout" id="wsc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-5"><span class="secnum">SEZIONE 29.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.1</div>
+    <p style="margin-bottom:0">Un filtro FIR a 200 coefficienti elabora 4 canali audio a \(48\) kHz. Quante MAC al
+      secondo servono? Basta un DSP da \(600\) milioni di MAC/s?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>MAC/s \(= 200 \times 48\,000 \times 4 = 38{,}4\) milioni. Un DSP da \(600\) milioni di MAC/s lo regge
+          largamente (usa circa il 6%), lasciando spazio per il resto del programma. <b>Sì</b>, e con ampio
+          margine.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.2</div>
+    <p style="margin-bottom:0">Perché conviene prototipare un algoritmo in virgola mobile sul PC prima di portarlo
+      su un DSP a virgola fissa?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché in virgola mobile sul PC è <b>facile</b> verificare che l'algoritmo funzioni (nessuna
+          preoccupazione di scala/overflow, strumenti comodi). Una volta validato il <em>comportamento</em>, lo
+          si porta sul DSP e si affrontano separatamente i problemi di velocità e di virgola fissa. «Prima far
+          funzionare, poi far andare veloce» (§29.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.3</div>
+    <p style="margin-bottom:0">In virgola fissa, cosa succede se scali i segnali troppo in alto? E troppo in
+      basso?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Troppo in alto → <b>overflow</b>: i valori superano il massimo e «traboccano» in numeri assurdi, il
+          segnale si distrugge. Troppo in basso → si spreca range e il <b>rumore di quantizzazione</b> diventa
+          relativamente grande (segnale impastato). La scala giusta tiene il segnale forte <em>senza mai</em>
+          traboccare (§29.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.4</div>
+    <p style="margin-bottom:0">Nel ciclo FIR dell'esempio, quale riga rappresenta la moltiplica-e-accumula, e
+      quale il buffer circolare?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La <b>MAC</b> è <span class="sym">y = y + coeff[j] * buffer[k]</span> (moltiplica e somma al totale).
+          Il <b>buffer circolare</b> è nell'aritmetica <span class="sym">mod M</span> sugli indici
+          (<span class="sym">k = (k-1+M) mod M</span> e <span class="sym">ptr = (ptr+1) mod M</span>): l'anello
+          che torna all'inizio in fondo, senza spostare dati (§29.3).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-6"><span class="secnum">SEZIONE 29.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 29</div>
+    <ol style="margin-bottom:0">
+      <li><b>Scelta del processore:</b> parti dalle <b>MAC/s richieste</b> (ops per campione × f<sub>s</sub> ×
+          canali), scegli con margine, poi valuta fissa/mobile, memoria, periferiche, consumo, costo, ecosistema.</li>
+      <li><b>Sviluppo iterativo:</b> compilatore incrociato, simulatore, scheda, debugger, profiler. Prototipa in
+          float sul PC, poi porta e ottimizza. <b>Prima far funzionare, poi far andare veloce.</b></li>
+      <li><b>Il FIR pratico:</b> MAC nel ciclo interno + buffer circolare = convoluzione in tempo reale. Tre
+          concetti del libro in otto righe.</li>
+      <li><b>Virgola fissa nella pratica:</b> gestisci la <b>scala</b> — né overflow (troppo alta) né rumore
+          (troppo bassa). L'arte è massimizzare il segnale senza traboccare.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Qui finisce il libro «pratico». I prossimi capitoli sono per chi vuole guardare sotto il cofano della teoria.
+    Il <strong>Capitolo 30</strong> ricostruisce da zero i <b>numeri complessi</b> — quelli che finora abbiamo
+    accuratamente evitato — e mostra perché il DSP li adora: rendono la trasformata di Fourier più elegante, i
+    filtri più semplici da analizzare, e aprono la strada a Laplace e alla trasformata z. La matematica che
+    illumina tutto ciò che abbiamo fatto.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §29.1 — budget di calcolo in tempo reale
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbg-out');
+  const fsS = document.getElementById('wbg-fs'), tS = document.getElementById('wbg-t'), cS = document.getElementById('wbg-c');
+  const fsV = document.getElementById('wbg-fsv'), tV = document.getElementById('wbg-tv'), cV = document.getElementById('wbg-cv');
+  const btns = { p1: document.getElementById('wbg-p1'), p2: document.getElementById('wbg-p2'), p3: document.getElementById('wbg-p3') };
+  const CAP = { p1: 100e6, p2: 600e6, p3: 2400e6 };
+  let proc = 'p2';
+
+  function draw() {
+    const fs = parseInt(fsS.value, 10) * 1000, t = parseInt(tS.value, 10), c = parseInt(cS.value, 10);
+    fsV.textContent = fsS.value; tV.textContent = t; cV.textContent = c;
+    const need = fs * t * c, cap = CAP[proc], usage = need / cap;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 3 });
+    // barra capacità (fondo) e richiesta (sopra)
+    p.rect(2, 0.4, 98, 1.3, { fill: 'var(--paper-3)', color: 'var(--rule)', width: 1 });
+    const w = Math.min(96, usage * 96);
+    const col = usage > 1 ? 'var(--warm)' : usage > 0.8 ? 'var(--gold)' : 'var(--green)';
+    p.rect(2, 0.4, 2 + w, 1.3, { fill: 'color-mix(in srgb, ' + col + ' 45%, transparent)', color: col, width: 1.5 });
+    p.line(98, 0.2, 98, 1.5, { color: 'var(--ink-faint)', width: 1.5, dash: '3 3' });
+    p.text(50, 2, 'utilizzo del processore', { size: 11, color: 'var(--ink-soft)' });
+    p.text(96, 0.2, '100%', { size: 10, color: 'var(--ink-faint)', anchor: 'end' });
+
+    const fmt = x => x >= 1e9 ? (x / 1e9).toFixed(2) + ' G' : (x / 1e6).toFixed(1) + ' M';
+    out.innerHTML = `
+      <div class="big">richieste: <b>${fmt(need)}MAC/s</b> &nbsp;·&nbsp; capacità: <b>${fmt(cap)}MAC/s</b>
+        &nbsp;·&nbsp; utilizzo <b style="color:${col}">${(usage * 100).toFixed(0)}%</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${usage > 1 ? '<mark>Non ci sta!</mark> Servono più coefficienti/canali/f<sub>s</sub> di quanti il processore regga: scegline uno più potente o alleggerisci.'
+          : usage > 0.8 ? 'Ci sta, ma <mark>col fiato corto</mark>: poco margine per il resto del programma. Meglio un po\' di riserva.'
+            : 'Ci sta con <mark>ampio margine</mark>: resta capacità per altri filtri o funzioni.'}
+        (${t} coeff × ${fsS.value} kHz × ${c} canali)
+      </div>`;
+  }
+  [fsS, tS, cS].forEach(s => s.addEventListener('input', draw));
+  function setProc(p) { proc = p; for (const k in btns) btns[k].classList.toggle('on', k === p); draw(); }
+  btns.p1.addEventListener('click', () => setProc('p1'));
+  btns.p2.addEventListener('click', () => setProc('p2'));
+  btns.p3.addEventListener('click', () => setProc('p3'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §29.4 — scala in virgola fissa (headroom)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsc-out');
+  const sS = document.getElementById('wsc-s'), sV = document.getElementById('wsc-sv');
+  const N = 100, BITS = 6;   // pochi bit per rendere visibile il rumore
+  const base = []; for (let n = 0; n < N; n++) base.push(0.7 * Math.sin(n * 0.28) + 0.3 * Math.sin(n * 0.9));
+
+  function draw() {
+    const scale = parseFloat(sS.value);
+    sV.textContent = scale.toFixed(2);
+    const L = Math.pow(2, BITS), step = 2 / L;
+    let clipped = 0;
+    const y = base.map(v => {
+      let s = v * scale;
+      if (s > 1) { s = 1; clipped++; } if (s < -1) { s = -1; clipped++; }   // overflow → saturazione
+      return Math.round(s / step) * step;                                    // quantizzazione
+    });
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: N, ymin: -1.25, ymax: 1.25 });
+    p.line(0, 1, N, 1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+    p.line(0, -1, N, -1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+    p.axes({ numbers: false, names: false });
+    p.seq(base.map(v => v * scale > 1 || v * scale < -1 ? (v > 0 ? 1.05 : -1.05) : v * scale), { color: 'var(--ink-faint)', width: 1.2 });
+    p.seq(y, { color: clipped > 0 ? 'var(--warm)' : 'var(--accent)', width: 2.2 });
+    p.text(2, 1.15, 'linee tratteggiate = limite (±max)', { color: 'var(--ink-faint)', anchor: 'start', size: 10 });
+
+    // rumore relativo (dev std dell'errore / ampiezza segnale)
+    let err = 0; for (let n = 0; n < N; n++) { const ideal = Math.max(-1, Math.min(1, base[n] * scale)); err += (y[n] - ideal) ** 2; }
+    const noise = Math.sqrt(err / N), amp = scale * 0.85;
+    out.innerHTML = `
+      <div class="big">scala ×<b>${scale.toFixed(2)}</b> &nbsp;·&nbsp; campioni troncati: <b style="color:${clipped ? 'var(--warm)' : 'var(--green)'}">${clipped}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${clipped > 0 ? '<mark>Overflow!</mark> La scala è troppo alta: il segnale sbatte contro il limite ±max e si <b>tronca</b> (distorsione).'
+          : scale < 0.4 ? 'Scala troppo bassa: il segnale usa poco range, quindi il <mark>rumore di quantizzazione</mark> è relativamente grande (segnale «impastato»).'
+            : 'Scala <mark>ben scelta</mark>: segnale forte, nessun troncamento — massimo rapporto segnale/rumore.'}
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

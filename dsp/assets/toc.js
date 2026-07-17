@@ -429,7 +429,7 @@ const TOC = [
     n: 29,
     titolo: "Iniziare con i DSP",
     file: "cap29-iniziare-dsp.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s29-1", n: "29.1", t: "Scegliere un processore" },
       { id: "s29-2", n: "29.2", t: "L'ambiente di sviluppo" },

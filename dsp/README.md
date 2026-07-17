@@ -55,7 +55,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 26 — Reti neurali (e altro!)
 - [x] 27 — Compressione dei dati
 - [x] 28 — I processori DSP
-- [ ] 29 — Iniziare con i DSP
+- [x] 29 — Iniziare con i DSP
 - [ ] 30 — I numeri complessi
 - [ ] 31 — La trasformata di Fourier complessa
 - [ ] 32 — La trasformata di Laplace
