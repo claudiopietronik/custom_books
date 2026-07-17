@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Proprietà della trasformata di Fourier — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.10 — Capitolo 10</div>
+    <h1>Proprietà della trasformata di Fourier</h1>
+    <p class="standfirst">
+      La trasformata di Fourier non è solo una formula: è un <em>dizionario</em> tra due lingue, il tempo e la
+      frequenza. E come ogni buon dizionario, ha regole di traduzione ricorrenti — cosa diventa una traslazione,
+      una somma, una convoluzione. La più importante di tutte è un piccolo miracolo: <b>convolvere nel tempo è
+      moltiplicare in frequenza</b>. È la chiave che aprirà la convoluzione veloce.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Consolidiamo la teoria della frequenza. Sappiamo calcolare la DFT (Cap. 8) e usarla (Cap. 9); ora
+      raccogliamo le <em>regole</em> che legano i due domini. Il teorema di convoluzione di questo capitolo è la
+      base concreta del Cap. 18 (convoluzione via FFT) e illumina, a ritroso, tutto ciò che abbiamo fatto nel
+      dominio del tempo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Queste proprietà sono <em>scorciatoie</em>. Invece di ricalcolare tutto, riconosci uno schema: «è una
+      traslazione, quindi cambia solo la fase»; «è una convoluzione, quindi in frequenza è un prodotto». Pensare
+      per proprietà trasforma conti lunghi in ragionamenti di una riga — ed è il modo in cui gli esperti
+      «vedono» i segnali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">SEZIONE 10.1</span>Linearità</h2>
+
+  <p class="lead">
+    La proprietà più semplice, e la più usata senza accorgersene: la trasformata di Fourier è <b>lineare</b>.
+  </p>
+
+  <p>
+    Significa due cose, ormai familiari (Cap. 5): la trasformata di una <b>somma</b> di segnali è la somma delle
+    trasformate, e moltiplicare un segnale per una costante moltiplica la sua trasformata per la stessa costante.
+    In simboli: se \(x \rightarrow X\) e \(y \rightarrow Y\), allora \(a\,x + b\,y \rightarrow a\,X + b\,Y\).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché è così comodo</div>
+    <p style="margin-bottom:0">
+      La linearità è ciò che permette di <em>scomporre</em> il lavoro. Un segnale complicato = somma di pezzi
+      semplici? Allora il suo spettro = somma degli spettri dei pezzi. Un segnale utile più rumore? Il suo spettro
+      è lo spettro del segnale più lo spettro del rumore, sovrapposti — ed è per questo che nello spettro il
+      segnale (concentrato) spicca sul rumore (spalmato). <mark>Tutta l'analisi spettrale poggia, in silenzio,
+      sulla linearità.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">SEZIONE 10.2</span>Traslazione e fase</h2>
+
+  <p class="lead">
+    Cosa succede allo spettro se <b>ritardo</b> un segnale nel tempo? La risposta è elegante: l'ampiezza non
+    cambia <em>affatto</em>; cambia solo la fase, e in modo perfettamente regolare.
+  </p>
+
+  <p>
+    Ha senso: ritardare un segnale non ne altera «di quali frequenze è fatto» — un accordo suonato un secondo più
+    tardi è lo stesso accordo. Quindi lo <b>spettro di ampiezza è invariante alla traslazione</b>. L'unica cosa
+    che cambia è <em>dove</em> ciascuna sinusoide passa per lo zero, cioè la fase. E la cambia in modo lineare con
+    la frequenza: le frequenze alte «sentono» il ritardo più di quelle basse, e la fase forma una
+    <b>rampa</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema di traslazione <span class="tag">ritardo = rampa di fase</span></div>
+    <div class="f-body">
+      \[
+        \sig{x}[n - \hA{s}] \;\;\xrightarrow{\;\text{DFT}\;}\;\; \abs{X[k]}\ \text{invariato},\qquad
+        \theta[k] \to \theta[k] - \hA{s}\,\tfrac{2\pi k}{N}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{s}\)</dt><dd>il <b>ritardo</b> in campioni.</dd>
+        <dt>\(\abs{X[k]}\)</dt><dd>l'ampiezza: <b>non cambia</b> traslando.</dd>
+        <dt>\(-\hA{s}\,\tfrac{2\pi k}{N}\)</dt><dd>la fase acquista un termine <b>proporzionale a \(k\)</b>: una
+            rampa, tanto più ripida quanto maggiore il ritardo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Conseguenza pratica importante: la <b>fase codifica la posizione</b>. Se ti interessa solo <em>quali</em>
+      frequenze ci sono (non <em>quando</em>), guarda l'ampiezza e ignora la fase. Se ti interessa la
+      <em>tempistica</em> (allineare due segnali, misurare un ritardo), la fase è tutto.
+    </div>
+  </div>
+
+  <h3>Provalo: sposta nel tempo, guarda la fase rampare</h3>
+
+  <p>
+    Sposta l'impulso nel tempo (in alto). Nello spettro (in basso) l'<b style="color:var(--accent)">ampiezza</b>
+    resta ferma — congelata — mentre la <b style="color:var(--warm)">fase</b> ruota, formando una rampa sempre
+    più ripida. Tutto il «quando» è finito nella fase.
+  </p>
+
+  <div class="widget" id="w-shift">
+    <div class="w-head">
+      <span>Teorema di traslazione</span>
+      <span class="hint">l'ampiezza non si muove, la fase rampa</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsh-top" viewBox="0 0 620 130" role="img" aria-label="Un impulso spostabile nel tempo"></svg>
+      <svg id="wsh-bot" viewBox="0 0 620 150" role="img" aria-label="Ampiezza costante e fase che rampa al variare del ritardo"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>ritardo</label><input type="range" id="wsh-s" min="0" max="20" step="1" value="4"><output id="wsh-sv">4</output></div>
+    </div>
+    <div class="w-readout" id="wsh-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">SEZIONE 10.3</span>Simmetria e segnali reali</h2>
+
+  <p class="lead">
+    C'è un motivo profondo per cui, nel Cap. 8, un segnale reale di \(N\) campioni dava solo \(N/2+1\) frequenze
+    utili: la <b>simmetria</b>.
+  </p>
+
+  <p>
+    Quando il segnale nel tempo è fatto di soli numeri <b>reali</b> (come tutti i segnali fisici), il suo spettro
+    ha una simmetria speciale: la metà alta delle frequenze è la «immagine speculare» della metà bassa (in
+    gergo, <em>simmetria coniugata</em>). Metà dello spettro è ridondante — non porta informazione nuova — ed è
+    per questo che ci bastano \(N/2+1\) valori. Inoltre: un segnale <b>simmetrico</b> nel tempo (pari) ha uno
+    spettro fatto di soli <b>coseni</b>; uno <b>antisimmetrico</b> (dispari) di soli <b>seni</b>.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> A cosa serve saperlo</div>
+    <p style="margin-bottom:0">
+      Due usi concreti. Primo: <b>efficienza</b> — la FFT dei segnali reali (Cap. 12) sfrutta questa simmetria per
+      dimezzare il lavoro. Secondo: <b>diagnosi</b> — se progetti un filtro simmetrico (come i FIR del Cap. 16),
+      sai in anticipo che avrà fase lineare e proprietà pulite, senza calcolare nulla. La simmetria è
+      un'informazione gratis che semplifica sia i conti sia il progetto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">SEZIONE 10.4</span>Il teorema di convoluzione</h2>
+
+  <p class="lead">
+    Ecco la proprietà regina, quella che da sola giustifica metà del libro. Detta in una frase:
+    <strong>convolvere due segnali nel tempo equivale a moltiplicare i loro spettri in frequenza.</strong>
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema di convoluzione <span class="tag">il ponte tra i due domini</span></div>
+    <div class="f-body">
+      \[
+        \sig{x}[n] \conv \sig{h}[n] \;\;\xrightarrow{\;\text{DFT}\;}\;\; \hA{X[k]} \cdot \hB{H[k]}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\conv\)</dt><dd>la <b>convoluzione</b> nel tempo: l'operazione lunga e faticosa del Cap. 6.</dd>
+        <dt>\(\hA{X[k]} \cdot \hB{H[k]}\)</dt><dd>il <b>prodotto</b>, frequenza per frequenza, dei due spettri:
+            un'operazione banale e velocissima.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un'operazione complicata in un dominio è un'operazione semplice nell'altro. <mark>Questo è il cuore del
+      DSP.</mark> Vale anche al contrario (per <em>dualità</em>): moltiplicare nel tempo equivale a convolvere in
+      frequenza — ed è esattamente ciò che fa una finestra (Cap. 9), che moltiplica nel tempo e quindi «spalma»
+      lo spettro.
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché cambia tutto</div>
+    <p style="margin-bottom:0">
+      Riflettici. Filtrare = convolvere con \(h\) (Cap. 6), operazione costosa \(\propto N^2\). Ma se passo in
+      frequenza, filtrare diventa <em>moltiplicare</em> lo spettro per \(H[k]\), operazione \(\propto N\).
+      L'unico ostacolo era il costo della DFT stessa — e la FFT (Cap. 12) lo abbatte. Mettendo insieme teorema di
+      convoluzione + FFT si ottiene la <b>convoluzione veloce</b> (Cap. 18): filtrare segnali enormi in un
+      lampo. <mark>Due mondi collegati da un ponte, e il ponte è percorribile a gran velocità.</mark>
+    </p>
+  </div>
+
+  <h3>Provalo: convoluzione nel tempo = prodotto in frequenza</h3>
+
+  <p>
+    A sinistra la convoluzione fatta nel tempo; a destra i due spettri moltiplicati. Cambia il kernel e osserva:
+    lo spettro dell'uscita (<b style="color:var(--green)">verde</b>) coincide sempre, bin per bin, col
+    <b>prodotto</b> degli spettri d'ingresso (<b style="color:var(--accent)">teal</b> × <b style="color:var(--warm)">ambra</b>).
+    Due strade, stesso risultato.
+  </p>
+
+  <div class="widget" id="w-convthm">
+    <div class="w-head">
+      <span>Teorema di convoluzione</span>
+      <span class="hint">cambia il kernel: i due risultati coincidono sempre</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wct-svg" viewBox="0 0 620 260" role="img" aria-label="Lo spettro della convoluzione coincide col prodotto degli spettri"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>larghezza h</label><input type="range" id="wct-w" min="1" max="12" step="1" value="4"><output id="wct-wv">4</output></div>
+      <button class="w-btn on" id="wct-lp">h passa-basso</button>
+      <button class="w-btn" id="wct-hp">h passa-alto</button>
+    </div>
+    <div class="w-readout" id="wct-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">SEZIONE 10.5</span>Scala, compressione e dualità</h2>
+
+  <p class="lead">
+    Un'ultima coppia di proprietà, legate da una bella simmetria concettuale: <b>comprimere</b> in un dominio
+    <b>dilata</b> nell'altro.
+  </p>
+
+  <p>
+    Se «stringi» un segnale nel tempo (lo fai accadere più in fretta), il suo spettro si <b>allarga</b> verso le
+    frequenze alte — un evento breve e brusco contiene molte frequenze. Viceversa, un segnale lungo e lento occupa
+    poche frequenze basse. È un principio reciproco: <mark>più stretto qui, più largo là</mark>. Lo ritroveremo in
+    forma estrema nel Cap. 11: l'impulso, infinitamente stretto nel tempo, ha uno spettro infinitamente largo
+    (tutte le frequenze); e una sinusoide eterna, infinitamente estesa nel tempo, ha uno spettro infinitamente
+    stretto (un solo picco).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Non puoi essere preciso in entrambi i domini</div>
+    <p style="margin-bottom:0">
+      Questa reciprocità ha un nome che forse hai già sentito in fisica: <b>principio di indeterminazione</b>. Un
+      segnale non può essere insieme molto localizzato nel tempo (un evento istantaneo) e molto localizzato in
+      frequenza (una nota pura): stringere l'uno allarga l'altro. È lo stesso motivo per cui, nel Cap. 9,
+      serviva una finestra lunga per distinguere frequenze vicine. <mark>Tempo e frequenza sono due risorse in
+      competizione</mark> — un compromesso profondo, non un limite tecnologico.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">SEZIONE 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">Ritardi un segnale di 10 campioni. Come cambiano il suo spettro di ampiezza e il
+      suo spettro di fase?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>L'<b>ampiezza non cambia</b> (le frequenze presenti sono le stesse). La <b>fase</b> acquista una rampa
+          lineare: a ogni bin \(k\) si sottrae \(10 \cdot 2\pi k/N\). Le frequenze alte ruotano più delle basse
+          (§10.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">Vuoi filtrare un segnale con una risposta all'impulso \(h\). Descrivi come farlo
+      (a) nel tempo e (b) in frequenza. Perché la seconda può essere più veloce?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>(a) Nel tempo: <b>convolvi</b> il segnale con \(h\) (Cap. 6), costo \(\propto N N_h\).</p>
+        <p>(b) In frequenza: calcola \(X[k]\) e \(H[k]\), <b>moltiplicali</b> bin per bin, poi DFT inversa
+          (teorema di convoluzione). La moltiplicazione costa \(\propto N\); con la FFT anche le trasformate
+          costano poco (\(\propto N\log N\)), così per \(h\) lunghe la via in frequenza vince nettamente
+          (Cap. 18).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">Un segnale reale di 512 campioni: quanti valori di frequenza <em>indipendenti</em>
+      contiene il suo spettro, e perché non 512?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per la simmetria coniugata dei segnali reali (§10.3), la metà alta dello spettro è l'immagine speculare
+          della bassa: è ridondante. Restano \(N/2+1 = 257\) frequenze indipendenti (in termini di ampiezza).
+          Contando separatamente parte reale e immaginaria «utili» si ritorna comunque a 512 numeri totali: la
+          stessa informazione del segnale di partenza.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">Applicare una finestra (moltiplicare nel tempo) provoca la dispersione spettrale
+      del Cap. 9. Con quale proprietà di questo capitolo si spiega?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con la <b>dualità del teorema di convoluzione</b>: moltiplicare nel tempo equivale a <em>convolvere</em>
+          in frequenza. Il segnale viene quindi convoluto (in frequenza) con lo spettro della finestra, e questa
+          convoluzione «spalma» i picchi — è esattamente la dispersione. Finestre migliori hanno spettri più
+          «stretti», e disperdono meno (§10.4–10.5).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">SEZIONE 10.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li><b>Linearità:</b> la trasformata di una somma è la somma delle trasformate. Regge tutta l'analisi
+          spettrale.</li>
+      <li><b>Traslazione:</b> ritardare nel tempo <em>non</em> cambia l'ampiezza, aggiunge solo una rampa di
+          fase. La fase codifica il «quando».</li>
+      <li><b>Simmetria:</b> i segnali reali hanno spettro coniugato-simmetrico (metà ridondante → \(N/2+1\)
+          frequenze). Pari→coseni, dispari→seni.</li>
+      <li><b>Teorema di convoluzione:</b> convolvere nel tempo = moltiplicare in frequenza (e viceversa per
+          dualità). È il ponte tra i domini e la base della convoluzione veloce.</li>
+      <li><b>Scala/dualità:</b> stringere in un dominio allarga nell'altro — principio di indeterminazione
+          tempo–frequenza.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo le regole di traduzione; ora costruiamo il <em>vocabolario</em>. Il <strong>Capitolo 11</strong>
+    raccoglie le <b>coppie di trasformate notevoli</b>: che aspetto ha in frequenza un impulso, una sinusoide, un
+    rettangolo, un gradino. Incontreremo la funzione <b>sinc</b> — protagonista dei filtri del Cap. 16 — e il
+    curioso <b>fenomeno di Gibbs</b>. Conoscere queste coppie a memoria è come conoscere le tabelline: rende
+    fluido tutto il resto.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function dftFull(x) {
+  const N = x.length, Re = new Array(N).fill(0), Im = new Array(N).fill(0);
+  for (let k = 0; k < N; k++) { let re = 0, im = 0; for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } Re[k] = re; Im[k] = im; }
+  return { Re, Im };
+}
+function conv(x, h) { const y = new Array(x.length + h.length - 1).fill(0); for (let k = 0; k < x.length; k++) for (let j = 0; j < h.length; j++) y[k + j] += x[k] * h[j]; return y; }
+
+/* ============================================================================
+   WIDGET §10.2 — teorema di traslazione: ampiezza ferma, fase che rampa
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wsh-top'), bot = document.getElementById('wsh-bot');
+  if (!top) return;
+  const out = document.getElementById('wsh-out');
+  const sS = document.getElementById('wsh-s'), sV = document.getElementById('wsh-sv');
+  const N = 64;
+  // un piccolo impulso "gaussiano" da traslare
+  const base = []; for (let n = 0; n < N; n++) { const t = (n - 8) / 3; base.push(Math.exp(-t * t)); }
+
+  function draw() {
+    const s = parseInt(sS.value, 10);
+    sV.textContent = s;
+    const x = new Array(N).fill(0);
+    for (let n = 0; n < N; n++) x[n] = base[(n - s + N) % N];
+    const { Re, Im } = dftFull(x);
+    const half = N / 2, mag = [], ph = [];
+    for (let k = 0; k <= half; k++) { mag.push(Math.sqrt(Re[k] * Re[k] + Im[k] * Im[k])); ph.push(Math.atan2(Im[k], Re[k])); }
+
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: 0, xmax: N, ymin: -0.3, ymax: 1.2 });
+    pt.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    pt.stem(x, { color: 'var(--ink-soft)', r: 2, width: 1 });
+    pt.text(1, 1.05, 'impulso nel tempo (ritardo ' + s + ')', { color: 'var(--ink-soft)', anchor: 'start', size: 10.5 });
+
+    bot.innerHTML = '';
+    const pb = new Plot(bot, { xmin: -1, xmax: half + 1, ymin: -Math.PI - 0.3, ymax: Math.max(...mag) * 1.1 });
+    pb.line(-1, 0, half + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    // ampiezza (teal) e fase (ambra, scalata per stare nel grafico)
+    pb.bars(mag, { x0: 0, dxs: 1, bw: 0.5, fill: 'color-mix(in srgb, var(--accent) 50%, transparent)', color: 'var(--accent)' });
+    const phScaled = ph.map(v => v);   // fase in [-π,π]
+    pb.seq(phScaled, { color: 'var(--warm)', width: 2 });
+    pb.text(1, Math.max(...mag), 'ampiezza (ferma)', { color: 'var(--accent)', anchor: 'start', size: 10 });
+    pb.text(1, -Math.PI + 0.2, 'fase (rampa)', { color: 'var(--warm)', anchor: 'start', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">ritardo = <b>${s}</b> campioni</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'<b style="color:var(--accent)">ampiezza</b> resta <mark>identica</mark> per ogni ritardo: le frequenze
+        presenti non cambiano. La <b style="color:var(--warm)">fase</b>, invece, forma una rampa sempre più
+        ripida (i salti sono l'avvolgimento a ±π). Tutto il «quando» del segnale vive nella fase.
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §10.4 — teorema di convoluzione
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wct-svg');
+  if (!svg) return;
+  const out = document.getElementById('wct-out');
+  const wS = document.getElementById('wct-w'), wV = document.getElementById('wct-wv');
+  const btns = { lp: document.getElementById('wct-lp'), hp: document.getElementById('wct-hp') };
+  let type = 'lp';
+  const N = 64;
+  // segnale d'ingresso: somma di poche sinusoidi
+  const xin = []; for (let n = 0; n < N; n++) xin.push(Math.sin(2 * Math.PI * 3 * n / N) + 0.7 * Math.sin(2 * Math.PI * 18 * n / N));
+
+  function draw() {
+    const w = parseInt(wS.value, 10);
+    wV.textContent = w;
+    // kernel: media (passa-basso) o differenza-di-medie (passa-alto)
+    let h;
+    if (type === 'lp') { h = new Array(w).fill(1 / w); }
+    else { h = new Array(w).fill(-1 / w); h[Math.floor(w / 2)] += 1; }   // impulso meno media = passa-alto
+
+    // convoluzione nel tempo → uscita, poi DFT
+    const y = conv(xin, h).slice(0, N);
+    const Xin = dftFull(xin), Hpad = dftFull((() => { const a = new Array(N).fill(0); for (let j = 0; j < h.length; j++) a[j] = h[j]; return a; })());
+    const Yt = dftFull(y);
+    const half = N / 2;
+    const magProd = [], magY = [];
+    for (let k = 0; k <= half; k++) {
+      // prodotto complesso X·H
+      const pr = Xin.Re[k] * Hpad.Re[k] - Xin.Im[k] * Hpad.Im[k];
+      const pi = Xin.Re[k] * Hpad.Im[k] + Xin.Im[k] * Hpad.Re[k];
+      magProd.push(Math.sqrt(pr * pr + pi * pi));
+      magY.push(Math.sqrt(Yt.Re[k] * Yt.Re[k] + Yt.Im[k] * Yt.Im[k]));
+    }
+
+    svg.innerHTML = '';
+    const ymax = Math.max(...magProd, ...magY) * 1.15 + 0.01;
+    const p = new Plot(svg, { xmin: -1, xmax: half + 1, ymin: 0, ymax });
+    p.axes({ numbers: true, names: true, xname: 'k', yname: '', stepX: 8, fmtY: () => '' });
+    // prodotto degli spettri (barre teal) e spettro della convoluzione (punti verdi)
+    p.bars(magProd, { x0: 0, dxs: 1, bw: 0.6, fill: 'color-mix(in srgb, var(--accent) 45%, transparent)', color: 'var(--accent)' });
+    p.stem(magY, { x0: 0, color: 'var(--green)', r: 3, width: 0 });
+
+    out.innerHTML = `
+      <div class="big">kernel: <b>${type === 'lp' ? 'passa-basso (media a ' + w + ')' : 'passa-alto'}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le <b style="color:var(--accent)">barre</b> sono il <b>prodotto</b> degli spettri d'ingresso, |X·H|; i
+        <b style="color:var(--green)">pallini verdi</b> sono lo spettro della <b>convoluzione</b> calcolata nel
+        tempo, |Y|. <mark>Coincidono sempre</mark>, per ogni kernel: è il teorema di convoluzione.
+        ${type === 'lp' ? 'Il passa-basso <b>abbassa</b> le frequenze alte (il picco a k=18 si sgonfia).' : 'Il passa-alto <b>abbassa</b> le frequenze basse (il picco a k=3 si sgonfia).'}
+      </div>`;
+  }
+  wS.addEventListener('input', draw);
+  function setType(t) { type = t; for (const k in btns) btns[k].classList.toggle('on', k === t); draw(); }
+  btns.lp.addEventListener('click', () => setType('lp'));
+  btns.hp.addEventListener('click', () => setType('hp'));
+  draw();
+})();
+</script>
+</body>
+</html>
