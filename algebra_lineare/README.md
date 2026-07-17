@@ -41,7 +41,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 17 — Forma quadratica
 - [x] 18 — Matrici di covarianza
 - [x] 19 — PCA
-- [ ] 20 — La fine
+- [x] 20 — La fine
 
 ## Nota
 
