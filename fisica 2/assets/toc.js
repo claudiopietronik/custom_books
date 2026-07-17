@@ -223,7 +223,7 @@ const TOC = [
     n: 15,
     titolo: "L'interferenza",
     file: "cap15-interferenza.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Sovrapposizione e coerenza" },
       { id: "s15-2", n: "15.2", t: "L'esperimento di Young" },
