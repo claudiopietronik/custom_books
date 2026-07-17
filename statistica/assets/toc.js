@@ -259,7 +259,7 @@ const TOC = [
   },
   {
     n: 22, parte: "III · Probabilità",
-    titolo: "Legge dei grandi numeri", file: "cap22-lln.html", stato: "da-fare",
+    titolo: "Legge dei grandi numeri", file: "cap22-lln.html", stato: "pronto",
     sezioni: [
       { id: "s22-1", n: "22.1", t: "La media si stabilizza" },
       { id: "s22-2", n: "22.2", t: "Enunciato e intuizione" },
