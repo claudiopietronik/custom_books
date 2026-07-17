@@ -161,7 +161,7 @@ const TOC = [
     n: 10,
     titolo: "Sistemi di equazioni e disequazioni",
     file: "cap10-sistemi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Sistemi lineari in due incognite" },
       { id: "s10-2", n: "10.2", t: "Sistemi lineari in tre incognite" },
