@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Serie di Fourier — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>Serie di Fourier</h1>
+    <p class="standfirst">
+      Le serie di potenze scomponevano una funzione in <em>potenze</em>; Fourier la scompone in <b>onde</b> —
+      seni e coseni. La domanda cambia: non «come approssimo vicino a un punto?» ma <mark>«di quali frequenze è
+      fatta questa funzione periodica?»</mark>. È il linguaggio dei suoni, dei segnali, delle vibrazioni e
+      delle equazioni della fisica — e una delle idee più sorprendenti della matematica: <em>qualunque</em>
+      onda periodica, anche spigolosa, è una somma di onde lisce.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'idea di scomporre in <b>armoniche</b> (§4.1) e la formula dei <b>coefficienti di Fourier</b> (§4.2),
+      che «pesano» ogni frequenza sfruttando l'ortogonalità di seni e coseni. Come e a cosa <b>converge</b> la
+      serie, con il curioso fenomeno di Gibbs (§4.3). Come le <b>simmetrie</b> semplificano tutto e come
+      trattare un <b>periodo qualunque</b> (§4.4). L'<b>uguaglianza di Parseval</b>, il «Pitagora dei segnali»
+      (§4.5), e infine le <b>applicazioni</b> (§4.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il mondo è fatto di frequenze</div>
+    <p style="margin-bottom:0">
+      Fourier è forse la matematica applicata più pervasiva che esista. <mark>Ogni volta che senti musica
+      compressa (MP3), guardi un'immagine (JPEG), fai una telefonata o una risonanza magnetica, dietro c'è una
+      scomposizione in frequenze.</mark> In fisica, risolve l'equazione del calore e quella delle onde; in
+      ingegneria, è il cuore dell'elaborazione dei segnali; in matematica, apre la porta all'analisi armonica.
+      E c'è un bonus elegante: fonde analisi e algebra lineare come nient'altro — le funzioni diventano
+      <b>vettori</b> di uno spazio infinito, seni e coseni ne sono la <b>base ortonormale</b>, e i coefficienti
+      sono <b>proiezioni</b> (Cap. 13 di Algebra Lineare).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>L'idea: scomporre in armoniche</h2>
+
+  <p class="lead">
+    L'intuizione di Fourier, nel 1807, fu quasi scandalosa: <b>ogni</b> funzione periodica — anche un'onda
+    quadra tutta spigoli — si può scrivere come <b>somma di seni e coseni</b> di frequenze multiple. Come un
+    accordo musicale è la somma di note pure.
+  </p>
+
+  <p>
+    Pensa a una corda di chitarra: il suono che produce non è un seno puro, ma la sovrapposizione di una
+    <b>frequenza fondamentale</b> e delle sue <b>armoniche</b> (frequenze doppie, triple, …), ciascuna con la
+    sua intensità. Fourier dice che questo vale per <em>qualunque</em> segnale periodico: c'è una ricetta —
+    l'ampiezza di ogni armonica — che, sommata, ricostruisce l'originale. Guarda un'onda quadra <em>nascere</em>
+    dalla somma di seni:
+  </p>
+
+  <div class="widget" id="w-fourier">
+    <div class="w-head">
+      <span>Costruire un'onda sommando armoniche</span>
+      <span class="hint">scegli l'onda · aggiungi armoniche</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wf-svg" viewBox="0 0 560 360" role="img" aria-label="La somma parziale di una serie di Fourier ricostruisce un'onda periodica sommando seni e coseni di frequenze crescenti"></svg>
+    </div>
+    <div class="w-controls" id="wf-btns" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; margin-top:.5rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">armoniche</label>
+      <input type="range" id="wf-n" min="1" max="40" step="1" value="3" style="flex:1">
+    </div>
+    <div class="w-readout" id="wf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>I coefficienti di Fourier</h2>
+
+  <p class="lead">
+    Come si trova «quanto» di ogni frequenza c'è dentro una funzione? Con un integrale che agisce da
+    <b>filtro</b>: moltiplica \(f\) per l'onda che cerchi e integra. È il prodotto scalare tra funzioni.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La serie e i suoi coefficienti (periodo \(2\pi\)) <span class="tag">un integrale che pesa ogni frequenza</span></div>
+    <div class="f-body">
+      \[ f(x) = \frac{a_0}{2} + \sum_{k=1}^{\infty}\big(a_k\cos kx + b_k\sin kx\big), \qquad
+         a_k = \frac1\pi\int_{-\pi}^{\pi} f(x)\cos kx\,\dd x, \quad b_k = \frac1\pi\int_{-\pi}^{\pi} f(x)\sin kx\,\dd x \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(a_k, b_k\) — i <b>coefficienti di Fourier</b></dt>
+        <dd>le ampiezze delle armoniche: quanto coseno e quanto seno di frequenza \(k\) ci sono in \(f\). Il
+            termine \(\frac{a_0}{2}\) è la <b>media</b> di \(f\) (la componente «continua», frequenza zero).</dd>
+        <dt>l'integrale-filtro</dt>
+        <dd>moltiplicando \(f\) per \(\cos kx\) e integrando, tutte le <em>altre</em> frequenze si cancellano e
+            sopravvive solo il contributo di \(\cos kx\). Funziona grazie all'<b>ortogonalità</b>:
+            \(\int_{-\pi}^{\pi}\cos kx\cos mx\,\dd x = 0\) se \(k \ne m\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>Il ponte con l'Algebra Lineare.</b> Immagina le funzioni come <em>vettori</em> e definisci il loro
+      «prodotto scalare» come \(\langle f, g\rangle = \int_{-\pi}^{\pi} f g\,\dd x\). Allora seni e coseni sono
+      <b>ortogonali</b> tra loro (prodotto scalare nullo), e formano una <b>base ortonormale</b> dello spazio
+      delle funzioni (Cap. 13 di Algebra Lineare). I coefficienti \(a_k, b_k\) non sono altro che le
+      <b>proiezioni</b> di \(f\) su ciascun asse-armonica — <mark>esattamente come si trovano le componenti di
+      un vettore su una base ortonormale</mark> (§13.4 di LA). Fourier è algebra lineare in dimensione infinita.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Convergenza della serie</h2>
+
+  <p class="lead">
+    A cosa converge davvero la somma? Per le funzioni «ragionevoli» (regolari a tratti), Fourier è molto
+    generoso: ricostruisce \(f\) dove è continua, e fa una cosa sensata anche sui salti.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Teorema di convergenza (Dirichlet)</div>
+    <p style="margin-bottom:0">
+      Se \(f\) è periodica e <b>regolare a tratti</b> (continua e derivabile salvo un numero finito di salti),
+      la sua serie di Fourier converge:
+      <br>• a \(f(x)\) in ogni punto di <b>continuità</b>;
+      <br>• al <b>valore medio del salto</b> \(\frac{f(x^+) + f(x^-)}{2}\) in ogni punto di discontinuità.
+      <br>Notevole: <mark>anche funzioni discontinue si ricostruiscono</mark> (quasi ovunque) sommando onde
+      lisce — cosa che le serie di Taylor non sanno fare.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il fenomeno di Gibbs</div>
+    <p style="margin-bottom:0">
+      Vicino a un salto, le somme parziali di Fourier «sbordano»: fanno un <b>sovraelongamento</b> di circa il
+      <b>9%</b> dell'altezza del salto, e — sorpresa — <mark>questo picco <em>non</em> sparisce aggiungendo
+      armoniche</mark>: si stringe verso il salto, ma resta alto uguale. Lo vedi nel widget scegliendo l'onda
+      quadra: le «orecchiette» agli spigoli restano lì anche con 40 armoniche. È il motivo per cui comprimere
+      un segnale con spigoli netti (un bordo in un'immagine) produce artefatti. La convergenza c'è (puntuale),
+      ma non è uniforme là dove \(f\) salta (§2.3).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Simmetrie e periodo qualunque</h2>
+
+  <p class="lead">
+    Due scorciatoie pratiche che dimezzano il lavoro. Le simmetrie di \(f\) spengono metà dei coefficienti, e
+    un cambio di scala adatta le formule a qualunque periodo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Simmetrie e periodo generico <span class="tag">meno conti, più struttura</span></div>
+    <div class="f-body">
+      \[
+        f \text{ pari} \Rightarrow \text{soli coseni } (b_k = 0), \qquad
+        f \text{ dispari} \Rightarrow \text{soli seni } (a_k = 0), \qquad
+        \text{periodo } T:\ \ kx \to \frac{2\pi k}{T}x
+      \]
+    </div>
+    <div class="f-note">
+      Se \(f\) è <b>pari</b> (\(f(-x) = f(x)\), Analisi 1 §4.8) la sua serie ha solo coseni — che sono pari;
+      se è <b>dispari</b>, solo seni. Un colpo d'occhio alla simmetria e metà dei coefficienti sono già zero.
+      Per un <b>periodo</b> \(T\) qualunque (non \(2\pi\)), basta riscalare: le armoniche diventano
+      \(\cos\frac{2\pi k}{T}x\), \(\sin\frac{2\pi k}{T}x\), e gli integrali si fanno su un periodo. La sostanza
+      non cambia: <mark>è sempre «pesa ogni frequenza con un integrale».</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>L'uguaglianza di Parseval</h2>
+
+  <p class="lead">
+    Un teorema di conservazione bellissimo: l'«energia» totale di una funzione è uguale alla somma delle
+    energie delle sue armoniche. È il teorema di Pitagora, di nuovo — ma in uno spazio a infinite dimensioni.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Uguaglianza di Parseval <span class="tag">Pitagora per i segnali</span></div>
+    <div class="f-body">
+      \[ \frac1\pi\int_{-\pi}^{\pi} f(x)^2\,\dd x = \frac{a_0^2}{2} + \sum_{k=1}^{\infty}\big(a_k^2 + b_k^2\big) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>a sinistra, l'<b>energia</b> di \(f\)</dt>
+        <dd>l'integrale del quadrato: la «lunghezza al quadrato» del vettore-funzione (la sua norma², §13 di
+            LA).</dd>
+        <dt>a destra, la somma delle <b>energie delle armoniche</b></dt>
+        <dd>ogni frequenza contribuisce con \(a_k^2 + b_k^2\), il quadrato della sua ampiezza. <mark>L'energia
+            totale è la somma dei quadrati delle componenti</mark> — esattamente Pitagora su una base
+            ortonormale (§13.3 di LA): \(\norm{\vv{v}}^2 = \sum v_i^2\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Oltre alla bellezza, un uso concreto e spettacolare: applica Parseval all'onda a dente di sega
+      (\(f(x) = x\)) e, facendo i conti, salta fuori \(\sum_{k=1}^{\infty}\frac{1}{k^2} = \frac{\pi^2}{6}\) —
+      il celebre <b>problema di Basilea</b> (Analisi 1, §15.13), risolto quasi per magia. E lo spettro
+      (widget) mostra dove sta l'energia: <mark>onde spigolose spargono energia su tante frequenze; onde
+      lisce la concentrano nelle prime.</mark>
+    </div>
+  </div>
+
+  <div class="widget" id="w-spettro">
+    <div class="w-head">
+      <span>Lo spettro: quanta energia in ogni armonica</span>
+      <span class="hint">confronta le tre onde</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsp-svg" viewBox="0 0 560 320" role="img" aria-label="Il diagramma a barre delle ampiezze delle armoniche mostra come le onde spigolose distribuiscono energia su molte frequenze"></svg>
+    </div>
+    <div class="w-controls" id="wsp-btns" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-readout" id="wsp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Applicazioni</h2>
+
+  <p class="lead">
+    Perché Fourier è forse il capitolo più «utile» di tutta l'analisi: apre la porta a un numero enorme di
+    tecnologie e di teorie. Ecco le principali.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Dove</th><th>Come Fourier entra in gioco</th></tr></thead>
+    <tbody>
+      <tr><td><b>Compressione (MP3, JPEG)</b></td><td>si scompone il segnale in frequenze e si <b>buttano via</b> quelle poco energetiche (piccoli coefficienti): meno dati, qualità quasi intatta</td></tr>
+      <tr><td><b>Equazioni della fisica</b></td><td>l'equazione del <b>calore</b> e delle <b>onde</b> si risolvono scomponendo il dato iniziale in armoniche, che evolvono in modo semplice e indipendente</td></tr>
+      <tr><td><b>Elaborazione dei segnali</b></td><td>filtrare (togliere il rumore, isolare le voci) significa lavorare sulle frequenze; è la <b>trasformata di Fourier</b></td></tr>
+      <tr><td><b>Matematica pura</b></td><td>Parseval regala somme come \(\sum\frac{1}{k^2} = \frac{\pi^2}{6}\); l'analisi armonica è una branca intera</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><b>Serie di Fourier:</b> ogni funzione periodica «ragionevole» è una somma di <b>seni e coseni</b> di
+          frequenze multiple (§4.1) — <mark>anche quelle spigolose</mark>.</li>
+      <li>I <b>coefficienti</b> \(a_k, b_k\) si trovano con un integrale-filtro (§4.2), grazie all'ortogonalità
+          di seni/coseni. È algebra lineare: funzioni = vettori, armoniche = base ortonormale, coefficienti =
+          proiezioni.</li>
+      <li><b>Converge</b> a \(f\) dove continua, alla media del salto dove discontinua (Dirichlet, §4.3), con
+          il <b>sovraelongamento di Gibbs</b> (~9%) che resta ai salti. Simmetrie: pari → soli coseni, dispari
+          → soli seni (§4.4).</li>
+      <li><b>Parseval</b> (§4.5): l'energia \(\frac1\pi\int f^2\) è la somma delle energie delle armoniche
+          \(\sum(a_k^2 + b_k^2)\) — <mark>Pitagora in dimensione infinita</mark>. Regala \(\sum\frac1{k^2} =
+          \frac{\pi^2}{6}\).</li>
+      <li><b>Applicazioni</b> ovunque (§4.6): compressione, equazioni del calore e delle onde, filtri,
+          trasformata di Fourier.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con Fourier chiudiamo la <b>Parte 1</b> — le serie di funzioni. Da qui il libro cambia scenario: entriamo
+    nel <b>mondo multidimensionale</b>. Nel <strong>Capitolo 5</strong> costruiamo il terreno, lo spazio
+    \(\R^n\) e la sua <b>topologia</b>: cosa significa «vicino», «bordo», «aperto», «chiuso», «compatto» quando
+    i punti hanno più coordinate. È l'analogo del Capitolo 2 di Analisi 1 (i numeri reali), ma in più
+    dimensioni — la geografia su cui vivranno le funzioni di più variabili.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      La funzione \(f(x) = x\) su \((-\pi, \pi)\), estesa periodicamente, è pari o dispari? Quali coefficienti
+      (\(a_k\) o \(b_k\)) saranno nulli, senza calcolarli?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Calcola i coefficienti \(b_k\) dell'onda a dente di sega \(f(x) = x\) su \((-\pi, \pi)\). (Suggerimento:
+      \(b_k = \frac1\pi\int_{-\pi}^{\pi} x\sin kx\,\dd x\), da fare per parti.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      A quale valore converge la serie di Fourier dell'onda quadra (\(+1\) su \((0,\pi)\), \(-1\) su
+      \((-\pi,0)\)) nel punto di salto \(x = 0\)? E in \(x = \pi/2\)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Solo le funzioni continue hanno serie di Fourier. &nbsp;
+      (b) Una funzione pari ha solo coseni nella sua serie. &nbsp;
+      (c) Il fenomeno di Gibbs sparisce aggiungendo abbastanza armoniche. &nbsp;
+      (d) Parseval lega l'energia di \(f\) alla somma dei quadrati dei coefficienti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">Sezione 4.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      \(f(x) = x\) è <b>dispari</b> (\(f(-x) = -x = -f(x)\)). Quindi la sua serie ha <b>solo seni</b>: tutti gli
+      \(a_k = 0\) (i coseni sono pari, e integrare «dispari × pari» su un intervallo simmetrico dà zero, §4.4).
+      Restano i \(b_k\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      Per parti, con \(u = x\), \(\dd v = \sin kx\,\dd x\) (\(v = -\frac{\cos kx}{k}\)):
+      \(\int_{-\pi}^{\pi} x\sin kx\,\dd x = \left[-\frac{x\cos kx}{k}\right]_{-\pi}^{\pi} + \frac1k
+      \int_{-\pi}^{\pi}\cos kx\,\dd x\). Il secondo integrale è \(0\); il primo dà
+      \(-\frac{2\pi\cos k\pi}{k} = -\frac{2\pi(-1)^k}{k}\). Quindi \(b_k = \frac1\pi\cdot\left(-\frac{2\pi(-1)^k}{k}\right)
+      = \frac{2(-1)^{k+1}}{k}\). La serie è \(f(x) = 2\sum_{k\ge 1}\frac{(-1)^{k+1}}{k}\sin kx\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      In \(x = 0\) c'è un salto da \(-1\) (sinistra) a \(+1\) (destra): la serie converge al <b>valore medio</b>
+      \(\frac{-1 + 1}{2} = 0\) (Dirichlet, §4.3). In \(x = \pi/2\) la funzione è continua e vale \(+1\): la
+      serie converge a \(+1\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Anche funzioni discontinue (regolari a tratti) hanno serie di Fourier, che converge a
+      \(f\) dove continua e alla media sui salti (§4.3) — è il grande vantaggio su Taylor.
+      <br><b>(b) VERO.</b> Pari ⟹ soli coseni (\(b_k = 0\), §4.4).
+      <br><b>(c) FALSO.</b> Il sovraelongamento di Gibbs (~9%) <b>non</b> sparisce: si stringe verso il salto
+      ma resta alto uguale (§4.3).
+      <br><b>(d) VERO.</b> È l'uguaglianza di Parseval: \(\frac1\pi\int f^2 = \frac{a_0^2}{2} + \sum(a_k^2 +
+      b_k^2)\) (§4.5).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+const wrap = x => x - 2 * Math.PI * Math.round(x / (2 * Math.PI));  // riporta in (−π, π]
+
+/* le tre onde: somma parziale S(x,n), funzione target, ampiezza k-esima, finestra */
+const ONDE = {
+  quadra: {
+    k: 'onda quadra', gibbs: true,
+    S: (x, n) => { let s = 0; for (let j = 1; j <= n; j++) { const m = 2 * j - 1; s += Math.sin(m * x) / m; } return 4 / Math.PI * s; },
+    target: x => Math.sign(Math.sin(x)) || 1,
+    amp: k => (k % 2 === 1) ? (4 / Math.PI) / k : 0,
+    win: { ymin: -1.6, ymax: 1.6 }
+  },
+  dente: {
+    k: 'dente di sega', gibbs: true,
+    S: (x, n) => { let s = 0; for (let k = 1; k <= n; k++) s += (k % 2 === 1 ? 1 : -1) * Math.sin(k * x) / k; return 2 * s; },
+    target: x => wrap(x),
+    amp: k => 2 / k,
+    win: { ymin: -3.6, ymax: 3.6 }
+  },
+  triangolare: {
+    k: 'triangolare', gibbs: false,
+    S: (x, n) => { let s = 0; for (let j = 1; j <= n; j++) { const m = 2 * j - 1; s += Math.cos(m * x) / (m * m); } return Math.PI / 2 - 4 / Math.PI * s; },
+    target: x => Math.abs(wrap(x)),
+    amp: k => (k % 2 === 1) ? (4 / Math.PI) / (k * k) : 0,
+    win: { ymin: -0.5, ymax: 3.6 }
+  }
+};
+
+/* ============================================================================
+   WIDGET §4.1 — ricostruzione di un'onda con le armoniche
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wf-svg');
+  if (!svg) return;
+  const out = document.getElementById('wf-out');
+  const btns = document.getElementById('wf-btns');
+  let cur = 'quadra';
+
+  function draw() {
+    const it = ONDE[cur];
+    const n = parseInt(document.getElementById('wf-n').value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3.6, xmax: 3.6, ymin: it.win.ymin, ymax: it.win.ymax });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // target (a tratti: campiono e spezzo sui salti disegnando come funzione tratteggiata)
+    p.func(it.target, { color: 'var(--ink-faint)', width: 2, dash: '4 3', samples: 700 });
+    // somma parziale di Fourier
+    p.func(x => it.S(x, n), { color: 'var(--accent)', width: 2.6, samples: 700 });
+    [...btns.children].forEach(b => b.classList.toggle('active', b.dataset.k === cur));
+
+    out.innerHTML = `
+      <div class="big">${it.k} &nbsp;·&nbsp; ${n} armonic${n === 1 ? 'a' : 'he'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In <b style="color:var(--ink-soft)">grigio</b> l'onda vera, in <b style="color:var(--accent)">blu</b>
+        la somma di ${n} sen${n === 1 ? 'o' : 'i'}/cosen${n === 1 ? 'o' : 'i'}. Aggiungi armoniche e guardala
+        <mark>prendere forma</mark>. ${it.gibbs
+          ? 'Nota le «orecchiette» agli spigoli: è il <b>fenomeno di Gibbs</b> (~9%), che si stringe ma non sparisce (§4.3).'
+          : 'È continua (nessuno spigolo netto): niente Gibbs, e la convergenza è rapidissima (ampiezze ~1/k²).'}
+      </div>`;
+  }
+  Object.keys(ONDE).forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = ONDE[key].k; b.dataset.k = key;
+    b.onclick = () => { cur = key; draw(); };
+    btns.appendChild(b);
+  });
+  document.getElementById('wf-n').addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §4.5 — lo spettro delle ampiezze
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsp-out');
+  const btns = document.getElementById('wsp-btns');
+  let cur = 'quadra';
+  const N = 12;
+
+  function draw() {
+    const it = ONDE[cur];
+    svg.innerHTML = '';
+    const maxA = it.amp(1) * 1.2;
+    const p = new Plot(svg, { xmin: 0, xmax: N + 1, ymin: -0.1 * maxA, ymax: maxA });
+    p.grid(1, maxA / 4); p.axes({ numbers: true, xname: 'k (frequenza)', yname: 'ampiezza' });
+    let nnz = 0;
+    for (let k = 1; k <= N; k++) {
+      const a = it.amp(k);
+      if (a > 1e-9) { p.rect(k - 0.32, 0, k + 0.32, a, { fill: 'color-mix(in srgb, var(--violet) 30%, transparent)', color: 'var(--violet)', width: 1 }); nnz++; }
+    }
+    [...btns.children].forEach(b => b.classList.toggle('active', b.dataset.k === cur));
+    out.innerHTML = `
+      <div class="big">Spettro: ${it.k}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni barra è l'ampiezza di un'armonica. ${cur === 'triangolare'
+          ? 'Le ampiezze calano come <b>1/k²</b> (veloce): quasi tutta l\'energia è nelle prime armoniche → onda liscia, convergenza rapida.'
+          : 'Le ampiezze calano come <b>1/k</b> (lento): l\'energia è <mark>spalmata su molte frequenze</mark> → spigoli, Gibbs, convergenza lenta.'}
+        La somma dei quadrati di queste barre è l'energia di f (Parseval, §4.5).
+      </div>`;
+  }
+  Object.keys(ONDE).forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = ONDE[key].k; b.dataset.k = key;
+    b.onclick = () => { cur = key; draw(); };
+    btns.appendChild(b);
+  });
+  draw();
+})();
+</script>
+</body>
+</html>
