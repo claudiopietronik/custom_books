@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Coppie di trasformate di Fourier — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.11 — Capitolo 11</div>
+    <h1>Coppie di trasformate di Fourier</h1>
+    <p class="standfirst">
+      Ci sono una manciata di segnali le cui trasformate vanno sapute a memoria, come le tabelline: impulso,
+      sinusoide, rettangolo, gradino. Conoscere «che aspetto ha in frequenza» ciascuno di essi rende immediato
+      tutto il resto. Qui incontriamo anche due protagonisti dei capitoli sui filtri: la funzione <b>sinc</b> e
+      il curioso <b>fenomeno di Gibbs</b>, l'increspatura che non vuole andarsene.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Ultimo capitolo «teorico» di Fourier prima della FFT (Cap. 12) e dei filtri (Cap. 14+). Con le proprietà
+      (Cap. 10) sappiamo <em>come</em> tradurre; qui costruiamo il <em>vocabolario</em> delle traduzioni più
+      importanti. La coppia rettangolo–sinc, in particolare, è il seme del filtro passa-basso ideale del Cap. 16.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Queste coppie sono l'<em>intuizione condensata</em>. Chi progetta filtri «vede» già che un taglio netto in
+      frequenza (rettangolo) corrisponde a una sinc infinita nel tempo — e quindi capisce, prima di ogni conto,
+      perché un filtro ideale è irrealizzabile e va troncato. Sono le fondamenta mentali dei prossimi dieci
+      capitoli.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">SEZIONE 11.1</span>Delta e sinusoidi</h2>
+
+  <p class="lead">
+    Le due coppie più basilari, e già rivelatrici del principio di reciprocità (Cap. 10.5): ciò che è
+    concentrato in un dominio è spalmato nell'altro.
+  </p>
+
+  <ul>
+    <li><b>Impulso ↔ spettro piatto.</b> Un impulso \(\delta[n]\) — infinitamente concentrato nel tempo — ha uno
+        spettro <em>piatto</em>: contiene <b>tutte le frequenze</b> in ugual misura. Ha senso: un «clic» istantaneo
+        è il suono più ricco che esista, un lampo bianco di tutte le frequenze. È anche il motivo per cui la
+        risposta all'impulso \(h[n]\) (Cap. 6) descrive tutto il sistema: stimolandolo con «tutte le frequenze
+        insieme», ne leggi la reazione a ciascuna.</li>
+    <li><b>Costante ↔ impulso in frequenza.</b> Il rovescio: un segnale costante (una sola «frequenza zero»)
+        ha spettro concentrato in un unico punto, a \(k=0\). È la coppia precedente letta al contrario.</li>
+    <li><b>Sinusoide ↔ picco.</b> Una sinusoide pura ed eterna è una sola frequenza: il suo spettro è un
+        <b>singolo picco</b>. Più «pura e lunga» è l'onda, più stretto è il picco — di nuovo la reciprocità.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> I due estremi della reciprocità</div>
+    <p style="margin-bottom:0">
+      Tieni a mente i due casi limite, sono una bussola: l'<b>impulso</b> è massimamente stretto nel tempo e
+      massimamente largo in frequenza; la <b>sinusoide eterna</b> è massimamente larga nel tempo (dura per
+      sempre) e massimamente stretta in frequenza (un punto). <mark>Tutti i segnali reali stanno in mezzo a
+      questi due estremi</mark>, con un compromesso tra concentrazione nel tempo e nella frequenza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">SEZIONE 11.2</span>La funzione rettangolare e la sinc</h2>
+
+  <p class="lead">
+    La coppia più importante del DSP, quella che tornerà in ogni capitolo sui filtri: il <b>rettangolo</b> e la
+    funzione <b>sinc</b>.
+  </p>
+
+  <p>
+    Un impulso <b>rettangolare</b> nel tempo — un tratto costante che vale \(1\) per un po' e \(0\) fuori — ha
+    come trasformata la funzione <b class="termine">sinc</b>: un'onda che decresce oscillando, definita da
+    \(\sinc(x) = \sin(\pi x)/(\pi x)\). Ha un lobo centrale alto e una scia di lobi laterali che si smorzano
+    lentamente da entrambi i lati, verso l'infinito.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La coppia rettangolo ↔ sinc <span class="tag">la più importante per i filtri</span></div>
+    <div class="f-body">
+      \[
+        \operatorname{rett}(n) \;\xrightarrow{\;\text{F}\;}\; \sinc(f) = \frac{\sin(\pi f)}{\pi f}
+      \]
+    </div>
+    <div class="f-note">
+      Vale la reciprocità, e in modo cruciale: un rettangolo <b>largo</b> nel tempo dà una sinc <b>stretta</b> in
+      frequenza, e viceversa. <mark>E qui c'è il seme di tutti i filtri del Cap. 16:</mark> un filtro passa-basso
+      «ideale» è un rettangolo in frequenza (lascia passare tutto sotto una soglia, blocca tutto sopra); ma la
+      sua risposta all'impulso — la trasformata inversa — è una sinc, che si estende all'infinito nel tempo.
+      Un filtro perfetto richiederebbe una risposta infinitamente lunga: <b>irrealizzabile</b>. Dovremo
+      troncarla — e da lì nascono tutti i compromessi del progetto dei filtri.
+    </div>
+  </div>
+
+  <h3>Provalo: rettangolo e sinc, reciproci</h3>
+
+  <p>
+    Cambia la larghezza del rettangolo nel tempo (sopra) e guarda la sua sinc in frequenza (sotto) rispondere in
+    modo <em>opposto</em>: rettangolo largo → sinc stretta, rettangolo stretto → sinc larga. Concentri in un
+    dominio, spandi nell'altro.
+  </p>
+
+  <div class="widget" id="w-rectsinc">
+    <div class="w-head">
+      <span>Rettangolo ↔ sinc</span>
+      <span class="hint">largo di qua, stretto di là</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wrs-top" viewBox="0 0 620 130" role="img" aria-label="Un impulso rettangolare di larghezza variabile nel tempo"></svg>
+      <svg id="wrs-bot" viewBox="0 0 620 150" role="img" aria-label="Lo spettro sinc del rettangolo, che si stringe quando il rettangolo si allarga"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>larghezza</label><input type="range" id="wrs-w" min="2" max="40" step="1" value="8"><output id="wrs-wv">8</output></div>
+    </div>
+    <div class="w-readout" id="wrs-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">SEZIONE 11.3</span>Il fenomeno di Gibbs</h2>
+
+  <p class="lead">
+    Cosa succede se provi a costruire uno spigolo netto — un'onda quadra — sommando un numero <em>finito</em> di
+    sinusoidi? Ottieni una sorpresa che ha fatto discutere i matematici per decenni.
+  </p>
+
+  <p>
+    Nel Cap. 8 abbiamo visto che sommando armoniche dispari si ottiene un'onda quadra. Ma con un numero finito di
+    armoniche, vicino a ogni gradino compare una <b>sovraelongazione</b>: il segnale «schizza» oltre il valore
+    corretto, con una piccola increspatura. La cosa sorprendente è che <mark>aggiungendo più armoniche
+    l'increspatura si stringe ma <em>non</em> si abbassa</mark>: la sovraelongazione resta sempre circa il
+    <b>9%</b> dell'altezza del gradino. È il <b class="termine">fenomeno di Gibbs</b>.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Perché conta nel DSP</div>
+    <p style="margin-bottom:0">
+      Gibbs non è una curiosità: è la ragione per cui i filtri con tagli troppo netti «suonano male» o creano
+      artefatti (i famosi <em>ringing</em>, gli aloni attorno ai bordi netti nelle immagini JPEG troppo
+      compresse). Ogni volta che tronchi bruscamente qualcosa nel dominio della frequenza, Gibbs ti presenta il
+      conto nel tempo. La cura è la stessa delle finestre (Cap. 9): <b>ammorbidire</b> il taglio invece di
+      renderlo netto. È il motivo per cui i filtri del Cap. 16 usano una sinc <em>finestrata</em>.
+    </p>
+  </div>
+
+  <h3>Provalo: l'increspatura che non se ne va</h3>
+
+  <p>
+    Aggiungi armoniche all'onda quadra e osserva: la ricostruzione migliora quasi ovunque, ma vicino agli
+    spigoli la sovraelongazione <b>resta lì</b>, sempre alta circa il 9%, solo più stretta. Puoi mettere mille
+    armoniche: non scenderà.
+  </p>
+
+  <div class="widget" id="w-gibbs">
+    <div class="w-head">
+      <span>Il fenomeno di Gibbs</span>
+      <span class="hint">più armoniche non abbassano il picco</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wgb-svg" viewBox="0 0 620 260" role="img" aria-label="La ricostruzione di un'onda quadra con più armoniche mostra una sovraelongazione del 9% che non si abbassa"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>armoniche</label><input type="range" id="wgb-k" min="1" max="80" step="1" value="7"><output id="wgb-kv">7</output></div>
+    </div>
+    <div class="w-readout" id="wgb-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">SEZIONE 11.4</span>Segnali periodici: la serie di Fourier</h2>
+
+  <p class="lead">
+    Se un segnale è <b>periodico</b> — si ripete identico all'infinito — il suo spettro ha una struttura
+    particolarmente pulita: è fatto di soli <b>picchi</b>, alle frequenze multiple della fondamentale.
+  </p>
+
+  <p>
+    È la <b class="termine">serie di Fourier</b>: un segnale periodico è la somma di una <b>fondamentale</b> (la
+    frequenza del periodo) e delle sue <b>armoniche</b> (i multipli interi). Nessuna frequenza «intermedia»: solo
+    la fondamentale e le sue armoniche. Ecco perché una nota musicale ha uno spettro a picchi regolari — la
+    fondamentale dà l'altezza (l'intonazione), le armoniche danno il <em>timbro</em> (cosa distingue un violino
+    da un flauto sulla stessa nota, Cap. 22).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Periodico ⇔ spettro a righe</div>
+    <p style="margin-bottom:0">
+      La regola da ricordare: <b>periodicità nel tempo ⇔ spettro discreto</b> (a righe). E per la reciprocità
+      vale il duale, che è proprio ciò che fa la DFT (Cap. 8): <b>campionamento nel tempo ⇔ spettro periodico</b>.
+      Discreto di qua, periodico di là — le due proprietà si scambiano tra i domini. È il filo che lega tutta la
+      famiglia di trasformate del §8.1.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">SEZIONE 11.5</span>La DTFT</h2>
+
+  <p>
+    Un'ultima parente, utile in teoria. Quando un segnale è <b>discreto</b> (campionato) ma <b>aperiodico</b>
+    (non si ripete), la trasformata giusta è la <b class="termine">DTFT</b> — <em>Discrete-Time Fourier
+    Transform</em>. A differenza della DFT, che dà un numero finito di frequenze, la DTFT dà uno spettro
+    <b>continuo</b>: una curva liscia, definita per ogni frequenza.
+  </p>
+
+  <p>
+    Perché ci interessa se non la calcoliamo mai al computer (è continua, non ha un numero finito di valori)?
+    Perché è lo strumento <em>teorico</em> con cui si analizzano e progettano i filtri: la <b>risposta in
+    frequenza</b> di un filtro digitale (Cap. 14) è, propriamente, una DTFT. Pensa alla DFT come alla DTFT
+    «campionata» in un numero finito di punti: la DTFT è la curva continua, la DFT ne prende \(N\) fotografie.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La mappa della famiglia, completata</div>
+    <p style="margin-bottom:0">
+      Ora la tabella del §8.1 si illumina. <b>Continuo + aperiodico</b> → trasformata integrale (spettro continuo
+      e aperiodico). <b>Continuo + periodico</b> → serie di Fourier (spettro a righe). <b>Discreto + aperiodico</b>
+      → DTFT (spettro continuo e periodico). <b>Discreto + periodico</b> → DFT (spettro a righe e periodico: è
+      l'unica interamente finita, la nostra). Ogni «discreto» rende l'altro dominio periodico; ogni «periodico»
+      rende l'altro dominio discreto. <mark>Una sola simmetria governa tutta la famiglia.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">SEZIONE 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">Che aspetto ha lo spettro di ampiezza di (a) un impulso, (b) un segnale costante,
+      (c) una sinusoide pura?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>(a) Impulso → spettro <b>piatto</b> (tutte le frequenze). (b) Costante → un solo picco a \(k=0\) (la
+          frequenza zero). (c) Sinusoide pura → un solo picco alla sua frequenza. (b) e (c) sono la stessa idea:
+          «una sola frequenza» → «un solo picco».</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">Un filtro passa-basso ideale è un rettangolo netto in frequenza. Perché non si può
+      realizzare esattamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché la sua risposta all'impulso (la trasformata inversa del rettangolo) è una <b>sinc</b>, che si
+          estende all'infinito in entrambe le direzioni nel tempo. Servirebbe un filtro con risposta infinitamente
+          lunga (e per giunta che «risponde» prima di essere stimolato, cioè non causale). In pratica la sinc va
+          <b>troncata e finestrata</b>, accettando un taglio non perfettamente netto (Cap. 16).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">Sommi 50 armoniche per ricostruire un'onda quadra. Quanto vale, circa, la
+      sovraelongazione vicino agli spigoli? E con 500 armoniche?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Circa il <b>9%</b> in entrambi i casi. È il fenomeno di Gibbs: aumentando le armoniche la
+          sovraelongazione si <em>stringe</em> (si avvicina allo spigolo) ma <b>non si abbassa</b>. Per ridurla
+          davvero bisogna ammorbidire il taglio (finestrare), non aggiungere termini.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">Perché la DFT (segnale discreto) produce uno spettro periodico?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per la simmetria della famiglia (§11.4–11.5): <b>campionamento nel tempo ⇔ periodicità in frequenza</b>.
+          Discretizzare un dominio rende l'altro periodico. È lo stesso fatto, visto in frequenza, delle repliche
+          spettrali del campionamento (Cap. 3.7): lo spettro di un segnale campionato si ripete a ogni multiplo
+          di \(f_s\).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">SEZIONE 11.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><b>Coppie base:</b> impulso ↔ spettro piatto, costante ↔ picco a zero, sinusoide ↔ picco. Concentrato
+          di qua ⇒ spalmato di là.</li>
+      <li><b>Rettangolo ↔ sinc:</b> la coppia dei filtri. Taglio netto in frequenza ⇒ sinc infinita nel tempo ⇒
+          filtro ideale irrealizzabile (Cap. 16).</li>
+      <li><b>Fenomeno di Gibbs:</b> troncare le armoniche a uno spigolo dà una sovraelongazione del ~9% che si
+          stringe ma non si abbassa. Cura: ammorbidire, non aggiungere termini.</li>
+      <li><b>Serie di Fourier:</b> periodico nel tempo ⇔ spettro a righe (fondamentale + armoniche = timbro).</li>
+      <li><b>La famiglia:</b> ogni «discreto» rende l'altro dominio periodico; ogni «periodico» rende l'altro
+          discreto. La DTFT è la curva continua di cui la DFT prende \(N\) fotografie.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo teoria e vocabolario di Fourier. Manca solo una cosa per renderla davvero utilizzabile: la
+    <b>velocità</b>. Calcolare la DFT con la correlazione del Cap. 8 costa \(\propto N^2\) — proibitivo per
+    segnali grandi. Il <strong>Capitolo 12</strong> presenta l'algoritmo che ha cambiato la storia del DSP: la
+    <b>FFT</b>, la trasformata di Fourier veloce, che fa lo stesso conto in \(\propto N\log N\) — la differenza
+    tra ore e millisecondi.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function dftMagHalf(x) {
+  const N = x.length, half = N / 2, mag = [];
+  for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); }
+  return mag;
+}
+
+/* ============================================================================
+   WIDGET §11.2 — rettangolo ↔ sinc
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wrs-top'), bot = document.getElementById('wrs-bot');
+  if (!top) return;
+  const out = document.getElementById('wrs-out');
+  const wS = document.getElementById('wrs-w'), wV = document.getElementById('wrs-wv');
+  const N = 128;
+
+  function draw() {
+    const W = parseInt(wS.value, 10);
+    wV.textContent = W;
+    // rettangolo centrato
+    const x = new Array(N).fill(0);
+    const start = Math.floor((N - W) / 2);
+    for (let i = 0; i < W; i++) x[start + i] = 1;
+    const mag = dftMagHalf(x);
+    const half = N / 2;
+
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: 0, xmax: N, ymin: -0.3, ymax: 1.4 });
+    pt.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    // disegna il rettangolo come area
+    const pts = [[start, 0]]; for (let i = 0; i < W; i++) { pts.push([start + i, 1]); pts.push([start + i + 1, 1]); } pts.push([start + W, 0]);
+    pt.poly(pts, { color: 'var(--accent)', width: 2.4, close: false });
+    pt.text(2, 1.15, 'rettangolo nel tempo (largo ' + W + ')', { color: 'var(--accent)', anchor: 'start', size: 10.5 });
+
+    bot.innerHTML = '';
+    const pb = new Plot(bot, { xmin: -1, xmax: half + 1, ymin: 0, ymax: Math.max(...mag) * 1.1 + 0.01 });
+    pb.axes({ numbers: true, names: true, xname: 'k', yname: '', stepX: 8, fmtY: () => '' });
+    pb.seq(mag, { color: 'var(--warm)', width: 2 });
+    pb.text(half - 1, Math.max(...mag) * 0.9, 'sinc in frequenza', { color: 'var(--warm)', anchor: 'end', size: 10.5 });
+
+    // larghezza del lobo centrale (primo zero) ~ N/W
+    const lobe = (N / W).toFixed(1);
+    out.innerHTML = `
+      <div class="big">rettangolo largo <b>${W}</b> &nbsp;·&nbsp; lobo sinc ≈ <b>${lobe}</b> bin</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Allarga il rettangolo e la <b style="color:var(--warm)">sinc</b> si <mark>stringe</mark> (lobo ∝ N/larghezza);
+        stringilo e la sinc si allarga. È la reciprocità tempo–frequenza: concentri di qua, spandi di là. Questa
+        è la coppia da cui nascono i filtri del Cap. 16.
+      </div>`;
+  }
+  wS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §11.3 — fenomeno di Gibbs
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wgb-svg');
+  if (!svg) return;
+  const out = document.getElementById('wgb-out');
+  const kS = document.getElementById('wgb-k'), kV = document.getElementById('wgb-kv');
+
+  function draw() {
+    const K = parseInt(kS.value, 10);
+    kV.textContent = K;
+    // somma parziale dell'onda quadra: (4/π) Σ_{dispari k≤K} sin(k x)/k
+    const f = x => { let s = 0; for (let k = 1; k <= K; k += 2) s += Math.sin(k * x) / k; return (4 / Math.PI) * s; };
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 2 * Math.PI, ymin: -1.5, ymax: 1.5 });
+    p.grid(Math.PI / 2, 0.5); p.axes({ numbers: false, names: false });
+    // onda quadra ideale
+    p.line(0, 1, Math.PI, 1, { color: 'var(--rule)', width: 1.5 });
+    p.line(Math.PI, -1, 2 * Math.PI, -1, { color: 'var(--rule)', width: 1.5 });
+    p.line(Math.PI, -1, Math.PI, 1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+    // ricostruzione
+    p.func(f, { color: 'var(--accent)', width: 2.2, samples: 800 });
+
+    // sovraelongazione: massimo su [0, π]
+    let over = 0; for (let i = 1; i < 400; i++) { const x = Math.PI * i / 400; over = Math.max(over, f(x)); }
+    const pct = ((over - 1) * 100).toFixed(1);
+    out.innerHTML = `
+      <div class="big"><b>${K}</b> armoniche &nbsp;·&nbsp; sovraelongazione = <b style="color:var(--warm)">${pct}%</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La ricostruzione <b style="color:var(--accent)">teal</b> insegue l'onda quadra ideale (grigia). Vicino
+        allo spigolo c'è un picco: con più armoniche si <mark>stringe</mark> ma resta sempre attorno al <b>9%</b>
+        — è il fenomeno di Gibbs. ${K > 40 ? 'Nota: anche con tante armoniche il picco non scende sotto ~9%.' : 'Aumenta le armoniche e verifica: il picco non scende.'}
+      </div>`;
+  }
+  kS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

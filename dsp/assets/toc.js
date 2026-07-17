@@ -172,7 +172,7 @@ const TOC = [
     n: 11,
     titolo: "Coppie di trasformate di Fourier",
     file: "cap11-coppie-fourier.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Delta e sinusoidi" },
       { id: "s11-2", n: "11.2", t: "La funzione rettangolare e la sinc" },
