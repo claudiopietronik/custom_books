@@ -129,7 +129,7 @@ const TOC = [
     n: 8,
     titolo: "Quantità di moto, impulso e urti",
     file: "cap08-quantita-moto.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "La quantità di moto" },
       { id: "s8-2", n: "8.2", t: "L'impulso e il suo teorema" },

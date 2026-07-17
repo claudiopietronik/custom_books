@@ -31,7 +31,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 5 — Applicazioni delle leggi di Newton
 - [x] 6 — Lavoro ed energia cinetica
 - [x] 7 — Energia potenziale e conservazione
-- [ ] 8 — Quantità di moto, impulso e urti
+- [x] 8 — Quantità di moto, impulso e urti
 - [ ] 9 — Rotazione dei corpi rigidi
 - [ ] 10 — Dinamica rotazionale
 - [ ] 11 — Equilibrio ed elasticità
