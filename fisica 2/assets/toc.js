@@ -58,7 +58,7 @@ const TOC = [
     n: 4,
     titolo: "Condensatori e dielettrici",
     file: "cap04-condensatori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "La capacità" },
       { id: "s4-2", n: "4.2", t: "Condensatori in serie e in parallelo" },

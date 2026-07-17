@@ -29,7 +29,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 1 — La carica elettrica e il campo elettrico
 - [x] 2 — La legge di Gauss
 - [x] 3 — Il potenziale elettrico
-- [ ] 4 — Condensatori e dielettrici
+- [x] 4 — Condensatori e dielettrici
 - [ ] 5 — Corrente, resistenza e forza elettromotrice
 - [ ] 6 — I circuiti in corrente continua
 - [ ] 7 — Il campo magnetico e le forze magnetiche
