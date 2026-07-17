@@ -38,7 +38,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 2 — Algebra lineare
 - [x] 3 — Probabilità e teoria dell'informazione
 - [x] 4 — Calcolo numerico
-- [ ] 5 — Fondamenti di machine learning
+- [x] 5 — Fondamenti di machine learning
 - [ ] 6 — Reti feedforward profonde
 - [ ] 7 — Regolarizzazione per il deep learning
 - [ ] 8 — Ottimizzazione per l'addestramento

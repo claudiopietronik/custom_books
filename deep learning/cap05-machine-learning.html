@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Fondamenti di machine learning — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5 · Parte I</div>
+    <h1>Fondamenti di machine learning</h1>
+    <p class="standfirst">
+      Il deep learning è una forma di machine learning, e ne eredita tutte le idee di fondo: cosa significa
+      «imparare», perché un modello che va benissimo sui dati di addestramento può fallire su quelli nuovi
+      (<b>overfitting</b>), come scegliere quanto dev'essere potente (<b>capacità</b>), e da dove vengono le
+      funzioni di costo (<b>massima verosimiglianza</b>). <mark>Chiuderemo con le sfide che i metodi classici
+      non superano</mark> — ed è proprio lì che nasce il bisogno del <em>deep</em>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un algoritmo di apprendimento — compito, misura, esperienza (§5.1). Il dilemma centrale:
+      <b>capacità, overfitting e underfitting</b> (§5.2, il widget-cuore) e come governarlo con <b>validation
+      set e iperparametri</b> (§5.3). La teoria: <b>stimatori, bias e varianza</b> (§5.4), la <b>massima
+      verosimiglianza</b> (§5.5) e la <b>statistica bayesiana</b> (§5.6). I due grandi paradigmi —
+      <b>supervisionato</b> (§5.7) e <b>non supervisionato</b> (§5.8) — e il motore pratico, l'<b>SGD</b> (§5.9).
+      Come si assembla un algoritmo (§5.10) e, infine, <b>perché serve il deep learning</b> (§5.11).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni concetto di questo capitolo torna, identico, nelle reti profonde — solo con milioni di parametri
+      invece di due. L'overfitting è la battaglia quotidiana di chi addestra reti; il validation set decide
+      quando fermarsi; la massima verosimiglianza <em>è</em> la cross-entropy del Cap. 3. <mark>Chi salta questo
+      capitolo non capirà mai <em>perché</em> una rete generalizza o fallisce</mark> — capirà solo come
+      scriverne il codice.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Gli algoritmi di apprendimento</h2>
+
+  <p class="lead">
+    Definizione operativa (Mitchell, 1997): un programma <b>impara</b> da un'esperienza \(E\), rispetto a un
+    compito \(T\) e a una misura di prestazione \(P\), se la sua \(P\) su \(T\) migliora con \(E\).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Compito, misura, esperienza</div>
+    <p style="margin-bottom:0">
+      • Il <b>compito \(T\)</b>: classificazione, regressione, traduzione, denoising, generazione… Descritto da
+        come il sistema deve processare un <b>esempio</b> (un vettore di feature \(\vv{x}\in\R^n\)).<br>
+      • La <b>misura \(P\)</b>: accuratezza per la classificazione, errore quadratico per la regressione. Va
+        valutata su dati <b>mai visti</b> (il test set), perché ci interessa come il sistema si comporta nel
+        mondo, non a memoria.<br>
+      • L'<b>esperienza \(E\)</b>: <span class="termine">supervisionata</span> se ogni esempio ha un'etichetta
+        \(y\); <span class="termine">non supervisionata</span> se ci sono solo i \(\vv{x}\).
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La regressione lineare <span class="tag">il «hello world» del ML</span></div>
+    <div class="f-body">
+      \[ \hat{y} = \vv{w}\T\vv{x} + b, \qquad \Loss_{\text{MSE}} = \frac{1}{m}\sum_{i=1}^{m}\big(\hat{y}^{(i)} - y^{(i)}\big)^2 \]
+    </div>
+    <div class="f-note">
+      Il modello prevede \(\hat{y}\) come combinazione lineare delle feature. La misura è l'<b>errore quadratico
+      medio</b> (MSE) tra previsione e verità. «Imparare» qui è trovare i pesi \(\vv{w}\) e il bias \(b\) che
+      minimizzano l'MSE sul training set — il problema di minimi quadrati del §4.6, risolubile in chiusa o per
+      discesa del gradiente. <mark>Una rete non è che questo, ripetuto e reso nonlineare.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Capacità, overfitting e underfitting</h2>
+
+  <p class="lead">
+    La vera sfida non è andare bene sui dati che hai, ma su quelli che <em>non</em> hai ancora visto:
+    <b>generalizzare</b>. E qui si annida il trade-off centrale di tutto il ML.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> I due errori, la capacità nel mezzo</div>
+    <p style="margin-bottom:0">
+      L'<span class="termine">underfitting</span> è quando il modello è <b>troppo semplice</b> per catturare la
+      struttura dei dati: sbaglia già sul training set. L'<span class="termine">overfitting</span> è l'opposto:
+      il modello è <b>così potente</b> da memorizzare anche il <em>rumore</em> del training set, e crolla sui
+      dati nuovi. La <span class="termine">capacità</span> è quanto un modello è flessibile (per un polinomio, il
+      grado). <mark>Il segreto: capacità giusta = abbastanza per i pattern veri, non tanto da inseguire il
+      rumore.</mark> Il divario tra errore di training ed errore di test è il <b>gap di generalizzazione</b>.
+    </p>
+  </div>
+
+  <p>
+    Il widget lo mostra dal vivo. Punti rumorosi generati da una curva «vera» (tratteggiata). Muovi il
+    <b>grado</b> del polinomio: a grado 1 il modello è una retta che non ci arriva (<b>underfit</b>: errore alto
+    ovunque); al grado giusto segue la curva vera; a grado alto la funzione si contorce per passare
+    <em>esattamente</em> sui punti di training (<b>overfit</b>: errore di training quasi zero, ma errore di test
+    che esplode). <mark>Guarda le due barre d'errore muoversi in direzioni opposte.</mark>
+  </p>
+
+  <div class="widget" id="w-fit">
+    <div class="w-head">
+      <span>Capacità: underfitting ↔ overfitting</span>
+      <span class="hint">muovi il grado del polinomio</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wf-svg" viewBox="0 0 560 380" role="img" aria-label="Fit polinomiale di dati rumorosi: a grado basso underfit, a grado alto overfit"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>grado</label><input type="range" id="wf-deg" min="1" max="10" step="1" value="1"><output id="wf-deg-o">1</output></div>
+      <button class="w-btn" id="wf-noise">Rigenera rumore</button>
+    </div>
+    <div class="w-readout" id="wf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Iperparametri e insiemi di validazione</h2>
+
+  <p class="lead">
+    Il grado del polinomio, il learning rate, la forza della regolarizzazione: sono <b>iperparametri</b>, scelte
+    che non si imparano dai dati con la discesa del gradiente. Come li fissiamo senza barare?
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Tre insiemi, non due</div>
+    <p style="margin-bottom:0">
+      Se scegliessi gli iperparametri guardando il <b>test set</b>, «truccheresti» il risultato: il test non
+      sarebbe più una stima onesta della generalizzazione. Perciò i dati si dividono in <b>tre</b>:
+      <b>training</b> (impara i parametri), <b>validation</b> (sceglie gli iperparametri) e <b>test</b> (toccato
+      una sola volta, alla fine, per il verdetto). <mark>Il test set si guarda una volta sola.</mark> Quando i
+      dati scarseggiano, si usa la <b>cross-validation</b> (k-fold): si ruota quale porzione fa da validation e
+      si media.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>Stimatori, bias e varianza</h2>
+
+  <p class="lead">
+    Overfitting e underfitting hanno un nome più preciso in statistica: <b>varianza</b> e <b>bias</b> di uno
+    stimatore. È la scomposizione che spiega <em>perché</em> esiste il trade-off.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La scomposizione bias-varianza <span class="tag">l'errore atteso in due pezzi</span></div>
+    <div class="f-body">
+      \[ \E\big[(\hat\theta - \theta)^2\big] = \underbrace{\big(\E[\hat\theta]-\theta\big)^2}_{\hA{\text{bias}^2}}
+         + \underbrace{\Var(\hat\theta)}_{\hB{\text{varianza}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{bias}}\) — l'errore <b>sistematico</b></dt>
+        <dd>quanto lo stimatore «manca» il vero valore in media. Alto bias = <b>underfitting</b>: il modello è
+            troppo rigido per il fenomeno.</dd>
+        <dt>\(\hB{\text{varianza}}\) — la <b>sensibilità</b> ai dati</dt>
+        <dd>quanto lo stimatore cambia se ricampioni il training set. Alta varianza = <b>overfitting</b>: il
+            modello insegue il rumore, cambia molto da un dataset all'altro.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Aumentando la capacità, il bias scende ma la varianza sale: l'errore totale ha una <b>forma a U</b>, con
+      un minimo alla capacità ottimale (esattamente la valle che vedi nel widget di §5.2 spostando il grado).
+      <mark>Più dati spostano il trade-off a favore di modelli più grandi</mark> — ed è per questo che il deep
+      learning, affamato di dati, ha potuto crescere.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>La stima di massima verosimiglianza</h2>
+
+  <p class="lead">
+    Da dove viene l'MSE? E la cross-entropy? Non sono scelte arbitrarie: derivano tutte da un unico principio,
+    la <b>massima verosimiglianza</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Massima verosimiglianza <span class="tag">i parametri che rendono i dati più probabili</span></div>
+    <div class="f-body">
+      \[ \vv{\theta}_{\text{ML}} = \argmax_{\vv{\theta}} \prod_{i=1}^{m} p(\vv{x}^{(i)};\vv{\theta})
+         = \argmax_{\vv{\theta}} \sum_{i=1}^{m} \log p(\vv{x}^{(i)};\vv{\theta}) \]
+    </div>
+    <div class="f-note">
+      L'idea: scegli i parametri \(\vv{\theta}\) che rendono i dati osservati <b>più probabili</b>. Si passa al
+      <b>logaritmo</b> (la log-verosimiglianza) per due motivi: trasforma il prodotto — che va in underflow — in
+      una somma, e non cambia il punto di massimo. <mark>Massimizzare la log-verosimiglianza equivale a
+      minimizzare la cross-entropy (§3.8) tra dati e modello</mark>: ecco il ponte. Applicata a un modello
+      gaussiano con varianza fissa, la massima verosimiglianza <em>produce</em> esattamente l'MSE; applicata a
+      un modello categorico, produce la cross-entropy. Un principio, tutte le nostre loss.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>La statistica bayesiana</h2>
+
+  <p class="lead">
+    La massima verosimiglianza dà <em>un</em> valore dei parametri. L'approccio <b>bayesiano</b> tiene invece
+    una distribuzione su tutti i valori possibili, pesata dalla nostra credenza.
+  </p>
+
+  <p>
+    Invece di un punto \(\vv{\theta}_{\text{ML}}\), il bayesiano parte da una <b>prior</b> \(p(\vv{\theta})\) e
+    la aggiorna con i dati via Bayes, ottenendo la <b>posterior</b> \(p(\vv{\theta}\given\text{dati})\). Fa
+    previsioni <b>mediando</b> su tutti i parametri, pesati dalla posterior — il che riduce l'overfitting perché
+    non si «impegna» su un unico valore. Il costo è computazionale (integrare su tutti i \(\vv{\theta}\)). Una
+    via di mezzo è il <b>MAP</b> (massimo a posteriori), che prende il picco della posterior: si scopre che
+    <mark>massimizzare la posterior con una prior gaussiana equivale ad aggiungere la penalità L2</mark> — cioè
+    la regolarizzazione weight decay (Cap. 7). Prior e regolarizzazione sono la stessa idea vista da due lati.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Apprendimento supervisionato</h2>
+
+  <p class="lead">
+    Impara la mappa da input a etichetta, \(\vv{x}\mapsto y\), da esempi già etichettati. È il paradigma
+    dominante e quello di quasi tutta la Parte II.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Modello</th><th>Idea</th><th>Uso tipico</th></tr></thead>
+    <tbody>
+      <tr><td><b>Regressione logistica</b></td><td>\(\sigma(\vv{w}\T\vv{x})\): un iperpiano + sigmoide</td>
+        <td>Classificazione binaria; il neurone d'uscita di mezza rete.</td></tr>
+      <tr><td><b>SVM</b></td><td>l'iperpiano a <b>margine massimo</b>; kernel per i confini curvi</td>
+        <td>Il grande rivale delle reti prima del 2012.</td></tr>
+      <tr><td><b>k-NN</b></td><td>guarda i \(k\) vicini più simili e vota</td>
+        <td>Baseline semplice, nessun addestramento; soffre in alta dimensione.</td></tr>
+      <tr><td><b>Alberi di decisione</b></td><td>una serie di domande sì/no che partizionano lo spazio</td>
+        <td>Interpretabili; potenti in ensemble (random forest, boosting).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-8"><span class="secnum">Sezione 5.8</span>Apprendimento non supervisionato</h2>
+
+  <p class="lead">
+    Nessuna etichetta: solo i dati \(\vv{x}\). L'obiettivo è scoprirne la <b>struttura</b> — gruppi, direzioni,
+    la distribuzione stessa.
+  </p>
+
+  <p>
+    Due compiti tipici: la <b>riduzione di dimensionalità</b> (la PCA del §2.11 trova le direzioni di massima
+    varianza) e il <b>clustering</b> (il <em>k-means</em> raggruppa i punti in \(k\) gruppi attorno a
+    centroidi). Più in generale, l'apprendimento non supervisionato prova a modellare la densità \(p(\vv{x})\)
+    dei dati — è il filo che porta agli <b>autoencoder</b> (Cap. 14) e ai <b>modelli generativi</b> (Cap. 20).
+    <mark>La distinzione supervisionato/non supervisionato è meno netta di quanto sembri</mark>: la regola della
+    catena (§3.4) permette di trasformare la modellazione di \(p(\vv{x})\) in tanti problemi supervisionati
+    «prevedi il prossimo pezzo dato il resto» — ed è esattamente così che imparano i modelli di linguaggio.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-9"><span class="secnum">Sezione 5.9</span>La discesa del gradiente stocastica</h2>
+
+  <p class="lead">
+    Il gradiente della loss è una somma su <em>tutti</em> gli esempi. Con milioni di dati, un solo passo
+    costerebbe un'eternità. La soluzione — geniale e semplice — è l'<b>SGD</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Stochastic Gradient Descent <span class="tag">il gradiente su un mini-batch</span></div>
+    <div class="f-body">
+      \[ \grad_{\vv{\theta}}\Loss \approx \frac{1}{m'}\sum_{i\in \text{batch}} \grad_{\vv{\theta}}\,\ell\big(\vv{x}^{(i)},y^{(i)};\vv{\theta}\big),
+         \qquad \vv{\theta}\leftarrow\vv{\theta}-\eta\,\grad_{\vv{\theta}}\Loss \]
+    </div>
+    <div class="f-note">
+      Invece di calcolare il gradiente esatto su tutti gli \(m\) esempi, lo si <b>stima</b> su un piccolo
+      <b>mini-batch</b> di \(m'\) esempi (tipicamente 32–256) estratti a caso. La stima è rumorosa ma
+      <em>non distorta</em>, e costa pochissimo: si fanno tantissimi passi approssimati invece di pochi passi
+      esatti. <mark>Il costo di un aggiornamento non dipende più dalla dimensione del dataset</mark> — è ciò che
+      rende possibile addestrare su miliardi di esempi. Il rumore del batch, per giunta, aiuta a sfuggire alle
+      selle. È l'algoritmo che manda avanti tutto il deep learning (Cap. 8).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-10"><span class="secnum">Sezione 5.10</span>Costruire un algoritmo di ML</h2>
+
+  <p class="lead">
+    Quasi ogni algoritmo di deep learning è la stessa ricetta con quattro ingredienti intercambiabili.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧩</span> La ricetta a quattro ingredienti</div>
+    <p style="margin-bottom:0">
+      1. Un <b>dataset</b> (gli esempi).<br>
+      2. Un <b>modello</b> (la famiglia di funzioni: lineare, rete profonda, …).<br>
+      3. Una <b>funzione di costo</b> (di solito log-verosimiglianza negativa + regolarizzazione).<br>
+      4. Una <b>procedura di ottimizzazione</b> (di solito SGD).<br>
+      <mark>Cambiare uno dei quattro dà un algoritmo diverso.</mark> Regressione lineare, logistica, reti
+      profonde, autoencoder: tutti si ottengono scegliendo un modello e una loss e girando l'ottimizzatore.
+      Questa modularità è il motivo per cui i framework (PyTorch, TensorFlow) hanno la struttura che hanno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-11"><span class="secnum">Sezione 5.11</span>Le sfide che motivano il deep learning</h2>
+
+  <p class="lead">
+    Se il ML classico funziona, perché serve il deep learning? Perché in alta dimensione i metodi classici
+    <b>crollano</b>. Ecco le tre crepe.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La maledizione della dimensionalità</div>
+    <p style="margin-bottom:0">
+      Il numero di configurazioni possibili cresce <b>esponenzialmente</b> con la dimensione. Con 100 pixel
+      binari ci sono \(2^{100}\) immagini possibili: nessun dataset potrà mai coprirle. I metodi che
+      «guardano i vicini» (come k-NN) presuppongono che punti vicini si comportino in modo simile — ma in alta
+      dimensione <mark>ogni punto è lontano da ogni altro</mark>, e i vicini non bastano.
+    </p>
+  </div>
+
+  <p>
+    Le altre due crepe sono connesse. I metodi classici si appoggiano a un <b>prior di regolarità locale</b>
+    (la funzione cambia poco tra punti vicini): utile, ma incapace di rappresentare funzioni complicate con
+    tante «oscillazioni» senza altrettanti esempi. E presuppongono feature costruite a mano. <mark>Il deep
+    learning scommette invece su un prior diverso</mark>: che i dati siano generati dalla <b>composizione</b> di
+    pochi fattori a più livelli (§1.3). Sotto questa ipotesi — che sembra reggere per immagini, suoni,
+    linguaggio — una rete profonda può rappresentare funzioni molto complesse con relativamente pochi parametri
+    ed esempi, generalizzando dove i metodi locali falliscono. È la scommessa che apre la Parte II.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li>Imparare = migliorare una <b>misura \(P\)</b> su un <b>compito \(T\)</b> con l'<b>esperienza \(E\)</b>,
+          valutata su dati <b>nuovi</b> (§5.1).</li>
+      <li><b>Underfitting</b> (capacità troppo bassa, alto bias) vs <b>overfitting</b> (troppo alta, alta
+          varianza): la capacità giusta sta nel mezzo (§5.2, §5.4). Il <b>validation set</b> sceglie gli
+          iperparametri; il test si guarda una volta (§5.3).</li>
+      <li>La <b>massima verosimiglianza</b> genera le nostre loss: MSE per gaussiane, cross-entropy per
+          categoriche (§5.5). La prior bayesiana = regolarizzazione (§5.6).</li>
+      <li>La ricetta: dataset + modello + costo + <b>SGD</b> (§5.9–5.10). I metodi classici crollano in alta
+          dimensione; il deep learning scommette sulla <b>composizione</b> di fattori (§5.11).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Finita la Parte I: abbiamo gli attrezzi matematici e il quadro del machine learning. La <strong>Parte II</strong>
+    costruisce le reti vere. Il <strong>Capitolo 6</strong> apre con le <b>reti feedforward profonde</b>:
+    partiremo dallo XOR — il problema che uccise i modelli lineari (§1.5) — e lo risolveremo impilando un livello
+    nascosto, per poi arrivare alla <b>backpropagation</b>, l'algoritmo che calcola i gradienti in una rete.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-12"><span class="secnum">Sezione 5.12</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §5.2, a quale grado del polinomio l'errore di <b>test</b> è minimo? Perché a grado 1 sia
+      training sia test sono alti, mentre a grado 10 il training è quasi zero ma il test schizza in alto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      Hai 1000 esempi. Proponi una suddivisione ragionevole in training/validation/test e spiega a cosa serve
+      ciascuno. Perché sarebbe un errore scegliere il grado del polinomio guardando l'errore di test?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Associa: (i) alto bias, bassa varianza; (ii) basso bias, alta varianza — a underfitting e overfitting.
+      Per ciascuno, la mossa giusta è aumentare o diminuire la capacità del modello? E raccogliere più dati a
+      quale dei due giova di più?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      Spiega in due righe perché massimizzare la log-verosimiglianza di un modello gaussiano (a varianza fissa)
+      equivale a minimizzare l'errore quadratico medio. <em>Suggerimento:</em> scrivi \(-\log p\) per la
+      gaussiana e guarda quale termine dipende dai parametri.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Un modello con errore di training zero è sempre il migliore. &nbsp;
+      (b) L'SGD calcola il gradiente esatto della funzione di costo. &nbsp;
+      (c) Aggiungere una penalità L2 sui pesi equivale a una prior gaussiana (visione MAP). &nbsp;
+      (d) In alta dimensione, i metodi basati sui vicini più prossimi migliorano.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-13"><span class="secnum">Sezione 5.13</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      Il minimo dell'errore di test cade a grado <b>basso-intermedio</b> (tipicamente 3–4, vicino alla
+      complessità della curva vera). A grado 1 il modello è una retta: troppo rigido per una curva —
+      <b>underfitting</b>, alto errore ovunque. A grado 10 il polinomio ha abbastanza libertà da passare
+      esattamente sui punti di training (errore di training ≈ 0), ma per farlo si contorce selvaggiamente tra un
+      punto e l'altro: sui dati nuovi (test) sbaglia di molto — <b>overfitting</b>. È la curva a U del §5.4.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      Per esempio 700/150/150 (o 800/100/100). <b>Training</b>: adatta i pesi. <b>Validation</b>: sceglie il
+      grado (e ogni altro iperparametro) confrontando l'errore. <b>Test</b>: stima finale, onesta, della
+      generalizzazione. Scegliere il grado sul test lo «contaminerebbe»: l'errore di test smetterebbe di essere
+      una stima imparziale, perché avresti ottimizzato <em>proprio</em> su di esso — un overfitting di secondo
+      livello, sugli iperparametri.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p style="margin-bottom:0">
+      (i) alto bias, bassa varianza = <b>underfitting</b> → <b>aumentare</b> la capacità (modello più
+      flessibile). (ii) basso bias, alta varianza = <b>overfitting</b> → <b>diminuire</b> la capacità (o
+      regolarizzare). Raccogliere più dati giova soprattutto all'<b>overfitting</b>: riduce la varianza e
+      permette di sostenere modelli più grandi senza memorizzare il rumore. Contro l'underfitting i dati in più
+      aiutano poco: il modello resta troppo rigido.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <p style="margin-bottom:0">
+      Per una gaussiana \(-\log p(y;\mu,\sigma^2)=\frac{(y-\mu)^2}{2\sigma^2}+\frac12\log(2\pi\sigma^2)\). Con
+      \(\mu=\hat y\) (la previsione del modello) e \(\sigma^2\) fisso, l'unico termine che dipende dai parametri
+      è \(\frac{(y-\hat y)^2}{2\sigma^2}\): minimizzarlo, sommato sugli esempi, è minimizzare
+      \(\sum(y-\hat y)^2\), cioè l'<b>MSE</b>. La log-verosimiglianza negativa gaussiana <em>è</em> l'MSE (a meno
+      di costanti).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Errore di training zero è spesso sintomo di <b>overfitting</b>: conta l'errore su dati
+      nuovi. <br>
+      <b>(b) FALSO.</b> L'SGD <b>stima</b> il gradiente su un mini-batch: è rumoroso ma non distorto (§5.9). <br>
+      <b>(c) VERO.</b> Il MAP con prior gaussiana sui pesi aggiunge un termine \(\propto\norm{\vv{w}}_2^2\): è la
+      penalità L2 / weight decay (§5.6, Cap. 7). <br>
+      <b>(d) FALSO.</b> Peggiorano: la maledizione della dimensionalità rende ogni punto lontano da ogni altro,
+      e i «vicini» perdono significato (§5.11).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §5.2 — capacità: underfitting ↔ overfitting (fit polinomiale)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wf-svg');
+  if (!svg) return;
+  const out = document.getElementById('wf-out');
+  const degI = document.getElementById('wf-deg'), degO = document.getElementById('wf-deg-o');
+  const noiseB = document.getElementById('wf-noise');
+
+  const trueF = x => Math.sin(2.4 * x);            // funzione "vera" su [-1,1]
+  let seed = 7;
+  function rng() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+
+  let train = [];
+  function genData() {
+    seed = seed || 7;
+    train = [];
+    const n = 11;
+    for (let i = 0; i < n; i++) {
+      const x = -1 + 2 * i / (n - 1);
+      const y = trueF(x) + (rng() - 0.5) * 0.55;    // rumore
+      train.push([x, y]);
+    }
+  }
+  genData();
+
+  // risolutore lineare (eliminazione di Gauss) per sistemi piccoli
+  function solve(A, b) {
+    const n = b.length;
+    for (let i = 0; i < n; i++) {
+      let piv = i;
+      for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+      [A[i], A[piv]] = [A[piv], A[i]];[b[i], b[piv]] = [b[piv], b[i]];
+      const d = A[i][i] || 1e-9;
+      for (let r = 0; r < n; r++) {
+        if (r === i) continue;
+        const f = A[r][i] / d;
+        for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+        b[r] -= f * b[i];
+      }
+    }
+    return b.map((v, i) => v / (A[i][i] || 1e-9));
+  }
+  // fit polinomiale di grado deg via equazioni normali
+  function polyfit(pts, deg) {
+    const m = deg + 1;
+    const A = Array.from({ length: m }, () => new Array(m).fill(0));
+    const b = new Array(m).fill(0);
+    for (const [x, y] of pts) {
+      const pw = []; let p = 1; for (let k = 0; k < 2 * m; k++) { pw.push(p); p *= x; }
+      for (let i = 0; i < m; i++) { b[i] += pw[i] * y; for (let j = 0; j < m; j++) A[i][j] += pw[i + j]; }
+    }
+    return solve(A, b);
+  }
+  const evalPoly = (c, x) => { let s = 0, p = 1; for (const ck of c) { s += ck * p; p *= x; } return s; };
+
+  function draw() {
+    const deg = parseInt(degI.value, 10);
+    degO.textContent = deg;
+    const coef = polyfit(train, deg);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1.15, xmax: 1.15, ymin: -1.7, ymax: 1.7 });
+    p.grid(0.5, 0.5); p.axes({ numbers: true, stepX: 0.5, stepY: 0.5 });
+    // funzione vera
+    p.func(trueF, { color: 'var(--rule)', width: 2, dash: '6 4' });
+    // polinomio adattato
+    p.func(x => evalPoly(coef, x), { color: 'var(--accent)', width: 2.6, from: -1.12, to: 1.12 });
+    // punti di training
+    for (const [x, y] of train) p.dot(x, y, { color: 'var(--warm)', r: 4 });
+
+    // errori
+    let eTr = 0; for (const [x, y] of train) eTr += (evalPoly(coef, x) - y) ** 2; eTr /= train.length;
+    let eTe = 0, nTe = 60;
+    for (let i = 0; i < nTe; i++) { const x = -1 + 2 * i / (nTe - 1); eTe += (evalPoly(coef, x) - trueF(x)) ** 2; }
+    eTe /= nTe;
+    const diag = deg <= 1 ? '<mark>Underfitting: la curva è troppo rigida, sbaglia già sul training.</mark>'
+      : deg >= 8 ? '<mark>Overfitting: la curva si contorce per toccare i punti; il test esplode.</mark>'
+      : 'Capacità ben calibrata: segue la curva vera senza inseguire il rumore.';
+    // barre errore (scala log-ish clamped)
+    const bar = e => Math.min(100, 100 * Math.sqrt(e) / 1.2);
+    out.innerHTML = `
+      <div class="big">grado ${deg} &nbsp;·&nbsp;
+        err. training <b style="color:var(--warm)">${fmt(eTr, 3)}</b> &nbsp;
+        err. test <b style="color:${eTe > 0.25 ? 'var(--warm)' : 'var(--green)'}">${fmt(eTe, 3)}</b>
+      </div>
+      <div style="margin:.5rem 0; display:flex; flex-direction:column; gap:.3rem; text-align:left; font-family:var(--sans); font-size:12px">
+        <div>training <span style="display:inline-block; height:9px; width:${bar(eTr)}%; background:var(--warm); border-radius:3px; vertical-align:middle"></span></div>
+        <div>test &nbsp;&nbsp;&nbsp;<span style="display:inline-block; height:9px; width:${bar(eTe)}%; background:var(--accent); border-radius:3px; vertical-align:middle"></span></div>
+      </div>
+      <div style="color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva <b style="color:var(--accent)">blu</b> è il polinomio adattato; la <b>tratteggiata</b> è la
+        funzione vera; i punti <b style="color:var(--warm)">arancioni</b> sono i dati (con rumore). ${diag}
+        Alza il grado e guarda l'errore di training scendere mentre quello di test prima cala e poi risale (la
+        curva a U, §5.4).
+      </div>`;
+  }
+  degI.addEventListener('input', draw);
+  noiseB.addEventListener('click', () => { seed = (seed * 7 + 13) & 0x7fffffff; genData(); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

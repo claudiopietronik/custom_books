@@ -92,7 +92,7 @@ const TOC = [
     titolo: "Fondamenti di machine learning",
     file: "cap05-machine-learning.html",
     parte: P1,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Gli algoritmi di apprendimento" },
       { id: "s5-2", n: "5.2", t: "Capacità, overfitting e underfitting" },
