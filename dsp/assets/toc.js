@@ -77,7 +77,7 @@ const TOC = [
     n: 5,
     titolo: "Sistemi lineari",
     file: "cap05-sistemi-lineari.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Cos'è un sistema" },
       { id: "s5-2", n: "5.2", t: "Linearità: omogeneità e additività" },

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Sistemi lineari — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.05 — Capitolo 5</div>
+    <h1>Sistemi lineari</h1>
+    <p class="standfirst">
+      Da qui comincia l'architettura del DSP. Quasi tutto ciò che faremo — filtrare, trasformare, analizzare —
+      accade dentro una classe speciale di sistemi: quelli <b>lineari</b>. Non è un capriccio matematico: la
+      linearità è la chiave che trasforma problemi impossibili in somme di problemi semplici. Capirla bene, qui,
+      significa capire <em>perché</em> funzionano la convoluzione e Fourier, che arrivano subito dopo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Fondamenta chiuse (Cap. 1–4), si costruisce. Questo capitolo è la porta d'ingresso ai due strumenti-madre
+      del libro: la <b>convoluzione</b> (Cap. 6) e la <b>trasformata di Fourier</b> (Cap. 8). Entrambi sono, in
+      fondo, modi di sfruttare una sola idea introdotta qui — la <em>sovrapposizione</em>.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La strategia più potente di tutta l'ingegneria è: <strong>spezza un problema complicato in pezzi semplici,
+      risolvi i pezzi, ricomponi.</strong> Questa strategia funziona <em>solo</em> se il sistema è lineare —
+      altrimenti «la somma dei pezzi» non ricostruisce il tutto. Ecco perché ci ostiniamo a lavorare con sistemi
+      lineari: sono gli unici in cui il dividi-e-conquista è lecito.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">SEZIONE 5.1</span>Cos'è un sistema</h2>
+
+  <p class="lead">
+    Un <b class="termine">sistema</b> è qualunque cosa prenda in ingresso un segnale e ne produca in uscita un
+    altro. Una scatola con una freccia che entra e una che esce.
+  </p>
+
+  <p>
+    Un amplificatore è un sistema: entra un segnale debole, esce lo stesso segnale più forte. Un filtro è un
+    sistema: entra un segnale rumoroso, esce ripulito. Anche l'aria tra un altoparlante e il tuo orecchio è un
+    sistema. In notazione: chiamiamo \(x[n]\) il segnale d'ingresso e \(y[n]\) l'uscita, e scriviamo il passaggio
+    come \(x[n] \rightarrow y[n]\). Il sistema è la regola che, dato \(x\), determina \(y\).
+  </p>
+
+  <p>
+    Ci interessa capire e prevedere questa regola. E la buona notizia è che un'enorme famiglia di sistemi utili
+    condivide due proprietà che li rendono <em>docili</em>: la linearità e l'invarianza nel tempo. Sono i
+    protagonisti del capitolo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">SEZIONE 5.2</span>Linearità: omogeneità e additività</h2>
+
+  <p class="lead">
+    Un sistema è <b>lineare</b> se rispetta due regole semplici. Sembrano ovvie; sono invece la condizione
+    esatta che sblocca tutto il resto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le due leggi della linearità <span class="tag">omogeneità + additività</span></div>
+    <div class="f-body">
+      \[
+        \begin{aligned}
+        \text{omogeneità:}\quad & \hA{k\,x[n]} \;\rightarrow\; \hA{k\,y[n]} \\[4pt]
+        \text{additività:}\quad & \hB{x_1[n]} + \hC{x_2[n]} \;\rightarrow\; \hB{y_1[n]} + \hC{y_2[n]}
+        \end{aligned}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{k\,x[n]}\)</dt><dd><b>Omogeneità</b> (o scalabilità): se moltiplichi l'ingresso per un numero
+            \(k\), l'uscita si moltiplica per lo stesso \(k\). Raddoppia l'ingresso, l'uscita raddoppia.</dd>
+        <dt>\(\hB{x_1} + \hC{x_2}\)</dt><dd><b>Additività</b>: se mandi la somma di due ingressi, l'uscita è la
+            somma delle due uscite. I segnali «non si disturbano» a vicenda passando nel sistema.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Le due insieme si riassumono in una: <mark>una combinazione di ingressi produce la stessa combinazione
+      delle uscite</mark>. Un amplificatore ideale (\(y = 3x\)) è lineare. Un sistema che eleva al quadrato
+      (\(y = x^2\)) non lo è: raddoppiando \(x\), \(y\) quadruplica, non raddoppia.
+    </div>
+  </div>
+
+  <h3>Provalo: questo sistema è lineare?</h3>
+
+  <p>
+    Ecco il test dell'additività reso visibile. Prendiamo due segnali, \(a\) e \(b\). Calcoliamo l'uscita del
+    sistema sulla <em>somma</em>, \(f(a+b)\), e la confrontiamo con la <em>somma delle uscite</em>,
+    \(f(a)+f(b)\). Se le due curve coincidono, il sistema è lineare; se si separano, non lo è. Cambia sistema e
+    guarda cosa succede.
+  </p>
+
+  <div class="widget" id="w-lin">
+    <div class="w-head">
+      <span>Test di linearità</span>
+      <span class="hint">le due curve coincidono ⇒ lineare</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wl-svg" viewBox="0 0 620 300" role="img" aria-label="Confronto tra l'uscita del sistema sulla somma di due segnali e la somma delle due uscite: coincidono solo se il sistema è lineare"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wl-amp">×2 (amplifica)</button>
+      <button class="w-btn" id="wl-sq">elevamento al quadrato</button>
+      <button class="w-btn" id="wl-clip">saturazione</button>
+    </div>
+    <div class="w-readout" id="wl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">SEZIONE 5.3</span>Invarianza nel tempo</h2>
+
+  <p class="lead">
+    Alla linearità aggiungiamo una seconda proprietà, altrettanto naturale: l'<b>invarianza nel tempo</b> (o
+    <em>shift invariance</em>). Il sistema si comporta allo stesso modo <em>oggi come domani</em>.
+  </p>
+
+  <p>
+    Formalmente: se ritardi l'ingresso di un certo numero di campioni, l'uscita è la stessa di prima, solo
+    ritardata dello stesso numero di campioni — <em>senza cambiare forma</em>. Scritto: se
+    \(x[n] \rightarrow y[n]\), allora \(x[n-s] \rightarrow y[n-s]\). Un sistema invariante nel tempo non ha
+    «orologio interno»: non gli importa <em>quando</em> arriva un segnale, solo <em>com'è fatto</em>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> LTI: la classe d'oro</div>
+    <p style="margin-bottom:0">
+      Un sistema che è <b>sia lineare sia invariante nel tempo</b> si dice <b class="termine">LTI</b> (dall'inglese
+      <em>Linear, Time-Invariant</em>). È la classe su cui poggia praticamente tutto il DSP dei prossimi dieci
+      capitoli. Il motivo è enorme e lo scopriremo nel Cap. 6: <mark>un sistema LTI è completamente descritto da
+      una sola cosa — come reagisce a un singolo impulso</mark>. Conosci quella, e conosci la sua risposta a
+      <em>qualunque</em> ingresso. È una semplificazione quasi miracolosa.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">SEZIONE 5.4</span>Esempi lineari e non lineari</h2>
+
+  <p>
+    Costruire l'intuizione richiede esempi in entrambe le direzioni. Ecco i più istruttivi.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Sistema</th><th>Regola</th><th>Lineare?</th><th>Perché</th></tr></thead>
+    <tbody>
+      <tr><td><b>Amplificatore</b></td><td>\(y = k\,x\)</td><td style="color:var(--green)">sì</td><td>scala e somma si conservano perfettamente</td></tr>
+      <tr><td><b>Media mobile</b></td><td>media dei vicini</td><td style="color:var(--green)">sì</td><td>è fatta di sole somme e scale (Cap. 15)</td></tr>
+      <tr><td><b>Ritardo</b></td><td>\(y[n]=x[n-s]\)</td><td style="color:var(--green)">sì</td><td>sposta soltanto: lineare e pure invariante</td></tr>
+      <tr><td><b>Quadrato</b></td><td>\(y = x^2\)</td><td style="color:var(--warm)">no</td><td>raddoppiando \(x\), \(y\) quadruplica</td></tr>
+      <tr><td><b>Saturazione</b></td><td>taglia oltre una soglia</td><td style="color:var(--warm)">no</td><td>oltre la soglia l'uscita smette di scalare</td></tr>
+      <tr><td><b>Offset costante</b></td><td>\(y = x + c\)</td><td style="color:var(--warm)">no</td><td>viola l'omogeneità: \(k\cdot 0 = 0\) ma l'uscita è \(c\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> «Somma una costante» non è lineare</div>
+    <p style="margin-bottom:0">
+      È la trappola che sorprende tutti: \(y = x + 5\) sembra innocua e «dritta», ma <b>non è un sistema
+      lineare</b>. Prova l'omogeneità con \(k=0\): l'ingresso nullo dovrebbe dare uscita nulla in ogni sistema
+      lineare (\(0 \rightarrow 0\)), ma qui dà \(5\). Aggiungere una costante è un'operazione <em>affine</em>, non
+      lineare. La distinzione conta: molte «linearità» ingenue nascondono un offset che rompe la sovrapposizione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">SEZIONE 5.5</span>Il principio di sovrapposizione</h2>
+
+  <p class="lead">
+    Ora il premio. Le due leggi della linearità, messe insieme, danno il <b>principio di sovrapposizione</b> —
+    la strategia più importante dell'intero DSP.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La strategia in tre mosse</div>
+    <ol style="margin-bottom:0">
+      <li><b>Decomponi</b> l'ingresso, per quanto complicato, in una somma di pezzi semplici.</li>
+      <li><b>Elabora</b> ogni pezzo separatamente: passandolo nel sistema, uno alla volta.</li>
+      <li><b>Ricomponi</b> sommando tutte le uscite: il risultato è, esattamente, l'uscita dell'ingresso di
+          partenza.</li>
+    </ol>
+  </div>
+
+  <p>
+    Perché è così potente? Perché sposta tutta la difficoltà dal <em>sistema</em> alla <em>scelta dei pezzi</em>.
+    Se troviamo pezzi semplici la cui uscita sappiamo calcolare al volo, allora sappiamo calcolare l'uscita di
+    <em>qualunque</em> ingresso — basta scomporlo in quei pezzi. Tutto il DSP «matematico» dei prossimi capitoli
+    è, in fondo, la ricerca dei pezzi giusti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">SEZIONE 5.6</span>Decomposizione dei segnali</h2>
+
+  <p class="lead">
+    Se la sovrapposizione vive o muore sulla scelta dei pezzi, quali pezzi scegliere? Il DSP ne privilegia
+    <b>due</b>, e non a caso: da ciascuna nasce uno dei due grandi domini del libro.
+  </p>
+
+  <p>
+    La prima è la <b class="termine">decomposizione a impulsi</b>. Un segnale qualunque si può vedere come una
+    somma di tanti <b>impulsi</b> — pallini isolati — ciascuno scalato all'altezza del rispettivo campione e
+    spostato alla sua posizione. Il campione \(x[5]\) diventa «un impulso di altezza \(x[5]\) al posto 5». Se
+    sappiamo come il sistema risponde a un singolo impulso, la sovrapposizione ci dà l'uscita totale: è
+    <em>letteralmente</em> la <b>convoluzione</b>, protagonista del Cap. 6.
+  </p>
+
+  <h3>Provalo: un segnale come somma di impulsi</h3>
+
+  <p>
+    Aumenta il cursore e guarda il segnale ricostruirsi un impulso alla volta, da sinistra. Ogni stelo è un
+    pezzo elementare: la sovrapposizione dice che l'uscita del sistema sul segnale intero è la somma delle
+    uscite su questi steli, presi uno per uno.
+  </p>
+
+  <div class="widget" id="w-decomp">
+    <div class="w-head">
+      <span>Decomposizione a impulsi</span>
+      <span class="hint">aggiungi impulsi e ricostruisci il segnale</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wdc-svg" viewBox="0 0 620 280" role="img" aria-label="Un segnale ricostruito come somma di impulsi scalati e traslati, aggiunti uno alla volta"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>impulsi</label><input type="range" id="wdc-k" min="0" max="20" step="1" value="6"><output id="wdc-kv">6</output></div>
+    </div>
+    <div class="w-readout" id="wdc-out"></div>
+  </div>
+
+  <p>
+    La seconda è la <b class="termine">decomposizione di Fourier</b>: vedere un segnale come somma di
+    <b>sinusoidi</b> di frequenze diverse. Anche questa sfrutta la sovrapposizione, ma cambia i pezzi — non
+    impulsi ma onde pure. E poiché i sistemi LTI trattano le sinusoidi in un modo straordinariamente semplice
+    (le lasciano sinusoidi, cambiando solo ampiezza e fase), questa scelta apre il <b>dominio della frequenza</b>,
+    il regno dei Cap. 8–13. <mark>Due decomposizioni, due domini, un solo principio.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">SEZIONE 5.7</span>Sistemi in cascata e in parallelo</h2>
+
+  <p>
+    I sistemi reali si costruiscono spesso combinando blocchi più semplici, in due modi fondamentali.
+  </p>
+
+  <figure class="fig wide" id="fig-blocchi">
+    <svg viewBox="0 0 640 250" role="img" aria-label="Due sistemi collegati in cascata e in parallelo"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 5.1</span> — <b>In cascata</b> (in alto): l'uscita del primo blocco è l'ingresso del
+      secondo, in fila. <b>In parallelo</b> (in basso): lo stesso ingresso attraversa due blocchi e le uscite si
+      sommano. Per i sistemi LTI vale un fatto comodissimo, che dimostreremo nel Cap. 7: <mark>l'ordine dei
+      blocchi in cascata non conta</mark> — invertirli dà lo stesso risultato. È una libertà che i sistemi non
+      lineari non concedono.
+    </figcaption>
+  </figure>
+
+  <p>
+    Nel caso LTI, combinare i blocchi è facile: due sistemi in cascata equivalgono a un unico sistema le cui
+    risposte all'impulso sono «convolute» tra loro; due in parallelo, a un sistema le cui risposte si sommano. È
+    il principio con cui si progettano filtri complessi assemblando mattoni semplici — lo vedremo all'opera dal
+    Cap. 14 in poi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-8"><span class="secnum">SEZIONE 5.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">Stabilisci se ciascun sistema è lineare: (a) \(y[n]=5\,x[n]\); (b)
+      \(y[n]=x[n]+2\); (c) \(y[n]=x[n]-x[n-1]\) (differenza); (d) \(y[n]=|x[n]|\).</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>(a) <b>Lineare</b>: pura scalatura. (b) <b>Non lineare</b>: l'offset \(+2\) viola l'omogeneità
+          (ingresso nullo → uscita 2). (c) <b>Lineare</b>: fatta di sole somme e differenze di campioni (ed è
+          anche invariante nel tempo). (d) <b>Non lineare</b>: il valore assoluto rompe l'omogeneità con \(k\)
+          negativo (\(|-x| = |x| \ne -|x|\)).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">Un sistema LTI, se all'ingresso \(x[n]\) risponde con \(y[n]\), come risponde
+      all'ingresso \(3\,x[n-4]\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con \(3\,y[n-4]\). L'omogeneità porta fuori il fattore \(3\); l'invarianza nel tempo traduce il
+          ritardo di 4 campioni sull'ingresso in un identico ritardo sull'uscita. Le due proprietà agiscono
+          indipendentemente.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">Un sistema lineare risponde al segnale \(a\) con l'uscita \(A\) e al segnale \(b\)
+      con l'uscita \(B\). Quanto vale la sua uscita per l'ingresso \(2a - 3b\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per sovrapposizione: \(2A - 3B\). Combinazione lineare in ingresso → stessa combinazione lineare in
+          uscita. È esattamente il principio del §5.5.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">Perché la decomposizione a impulsi è utile <em>soprattutto</em> per i sistemi
+      LTI, e non per uno qualunque?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché la sovrapposizione (che serve per ricomporre le uscite dei singoli impulsi) richiede la
+          <b>linearità</b>, e il fatto che basti conoscere la risposta a <em>un</em> impulso — non a uno per ogni
+          posizione — richiede l'<b>invarianza nel tempo</b>: gli impulsi in posizioni diverse danno la stessa
+          risposta, solo traslata. Serve tutto l'LTI. È il seme della convoluzione (Cap. 6).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-9"><span class="secnum">SEZIONE 5.9</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><b>Un sistema</b> trasforma un ingresso \(x[n]\) in un'uscita \(y[n]\).</li>
+      <li><b>Lineare</b> = omogeneo (scala) + additivo (somma). <b>Invariante nel tempo</b> = ritardo in
+          ingresso → identico ritardo in uscita. Insieme: <b>LTI</b>.</li>
+      <li><b>Attenzione all'offset:</b> aggiungere una costante <em>non</em> è lineare; un sistema lineare manda
+          sempre \(0 \rightarrow 0\).</li>
+      <li><b>Sovrapposizione:</b> decomponi → elabora i pezzi → ricomponi. È la strategia-madre, e funziona solo
+          se il sistema è lineare.</li>
+      <li><b>Due decomposizioni d'oro:</b> a <b>impulsi</b> (→ convoluzione, dominio del tempo) e in
+          <b>sinusoidi</b> (→ Fourier, dominio della frequenza).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo la strategia; ci manca l'esecuzione. Nel <strong>Capitolo 6</strong> mettiamo in atto la
+    decomposizione a impulsi e scopriamo il primo grande strumento del DSP: la <b>convoluzione</b>. È
+    l'operazione che, data la risposta di un sistema LTI a un singolo impulso, calcola la sua risposta a
+    <em>qualsiasi</em> segnale. Detta così sembra astratta; vedremo che è un gesto concreto — far scorrere,
+    moltiplicare e sommare — e che dentro ci sono già tutti i filtri che costruiremo.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.2 — test di linearità: f(a+b) vs f(a)+f(b)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wl-out');
+  const btns = { amp: document.getElementById('wl-amp'), sq: document.getElementById('wl-sq'), clip: document.getElementById('wl-clip') };
+  let sys = 'amp';
+  const a = x => 0.9 * Math.sin(x);
+  const b = x => 0.6 * Math.sin(2.3 * x + 0.7);
+  const F = {
+    amp: v => 2 * v,
+    sq: v => v * v,
+    clip: v => Math.max(-0.7, Math.min(0.7, v))
+  };
+  const NAME = { amp: '×2 (amplifica)', sq: 'elevamento al quadrato', clip: 'saturazione (±0,7)' };
+  const LINEAR = { amp: true, sq: false, clip: false };
+
+  function draw() {
+    const f = F[sys];
+    svg.innerHTML = '';
+    const X = 2 * Math.PI;
+    const p = new Plot(svg, { xmin: 0, xmax: X, ymin: -2.4, ymax: 2.4 });
+    p.grid(1, 1); p.axes({ numbers: false, names: false });
+    // f(a+b)  (teal, spessa) e f(a)+f(b) (indaco, tratteggiata)
+    p.func(x => f(a(x) + b(x)), { color: 'var(--accent)', width: 3, samples: 500 });
+    p.func(x => f(a(x)) + f(b(x)), { color: 'var(--violet)', width: 2, dash: '5 4', samples: 500 });
+
+    // massimo scarto tra le due
+    let d = 0; for (let i = 0; i <= 200; i++) { const x = X * i / 200; d = Math.max(d, Math.abs(f(a(x) + b(x)) - (f(a(x)) + f(b(x))))); }
+
+    out.innerHTML = `
+      <div class="big">sistema: <b>${NAME[sys]}</b>
+        &nbsp;·&nbsp; scarto max = <b>${d.toFixed(3)}</b>
+        &nbsp;·&nbsp; <b style="color:${LINEAR[sys] ? 'var(--green)' : 'var(--warm)'}">${LINEAR[sys] ? 'LINEARE ✓' : 'NON LINEARE ✗'}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In <b style="color:var(--accent)">teal</b> l'uscita sulla somma, \\(f(a+b)\\); in
+        <b style="color:var(--violet)">indaco</b> la somma delle uscite, \\(f(a)+f(b)\\).
+        ${LINEAR[sys]
+          ? 'Le due curve <mark>coincidono perfettamente</mark>: l&rsquo;additività è rispettata, il sistema è lineare.'
+          : 'Le due curve <mark>si separano</mark>: elaborare la somma non equivale a sommare gli elaborati. La sovrapposizione qui non vale.'}
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  function setSys(s) { sys = s; for (const k in btns) btns[k].classList.toggle('on', k === s); draw(); }
+  btns.amp.addEventListener('click', () => setSys('amp'));
+  btns.sq.addEventListener('click', () => setSys('sq'));
+  btns.clip.addEventListener('click', () => setSys('clip'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §5.6 — decomposizione a impulsi
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wdc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wdc-out');
+  const kS = document.getElementById('wdc-k'), kV = document.getElementById('wdc-kv');
+  // un segnale-campione di 21 valori (una "gobba" asimmetrica)
+  const N = 21;
+  const data = [];
+  for (let n = 0; n < N; n++) {
+    const t = (n - 8) / 4;
+    data.push(1.15 * Math.exp(-t * t) * (1 + 0.35 * Math.sin(n * 0.9)));
+  }
+
+  function draw() {
+    const k = parseInt(kS.value, 10);
+    kV.textContent = k;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1, xmax: N, ymin: -0.4, ymax: 1.7 });
+    p.axes({ numbers: false, names: true, xname: 'n', yname: '' });
+    // fantasma del segnale completo (grigio)
+    p.stem(data, { color: 'var(--rule)', r: 2, width: 1 });
+    // i primi k impulsi, evidenziati
+    const shown = data.slice(0, k);
+    p.stem(shown, { color: 'var(--accent)', r: 3.2, width: 1.8 });
+    // evidenzia l'ultimo impulso aggiunto
+    if (k > 0) {
+      const i = k - 1;
+      p.line(i, 0, i, data[i], { color: 'var(--warm)', width: 2.4 });
+      p.dot(i, data[i], { color: 'var(--warm)', r: 4.5 });
+      p.text(i, data[i], 'δ×' + data[i].toFixed(2), { color: 'var(--warm)', bold: true, dy: -12, size: 11 });
+    }
+
+    out.innerHTML = `
+      <div class="big"><b>${k}</b> di ${N} impulsi</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni <b style="color:var(--accent)">stelo</b> è un impulso elementare: l'impulso unitario \\(\\delta\\)
+        <b>scalato</b> all'altezza del campione e <b>spostato</b> alla sua posizione. Il segnale intero è la loro
+        <mark>somma</mark>. ${k === N ? 'Ricostruzione completa: hai il segnale di partenza.' : 'Aggiungine altri e guardalo completarsi da sinistra.'}
+        Per un sistema LTI, l'uscita del segnale è la somma delle uscite di questi impulsi: è la convoluzione (Cap. 6).
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  kS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 5.1 — sistemi in cascata e in parallelo
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-blocchi svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+
+  const defs = el('defs', {});
+  const mk = el('marker', { id: 'arwb', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
+  mk.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--ink-faint)' }));
+  defs.appendChild(mk); svg.appendChild(defs);
+  const arrow = (x1, y1, x2, y2) => el('line', { x1, y1, x2, y2, stroke: 'var(--ink-faint)', 'stroke-width': 1.6, 'marker-end': 'url(#arwb)' });
+  const box = (x, y, w, h, label, col) => {
+    const g = el('g', {});
+    g.appendChild(el('rect', { x, y, width: w, height: h, rx: 7, fill: 'color-mix(in srgb, ' + col + ' 14%, var(--paper))', stroke: col, 'stroke-width': 1.6 }));
+    const t = txt(x + w / 2, y + h / 2 + 4, label, 'lbl-b'); t.setAttribute('fill', col); t.setAttribute('font-size', '13'); g.appendChild(t);
+    return g;
+  };
+
+  // --- cascata (in alto) ---
+  svg.appendChild(txt(30, 26, 'CASCATA (in serie)', 'lbl-b', 'start'));
+  svg.appendChild(arrow(40, 60, 90, 60));
+  svg.appendChild(txt(58, 50, 'x', 'lbl'));
+  svg.appendChild(box(90, 40, 100, 42, 'sistema A', 'var(--accent)'));
+  svg.appendChild(arrow(190, 60, 260, 60));
+  svg.appendChild(box(260, 40, 100, 42, 'sistema B', 'var(--warm)'));
+  svg.appendChild(arrow(360, 60, 420, 60));
+  svg.appendChild(txt(400, 50, 'y', 'lbl'));
+
+  // --- parallelo (in basso) ---
+  svg.appendChild(txt(30, 146, 'PARALLELO', 'lbl-b', 'start'));
+  svg.appendChild(arrow(40, 195, 95, 195));
+  svg.appendChild(txt(58, 185, 'x', 'lbl'));
+  // nodo di diramazione
+  svg.appendChild(el('circle', { cx: 95, cy: 195, r: 3, fill: 'var(--ink-faint)' }));
+  svg.appendChild(el('path', { d: 'M95,195 L95,168 L150,168', fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1.6 }));
+  svg.appendChild(el('path', { d: 'M95,195 L95,222 L150,222', fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1.6 }));
+  svg.appendChild(box(150, 148, 100, 40, 'sistema A', 'var(--accent)'));
+  svg.appendChild(box(150, 202, 100, 40, 'sistema B', 'var(--warm)'));
+  svg.appendChild(el('path', { d: 'M250,168 L305,168 L305,195', fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1.6 }));
+  svg.appendChild(el('path', { d: 'M250,222 L305,222 L305,195', fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1.6 }));
+  // sommatore
+  svg.appendChild(el('circle', { cx: 305, cy: 195, r: 12, fill: 'var(--paper)', stroke: 'var(--green)', 'stroke-width': 1.8 }));
+  svg.appendChild(txt(305, 200, '+', 'lbl-b'));
+  svg.appendChild(arrow(317, 195, 420, 195));
+  svg.appendChild(txt(400, 185, 'y', 'lbl'));
+})();
+</script>
+</body>
+</html>
