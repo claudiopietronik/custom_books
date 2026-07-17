@@ -117,7 +117,7 @@ const TOC = [
     n: 7,
     titolo: "Trigonometria analitica",
     file: "cap07-trigonometria-analitica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Identità trigonometriche fondamentali" },
       { id: "s7-2", n: "7.2", t: "Formule di addizione e sottrazione" },
