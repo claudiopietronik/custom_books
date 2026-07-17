@@ -132,7 +132,7 @@ const TOC = [
     n: 8,
     titolo: "Applicazioni della trigonometria",
     file: "cap08-applicazioni-trigonometria.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Applicazioni dei triangoli rettangoli" },
       { id: "s8-2", n: "8.2", t: "Il teorema dei seni" },
