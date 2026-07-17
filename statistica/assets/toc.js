@@ -22,7 +22,7 @@ const TOC = [
   },
   {
     n: 2, parte: "I · Statistica descrittiva",
-    titolo: "Fondamenta: dati e variabili", file: "cap02-fondamenta.html", stato: "da-fare",
+    titolo: "Fondamenta: dati e variabili", file: "cap02-fondamenta.html", stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Popolazione e campione" },
       { id: "s2-2", n: "2.2", t: "Tipi di variabile" },
