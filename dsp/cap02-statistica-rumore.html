@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Statistica, probabilità e rumore — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.02 — Capitolo 2</div>
+    <h1>Statistica, probabilità e rumore</h1>
+    <p class="standfirst">
+      Ogni segnale reale è sporco. Il microfono raccoglie fruscio, il sensore ha il suo rumore di fondo,
+      l'antenna capta disturbi. Prima di poter <em>ripulire</em> qualcosa dobbiamo saperlo <em>misurare</em>:
+      quanto vale «in media» un segnale, quanto «ballano» i suoi valori, e quanto di ciò che vediamo è
+      informazione e quanto è caso. Sono due numeri — la media e la deviazione standard — a reggere tutto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Siamo ancora nelle fondamenta. Questo capitolo non parla di trasformate né di filtri: parla del
+      <em>metro</em> con cui giudicheremo tutto il resto. Quando nel Cap. 15 diremo «questo filtro riduce il
+      rumore di un fattore tre», la parola «rumore» avrà il significato preciso che costruiamo qui.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il DSP è, in larghissima parte, una guerra al rumore. Ma non puoi combattere un nemico che non sai
+      quantificare. <strong>Media</strong> e <strong>deviazione standard</strong> sono i due strumenti che
+      trasformano un'impressione vaga («questo segnale è disturbato») in un numero con cui lavorare. Da qui
+      nascono il <em>rapporto segnale/rumore</em> e l'idea che il rumore, pur essendo casuale, sia
+      <em>prevedibile in media</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">SEZIONE 2.1</span>Media e deviazione standard</h2>
+
+  <p class="lead">
+    Prendi un segnale di \(N\) campioni, \(x[0], x[1], \ldots, x[N-1]\). Due domande semplici: attorno a
+    <em>quale valore</em> si aggira? E <em>quanto</em> si allontana da quel valore? Le risposte sono la media e
+    la deviazione standard.
+  </p>
+
+  <p>
+    La <b class="termine">media</b> (in inglese <em>mean</em>, simbolo \(\mu\), la lettera greca «mu») è il
+    baricentro del segnale: somma tutti i campioni e dividi per quanti sono. È il valore «tipico», la linea
+    orizzontale attorno a cui il segnale oscilla.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La media di un segnale <span class="tag">il baricentro</span></div>
+    <div class="f-body">
+      \[
+        \hD{\mu} \;=\; \frac{1}{\hB{N}} \hA{\sum_{i=0}^{N-1}} \hC{x[i]}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hD{\mu}\)</dt><dd>il risultato: la <b>media</b> dei campioni.</dd>
+        <dt>\(\hA{\sum_{i=0}^{N-1}}\)</dt><dd>«somma su tutti i campioni», da \(i=0\) fino all'ultimo
+            \(i=N-1\) (contiamo da zero, come fanno i calcolatori).</dd>
+        <dt>\(\hC{x[i]}\)</dt><dd>il valore dell'\(i\)-esimo campione, l'addendo generico.</dd>
+        <dt>\(1/\hB{N}\)</dt><dd>diviso il <b>numero di campioni</b>: trasforma la somma in una media.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esattamente la media dei voti a scuola: sommi e dividi per quanti sono. Nel DSP la media ha un
+      significato fisico: per un segnale elettrico è la sua <b>componente continua</b> (il livello attorno a cui
+      pulsa la parte «viva»).
+    </div>
+  </div>
+
+  <p>
+    La media però non dice <em>niente</em> su quanto il segnale sia agitato. Due segnali possono avere la
+    stessa media identica ed essere uno piatto come un lago e l'altro increspato come il mare in tempesta. Per
+    misurare l'agitazione serve la <b class="termine">deviazione standard</b> (simbolo \(\sigma\), «sigma»):
+    quanto, <em>tipicamente</em>, un campione si scosta dalla media.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La deviazione standard <span class="tag">quanto ballano i campioni</span></div>
+    <div class="f-body">
+      \[
+        \hD{\sigma} \;=\; \sqrt{\,\frac{1}{\hB{N-1}} \hA{\sum_{i=0}^{N-1}} \big(\hC{x[i]} - \mu\big)^{2}\,}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{x[i]} - \mu\)</dt><dd>lo <b>scarto</b> del campione dalla media: quanto è sopra o sotto il
+            baricentro.</dd>
+        <dt>\((\cdots)^2\)</dt><dd>lo <b>eleviamo al quadrato</b>: così gli scarti negativi non cancellano i
+            positivi, e gli scarti grandi pesano di più.</dd>
+        <dt>\(\hA{\sum}\big/\hB{(N-1)}\)</dt><dd>ne facciamo la media (quasi: dividiamo per \(N-1\), vedi sotto):
+            questa è la <b>varianza</b> \(\sigma^2\).</dd>
+        <dt>\(\sqrt{\;}\)</dt><dd>la <b>radice</b> riporta il risultato nelle stesse unità del segnale
+            (avevamo elevato al quadrato).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una riga: <mark>la deviazione standard è la «distanza tipica» di un campione dalla media</mark>. Se il
+      segnale è in volt, \(\sigma\) è in volt. Piccola \(\sigma\) = segnale calmo; grande \(\sigma\) = segnale
+      agitato.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Perché \(N-1\) e non \(N\)?</div>
+    <p style="margin-bottom:0">
+      È la trappola che fa inciampare tutti. Dividere per \(N-1\) invece che per \(N\) serve quando \(\mu\) non
+      è la «vera» media del processo ma quella <em>stimata</em> dagli stessi dati: usando i dati due volte (una
+      per stimare \(\mu\), una per gli scarti) si sottostima leggermente la dispersione, e il \(-1\) corregge il
+      tiro. Con \(N\) grande la differenza è trascurabile (\(1000\) contro \(999\)); con pochi campioni conta.
+      Regola pratica: <b>se hai un campione di dati, dividi per \(N-1\)</b>. Se conosci davvero la media del
+      processo, puoi usare \(N\).
+    </p>
+  </div>
+
+  <h3>Provalo: media e deviazione dal vivo</h3>
+
+  <p>
+    Genera un segnale con un livello (la media) e una quantità di rumore (la deviazione) a tua scelta, e guarda
+    i due numeri comparire. Nota come \(\mu\) sposta il segnale su e giù <em>in blocco</em>, mentre \(\sigma\)
+    ne cambia solo l'<em>ispessimento</em> attorno alla linea.
+  </p>
+
+  <div class="widget" id="w-meanstd">
+    <div class="w-head">
+      <span>Media e deviazione standard</span>
+      <span class="hint">muovi i cursori e osserva μ e σ</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wms-svg" viewBox="0 0 620 300" role="img" aria-label="Un segnale rumoroso con media e deviazione standard regolabili"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>media μ</label><input type="range" id="wms-mu" min="-2" max="2" step="0.1" value="0.6"><output id="wms-muv">0.6</output></div>
+      <div class="w-ctrl"><label>rumore σ</label><input type="range" id="wms-sd" min="0" max="1.6" step="0.05" value="0.5"><output id="wms-sdv">0.5</output></div>
+      <button class="w-btn" id="wms-new">rigenera</button>
+    </div>
+    <div class="w-readout" id="wms-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">SEZIONE 2.2</span>Segnale, rumore e rapporto segnale/rumore</h2>
+
+  <p class="lead">
+    Ogni segnale misurato è la somma di due cose: la <b>parte utile</b> — l'informazione che ci interessa — e il
+    <b>rumore</b> — tutto ciò che si è aggiunto per strada e che vorremmo non ci fosse. Il mestiere del DSP è
+    separarli.
+  </p>
+
+  <p>
+    Il <b class="termine">rumore</b> è, per definizione, la parte <em>casuale</em>: non possiamo predire il
+    singolo valore, ma possiamo descriverne il comportamento statistico. Il caso più comune e importante è il
+    <b>rumore bianco gaussiano</b>: valori indipendenti, distribuiti a campana attorno allo zero. La sua
+    ampiezza tipica è, guarda caso, la sua deviazione standard \(\sigma\). Ecco perché il capitolo comincia da
+    lì: <mark>la deviazione standard del rumore è la misura di quanto un segnale è disturbato</mark>.
+  </p>
+
+  <p>
+    Per confrontare quanto è «buono» un segnale usiamo il <b class="termine">rapporto segnale/rumore</b>
+    (<em>Signal-to-Noise Ratio</em>, SNR): quanto è forte la parte utile rispetto al rumore. Ci sono più
+    convenzioni; la più diretta mette a confronto le <em>ampiezze tipiche</em>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Rapporto segnale/rumore <span class="tag">forza dell'informazione vs disturbo</span></div>
+    <div class="f-body">
+      \[
+        \mathrm{SNR} \;=\; \frac{\hA{A_{\text{segnale}}}}{\hB{\sigma_{\text{rumore}}}}
+        \qquad\qquad
+        \mathrm{SNR}_{\text{dB}} \;=\; 20\,\log_{10}\!\left(\frac{\hA{A_{\text{segnale}}}}{\hB{\sigma_{\text{rumore}}}}\right)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{A_{\text{segnale}}}\)</dt><dd>l'ampiezza tipica della parte utile (per un segnale che oscilla,
+            spesso la sua deviazione standard).</dd>
+        <dt>\(\hB{\sigma_{\text{rumore}}}\)</dt><dd>la deviazione standard del rumore.</dd>
+        <dt>\(20\log_{10}\)</dt><dd>la versione in <b>decibel</b>: comprime rapporti enormi in numeri
+            comodi. Un fattore \(10\) in ampiezza fa \(+20\) dB; un fattore \(2\), circa \(+6\) dB.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un SNR alto è un segnale pulito; un SNR di 1 (0 dB) vuol dire segnale e rumore ugualmente forti — al
+      limite dell'inservibile. C'è anche il cugino <b>coefficiente di variazione</b> \(CV = \sigma/\mu\), utile
+      quando il «segnale» è proprio il livello medio \(\mu\).
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il rumore si combatte facendo la media</div>
+    <p style="margin-bottom:0">
+      Ecco l'intuizione più preziosa del capitolo, e la useremo di continuo. Se misuri la stessa cosa \(M\)
+      volte e fai la media, il segnale (che è sempre uguale) resta; il rumore (che è casuale, a volte sopra a
+      volte sotto) <em>si cancella parzialmente da solo</em>. Precisamente: mediando \(M\) misure, la deviazione
+      del rumore si riduce di un fattore \(\sqrt{M}\). Vuoi dimezzare il rumore? Servono <b>quattro</b> misure.
+      Ridurlo di dieci volte? <b>Cento</b> misure. <mark>Il rumore cala come la radice del numero di medie</mark> —
+      un compromesso duro ma affidabilissimo, alla base di tantissimo DSP.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">SEZIONE 2.3</span>Varianza: come si calcola davvero</h2>
+
+  <p>
+    La <b class="termine">varianza</b> è semplicemente il quadrato della deviazione standard: \(\sigma^2\). Se
+    \(\sigma\) è la «distanza tipica» dalla media, \(\sigma^2\) è la media degli scarti al quadrato. Perché darle
+    un nome a parte? Perché nei conti è la varianza, non \(\sigma\), a comportarsi bene: <b>le varianze di
+    rumori indipendenti si sommano</b> (le deviazioni no). Se sommi due segnali rumorosi, la varianza del
+    risultato è la somma delle varianze — un fatto che useremo spesso.
+  </p>
+
+  <p>
+    C'è poi una questione pratica: la formula «da manuale» richiede <em>due passate</em> sui dati — una per
+    calcolare \(\mu\), l'altra per gli scarti. Per un flusso di dati in tempo reale è scomodo. Con un po' di
+    algebra si ricava una formula a <b>una sola passata</b>, che accumula man mano due somme: quella dei valori
+    e quella dei quadrati.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Varianza in una passata sola <span class="tag">accumula somma e somma dei quadrati</span></div>
+    <div class="f-body">
+      \[
+        \sigma^{2} \;=\; \frac{1}{N-1}\left[\; \hA{\sum_{i=0}^{N-1} x[i]^{2}} \;-\; \frac{1}{N}\Big(\hB{\sum_{i=0}^{N-1} x[i]}\Big)^{\!2} \;\right]
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\sum x[i]^2}\)</dt><dd>la <b>somma dei quadrati</b> dei campioni, accumulata a mano a mano.</dd>
+        <dt>\(\hB{\sum x[i]}\)</dt><dd>la <b>somma</b> dei campioni (da cui ricavi anche \(\mu\)).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Matematicamente identica alla definizione, ma calcolabile «al volo»: a ogni nuovo campione aggiorni le due
+      somme, e alla fine hai media e varianza senza rileggere i dati. Attenzione però: con numeri molto grandi
+      questa forma può soffrire di errori di arrotondamento (Cap. 4) — sottrae due quantità grandi e simili.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">SEZIONE 2.4</span>Istogramma, PMF e PDF</h2>
+
+  <p class="lead">
+    Media e deviazione riassumono un segnale in due numeri. Ma a volte vogliamo il quadro completo: <em>quanto
+    spesso</em> il segnale assume ciascun valore? La risposta è l'istogramma, e la sua versione «ideale» è la
+    distribuzione di probabilità.
+  </p>
+
+  <p>
+    L'<b class="termine">istogramma</b> conta: si divide l'asse dei valori in caselle (i <em>bin</em>) e per
+    ogni casella si conta quanti campioni ci cascano dentro. Il risultato è un grafico a barre che mostra la
+    «forma» del segnale: dove le barre sono alte, il segnale passa più tempo. Un fatto utile: la somma di tutte
+    le altezze è \(N\), il numero totale di campioni. E media e deviazione si possono calcolare direttamente
+    dall'istogramma, il che è molto più veloce quando \(N\) è enorme (i valori possibili sono pochi, i campioni
+    milioni).
+  </p>
+
+  <p>
+    Se dividiamo ogni conteggio per \(N\), le altezze diventano <b>frazioni</b> che sommano a \(1\): otteniamo
+    la <b class="termine">PMF</b>, la <em>funzione di massa di probabilità</em> (per segnali che assumono valori
+    discreti, come le uscite intere di un convertitore). La PMF risponde a: «qual è la probabilità che un
+    campione valga esattamente \(v\)?»
+  </p>
+
+  <p>
+    Quando invece i valori sono <em>continui</em> (un segnale che può assumere qualunque valore reale), la
+    probabilità di un valore <em>esatto</em> è zero — ha senso solo chiedere la probabilità che il campione
+    cada in un <em>intervallo</em>. Nasce così la <b class="termine">PDF</b>, la <em>densità di probabilità</em>:
+    una curva liscia sotto la quale l'<b>area</b> tra due valori dà la probabilità di finire in quell'intervallo.
+    L'area totale sotto la PDF vale \(1\).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Tre parenti stretti</div>
+    <ul style="margin-bottom:0">
+      <li><b>Istogramma</b> — conteggi grezzi. Somma delle barre = \(N\). Dipende da quanti campioni hai.</li>
+      <li><b>PMF</b> — istogramma normalizzato (diviso \(N\)). Somma = \(1\). Per valori discreti. È la «forma
+          ideale» a cui l'istogramma tende all'aumentare dei campioni.</li>
+      <li><b>PDF</b> — la versione continua. È una densità: conta l'<b>area</b>, non l'altezza. Area totale =
+          \(1\). Per valori continui.</li>
+    </ul>
+  </div>
+
+  <h3>Provalo: l'istogramma prende forma</h3>
+
+  <p>
+    Genera sempre più campioni di rumore gaussiano e guarda l'istogramma emergere dal caos. Con pochi campioni è
+    frastagliato e imprevedibile; con tanti, si adagia sempre più fedelmente sulla curva a campana (in
+    <b style="color:var(--violet)">indaco</b>) che è la sua PDF ideale. È la statistica in azione: <em>il singolo
+    valore è imprevedibile, la forma d'insieme no</em>.
+  </p>
+
+  <div class="widget" id="w-hist">
+    <div class="w-head">
+      <span>L'istogramma converge alla campana</span>
+      <span class="hint">aggiungi campioni e guarda la forma stabilizzarsi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wh-svg" viewBox="0 0 620 300" role="img" aria-label="Istogramma di rumore gaussiano che, all'aumentare dei campioni, converge alla curva a campana"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>campioni</label><input type="range" id="wh-n" min="20" max="20000" step="20" value="200"><output id="wh-nv">200</output></div>
+      <button class="w-btn" id="wh-new">rigenera</button>
+    </div>
+    <div class="w-readout" id="wh-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">SEZIONE 2.5</span>La distribuzione normale</h2>
+
+  <p class="lead">
+    Fra tutte le forme che una PDF può avere, una spunta ovunque: la <b>curva a campana</b>, o <b>distribuzione
+    normale</b> (o gaussiana). Il rumore dei circuiti, gli errori di misura, le fluttuazioni termiche: quasi
+    sempre, a campana. Non è una coincidenza.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La curva normale <span class="tag">la campana</span></div>
+    <div class="f-body">
+      \[
+        p(x) \;=\; \frac{1}{\hB{\sigma}\sqrt{2\pi}}\; \eu^{\displaystyle -\frac{(x-\hA{\mu})^{2}}{2\hB{\sigma}^{2}}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\mu}\)</dt><dd>il <b>centro</b> della campana: dove sta il picco.</dd>
+        <dt>\(\hB{\sigma}\)</dt><dd>la <b>larghezza</b>: piccola \(\sigma\) = campana stretta e alta, grande
+            \(\sigma\) = larga e bassa.</dd>
+        <dt>\(\eu^{-(\cdots)^2}\)</dt><dd>l'esponenziale di un quadrato negativo: cala rapidissimo allontanandosi
+            dal centro — ecco perché i valori lontani dalla media sono rarissimi.</dd>
+        <dt>\(\frac{1}{\sigma\sqrt{2\pi}}\)</dt><dd>la costante che «normalizza» la curva, in modo che l'area
+            sotto valga esattamente \(1\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La regola pratica da tenere a mente: circa il <b>68%</b> dei campioni cade entro \(\pm\sigma\) dalla media,
+      il <b>95%</b> entro \(\pm 2\sigma\), il <b>99{,}7%</b> entro \(\pm 3\sigma\). Un valore oltre \(3\sigma\) è
+      un evento raro: capita meno di 3 volte su 1000.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché la campana è dappertutto: il teorema del limite centrale</div>
+    <p style="margin-bottom:0">
+      Il rumore reale non è mai una sola causa: è la <em>somma</em> di tantissimi contributi piccoli e
+      indipendenti — il moto di miliardi di elettroni, mille micro-disturbi. E qui interviene un teorema
+      profondo: <mark>sommando molte cause casuali indipendenti, qualunque sia la loro forma individuale, il
+      risultato tende alla campana</mark>. È il <b>teorema del limite centrale</b>. Ecco perché la gaussiana non
+      è una scelta ma quasi un destino: basta che il disturbo abbia molte sorgenti, e la campana appare. Lo
+      sfrutteremo anche al contrario, per <em>fabbricare</em> rumore gaussiano (§2.6).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">SEZIONE 2.6</span>Generare numeri casuali</h2>
+
+  <p>
+    Per collaudare gli algoritmi serve spesso <em>fabbricare</em> rumore su misura. Ma un calcolatore è
+    deterministico: come fa a produrre il caso? La risposta è che non lo produce davvero — lo <b>simula</b>. I
+    generatori di numeri <b class="termine">pseudo-casuali</b> partono da un valore iniziale (il <em>seme</em>) e
+    generano una sequenza che <em>sembra</em> casuale pur essendo perfettamente ripetibile: stesso seme, stessa
+    sequenza. Comodissimo, perché un esperimento si può rifare identico.
+  </p>
+
+  <p>
+    Il generatore di base sputa numeri <b>uniformi</b> tra \(0\) e \(1\): tutti i valori ugualmente probabili,
+    un istogramma piatto. Ma noi vogliamo la <em>campana</em>. Come trasformare l'uniforme in gaussiana? La
+    ricetta più intuitiva sfrutta proprio il teorema del limite centrale: <b>somma tanti numeri uniformi</b>.
+    Sommandone dodici e sottraendo 6, per esempio, si ottiene un ottimo rumore gaussiano con media \(0\) e
+    deviazione \(1\) — perché una somma di tante variabili casuali indipendenti, l'abbiamo appena detto, tende
+    alla normale.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Metodi migliori</div>
+    <p style="margin-bottom:0">
+      Il trucco «somma 12 uniformi» è didattico e funziona, ma taglia le code oltre \(\pm 6\sigma\). In pratica
+      si usa il <b>metodo di Box–Muller</b>, che da due numeri uniformi \(u_1, u_2\) produce direttamente due
+      gaussiani esatti tramite \(\sqrt{-2\ln u_1}\,\cos(2\pi u_2)\) e il suo gemello col seno. Nessuna coda
+      tagliata, due gaussiani al prezzo di due uniformi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">SEZIONE 2.7</span>Precisione e accuratezza</h2>
+
+  <p class="lead">
+    Nel linguaggio comune sono sinonimi; nella misura sono due cose diverse, e confonderle costa caro. Un
+    esempio con il bersaglio delle freccette chiarisce tutto.
+  </p>
+
+  <p>
+    La <b class="termine">precisione</b> è la <em>ripetibilità</em>: quanto sono vicini fra loro i colpi,
+    indipendentemente da dove miravi. È legata al <b>rumore casuale</b>, e la si misura con la deviazione
+    standard: piccola \(\sigma\) = alta precisione. L'<b class="termine">accuratezza</b> è invece la
+    <em>correttezza</em>: quanto il centro dei colpi coincide col bersaglio vero. È legata all'<b>errore
+    sistematico</b> (il <em>bias</em>): una calibrazione sbagliata sposta tutti i colpi nella stessa direzione,
+    per quanto raggruppati siano.
+  </p>
+
+  <figure class="fig wide" id="fig-pa">
+    <svg viewBox="0 0 620 210" role="img" aria-label="Quattro bersagli che illustrano le combinazioni di precisione e accuratezza"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 2.1</span> — Le due qualità sono indipendenti. <b>Precisione</b> = colpi
+      raggruppati (poco rumore, piccola \(\sigma\)); <b>accuratezza</b> = colpi centrati (poco errore
+      sistematico). Si può essere <em>precisi ma inaccurati</em> (raggruppati ma fuori centro: un difetto di
+      calibrazione) — ed è il caso insidioso, perché sembra affidabile. <mark>Il DSP, facendo la media, migliora
+      la precisione ma non l'accuratezza:</mark> mediare mille misure sbagliate allo stesso modo dà una media
+      precisa e ancora sbagliata.
+    </figcaption>
+  </figure>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La media cura il caso, non il pregiudizio</div>
+    <p style="margin-bottom:0">
+      Ricordiamo il messaggio del §2.2: fare la media riduce il rumore casuale come \(\sqrt{M}\). Ma
+      l'<em>errore sistematico</em> non lo tocca affatto — se ogni misura è alta di 2, la media sarà alta di 2,
+      per quante ne fai. Combattere il rumore (precisione) è un problema di DSP; combattere il bias
+      (accuratezza) è un problema di <em>calibrazione</em>, e nessun algoritmo lo risolve al posto tuo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-8"><span class="secnum">SEZIONE 2.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">Un segnale ha i cinque campioni \(2,\ 4,\ 4,\ 6,\ 9\). Calcola la media \(\mu\) e
+      la deviazione standard \(\sigma\) (usando \(N-1\) al denominatore).</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Media: \(\mu = (2+4+4+6+9)/5 = 25/5 = 5\).</p>
+        <p>Scarti dalla media: \(-3, -1, -1, 1, 4\); i loro quadrati: \(9, 1, 1, 1, 16\), somma \(=28\).</p>
+        <p>Varianza: \(\sigma^2 = 28/(5-1) = 28/4 = 7\). Deviazione standard: \(\sigma = \sqrt{7} \approx 2{,}65\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">Un sensore ha un rumore con \(\sigma = 0{,}8\) mV. Vuoi ridurre il rumore a
+      \(0{,}1\) mV mediando più letture della stessa grandezza. Quante letture servono?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Mediando \(M\) letture, il rumore cala di \(\sqrt{M}\): \(\sigma_M = \sigma/\sqrt{M}\).</p>
+        <p>Vogliamo \(0{,}8/\sqrt{M} = 0{,}1\), cioè \(\sqrt{M} = 8\), quindi \(M = 64\).</p>
+        <p>Servono <b>64 letture</b>. Nota il prezzo: per ridurre il rumore di 8 volte serve un lavoro 64 volte
+          maggiore — è il costo della radice quadrata.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">Un segnale utile ha ampiezza tipica \(A = 5\) V; il rumore ha \(\sigma = 0{,}25\) V.
+      Qual è l'SNR come rapporto e in decibel?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Rapporto: \(\mathrm{SNR} = 5 / 0{,}25 = 20\).</p>
+        <p>In decibel: \(\mathrm{SNR_{dB}} = 20\log_{10}(20) = 20 \times 1{,}301 \approx 26\) dB.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">Vero o falso: «mediando molte misure posso rendere un termometro mal calibrato
+      accurato quanto voglio». Spiega.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Falso.</b> Mediare riduce l'errore <em>casuale</em> (migliora la precisione), ma un termometro mal
+          calibrato ha un errore <em>sistematico</em>: sballa sempre nella stessa direzione. La media di mille
+          letture tutte alte di 2 gradi è ancora alta di 2 gradi. L'accuratezza si recupera solo ricalibrando,
+          non con il DSP (§2.7).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.5</div>
+    <p style="margin-bottom:0">In un rumore gaussiano con \(\mu = 0\) e \(\sigma = 1\), circa quale frazione dei
+      campioni supera in valore assoluto \(2\)? E quale supera \(3\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Dalla regola \(68\)–\(95\)–\(99{,}7\): entro \(\pm 2\sigma\) sta il \(95\%\), quindi <b>circa il 5%</b>
+          lo supera (2,5% da ciascun lato).</p>
+        <p>Entro \(\pm 3\sigma\) sta il \(99{,}7\%\), quindi <b>circa lo 0,3%</b> supera \(3\) in valore assoluto —
+          3 campioni su 1000.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-9"><span class="secnum">SEZIONE 2.9</span>Soluzioni</h2>
+
+  <p>
+    Le soluzioni complete sono qui sopra, ripiegate sotto ciascun esercizio: apri il triangolino «Soluzione» solo
+    <em>dopo</em> aver provato con carta e penna. Il valore dell'esercizio è tutto nei trenta secondi di sforzo
+    prima di sbirciare.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li><b>Due numeri riassumono un segnale:</b> la <b>media</b> \(\mu\) (il baricentro, la componente
+          continua) e la <b>deviazione standard</b> \(\sigma\) (l'ampiezza tipica delle oscillazioni). Il rumore
+          si misura con \(\sigma\).</li>
+      <li><b>La varianza \(\sigma^2\) si somma</b> per rumori indipendenti; le deviazioni no. Esiste una formula
+          a una passata per calcolarla al volo.</li>
+      <li><b>Il rumore si combatte con la media:</b> mediando \(M\) misure, \(\sigma\) cala di \(\sqrt{M}\).
+          Dimezzare il rumore costa 4 misure; dividerlo per 10, cento misure.</li>
+      <li><b>La campana è ovunque</b> per il teorema del limite centrale (somma di tante cause casuali). Regola
+          \(68\)–\(95\)–\(99{,}7\).</li>
+      <li><b>Precisione ≠ accuratezza:</b> la media cura il rumore casuale (precisione) ma non l'errore
+          sistematico (accuratezza).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sappiamo <em>misurare</em> un segnale e il suo rumore. Ma non abbiamo ancora detto come un segnale del
+    mondo reale — continuo, analogico — entri davvero dentro un calcolatore. È il compito del <strong>Capitolo
+    3</strong>: la conversione <b>analogico-digitale</b>. Scopriremo il teorema del campionamento (quanti
+    campioni servono per non perdere nulla), l'insidia dell'<b>aliasing</b> (frequenze che si travestono da
+    altre, come già intravisto nel widget del Cap. 1) e come si ricostruisce un segnale continuo dai suoi
+    campioni. È il vero ingresso nel mondo digitale.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Piccolo generatore pseudo-casuale ripetibile (Mulberry32), così le figure
+   non dipendono da Math.random e restano stabili tra i temi.
+   ========================================================================= */
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/* gaussiano via somma di 12 uniformi (media 0, dev. std 1) */
+function gauss(rng) {
+  let s = 0;
+  for (let i = 0; i < 12; i++) s += rng();
+  return s - 6;
+}
+
+
+/* ============================================================================
+   WIDGET §2.1 — media e deviazione standard dal vivo
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wms-svg');
+  if (!svg) return;
+  const out = document.getElementById('wms-out');
+  const muS = document.getElementById('wms-mu'), sdS = document.getElementById('wms-sd');
+  const muV = document.getElementById('wms-muv'), sdV = document.getElementById('wms-sdv');
+  const N = 90;
+  let base = [];
+  function regen() { const rng = makeRng(1234 + Math.floor(performance.now()) % 9999); base = []; for (let i = 0; i < N; i++) base.push(gauss(rng)); }
+  regen();
+
+  function draw() {
+    const mu = parseFloat(muS.value), sd = parseFloat(sdS.value);
+    muV.textContent = mu.toFixed(1); sdV.textContent = sd.toFixed(2);
+    const data = base.map(z => mu + sd * z);
+    // statistiche misurate (per verifica: dovrebbero avvicinarsi a mu e sd)
+    const m = data.reduce((a, b) => a + b, 0) / N;
+    let ss = 0; for (const v of data) ss += (v - m) * (v - m);
+    const s = Math.sqrt(ss / (N - 1));
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: N, ymin: -3.6, ymax: 3.6 });
+    p.grid(10, 1); p.axes({ numbers: false, names: false });
+    // banda ±sigma attorno alla media
+    p.rect(0, m - s, N, m + s, { fill: 'color-mix(in srgb, var(--warm) 14%, transparent)', color: 'none' });
+    p.line(0, m, N, m, { color: 'var(--warm)', width: 2 });
+    p.stem(data, { color: 'var(--accent)', r: 2.6, width: 1.2 });
+
+    out.innerHTML = `
+      <div class="big">μ misurata = <b style="color:var(--warm)">${m.toFixed(2)}</b>
+        &nbsp;·&nbsp; σ misurata = <b style="color:var(--accent)">${s.toFixed(2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La linea <b style="color:var(--warm)">ambra</b> è la media; la banda ombreggiata è ±σ, la fascia dentro
+        cui cade circa il 68% dei campioni. Impostati μ=${mu.toFixed(1)} e σ=${sd.toFixed(2)}, la misura su ${N}
+        campioni dà valori vicini ma non identici: è il caso. Aumenta σ e guarda gli steli allargarsi;
+        cambia μ e guardali traslare in blocco.
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  muS.addEventListener('input', draw); sdS.addEventListener('input', draw);
+  document.getElementById('wms-new').addEventListener('click', () => { regen(); draw(); });
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §2.4 — istogramma che converge alla campana
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wh-svg');
+  if (!svg) return;
+  const out = document.getElementById('wh-out');
+  const nS = document.getElementById('wh-n'), nV = document.getElementById('wh-nv');
+  let seed = 7;
+
+  function draw() {
+    const N = parseInt(nS.value, 10);
+    nV.textContent = N;
+    const rng = makeRng(seed);
+    const BINS = 33, LO = -4, HI = 4, w = (HI - LO) / BINS;
+    const hist = new Array(BINS).fill(0);
+    for (let i = 0; i < N; i++) {
+      const z = gauss(rng);
+      let b = Math.floor((z - LO) / w);
+      if (b >= 0 && b < BINS) hist[b]++;
+    }
+    // normalizza a densità: conteggio / (N * larghezza bin)
+    const dens = hist.map(c => c / (N * w));
+    const peak = 1 / Math.sqrt(2 * Math.PI);   // picco della normale standard
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: LO, xmax: HI, ymin: 0, ymax: peak * 1.5 });
+    p.axes({ numbers: true, names: false, stepX: 1, stepY: 1, fmtY: () => '' });
+    // barre dell'istogramma (densità)
+    p.bars(dens, { x0: LO + w / 2, dxs: w, bw: w * 0.9,
+      fill: 'color-mix(in srgb, var(--accent) 45%, transparent)', color: 'var(--accent)' });
+    // curva normale ideale
+    p.func(x => Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI), { color: 'var(--violet)', width: 2.6 });
+
+    // errore quadratico medio tra istogramma e curva, come indice di "aderenza"
+    let err = 0; for (let b = 0; b < BINS; b++) { const xc = LO + (b + 0.5) * w; const ideal = Math.exp(-xc * xc / 2) / Math.sqrt(2 * Math.PI); err += (dens[b] - ideal) ** 2; }
+    err = Math.sqrt(err / BINS);
+
+    out.innerHTML = `
+      <div class="big"><b>${N.toLocaleString('it')}</b> campioni
+        &nbsp;·&nbsp; scarto dalla campana = <b>${err.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le <b style="color:var(--accent)">barre</b> sono l'istogramma normalizzato a densità; la
+        <b style="color:var(--violet)">curva indaco</b> è la PDF normale ideale.
+        ${N < 300 ? 'Con pochi campioni le barre sono <mark>frastagliate</mark>: il caso domina.'
+          : N < 3000 ? 'La forma a campana è ormai riconoscibile, ma i bordi ancora tremano.'
+            : 'Con tanti campioni le barre <mark>aderiscono</mark> alla curva: la statistica ha vinto sul caso.'}
+        Premi «rigenera» per una nuova estrazione con lo stesso numero di campioni.
+      </div>`;
+  }
+  nS.addEventListener('input', draw);
+  document.getElementById('wh-new').addEventListener('click', () => { seed = (seed * 1103515245 + 12345) >>> 0; draw(); });
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 2.1 — precisione vs accuratezza (quattro bersagli)
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-pa svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+  const rng = makeRng(99);
+  const gr = () => { let s = 0; for (let i = 0; i < 12; i++) s += rng(); return (s - 6) / 3; };
+
+  const casi = [
+    { cx: 90,  bias: [0, 0],       spread: 0.10, t1: 'preciso', t2: 'accurato', good: true },
+    { cx: 260, bias: [0.55, -0.35], spread: 0.10, t1: 'preciso', t2: 'inaccurato', good: false },
+    { cx: 430, bias: [0, 0],       spread: 0.42, t1: 'impreciso', t2: 'accurato', good: false },
+    { cx: 600, bias: [0.5, -0.3],  spread: 0.42, t1: 'impreciso', t2: 'inaccurato', good: false }
+  ];
+  const cy = 90, R = 62;
+
+  casi.forEach(c => {
+    // anelli del bersaglio
+    [1, 0.66, 0.33].forEach((f, i) => {
+      svg.appendChild(el('circle', { cx: c.cx, cy, r: R * f, fill: i === 2 ? 'var(--warm-bg)' : 'none', stroke: 'var(--rule)', 'stroke-width': 1.2 }));
+    });
+    svg.appendChild(el('circle', { cx: c.cx, cy, r: 3, fill: 'var(--ink-faint)' }));
+    // colpi
+    for (let k = 0; k < 9; k++) {
+      const dx = (c.bias[0] + gr() * c.spread) * R;
+      const dy = (c.bias[1] + gr() * c.spread) * R;
+      svg.appendChild(el('circle', { cx: c.cx + dx, cy: cy + dy, r: 3.4, fill: c.good ? 'var(--green)' : 'var(--accent)', opacity: 0.85 }));
+    }
+    const a = txt(c.cx, cy + R + 20, c.t1, 'lbl-b'); a.setAttribute('font-size', '12'); a.setAttribute('fill', c.good ? 'var(--green)' : 'var(--ink)'); svg.appendChild(a);
+    const b = txt(c.cx, cy + R + 35, c.t2, 'lbl'); b.setAttribute('font-size', '11'); b.setAttribute('fill', 'var(--ink-soft)'); svg.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>

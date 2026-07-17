@@ -27,7 +27,7 @@ const TOC = [
     n: 2,
     titolo: "Statistica, probabilità e rumore",
     file: "cap02-statistica-rumore.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Media e deviazione standard" },
       { id: "s2-2", n: "2.2", t: "Segnale, rumore e rapporto segnale/rumore" },
