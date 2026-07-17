@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Ottimizzazione vincolata — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>Ottimizzazione vincolata</h1>
+    <p class="standfirst">
+      Nella vita reale l'ottimizzazione ha quasi sempre dei <b>vincoli</b>: massimizza il profitto <em>con
+      questo budget</em>, trova il punto più vicino <em>su questa superficie</em>, la scatola di volume massimo
+      <em>con questa superficie di cartone</em>. Il gradiente nullo non basta più. La soluzione è un'idea
+      geometrica elegante — i <b>moltiplicatori di Lagrange</b> — che si riassume in una frase:
+      <mark>all'ottimo, la curva di livello è tangente al vincolo</mark>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema dei vincoli (§9.1). Due teoremi di struttura che ci servono: le <b>funzioni implicite</b> di
+      Dini (§9.2), che dicono quando \(F(x,y) = 0\) è localmente un grafico, e la <b>funzione inversa</b>
+      (§9.3), che dice quando una mappa si può invertire — con lo Jacobiano protagonista. Poi il metodo dei
+      <b>moltiplicatori di Lagrange</b> (§9.4) con la sua limpida <b>interpretazione geometrica</b> (§9.5).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: l'ottimo non è mai «libero»</div>
+    <p style="margin-bottom:0">
+      Quasi ogni decisione reale è un'ottimizzazione con vincoli. L'economia è fatta di scelte «a risorse
+      limitate»; l'ingegneria progetta «a peso fissato» o «a costo dato»; la fisica trova gli equilibri
+      «vincolati» a una superficie; il machine learning regolarizzato minimizza un errore «entro un budget di
+      complessità». <mark>Lagrange è lo strumento universale per ottimizzare quando non tutto è permesso</mark>,
+      e il moltiplicatore \(\lambda\) ha perfino un significato economico — il «prezzo ombra» del vincolo, quanto
+      guadagneresti allentandolo di un pelo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>Il problema dei vincoli</h2>
+
+  <p class="lead">
+    Il problema cambia forma: non «massimizza \(f\) su tutto il piano», ma «massimizza \(f\) restando sulla
+    curva \(g(x, y) = 0\)». L'insieme ammissibile non è più aperto: è una <b>curva</b> (o una superficie), e i
+    metodi del capitolo scorso non bastano.
+  </p>
+
+  <p>
+    Perché \(\grad f = \vv{0}\) non serve? Perché quel punto — il massimo «libero» di \(f\) — quasi mai cade
+    <em>sul vincolo</em>. Sul vincolo, \(f\) può crescere anche dove il suo gradiente non è nullo: basta che la
+    direzione di crescita sia «bloccata» dal vincolo. Serve una condizione nuova, che tenga conto di
+    <em>entrambe</em> le funzioni, \(f\) e \(g\). La troveremo confrontando i loro gradienti — ma prima due
+    strumenti che rendono rigoroso il tutto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Funzioni implicite (Dini)</h2>
+
+  <p class="lead">
+    Una curva vincolo \(g(x, y) = 0\) è definita <em>implicitamente</em>: non nella forma \(y = (\dots)\). Il
+    <b>teorema di Dini</b> dice quando, localmente, la si può «esplicitare» come un grafico — e come derivarla
+    senza risolverla.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema delle funzioni implicite (Dini) <span class="tag">quando F = 0 è un grafico</span></div>
+    <div class="f-body">
+      \[ F(x_0, y_0) = 0, \quad \pdv{F}{y}(x_0, y_0) \ne 0 \quad\Longrightarrow\quad \text{localmente } y = g(x), \qquad g'(x) = -\frac{F_x}{F_y} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la condizione \(\pdv{F}{y} \ne 0\)</dt>
+        <dd>garantisce che vicino al punto la curva <b>non sia verticale</b>: allora si può risolvere per \(y\)
+            e ottenere una funzione \(y = g(x)\) (magari senza formula esplicita, ma esiste ed è derivabile).</dd>
+        <dt>la derivata implicita \(g' = -\dfrac{F_x}{F_y}\)</dt>
+        <dd>si trova <b>senza esplicitare</b>: deriva \(F(x, g(x)) = 0\) con la regola della catena (§7.6),
+            \(F_x + F_y\,g' = 0\), e isola \(g'\). <mark>Puoi derivare una curva che non sai nemmeno
+            scrivere.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio: la circonferenza \(F = x^2 + y^2 - 1 = 0\). Dove \(F_y = 2y \ne 0\) (cioè fuori dai punti
+      \((\pm 1, 0)\)), è localmente un grafico, e \(g' = -\frac{2x}{2y} = -\frac xy\) (la pendenza della
+      tangente al cerchio). Nei punti \((\pm 1, 0)\), dove la tangente è verticale, Dini «per \(y\)» fallisce —
+      ma lì funziona «per \(x\)» (\(F_x \ne 0\)): la curva è comunque liscia. Il widget mostra dove il teorema
+      si applica.
+    </div>
+  </div>
+
+  <div class="widget" id="w-dini">
+    <div class="w-head">
+      <span>Dini: quando la curva è un grafico y = g(x)</span>
+      <span class="hint">trascina il punto lungo la circonferenza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wdi-svg" viewBox="0 0 560 400" role="img" aria-label="Sul cerchio, dove la tangente non è verticale, la curva è localmente il grafico di una funzione"></svg>
+    </div>
+    <div class="w-readout" id="wdi-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>Il teorema della funzione inversa</h2>
+
+  <p class="lead">
+    Il gemello di Dini per le trasformazioni: quando una mappa \(\vv{F} : \R^n \to \R^n\) si può <b>invertire</b>
+    localmente? La risposta è nel suo Jacobiano — ed è la chiave del cambio di variabili (Cap. 12).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema della funzione inversa <span class="tag">Jacobiano invertibile ⟹ invertibile</span></div>
+    <div class="f-body">
+      \[ \det J_{\vv{F}}(\vv{x}_0) \ne 0 \quad\Longrightarrow\quad \vv{F} \text{ è invertibile in un intorno di } \vv{x}_0 \]
+    </div>
+    <div class="f-note">
+      Lo <span class="termine">Jacobiano</span> \(J_{\vv{F}}\) è la matrice delle derivate parziali di tutte le
+      componenti (la «derivata» di una mappa \(\R^n \to \R^n\), §7.6). Se il suo <b>determinante è non nullo</b>
+      in un punto, la mappa è localmente invertibile lì — è la generalizzazione multivariabile del fatto che
+      \(f' \ne 0\) permette di invertire in Analisi 1 (§8.9). Il determinante dello Jacobiano misura anche di
+      quanto la mappa <b>dilata le aree</b> (§11 di Algebra Lineare): <mark>se non schiaccia (det \(\ne 0\)),
+      non perde informazione e si può tornare indietro.</mark> Sarà il fattore di correzione nel cambio di
+      variabili degli integrali (§12.4).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>I moltiplicatori di Lagrange</h2>
+
+  <p class="lead">
+    Il metodo, in una formula. Per ottimizzare \(f\) sul vincolo \(g = 0\), non cerchi \(\grad f = \vv{0}\), ma
+    i punti dove <b>il gradiente di \(f\) è parallelo al gradiente di \(g\)</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Condizione di Lagrange <span class="tag">gradienti paralleli</span></div>
+    <div class="f-body">
+      \[ \grad f = \lambda\,\grad g, \qquad g(x, y) = 0 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\grad f = \lambda\grad g\)</dt>
+        <dd>all'ottimo vincolato i due gradienti sono <b>paralleli</b> (uno multiplo dell'altro). Il fattore
+            \(\lambda\) è il <span class="termine">moltiplicatore di Lagrange</span>.</dd>
+        <dt>\(g(x, y) = 0\)</dt>
+        <dd>la condizione di stare <b>sul vincolo</b>. Insieme, sono un sistema di \(3\) equazioni nelle \(3\)
+            incognite \(x, y, \lambda\): risolvendolo si trovano i candidati.</dd>
+        <dt>la ricetta operativa</dt>
+        <dd>si costruisce la <b>lagrangiana</b> \(\mathcal{L} = f - \lambda g\) e si pone \(\grad\mathcal{L} =
+            \vv{0}\) (rispetto a \(x, y, \lambda\)): <mark>trasforma un'ottimizzazione vincolata in una
+            libera</mark>, in una variabile in più.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché <em>paralleli</em>? Lo spiega la geometria della prossima sezione. Il metodo trova i candidati; per
+      sapere quali sono massimi e quali minimi si confrontano i valori di \(f\) (o si usa Weierstrass se il
+      vincolo è compatto). Con più vincoli, \(\grad f = \sum_i \lambda_i\grad g_i\): un moltiplicatore per
+      vincolo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Interpretazione geometrica</h2>
+
+  <p class="lead">
+    L'idea dietro Lagrange è così visiva che, una volta vista, la formula diventa ovvia. Riguarda le curve di
+    livello di \(f\) e come «toccano» il vincolo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> All'ottimo, il livello è tangente al vincolo</div>
+    <p style="margin-bottom:0">
+      Cammina lungo il vincolo \(g = 0\) e guarda il valore di \(f\). Finché la curva del vincolo
+      <b>attraversa</b> le curve di livello di \(f\), stai passando da un livello all'altro: \(f\) sta
+      cambiando, quindi non sei all'ottimo (puoi ancora salire o scendere). L'ottimo è dove il vincolo
+      <b>non attraversa più</b> ma <b>sfiora</b> una curva di livello: sono <mark>tangenti</mark>. E due curve
+      tangenti hanno i gradienti (entrambi perpendicolari alle rispettive curve, §7.2) <b>paralleli</b>:
+      \(\grad f \parallel \grad g\), cioè \(\grad f = \lambda\grad g\). <mark>Ecco perché la condizione è quella,
+      e non un'altra.</mark> Il widget lo mostra: trascina il punto lungo il vincolo e cerca dove le due frecce
+      si allineano.
+    </p>
+  </div>
+
+  <div class="widget" id="w-lagrange">
+    <div class="w-head">
+      <span>Lagrange: cerca dove ∇f è parallelo a ∇g</span>
+      <span class="hint">gira il punto sul vincolo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wla-svg" viewBox="0 0 560 400" role="img" aria-label="Sull'ottimo vincolato la curva di livello è tangente al vincolo e i gradienti sono paralleli"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">posizione sul vincolo</label>
+      <input type="range" id="wla-th" min="0" max="6.2832" step="0.01" value="1.2" style="flex:1">
+    </div>
+    <div class="w-readout" id="wla-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li><b>Ottimizzazione vincolata:</b> massimizzare \(f\) su \(g = 0\) (§9.1). \(\grad f = \vv{0}\) non
+          serve — l'ottimo sta sul vincolo, dove \(f\) può crescere ancora.</li>
+      <li><b>Dini</b> (§9.2): se \(F_y \ne 0\), la curva \(F = 0\) è localmente un grafico \(y = g(x)\), con
+          \(g' = -F_x/F_y\) (derivata implicita, senza esplicitare). <b>Funzione inversa</b> (§9.3): Jacobiano
+          con \(\det \ne 0\) ⟹ invertibile localmente.</li>
+      <li><b>Moltiplicatori di Lagrange</b> (§9.4): all'ottimo <mark>\(\grad f = \lambda\grad g\)</mark> con
+          \(g = 0\). Ricetta: lagrangiana \(\mathcal{L} = f - \lambda g\), poi \(\grad\mathcal{L} = \vv{0}\).</li>
+      <li><b>Geometria</b> (§9.5): all'ottimo la <b>curva di livello di \(f\) è tangente al vincolo</b>, quindi
+          i gradienti sono paralleli. Se attraversassero, potresti ancora migliorare.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con Lagrange chiudiamo la Parte 2, il calcolo differenziale in più variabili. Nella <strong>Parte 3</strong>
+    passiamo all'<b>integrazione</b>. Ma prima di integrare su regioni e volumi (Cap. 12), nel
+    <strong>Capitolo 10</strong> impariamo a integrare lungo <b>curve</b>: parametrizzarle, misurarne la
+    lunghezza, e calcolare integrali «lungo un percorso». È il primo passo verso i campi vettoriali e i grandi
+    teoremi del calcolo vettoriale (Gauss, Stokes) che coroneranno il libro.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Massimizza e minimizza \(f(x, y) = x + y\) sul vincolo \(x^2 + y^2 = 1\) con i moltiplicatori di Lagrange.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Trova il rettangolo di area massima inscritto nella circonferenza \(x^2 + y^2 = 1\) (massimizza
+      \(A = 4xy\) con \(x, y > 0\) e \(x^2 + y^2 = 1\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      La curva \(x^3 + y^3 - 6xy = 0\) (folium di Cartesio) passa per l'origine. Usa la derivazione implicita
+      per trovare \(\frac{\dd y}{\dd x}\) in un punto generico (dove \(F_y \ne 0\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) All'ottimo vincolato \(\grad f = \vv{0}\). &nbsp;
+      (b) All'ottimo vincolato \(\grad f\) è parallelo a \(\grad g\). &nbsp;
+      (c) Il teorema di Dini richiede \(\pdv{F}{y} \ne 0\) per esplicitare \(y\). &nbsp;
+      (d) Se \(\det J = 0\), la mappa è localmente invertibile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      \(\grad f = (1, 1)\), \(\grad g = (2x, 2y)\). Da \(\grad f = \lambda\grad g\): \(1 = 2\lambda x\) e
+      \(1 = 2\lambda y\), quindi \(x = y\). Nel vincolo \(2x^2 = 1 \Rightarrow x = \pm\frac{1}{\sqrt2}\). I due
+      candidati: \(\left(\frac{1}{\sqrt2}, \frac{1}{\sqrt2}\right)\) con \(f = \sqrt2\) (<b>massimo</b>) e
+      \(\left(-\frac{1}{\sqrt2}, -\frac{1}{\sqrt2}\right)\) con \(f = -\sqrt2\) (<b>minimo</b>). (Il vincolo è
+      compatto, quindi Weierstrass garantisce che sono davvero max e min.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      \(\grad A = (4y, 4x)\), \(\grad g = (2x, 2y)\). Da \(\grad A = \lambda\grad g\): \(4y = 2\lambda x\),
+      \(4x = 2\lambda y\), da cui \(\frac{y}{x} = \frac{x}{y}\), cioè \(x^2 = y^2\), e con \(x, y > 0\),
+      \(x = y\). Nel vincolo \(2x^2 = 1 \Rightarrow x = y = \frac{1}{\sqrt2}\). Il rettangolo è un <b>quadrato</b>
+      di lato \(\frac{2}{\sqrt2} = \sqrt2\), area \(A = 4\cdot\frac12 = 2\). (Il rettangolo di area massima
+      inscritto in un cerchio è sempre un quadrato.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      \(F = x^3 + y^3 - 6xy\). \(F_x = 3x^2 - 6y\), \(F_y = 3y^2 - 6x\). Derivata implicita (§9.2):
+      \(\frac{\dd y}{\dd x} = -\frac{F_x}{F_y} = -\frac{3x^2 - 6y}{3y^2 - 6x} = -\frac{x^2 - 2y}{y^2 - 2x}\)
+      (valida dove \(y^2 - 2x \ne 0\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> All'ottimo <em>vincolato</em> il gradiente di \(f\) in genere non è nullo (§9.1): è
+      parallelo a \(\grad g\), non zero.
+      <br><b>(b) VERO.</b> È la condizione di Lagrange: \(\grad f = \lambda\grad g\) (§9.4–9.5).
+      <br><b>(c) VERO.</b> Dini richiede \(\pdv{F}{y} \ne 0\) per esplicitare \(y = g(x)\) (§9.2).
+      <br><b>(d) FALSO.</b> Serve \(\det J \ne 0\): se il determinante è nullo la mappa «schiaccia» e non è
+      invertibile localmente (§9.3).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §9.2 — Dini sul cerchio
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wdi-svg');
+  if (!svg) return;
+  const out = document.getElementById('wdi-out');
+  let th = 0.9;
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1.9, xmax: 1.9, ymin: -1.5, ymax: 1.5, iso: true });
+    p.grid(0.5, 0.5); p.axes({ numbers: true });
+    p.param(t => Math.cos(t), t => Math.sin(t), 0, 6.2832, { color: 'var(--accent)', width: 2.6 });
+    const x = Math.cos(th), y = Math.sin(th);
+    const Fy = 2 * y, Fx = 2 * x;
+    const verticale = Math.abs(Fy) < 0.12;
+    // tangente: pendenza −Fx/Fy (se non verticale)
+    if (!verticale) {
+      const m = -Fx / Fy;
+      p.line(x - 0.8, y - 0.8 * m, x + 0.8, y + 0.8 * m, { color: 'var(--warm)', width: 2.2 });
+    } else {
+      p.line(x, y - 0.8, x, y + 0.8, { color: 'var(--ink-soft)', width: 2.2, dash: '4 3' });
+    }
+    p.dot(x, y, { color: 'var(--violet)', r: 6 });
+    p.handle(x, y, { color: 'var(--violet)' }, (X, Y) => { th = Math.atan2(Y, X); draw(); });
+
+    out.innerHTML = `
+      <div class="big">
+        punto (${fmt(x)}, ${fmt(y)}) &nbsp;·&nbsp; F_y = 2y = <b>${fmt(Fy)}</b>
+        &nbsp;→&nbsp; <b style="color:${verticale ? 'var(--warm)' : 'var(--green)'}">${verticale ? 'Dini «per y» FALLISCE' : 'y = g(x) locale ✔'}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${verticale
+          ? 'Qui la tangente è <b>verticale</b> (F_y = 0): non si può scrivere y = g(x). Ma la curva è comunque liscia — funziona «per x», cioè x = h(y).'
+          : 'F_y ≠ 0: vicino a questo punto il cerchio è il grafico di una funzione <b>y = g(x)</b>, con pendenza g\' = −F_x/F_y = ' + fmt(-Fx / Fy) + ' (la tangente arancione).'}
+        Trascina verso (±1, 0) e guarda Dini fallire.
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §9.4/9.5 — Lagrange: ∇f ∥ ∇g  (f = x+y, vincolo cerchio)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wla-svg');
+  if (!svg) return;
+  const out = document.getElementById('wla-out');
+  const slider = document.getElementById('wla-th');
+
+  function draw() {
+    const th = parseFloat(slider.value);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -2.2, xmax: 2.2, ymin: -1.7, ymax: 1.7, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    // curve di livello di f = x+y (rette x+y = c)
+    const fxy = (x, y) => x + y;
+    p.contour(fxy, [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.41, 1.5, 2], { color: 'var(--ink-faint)', width: 1.2, n: 60 });
+    // vincolo (cerchio)
+    p.param(t => Math.cos(t), t => Math.sin(t), 0, 6.2832, { color: 'var(--accent)', width: 2.6 });
+    const x = Math.cos(th), y = Math.sin(th);
+    // ∇f = (1,1), ∇g = (2x,2y)
+    const gf = [1, 1], gg = [2 * x, 2 * y];
+    p.arrow(x, y, x + gf[0] * 0.5, y + gf[1] * 0.5, { color: 'var(--warm)', width: 3, label: '∇f' });
+    p.arrow(x, y, x + gg[0] * 0.35, y + gg[1] * 0.35, { color: 'var(--violet)', width: 2.6, label: '∇g' });
+    p.dot(x, y, { color: 'var(--accent)', r: 6 });
+    // parallelismo: cross product
+    const cross = Math.abs(gf[0] * gg[1] - gf[1] * gg[0]) / (Math.hypot(...gf) * Math.hypot(...gg));
+    const paral = cross < 0.04;
+
+    out.innerHTML = `
+      <div class="big">
+        f = x+y = <b style="color:var(--accent)">${fmt(fxy(x, y))}</b> &nbsp;·&nbsp;
+        <b style="color:${paral ? 'var(--green)' : 'var(--ink-soft)'}">${paral ? '∇f ∥ ∇g — OTTIMO!' : '∇f e ∇g non allineati'}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Muovendoti sul <b style="color:var(--accent)">vincolo</b> attraversi le curve di livello (grigie): f
+        cambia. ${paral
+          ? '<mark>Qui il livello è tangente al vincolo</mark> e le frecce ∇f (arancione) e ∇g (viola) sono <b>parallele</b>: è un punto di ottimo (§9.5). Max in (0.71, 0.71) con f=√2≈1.41.'
+          : 'Cerca dove le due frecce si <b>allineano</b>: lì la retta di livello sfiora il cerchio senza tagliarlo, e f è massima o minima.'}
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
