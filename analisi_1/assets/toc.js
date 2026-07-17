@@ -85,7 +85,7 @@ const TOC = [
     n: 5,
     titolo: "Successioni e limiti",
     file: "cap05-successioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Cos'è una successione" },
       { id: "s5-2", n: "5.2", t: "L'idea di limite" },
