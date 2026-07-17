@@ -146,7 +146,7 @@ const TOC = [
     n: 9,
     titolo: "Coordinate polari, complessi e vettori",
     file: "cap09-polari-vettori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Le coordinate polari" },
       { id: "s9-2", n: "9.2", t: "Grafici di equazioni polari" },

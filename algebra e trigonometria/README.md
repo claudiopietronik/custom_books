@@ -36,7 +36,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 6 — Le funzioni trigonometriche
 - [x] 7 — Trigonometria analitica
 - [x] 8 — Applicazioni della trigonometria
-- [ ] 9 — Coordinate polari, complessi e vettori
+- [x] 9 — Coordinate polari, complessi e vettori
 - [ ] 10 — Sistemi di equazioni e disequazioni
 - [ ] 11 — Matrici e determinanti
 - [ ] 12 — Geometria analitica: le coniche
