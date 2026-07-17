@@ -32,7 +32,7 @@ const TOC = [
     n: 2,
     titolo: "Il moto rettilineo",
     file: "cap02-moto-rettilineo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Posizione, spostamento e tempo" },
       { id: "s2-2", n: "2.2", t: "Velocità media" },
