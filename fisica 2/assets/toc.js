@@ -267,7 +267,7 @@ const TOC = [
     n: 18,
     titolo: "Fotoni, elettroni e la fisica quantistica",
     file: "cap18-quantistica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "L'effetto fotoelettrico" },
       { id: "s18-2", n: "18.2", t: "I fotoni" },
