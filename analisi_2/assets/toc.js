@@ -153,7 +153,7 @@ const TOC = [
     n: 10,
     titolo: "Curve e integrali di linea",
     file: "cap10-curve.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Curve parametrizzate" },
       { id: "s10-2", n: "10.2", t: "Curve regolari e versori" },

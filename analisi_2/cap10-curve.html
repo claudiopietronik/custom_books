@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Curve e integrali di linea — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Curve e integrali di linea</h1>
+    <p class="standfirst">
+      Prima di integrare su regioni e volumi, impariamo a integrare <b>lungo un percorso</b>. Una curva è un
+      cammino tracciato nel tempo, \(\vv{r}(t)\); ne misureremo la <b>lunghezza</b> sommando tanti tratti
+      infinitesimi, e integreremo funzioni «lungo di essa» — <mark>la massa di un filo, la distanza percorsa,
+      il valore medio su un tragitto</mark>. È il primo passo verso i campi vettoriali e i grandi teoremi del
+      calcolo vettoriale che coroneranno il libro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>curve parametrizzate</b> (§10.1) e il loro vettore velocità, con la nozione di curva <b>regolare</b>
+      (§10.2). La <b>lunghezza</b> come integrale della velocità (§10.3) e la sua parametrizzazione naturale,
+      l'<b>ascissa curvilinea</b> (§10.4). Infine l'<b>integrale di linea di prima specie</b> (§10.5):
+      integrare un campo scalare lungo una curva.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il moto è curve: la traiettoria di un pianeta, di un proiettile, di un robot sono \(\vv{r}(t)\). La
+      <b>lunghezza d'arco</b> serve ovunque si misuri una distanza percorsa — dal contachilometri al GPS. E gli
+      integrali di linea calcolano grandezze «accumulate lungo un percorso»: la massa di un cavo di densità
+      variabile, il tempo di percorrenza, l'energia. <mark>Sono anche il linguaggio con cui, nel Capitolo 11,
+      diremo «lavoro di una forza lungo un cammino»</mark> — il concetto che porta ai teoremi di Gauss e Stokes.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Curve parametrizzate</h2>
+
+  <p class="lead">
+    Una curva si descrive con un <b>punto in movimento</b>: al variare di un parametro \(t\), il punto
+    \(\vv{r}(t)\) traccia il cammino. Pensa a \(t\) come al tempo, e a \(\vv{r}(t)\) come alla tua posizione
+    istante per istante.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Curva parametrizzata <span class="tag">un punto che si muove nel tempo</span></div>
+    <div class="f-body">
+      \[ \vv{r}(t) = \big(x(t),\, y(t)\big), \qquad t \in [a, b] \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(t\) — il <b>parametro</b></dt>
+        <dd>una variabile scalare (spesso il tempo) che «guida» il punto lungo la curva, da \(t = a\) a
+            \(t = b\).</dd>
+        <dt>\(x(t), y(t)\) — le <b>equazioni parametriche</b></dt>
+        <dd>le coordinate del punto in funzione di \(t\). In \(\R^3\) si aggiunge \(z(t)\) (un'elica, una
+            traiettoria nello spazio).</dd>
+        <dt>curva vs parametrizzazione</dt>
+        <dd>la <b>curva</b> è il cammino disegnato (l'immagine); la <b>parametrizzazione</b> è <em>come</em> lo
+            percorri. La stessa curva si può percorrere a velocità diverse o in verso opposto — importa,
+            talvolta, e talvolta no.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempi: la retta \(\vv{r}(t) = \vv{p} + t\vv{v}\); la circonferenza \(\vv{r}(t) = (\cos t, \sin t)\);
+      l'ellisse \((a\cos t, b\sin t)\); la <b>cicloide</b> \((t - \sin t, 1 - \cos t)\), il percorso di un punto
+      sul bordo di una ruota che rotola. Il widget le traccia tutte, mostrando il punto e la sua velocità.
+    </div>
+  </div>
+
+  <div class="widget" id="w-curva">
+    <div class="w-head">
+      <span>Tracciare una curva: punto e velocità</span>
+      <span class="hint">scegli la curva · avanza t</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-svg" viewBox="0 0 560 380" role="img" aria-label="Un punto percorre una curva parametrica; la freccia è il vettore velocità, tangente alla curva"></svg>
+    </div>
+    <div class="w-controls" id="wc-btns" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; margin-top:.5rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">parametro t</label>
+      <input type="range" id="wc-t" min="0" max="1" step="0.005" value="0.3" style="flex:1">
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Curve regolari e versori</h2>
+
+  <p class="lead">
+    Derivando la posizione rispetto a \(t\) si ottiene la <b>velocità</b>: un vettore <b>tangente</b> alla
+    curva, che indica direzione e rapidità del moto. Le curve «buone» — quelle regolari — non si fermano mai.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Velocità, versore tangente, regolarità <span class="tag">la derivata di una curva</span></div>
+    <div class="f-body">
+      \[ \vv{r}'(t) = \big(x'(t),\, y'(t)\big), \qquad \vv{T} = \frac{\vv{r}'}{\norm{\vv{r}'}}, \qquad \text{velocità scalare} = \norm{\vv{r}'} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{r}'(t)\) — il <b>vettore velocità</b></dt>
+        <dd>la derivata componente per componente. È <b>tangente</b> alla curva nel punto \(\vv{r}(t)\): punta
+            nella direzione del moto.</dd>
+        <dt>\(\vv{T}\) — il <b>versore tangente</b></dt>
+        <dd>la velocità normalizzata a lunghezza \(1\) (§5.1): la pura <em>direzione</em> del moto, senza la
+            rapidità.</dd>
+        <dt>curva <b>regolare</b></dt>
+        <dd>se \(\vv{r}'(t) \ne \vv{0}\) ovunque: il punto non si ferma mai, e la curva ha in ogni punto una
+            tangente ben definita (niente spigoli o cuspidi). È l'ipotesi standard.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      \(\norm{\vv{r}'}\) è la <b>velocità scalare</b> (quanto in fretta percorri), \(\vv{r}'\) è la velocità
+      vettoriale (in fretta <em>e</em> in quale direzione). Per la circonferenza \((\cos t, \sin t)\):
+      \(\vv{r}' = (-\sin t, \cos t)\), velocità \(\norm{\vv{r}'} = 1\) costante (percorsa a velocità uniforme),
+      e \(\vv{r}' \perp \vv{r}\) (la velocità è tangente, perpendicolare al raggio). Il widget disegna proprio
+      questa freccia.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>Lunghezza di una curva</h2>
+
+  <p class="lead">
+    Quanto è lunga una curva? La misuriamo come Archimede misurava l'area: <b>approssimandola con segmenti</b>
+    (una spezzata inscritta) e infittendoli. Al limite, la somma delle cordicelle è la lunghezza — un integrale
+    della velocità.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Lunghezza d'arco <span class="tag">integrale della velocità scalare</span></div>
+    <div class="f-body">
+      \[ L = \int_a^b \norm{\vv{r}'(t)}\,\dd t = \int_a^b \sqrt{x'(t)^2 + y'(t)^2}\,\dd t \]
+    </div>
+    <div class="f-note">
+      L'idea: in un tempuscolo \(\dd t\) percorri un trattino di lunghezza \(\norm{\vv{r}'}\,\dd t\)
+      (velocità \(\times\) tempo); sommando tutti i trattini — cioè integrando — ottieni la lunghezza totale.
+      Il termine \(\sqrt{x'^2 + y'^2}\) è Pitagora sui piccoli spostamenti \((\dd x, \dd y)\). Per il grafico di
+      una funzione \(y = f(x)\) (parametrizzato \(\vv{r}(t) = (t, f(t))\)) diventa la formula nota
+      \(L = \int_a^b\sqrt{1 + f'(x)^2}\,\dd x\). <mark>La lunghezza è l'integrale della velocità</mark>: il widget
+      mostra la spezzata inscritta che vi converge.
+    </div>
+  </div>
+
+  <div class="widget" id="w-lung">
+    <div class="w-head">
+      <span>Lunghezza per approssimazione poligonale</span>
+      <span class="hint">aumenta i segmenti: la spezzata → la curva</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wl-svg" viewBox="0 0 560 340" role="img" aria-label="Una spezzata inscritta approssima la lunghezza di una curva, e vi converge al crescere dei segmenti"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">segmenti n</label>
+      <input type="range" id="wl-n" min="1" max="40" step="1" value="3" style="flex:1">
+    </div>
+    <div class="w-readout" id="wl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Ascissa curvilinea</h2>
+
+  <p class="lead">
+    C'è una parametrizzazione «privilegiata» di ogni curva: quella in cui il parametro <b>è</b> la lunghezza
+    percorsa. Si chiama ascissa curvilinea, e semplifica tante formule.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'ascissa curvilinea <span class="tag">il parametro naturale: la lunghezza</span></div>
+    <div class="f-body">
+      \[ s(t) = \int_a^t \norm{\vv{r}'(\tau)}\,\dd\tau, \qquad \dd s = \norm{\vv{r}'(t)}\,\dd t \]
+    </div>
+    <div class="f-note">
+      \(s\) misura la <b>lunghezza percorsa</b> dall'inizio fino a \(t\): è l'«area finora» della lunghezza
+      (§12.7 di Analisi 1). L'elemento \(\dd s = \norm{\vv{r}'}\,\dd t\) è il «trattino di curva», il mattone di
+      tutti gli integrali di linea. Riparametrizzando con \(s\) al posto di \(t\), la curva viene percorsa a
+      <b>velocità unitaria</b> (\(\norm{\vv{r}'(s)} = 1\)): il parametro «naturale», indipendente da come acceleri
+      o rallenti. <mark>Con \(\dd s\), l'integrale di linea diventa naturale.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Integrale di linea di prima specie</h2>
+
+  <p class="lead">
+    Ed ecco l'integrale «lungo una curva»: sommi i valori di un campo scalare \(f\) lungo il cammino, pesando
+    ogni trattino con la sua lunghezza \(\dd s\). Se \(f\) è una densità, ottieni una massa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Integrale di linea di prima specie <span class="tag">un campo scalare, lungo la curva</span></div>
+    <div class="f-body">
+      \[ \int_\gamma f\,\dd s = \int_a^b f\big(\vv{r}(t)\big)\,\norm{\vv{r}'(t)}\,\dd t \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(f(\vv{r}(t))\)</dt>
+        <dd>il valore del campo scalare <b>nei punti della curva</b>: valuti \(f\) lungo il cammino.</dd>
+        <dt>\(\dd s = \norm{\vv{r}'}\,\dd t\)</dt>
+        <dd>il peso di ogni trattino: la sua lunghezza (§10.4). Moltiplica il valore per «quanta curva» c'è
+            lì.</dd>
+        <dt>il significato</dt>
+        <dd>se \(f\) è la <b>densità lineare</b> di un filo curvo, \(\int_\gamma f\,\dd s\) è la sua <b>massa</b>;
+            se \(f = 1\), è la <b>lunghezza</b> (§10.3); \(\frac{1}{L}\int_\gamma f\,\dd s\) è il <b>valor
+            medio</b> di \(f\) lungo la curva.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questo integrale <b>non dipende</b> dalla parametrizzazione né dal verso di percorrenza: misura una
+      proprietà «fisica» della curva. (Nel Capitolo 11 incontreremo l'integrale di <em>seconda</em> specie, che
+      invece <em>dipende</em> dal verso — perché misura il <b>lavoro</b>, e andare avanti o indietro cambia
+      segno.) Esempio: la massa di un filo semicircolare di densità \(f = 1\) è semplicemente \(\pi r\), la sua
+      lunghezza.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li><b>Curva parametrizzata</b> \(\vv{r}(t) = (x(t), y(t))\) (§10.1): un punto che si muove. La curva è il
+          cammino, la parametrizzazione è come lo percorri.</li>
+      <li><b>Velocità</b> \(\vv{r}'(t)\), tangente alla curva; <b>versore tangente</b> \(\vv{T} =
+          \vv{r}'/\norm{\vv{r}'}\); curva <b>regolare</b> se \(\vv{r}' \ne \vv{0}\) (§10.2).</li>
+      <li><b>Lunghezza</b> \(L = \int_a^b \norm{\vv{r}'}\,\dd t\) (§10.3): l'integrale della velocità scalare,
+          limite delle spezzate inscritte. L'<b>ascissa curvilinea</b> \(s\) è il parametro naturale, con
+          \(\dd s = \norm{\vv{r}'}\,\dd t\) (§10.4).</li>
+      <li><b>Integrale di linea di prima specie</b> \(\int_\gamma f\,\dd s = \int_a^b f(\vv{r})\norm{\vv{r}'}\dd t\)
+          (§10.5): un campo scalare lungo la curva. <mark>Densità → massa; \(f=1\) → lunghezza</mark>. Non
+          dipende dal verso.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo integrare un <em>numero</em> lungo una curva. Nel <strong>Capitolo 11</strong> integriamo un
+    <b>vettore</b>: entrano in scena i <b>campi vettoriali</b> (una freccia in ogni punto) e l'integrale di
+    linea di <b>seconda specie</b>, che misura il <b>lavoro</b> di un campo lungo un cammino. Scopriremo i
+    <b>campi conservativi</b> — quelli che «derivano da un potenziale» — per cui il lavoro non dipende dal
+    percorso ma solo dagli estremi, l'esatto analogo del Teorema Fondamentale del Calcolo, ma per le curve.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Per la curva \(\vv{r}(t) = (t^2, t^3)\), \(t \in [0, 1]\), calcola il vettore velocità \(\vv{r}'(t)\) e la
+      velocità scalare \(\norm{\vv{r}'(t)}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Calcola la lunghezza dell'elica \(\vv{r}(t) = (\cos t, \sin t, t)\) per \(t \in [0, 2\pi]\).
+      (Suggerimento: \(\norm{\vv{r}'} = \sqrt{\sin^2 t + \cos^2 t + 1}\).)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Calcola \(\displaystyle\int_\gamma (x + y)\,\dd s\) lungo il segmento da \((0,0)\) a \((1,1)\),
+      parametrizzato \(\vv{r}(t) = (t, t)\), \(t \in [0, 1]\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Il vettore \(\vv{r}'(t)\) è tangente alla curva. &nbsp;
+      (b) La lunghezza dipende dalla parametrizzazione scelta. &nbsp;
+      (c) L'integrale di prima specie \(\int_\gamma f\,\dd s\) cambia segno se inverti il verso. &nbsp;
+      (d) Con \(f = 1\), \(\int_\gamma f\,\dd s\) è la lunghezza della curva.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      \(\vv{r}'(t) = (2t,\ 3t^2)\); \(\norm{\vv{r}'(t)} = \sqrt{4t^2 + 9t^4} = t\sqrt{4 + 9t^2}\) (per
+      \(t \ge 0\)). In \(t = 0\) la velocità è nulla: la curva ha lì una cuspide (non è regolare in \(0\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      \(\vv{r}' = (-\sin t, \cos t, 1)\), \(\norm{\vv{r}'} = \sqrt{\sin^2 t + \cos^2 t + 1} = \sqrt{2}\)
+      (costante). Quindi \(L = \int_0^{2\pi}\sqrt2\,\dd t = 2\pi\sqrt2\). (L'elica sale a velocità uniforme:
+      lunghezza = velocità × tempo.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      \(\vv{r}' = (1, 1)\), \(\norm{\vv{r}'} = \sqrt2\). Lungo la curva \(x + y = t + t = 2t\). Allora
+      \(\int_\gamma (x+y)\,\dd s = \int_0^1 2t\cdot\sqrt2\,\dd t = 2\sqrt2\left[\frac{t^2}{2}\right]_0^1 =
+      \sqrt2\). (Il fattore \(\sqrt2\) è \(\dd s\): il segmento è più lungo del suo «passo» in \(t\).)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(\vv{r}'\) è il vettore velocità, tangente alla curva (§10.2).
+      <br><b>(b) FALSO.</b> La lunghezza è una proprietà <b>geometrica</b> della curva: non dipende da come la
+      parametrizzi (l'integrale \(\int\norm{\vv{r}'}\dd t\) dà lo stesso valore, §10.3).
+      <br><b>(c) FALSO.</b> L'integrale di <b>prima</b> specie non dipende dal verso: \(\dd s\) è una lunghezza,
+      sempre positiva (§10.5). È quello di <em>seconda</em> specie a cambiare segno (Cap. 11).
+      <br><b>(d) VERO.</b> \(\int_\gamma 1\,\dd s = \int\dd s = L\), la lunghezza (§10.5).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §10.1 — tracciare una curva con punto e velocità
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wc-out');
+  const btns = document.getElementById('wc-btns');
+  const C = {
+    cerchio: { r: t => [Math.cos(t), Math.sin(t)], d: t => [-Math.sin(t), Math.cos(t)], t0: 0, t1: 6.2832, win: { xmin: -1.8, xmax: 1.8, ymin: -1.4, ymax: 1.4 } },
+    ellisse: { r: t => [2 * Math.cos(t), Math.sin(t)], d: t => [-2 * Math.sin(t), Math.cos(t)], t0: 0, t1: 6.2832, win: { xmin: -2.6, xmax: 2.6, ymin: -1.7, ymax: 1.7 } },
+    spirale: { r: t => [0.28 * t * Math.cos(t), 0.28 * t * Math.sin(t)], d: t => [0.28 * (Math.cos(t) - t * Math.sin(t)), 0.28 * (Math.sin(t) + t * Math.cos(t))], t0: 0, t1: 12.5, win: { xmin: -3.6, xmax: 3.6, ymin: -3, ymax: 3 } },
+    cicloide: { r: t => [t - Math.sin(t), 1 - Math.cos(t)], d: t => [1 - Math.cos(t), Math.sin(t)], t0: 0, t1: 12.566, win: { xmin: -0.5, xmax: 13, ymin: -0.5, ymax: 3 } }
+  };
+  const keys = Object.keys(C);
+  let cur = 'cicloide';
+
+  function draw() {
+    const it = C[cur];
+    const frac = parseFloat(document.getElementById('wc-t').value);
+    const t = it.t0 + frac * (it.t1 - it.t0);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { ...it.win, iso: cur !== 'cicloide' });
+    p.grid(1, 1); p.axes({ numbers: false });
+    p.param(tt => it.r(tt)[0], tt => it.r(tt)[1], it.t0, it.t1, { color: 'var(--ink-faint)', width: 1.6 });
+    // pezzo già percorso
+    p.param(tt => it.r(tt)[0], tt => it.r(tt)[1], it.t0, t, { color: 'var(--accent)', width: 2.8 });
+    const P = it.r(t), V = it.d(t), vm = Math.hypot(V[0], V[1]) || 1e-9;
+    const sc = 0.9 / vm * (cur === 'spirale' ? 1.3 : 1);
+    p.arrow(P[0], P[1], P[0] + V[0] * sc, P[1] + V[1] * sc, { color: 'var(--warm)', width: 2.8, label: "r'" });
+    p.dot(P[0], P[1], { color: 'var(--violet)', r: 6 });
+    [...btns.children].forEach(b => b.classList.toggle('active', b.textContent === cur));
+
+    out.innerHTML = `
+      <div class="big">
+        ${cur}: &nbsp; posizione (${fmt(P[0])}, ${fmt(P[1])}) &nbsp;·&nbsp;
+        velocità ‖r'‖ = <b style="color:var(--warm)">${fmt(vm)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--violet)">punto</b> percorre la curva al crescere di t; la freccia
+        <b style="color:var(--warm)">r'</b> è la <b>velocità</b>, sempre <mark>tangente</mark> al cammino.
+        ${cur === 'cerchio' ? 'Sul cerchio la velocità è costante (=1) e perpendicolare al raggio.'
+          : cur === 'cicloide' ? 'Sulla cicloide la velocità si annulla a terra (le «punte») e è massima in cima.'
+            : 'Nota come direzione e rapidità della freccia cambiano lungo la curva.'}
+      </div>`;
+  }
+  keys.forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = key;
+    b.onclick = () => { cur = key; draw(); };
+    btns.appendChild(b);
+  });
+  document.getElementById('wc-t').addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §10.3 — lunghezza per spezzata inscritta  (curva y = sin x su [0, π])
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wl-out');
+  const slider = document.getElementById('wl-n');
+  const r = t => [t, Math.sin(t)];
+  const T0 = 0, T1 = Math.PI, VERO = 3.8202;      // ∫₀^π √(1+cos²) dt
+
+  function draw() {
+    const n = parseInt(slider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.3, xmax: 3.5, ymin: -0.4, ymax: 1.4 });
+    p.grid(1, 0.5); p.axes({ numbers: true });
+    p.param(t => r(t)[0], t => r(t)[1], T0, T1, { color: 'var(--ink-faint)', width: 2 });
+    // spezzata
+    let L = 0;
+    const pts = [];
+    for (let i = 0; i <= n; i++) { const t = T0 + i * (T1 - T0) / n; pts.push(r(t)); }
+    for (let i = 1; i < pts.length; i++) {
+      p.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], { color: 'var(--accent)', width: 2 });
+      L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    }
+    pts.forEach(q => p.dot(q[0], q[1], { color: 'var(--violet)', r: 3 }));
+
+    out.innerHTML = `
+      <div class="big">
+        ${n} segment${n === 1 ? 'o' : 'i'}: &nbsp; lunghezza spezzata = <b style="color:var(--accent)">${L.toFixed(4)}</b>
+        &nbsp;→&nbsp; vera = <b>${VERO.toFixed(4)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--accent)">spezzata inscritta</b> è sempre <b>più corta</b> della curva (la
+        corda taglia l'arco). Aggiungendo segmenti <mark>si avvicina alla lunghezza vera</mark> ${VERO.toFixed(3)}
+        = ∫₀^π √(1+cos²t) dt (§10.3). Errore attuale: ${Math.abs(VERO - L).toFixed(4)}.
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
