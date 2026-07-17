@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>40 · Cos'è l'ANOVA — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="40">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Cos'è l'ANOVA</h1>
+    <p class="standfirst">
+      Il t-test confronta due gruppi. Ma se i gruppi sono <b>tre o più</b>? Fare tutti i t-test a coppie riaprirebbe
+      il disastro dei confronti multipli (Cap. 29). L'<b>ANOVA</b> (analisi della varianza) risolve con un test
+      unico e un'idea geniale: per capire se le <em>medie</em> differiscono, confronta due tipi di
+      <em>varianza</em>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Apre l'ultimo blocco di test. Nasce dal problema dei confronti multipli (Cap. 29) e generalizza il t-test
+      (Cap. 30) a più gruppi. Il Cap. 41 ne svela la meccanica (somme dei quadrati, statistica F); il Cap. 42 dice
+      cosa fare <em>dopo</em> un'ANOVA significativa.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Quale di quattro fertilizzanti rende di più?», «i tre dosaggi differiscono?», «le cinque versioni del sito
+      convertono diversamente?»: ogni volta che confronti più di due gruppi, l'ANOVA è il punto di partenza. È lo
+      strumento base degli esperimenti a più condizioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s40-1"><span class="secnum">SEZIONE 40.1</span>Confrontare più di due gruppi</h2>
+
+  <p class="lead">
+    Con \(k\) gruppi, l'ipotesi nulla è che abbiano <b>tutti la stessa media</b>; l'alternativa è che
+    <b>almeno uno</b> differisca. Un solo test per tutti.
+  </p>
+
+  <p>
+    \(H_0: \mu_1 = \mu_2 = \dots = \mu_k\) («nessun gruppo è diverso»); \(H_1\): almeno una media è diversa dalle
+    altre. Perché non fare tutti i t-test a coppie? Con 5 gruppi ci sarebbero 10 confronti, e la probabilità di un
+    falso positivo schizzerebbe (Cap. 29). L'ANOVA fa <b>un unico test globale</b> a livello \(\alpha\) controllato,
+    che risponde alla domanda «c'è <em>qualche</em> differenza?» senza gonfiare i falsi allarmi.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'ANOVA dice «se», non «quali»</div>
+    <p style="margin-bottom:0">
+      Un'ANOVA significativa dice che <mark>almeno un gruppo differisce, ma non quale</mark>. È un test
+      «onnibus». Per scoprire <em>quali</em> coppie sono diverse servono i test <b>post-hoc</b> (Cap. 42),
+      opportunamente corretti per i confronti multipli. L'ANOVA è la porta; i post-hoc sono le stanze.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s40-2"><span class="secnum">SEZIONE 40.2</span>Varianza tra e dentro i gruppi</h2>
+
+  <p class="lead">
+    L'idea brillante: per decidere se le <em>medie</em> differiscono, l'ANOVA scompone la variabilità totale in due
+    parti e le confronta.
+  </p>
+
+  <ul>
+    <li><b>Varianza <em>tra</em> i gruppi</b> (between): quanto le medie dei gruppi si discostano dalla media
+      generale. È il <b>segnale</b> — l'effetto dei gruppi.</li>
+    <li><b>Varianza <em>dentro</em> i gruppi</b> (within): quanto i dati ballano <em>all'interno</em> di ciascun
+      gruppo, attorno alla propria media. È il <b>rumore</b> — la variabilità naturale.</li>
+  </ul>
+
+  <p>
+    Il ragionamento: se i gruppi hanno davvero medie diverse, la variabilità <em>tra</em> le medie sarà grande
+    rispetto al rumore <em>dentro</em> i gruppi. Se invece le medie sono uguali (\(H_0\)), qualunque differenza tra
+    esse è solo rumore campionario, e le due varianze saranno confrontabili. <mark>Confrontare le medie
+    diventa confrontare due varianze</mark>: da qui il nome «analisi della varianza».
+  </p>
+
+  <h3>Provalo: segnale tra i gruppi, rumore dentro</h3>
+
+  <p>
+    Tre gruppi. Regola quanto le medie sono <b>separate</b> (segnale) e quanto i dati ballano <b>dentro</b> ogni
+    gruppo (rumore). Guarda la statistica F crescere quando la separazione supera il rumore, crollare quando il
+    rumore domina.
+  </p>
+
+  <div class="widget" id="w-anova">
+    <div class="w-head">
+      <span>Varianza tra ÷ varianza dentro</span>
+      <span class="hint">è questo il rapporto F</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wan-svg" viewBox="0 0 620 230" role="img" aria-label="Tre gruppi con separazione tra le medie e dispersione interna variabili"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>separazione (tra)</label><input type="range" id="wan-b" min="0" max="100" step="1" value="50"><output id="wan-bv"></output></div>
+      <div class="w-ctrl"><label>rumore (dentro)</label><input type="range" id="wan-w" min="10" max="90" step="1" value="35"><output id="wan-wv"></output></div>
+    </div>
+    <div class="w-readout" id="wan-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s40-3"><span class="secnum">SEZIONE 40.3</span>L'idea della statistica F</h2>
+
+  <p class="lead">
+    Il verdetto dell'ANOVA è un unico numero: la <b>statistica F</b>, il rapporto tra le due varianze. È
+    l'equivalente «a più gruppi» del rapporto segnale/rumore del t-test.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La statistica F <span class="tag">segnale tra ÷ rumore dentro</span></div>
+    <div class="f-body">
+      \[ F \;=\; \frac{\hA{\text{varianza tra i gruppi}}}{\hB{\text{varianza dentro i gruppi}}} \;=\; \frac{\hA{\text{segnale}}}{\hB{\text{rumore}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{tra}}\)</dt><dd>quanto variano le medie dei gruppi tra loro (l'effetto).</dd>
+        <dt>\(\hB{\text{dentro}}\)</dt><dd>quanto variano i dati dentro i gruppi (il caso).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>F ≈ 1</b>: le due varianze sono simili → nessuna evidenza di differenze (coerente con \(H_0\): tutto è
+      rumore). <b>F ≫ 1</b>: la variabilità tra i gruppi supera di molto quella interna → <mark>almeno una media
+      è davvero diversa</mark>. Si confronta F con la <b>distribuzione F</b> (indicizzata dai gradi di libertà,
+      Cap. 27) per ottenere il p-value. I dettagli del calcolo sono il Cap. 41.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s40-4"><span class="secnum">SEZIONE 40.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 40.1</div>
+    <p style="margin-bottom:0">Perché non si confrontano 4 gruppi con tutti i t-test a coppie invece dell'ANOVA?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Con 4 gruppi ci sono 6 confronti a coppie; a \(\alpha = 0{,}05\) ciascuno, la
+          probabilità di almeno un falso positivo sale a \(1 - 0{,}95^6 \approx 0{,}26\) (Cap. 29). L'ANOVA fa un
+          <b>unico test</b> con \(\alpha\) controllato (§40.1), rispondendo a «c'è qualche differenza?» senza
+          gonfiare i falsi allarmi.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 40.2</div>
+    <p style="margin-bottom:0">Un'ANOVA dà \(F = 0{,}9\). Cosa concludi sulle medie dei gruppi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(F \approx 1\) significa che la varianza <b>tra</b> i gruppi è
+          circa uguale a quella <b>dentro</b> (§40.3): la variabilità tra le medie è compatibile col semplice
+          rumore campionario. <b>Nessuna evidenza</b> che le medie differiscano — non si rifiuta \(H_0\). Se le
+          medie fossero davvero diverse, ci si aspetterebbe \(F\) ben sopra 1.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 40.3</div>
+    <p style="margin-bottom:0">Un'ANOVA su 5 diete è significativa (\(p = 0{,}002\)). Un collega conclude «la dieta
+      A è migliore della B». È giustificato?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>No.</b> L'ANOVA è un test <b>onnibus</b> (§40.1): dice che <em>almeno una</em>
+          delle 5 medie differisce, ma non <em>quale</em> né in che direzione. Potrebbe essere la E a spiccare, non
+          A vs B. Per confrontare coppie specifiche servono i <b>test post-hoc</b> (Cap. 42), corretti per i
+          confronti multipli. Saltare all'A-vs-B senza post-hoc è ingiustificato.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s40-5"><span class="secnum">SEZIONE 40.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 40</div>
+    <ol style="margin-bottom:0">
+      <li><b>ANOVA:</b> un test unico per \(k\) gruppi. \(H_0\): tutte le medie uguali; \(H_1\): almeno una diversa.
+        Evita i confronti multipli.</li>
+      <li><b>L'idea:</b> confronta la varianza <b>tra</b> i gruppi (segnale) con quella <b>dentro</b> (rumore).</li>
+      <li><b>Statistica F</b> = tra/dentro. \(F \approx 1\): nessuna differenza; \(F \gg 1\): almeno una media
+        diversa.</li>
+      <li>È un test <b>onnibus</b>: dice «se», non «quali». Per le coppie servono i post-hoc (Cap. 42).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo l'intuizione: F = varianza tra ÷ varianza dentro. Ma come si calcolano <em>esattamente</em> queste
+    varianze dai dati? La risposta è un'elegante scomposizione della variabilità totale in <b>somme dei
+    quadrati</b> — il macchinario dell'ANOVA, nel <strong>Capitolo 41</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §40.2 — tre gruppi: varianza tra vs dentro → F
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wan-svg');
+  if (!svg) return;
+  const out = document.getElementById('wan-out');
+  const bS = document.getElementById('wan-b'), wS = document.getElementById('wan-w');
+  let seed = 44;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+
+  function draw() {
+    const sep = parseInt(bS.value, 10) / 100;   // separazione
+    const noise = parseInt(wS.value, 10) / 10;  // rumore interno
+    seed = 44;
+    const centers = [50 - 22 * sep, 50, 50 + 22 * sep];
+    const groups = centers.map(c => { const arr = []; for (let i = 0; i < 25; i++) arr.push(c + noise * g()); return arr; });
+    const grand = 50;
+    // varianza tra (pesata) e dentro
+    let ssB = 0; groups.forEach(gr => { const m = gr.reduce((a, b) => a + b, 0) / gr.length; ssB += gr.length * (m - grand) ** 2; });
+    let ssW = 0; groups.forEach(gr => { const m = gr.reduce((a, b) => a + b, 0) / gr.length; gr.forEach(v => ssW += (v - m) ** 2); });
+    const dfB = 2, dfW = 72;
+    const F = (ssB / dfB) / (ssW / dfW);
+    const sig = F > 3.12;
+
+    svg.innerHTML = '';
+    const cols = ['var(--accent)', 'var(--green)', 'var(--warm)'];
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 1 });
+    p.line(grand, 0.08, grand, 0.92, { color: 'var(--ink-faint)', width: 1.2, dash: '3 3' });
+    p.text(grand, 0.98, 'media generale', { color: 'var(--ink-faint)', size: 9.5 });
+    groups.forEach((gr, k) => {
+      const yb = 0.25 + k * 0.25;
+      gr.forEach(v => p.dot(Math.max(2, Math.min(98, v)), yb + (u() - 0.5) * 0.12, { r: 2.6, color: 'color-mix(in srgb, ' + cols[k] + ' 55%, transparent)', stroke: 'var(--paper)', sw: 0.4 }));
+      const m = gr.reduce((a, b) => a + b, 0) / gr.length;
+      p.line(m, yb - 0.09, m, yb + 0.09, { color: cols[k], width: 2.6 });
+    });
+    out.innerHTML = `
+      <div class="big">F = varianza tra ÷ dentro = <b style="color:${sig ? 'var(--warm)' : 'var(--ink)'}">${F.toFixed(2)}</b> ${sig ? '(significativo)' : '(non significativo)'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${(sep > 0.5 && noise < 5) ? 'Medie ben <mark>separate</mark> e poco rumore interno: il segnale (tra) supera il rumore (dentro), F grande → almeno una media differisce.'
+          : (sep < 0.2) ? 'Medie quasi <mark>sovrapposte</mark>: nessun segnale, F ≈ 1 → nessuna differenza.'
+          : (noise > 6) ? 'Molto <mark>rumore interno</mark>: anche con medie separate, il denominatore gonfio schiaccia F.'
+          : 'Situazione intermedia: il verdetto dipende dal rapporto tra separazione e rumore.'}
+      </div>`;
+  }
+  bS.addEventListener('input', draw); wS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -471,7 +471,7 @@ const TOC = [
   },
   {
     n: 40, parte: "IV · Statistica inferenziale",
-    titolo: "Cos'è l'ANOVA", file: "cap40-anova.html", stato: "da-fare",
+    titolo: "Cos'è l'ANOVA", file: "cap40-anova.html", stato: "pronto",
     sezioni: [
       { id: "s40-1", n: "40.1", t: "Confrontare più di due gruppi" },
       { id: "s40-2", n: "40.2", t: "Varianza tra e dentro i gruppi" },
