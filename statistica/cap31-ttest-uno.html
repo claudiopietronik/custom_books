@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>31 · t-test a un campione — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="31">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>t-test a un campione</h1>
+    <p class="standfirst">
+      La versione più semplice del t-test: confrontare la media di <b>un</b> campione con un <b>valore atteso</b>
+      noto. «Questa fabbrica produce davvero pezzi da 500 g?», «il tempo medio di attesa è davvero 10 minuti?». Un
+      solo gruppo, un numero di riferimento, la stessa anima segnale/rumore del capitolo precedente.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prima applicazione concreta dell'anatomia del t-test (Cap. 30). Il denominatore è l'errore standard del TLC
+      (Cap. 23), i gradi di libertà sono \(n-1\) (Cap. 27). Il Cap. 32 estende a due campioni.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      È il test del controllo qualità e della verifica di uno standard: ogni volta che hai un valore-obiettivo e
+      vuoi sapere se i tuoi dati vi si conformano o se ne discostano più di quanto il caso spieghi, è un t-test a
+      un campione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-1"><span class="secnum">SEZIONE 31.1</span>Confrontare con un valore atteso</h2>
+
+  <p class="lead">
+    Qui non ci sono due gruppi: c'è <b>un campione</b> e un <b>numero di riferimento</b> \(\mu_0\), fissato dalla
+    domanda (uno standard, una specifica, un'ipotesi).
+  </p>
+
+  <p>
+    L'ipotesi nulla è che la vera media della popolazione sia proprio quel valore: \(H_0: \mu = \mu_0\)
+    («i pezzi pesano in media 500 g»). L'alternativa è che sia diversa: \(H_1: \mu \neq \mu_0\). La domanda del
+    test: la media <em>osservata</em> \(\bar{x}\) si discosta da \(\mu_0\) più di quanto la variabilità
+    campionaria (Cap. 23) potrebbe spiegare per caso? Se sì, rifiutiamo \(H_0\): lo scostamento è reale, non
+    rumore.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-2"><span class="secnum">SEZIONE 31.2</span>La formula</h2>
+
+  <div class="formula">
+    <div class="f-head">Statistica t a un campione <span class="tag">quanto dista x̄ da μ₀, in errori standard</span></div>
+    <div class="f-body">
+      \[ t \;=\; \frac{\hA{\bar{x} - \mu_0}}{\hB{\,s / \sqrt{n}\,}}, \qquad \text{df} = n - 1 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\bar{x} - \mu_0}\)</dt><dd>il <b>segnale</b>: di quanto la media del campione si scosta dal valore atteso.</dd>
+        <dt>\(\hB{s/\sqrt{n}}\)</dt><dd>il <b>rumore</b>: l'errore standard della media (Cap. 23), con \(s\) stimato dal campione.</dd>
+        <dt>\(\text{df} = n-1\)</dt><dd>i gradi di libertà, perché \(s\) usa \(\bar{x}\) stimata dai dati (Cap. 27).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Identica anima del Cap. 30: <mark>differenza ÷ errore standard</mark>. Qui il «segnale» è la distanza da un
+      valore fisso invece che tra due gruppi. Il \(t\) si confronta con la distribuzione t a \(n-1\) gradi di
+      libertà per ottenere il p-value.
+    </div>
+  </div>
+
+  <h3>Provalo: il campione contro lo standard</h3>
+
+  <p>
+    Un campione (nuvola verde) con la sua media, e un <b style="color:var(--accent)">valore atteso</b>
+    trascinabile. Allontana \(\mu_0\) dalla media osservata e guarda \(t\) crescere; poi cambia il rumore e vedi
+    come la stessa distanza da \(\mu_0\) possa essere significativa o no.
+  </p>
+
+  <div class="widget" id="w-one">
+    <div class="w-head">
+      <span>t-test a un campione</span>
+      <span class="hint">trascina il valore atteso μ₀</span>
+    </div>
+    <div class="w-stage">
+      <svg id="won-svg" viewBox="0 0 620 210" role="img" aria-label="Un campione con media confrontata a un valore atteso trascinabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>rumore (s)</label><input type="range" id="won-s" min="6" max="40" step="1" value="16"><output id="won-sv">1.6</output></div>
+    </div>
+    <div class="w-readout" id="won-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-3"><span class="secnum">SEZIONE 31.3</span>Esempio completo</h2>
+
+  <p class="lead">
+    Numeri veri, dall'inizio alla conclusione.
+  </p>
+
+  <p>
+    Una macchina dovrebbe riempire sacchetti da <b>\(\mu_0 = 500\) g</b>. Prendi un campione di \(n = 16\)
+    sacchetti e trovi media \(\bar{x} = 493\) g e deviazione standard \(s = 12\) g. La macchina sta sotto-riempiendo,
+    o è solo variabilità normale?
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> I passi del test</div>
+    <ol style="margin-bottom:0">
+      <li><b>Ipotesi:</b> \(H_0: \mu = 500\); \(H_1: \mu \neq 500\) (due code).</li>
+      <li><b>Errore standard:</b> \(s/\sqrt{n} = 12/\sqrt{16} = 12/4 = 3\) g.</li>
+      <li><b>Statistica t:</b> \(t = (493 - 500)/3 = -7/3 \approx -2{,}33\).</li>
+      <li><b>Gradi di libertà:</b> \(n - 1 = 15\).</li>
+      <li><b>Decisione:</b> il valore critico a due code (\(\alpha = 0{,}05\), df = 15) è circa \(\pm 2{,}13\).
+        Poiché \(|-2{,}33| > 2{,}13\), <b>rifiutiamo \(H_0\)</b> (\(p \approx 0{,}034\)).</li>
+    </ol>
+  </div>
+
+  <p>
+    Conclusione: lo scostamento di 7 g è statisticamente significativo — è troppo grande per essere solo caso, con
+    quella dispersione e quel campione. La macchina sotto-riempie davvero. Nota però (Cap. 25): 7 g su 500 sono
+    l'1,4% — se sia <em>rilevante</em> nella pratica è un'altra domanda, da valutare a parte.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-4"><span class="secnum">SEZIONE 31.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.1</div>
+    <p style="margin-bottom:0">Un campione di \(n = 25\) ha \(\bar{x} = 104\), \(s = 10\), contro un valore atteso
+      \(\mu_0 = 100\). Calcola \(t\) e i gradi di libertà.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Errore standard: \(s/\sqrt{n} = 10/\sqrt{25} = 10/5 = 2\). Statistica:
+          \(t = (104 - 100)/2 = \mathbf{2{,}0}\). Gradi di libertà: \(n - 1 = \mathbf{24}\). Il critico a due code
+          (df 24, α 0,05) è ~2,06: \(2{,}0 < 2{,}06\), quindi <b>al limite, non si rifiuta</b> \(H_0\)
+          (\(p \approx 0{,}057\)).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.2</div>
+    <p style="margin-bottom:0">Nell'esercizio precedente, se il campione fosse \(n = 100\) (stessi \(\bar{x}\) e
+      \(s\)), la conclusione cambierebbe?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Errore standard: \(10/\sqrt{100} = 1\). \(t = (104-100)/1 = \mathbf{4{,}0}\),
+          df = 99. Ben oltre il critico (~1,98): <b>si rifiuta nettamente</b> \(H_0\) (\(p < 0{,}001\)). Stessa
+          differenza (4) e stessa dispersione, ma con più dati il rumore cala e la differenza diventa
+          significativa. È la legge del \(1/\sqrt{n}\) (Cap. 30).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.3</div>
+    <p style="margin-bottom:0">Quando useresti un t-test a un campione invece che a due campioni?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Quando confronti <b>un solo gruppo</b> con un <b>valore fisso noto</b> (uno
+          standard, una specifica, un'ipotesi teorica), non con un secondo gruppo di dati (§31.1). Esempi: pezzi
+          contro peso nominale, punteggi contro la media storica, temperatura contro una soglia. Se invece
+          confronti due gruppi di dati tra loro (trattamento vs controllo), serve il t-test a due campioni
+          (Cap. 32).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-5"><span class="secnum">SEZIONE 31.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 31</div>
+    <ol style="margin-bottom:0">
+      <li><b>Un campione contro un valore atteso</b> \(\mu_0\): \(H_0: \mu = \mu_0\).</li>
+      <li><b>Formula:</b> \(t = (\bar{x} - \mu_0)/(s/\sqrt{n})\), con df \(= n-1\).</li>
+      <li>Confronta \(t\) con la distribuzione t: se \(|t|\) supera il critico, rifiuti \(H_0\).</li>
+      <li>Significativo ≠ rilevante: valuta anche la <b>grandezza</b> dello scostamento (Cap. 25).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Un gruppo contro uno standard è il caso più semplice. Molto più comune è confrontare <em>due</em> gruppi tra
+    loro — trattamento contro controllo, prima contro dopo. Il <strong>Capitolo 32</strong> affronta il t-test a
+    due campioni, e la distinzione cruciale tra campioni <b>indipendenti</b> e <b>appaiati</b>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §31.2 — t-test a un campione: media contro valore atteso trascinabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('won-svg');
+  if (!svg) return;
+  const out = document.getElementById('won-out');
+  const sS = document.getElementById('won-s'), sV = document.getElementById('won-sv');
+  const xbar = 50, n = 20;
+  let mu0 = 62;
+
+  function draw() {
+    const s = parseInt(sS.value, 10) / 10 * 6;   // dispersione grafica
+    sV.textContent = (parseInt(sS.value, 10) / 10).toFixed(1);
+    const se = s / Math.sqrt(n);
+    const t = (xbar - mu0) / se;
+    const crit = 2.09;   // df=19
+    const sig = Math.abs(t) > crit;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 10, xmax: 90, ymin: 0, ymax: 1 });
+    p.line(10, 0.4, 90, 0.4, { color: 'var(--rule)', width: 1.2 });
+    // nuvola campione ~N(xbar, s)
+    let seed = 5; const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+    for (let i = 0; i < n; i++) { const x = xbar + s * g(); p.dot(Math.max(11, Math.min(89, x)), 0.4 + ((i % 5) - 2) * 0.05, { r: 3.2, color: 'color-mix(in srgb, var(--green) 60%, transparent)', stroke: 'var(--paper)', sw: 0.6 }); }
+    // media campionaria
+    p.line(xbar, 0.15, xbar, 0.7, { color: 'var(--green)', width: 2.4 });
+    p.text(xbar, 0.06, 'x̄ = 50', { color: 'var(--green)', size: 10.5 });
+    // valore atteso trascinabile
+    p.line(mu0, 0.15, mu0, 0.7, { color: 'var(--accent)', width: 2.4, dash: '5 4' });
+    p.handle(mu0, 0.78, { r: 7, color: 'var(--accent)', axis: 'x' }, (x) => { mu0 = Math.max(12, Math.min(88, x)); draw(); });
+    p.text(mu0, 0.9, 'μ₀ = ' + mu0.toFixed(0), { color: 'var(--accent)', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">t = <b style="color:${sig ? 'var(--warm)' : 'var(--ink)'}">${t.toFixed(2)}</b> ${sig ? '→ rifiuto H₀' : '→ non rifiuto H₀'} &nbsp;<span style="color:var(--ink-faint)">(critico ±${crit})</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La media osservata è 50; il valore atteso è ${mu0.toFixed(0)}.
+        ${sig ? 'Lo scostamento supera il rumore: <mark>differenza reale</mark> dal valore atteso.'
+              : 'Lo scostamento è compatibile con la variabilità campionaria: <mark>non</mark> abbastanza per rifiutare H₀.'}
+        Avvicina μ₀ a 50 o aumenta il rumore e t scende sotto la soglia.
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

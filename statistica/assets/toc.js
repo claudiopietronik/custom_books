@@ -366,7 +366,7 @@ const TOC = [
   },
   {
     n: 31, parte: "IV · Statistica inferenziale",
-    titolo: "t-test a un campione", file: "cap31-ttest-uno.html", stato: "da-fare",
+    titolo: "t-test a un campione", file: "cap31-ttest-uno.html", stato: "pronto",
     sezioni: [
       { id: "s31-1", n: "31.1", t: "Confrontare con un valore atteso" },
       { id: "s31-2", n: "31.2", t: "La formula" },
