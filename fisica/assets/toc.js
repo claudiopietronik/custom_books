@@ -226,7 +226,7 @@ const TOC = [
     n: 14,
     titolo: "La meccanica dei fluidi",
     file: "cap14-fluidi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Densità e pressione" },
       { id: "s14-2", n: "14.2", t: "La pressione in un fluido (Stevino)" },
