@@ -169,7 +169,7 @@ const TOC = [
   },
   {
     n: 14, parte: "III · Probabilità",
-    titolo: "Probabilità e proporzione", file: "cap14-probabilita-proporzione.html", stato: "da-fare",
+    titolo: "Probabilità e proporzione", file: "cap14-probabilita-proporzione.html", stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Frequenza relativa" },
       { id: "s14-2", n: "14.2", t: "Dalla proporzione alla probabilità" },
