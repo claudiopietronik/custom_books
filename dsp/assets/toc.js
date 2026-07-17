@@ -344,7 +344,7 @@ const TOC = [
     n: 23,
     titolo: "Formazione e visualizzazione delle immagini",
     file: "cap23-immagini-formazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s23-1", n: "23.1", t: "Cos'è un'immagine digitale" },
       { id: "s23-2", n: "23.2", t: "Camere e formazione dell'immagine" },

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>23 · Formazione e visualizzazione delle immagini — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="23">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.23 — Capitolo 23</div>
+    <h1>Formazione e visualizzazione delle immagini</h1>
+    <p class="standfirst">
+      Dal filo del tempo al piano dei pixel. Un'immagine è solo un segnale a <b>due dimensioni</b>: invece di un
+      valore per ogni istante, un valore di luminosità per ogni punto. La buona notizia è che quasi tutto ciò che
+      abbiamo imparato — campionamento, convoluzione, Fourier — si estende alle immagini, con qualche twist
+      geometrico. Qui vediamo come un'immagine nasce, si misura e si mostra.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Apertura della sezione immagini (Cap. 23–25). Questo capitolo pone le basi — cos'è un'immagine, come si
+      forma e si visualizza — prima di elaborarla davvero nel Cap. 24 (convoluzione 2D, bordi, sfocatura) e di
+      spingersi alle tecniche avanzate nel Cap. 25 (morfologia, tomografia).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      L'elaborazione delle immagini è tra le applicazioni più spettacolari del DSP: fotocamere, imaging medico,
+      visione artificiale, foto dallo spazio. E il punto di partenza è capire che <strong>un'immagine è un
+      segnale</strong> — così tutti gli strumenti del libro tornano utili, solo con una dimensione in più.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-1"><span class="secnum">SEZIONE 23.1</span>Cos'è un'immagine digitale</h2>
+
+  <p class="lead">
+    Un'immagine digitale è una <b>griglia di numeri</b>: una matrice in cui ogni casella — un <b class="termine">pixel</b>
+    (da <em>picture element</em>) — porta un valore di luminosità.
+  </p>
+
+  <p>
+    In un'immagine in scala di grigi, ogni pixel è un singolo numero: 0 = nero, il massimo = bianco, i valori in
+    mezzo = grigi. Con 8 bit per pixel si hanno 256 livelli di grigio. In un'immagine a colori, ogni pixel porta
+    <em>tre</em> numeri — le intensità di rosso, verde e blu (RGB) — perché l'occhio ha tre tipi di recettori per
+    il colore. Un'immagine è quindi identificata da tre cose: <b>larghezza</b> e <b>altezza</b> in pixel (quanti
+    punti) e <b>profondità</b> in bit (quanti livelli per punto).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Due dimensioni, stessi concetti</div>
+    <p style="margin-bottom:0">
+      Un segnale audio era \(x[n]\), indicizzato da un solo numero (il tempo). Un'immagine è \(x[i,j]\),
+      indicizzata da <b>due</b> (riga e colonna). Ma le idee sono le stesse: campionare (i pixel sono campioni
+      spaziali, con il loro Nyquist!), convolvere (ora con un kernel 2D, Cap. 24), trasformare con Fourier (uno
+      spettro 2D). <mark>Passare da 1D a 2D non richiede una nuova teoria, solo di applicare quella vecchia su due
+      assi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-2"><span class="secnum">SEZIONE 23.2</span>Camere e formazione dell'immagine</h2>
+
+  <p class="lead">
+    Come nasce un'immagine digitale? Una lente concentra la luce su una griglia di sensori; ogni sensore misura
+    quanta luce riceve e diventa un pixel. Ma la lente non è perfetta.
+  </p>
+
+  <p>
+    Nessun sistema ottico è ideale: un punto luminoso infinitamente piccolo, passando per la lente, non arriva al
+    sensore come un punto ma come una piccola macchia sfocata. Questa macchia è la <b class="termine">point-spread
+    function</b> (PSF) — ed è, né più né meno, la <b>risposta all'impulso a due dimensioni</b> del sistema ottico
+    (Cap. 6). L'immagine che ottieni è la scena reale <b>convoluta</b> con la PSF: ogni punto della scena viene
+    «spalmato» secondo la PSF, ed è per questo che le immagini sono sempre un po' sfocate.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La PSF è la h[i,j] dell'ottica</div>
+    <p style="margin-bottom:0">
+      Riconoscere che <mark>l'ottica è un sistema LTI e la PSF è la sua risposta all'impulso</mark> è la chiave di
+      tutto l'imaging. Vuol dire che sfocatura e distorsione sono <em>convoluzioni</em>, e quindi si possono, in
+      linea di principio, <em>deconvolvere</em> (Cap. 17) per ripristinare la nitidezza — entro i limiti del
+      rumore e dell'informazione persa. È il fondamento della messa a fuoco software, del deblurring, e delle
+      immagini «impossibili» delle sonde spaziali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-3"><span class="secnum">SEZIONE 23.3</span>Visualizzazione e scala di grigi</h2>
+
+  <p class="lead">
+    Avere i numeri non basta: bisogna <b>mostrarli</b>. E il modo in cui mappi i valori dei pixel in luminosità
+    sullo schermo cambia radicalmente ciò che vedi.
+  </p>
+
+  <p>
+    Le regolazioni di base — <b>luminosità</b> (sposta tutti i valori su o giù) e <b>contrasto</b> (allarga o
+    comprime la scala) — sono semplici trasformazioni punto per punto. Ce n'è una più sottile e importante: la
+    <b class="termine">gamma</b>, una curva non lineare che corregge il modo in cui gli schermi e l'occhio
+    rispondono alla luce (l'occhio, di nuovo, è logaritmico, Cap. 22). E c'è l'<b>equalizzazione
+    dell'istogramma</b>, che ridistribuisce i livelli per usare al meglio l'intera scala, tirando fuori dettagli
+    nascosti nelle zone troppo scure o troppo chiare.
+  </p>
+
+  <h3>Provalo: regola un'immagine</h3>
+
+  <p>
+    Un'immagine in scala di grigi (una piccola «scena» generata al volo). Muovi luminosità, contrasto e gamma e
+    guarda cosa cambia: la luminosità la sposta in blocco, il contrasto ne allarga la scala, la gamma agisce in
+    modo non lineare — schiarendo le ombre o affondandole.
+  </p>
+
+  <div class="widget" id="w-adjust">
+    <div class="w-head">
+      <span>Luminosità, contrasto, gamma</span>
+      <span class="hint">trasformazioni punto per punto</span>
+    </div>
+    <div class="w-stage" style="text-align:center">
+      <svg id="wadj-svg" viewBox="0 0 300 300" style="max-width:300px" role="img" aria-label="Un'immagine in scala di grigi con luminosità, contrasto e gamma regolabili"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>luminosità</label><input type="range" id="wadj-b" min="-0.4" max="0.4" step="0.02" value="0"><output id="wadj-bv">0.00</output></div>
+      <div class="w-ctrl"><label>contrasto</label><input type="range" id="wadj-c" min="0.4" max="2.2" step="0.05" value="1"><output id="wadj-cv">1.00</output></div>
+      <div class="w-ctrl"><label>gamma</label><input type="range" id="wadj-g" min="0.4" max="2.5" step="0.05" value="1"><output id="wadj-gv">1.00</output></div>
+    </div>
+    <div class="w-readout" id="wadj-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-4"><span class="secnum">SEZIONE 23.4</span>Risoluzione spaziale e brillanza</h2>
+
+  <p class="lead">
+    La qualità di un'immagine ha <b>due assi indipendenti</b>, e confonderli è un errore comune: quanti pixel, e
+    quanti livelli per pixel.
+  </p>
+
+  <ul>
+    <li><b>Risoluzione spaziale:</b> quanti pixel, cioè quanto <em>fine</em> è il dettaglio. Pochi pixel →
+        immagine «a blocchi», dettagli persi. È il campionamento spaziale, con il suo teorema di Nyquist: dettagli
+        più fini del passo tra pixel non si possono rappresentare (e producono aliasing — i fastidiosi motivi
+        moiré).</li>
+    <li><b>Risoluzione di brillanza:</b> quanti livelli di grigio per pixel, cioè quante <em>sfumature</em>. Pochi
+        livelli → gradienti «a scalini» (il <em>banding</em>, la posterizzazione). È la quantizzazione
+        dell'ampiezza (Cap. 3), applicata alla luminosità.</li>
+  </ul>
+
+  <h3>Provalo: pixel contro livelli</h3>
+
+  <p>
+    Riduci la <b>risoluzione spaziale</b> (meno pixel) e la <b>risoluzione di brillanza</b> (meno livelli di
+    grigio), separatamente. Sono due degradi diversi: pochi pixel danno un'immagine a blocchi; pochi livelli
+    danno gradienti a scalini. Due assi, due difetti.
+  </p>
+
+  <div class="widget" id="w-res">
+    <div class="w-head">
+      <span>Risoluzione spaziale vs brillanza</span>
+      <span class="hint">due assi indipendenti di qualità</span>
+    </div>
+    <div class="w-stage" style="text-align:center">
+      <svg id="wres-svg" viewBox="0 0 300 300" style="max-width:300px" role="img" aria-label="Un'immagine degradata riducendo il numero di pixel e il numero di livelli di grigio"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>pixel</label><input type="range" id="wres-n" min="6" max="64" step="1" value="48"><output id="wres-nv">48</output></div>
+      <div class="w-ctrl"><label>livelli</label><input type="range" id="wres-l" min="2" max="64" step="1" value="32"><output id="wres-lv">32</output></div>
+    </div>
+    <div class="w-readout" id="wres-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-5"><span class="secnum">SEZIONE 23.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 23.1</div>
+    <p style="margin-bottom:0">Un'immagine in scala di grigi è \(1024 \times 768\) pixel a 8 bit. Quanti pixel ha?
+      Quanto occupa (non compressa)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Pixel: \(1024 \times 768 = 786\,432\) (circa 0,79 megapixel). Con 8 bit (1 byte) per pixel:
+          \(786\,432\) byte \(\approx 768\) KB. A colori (3 byte/pixel) sarebbe il triplo, ~2,3 MB. Da qui la
+          necessità di comprimere (Cap. 27).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 23.2</div>
+    <p style="margin-bottom:0">Perché le foto sono sempre un po' sfocate, anche con ottiche eccellenti? Come si
+      chiama, in termini di DSP, ciò che causa la sfocatura?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché ogni ottica ha una <b>point-spread function</b> (PSF) non puntiforme: un punto luminoso arriva
+          al sensore come una macchia. L'immagine è la scena <b>convoluta</b> con la PSF (la risposta all'impulso
+          2D dell'ottica, §23.2). Anche le migliori lenti hanno una PSF finita; la sfocatura si può ridurre per
+          deconvoluzione (Cap. 17), entro i limiti del rumore.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 23.3</div>
+    <p style="margin-bottom:0">Un'immagine mostra gradienti «a scalini» (banding). È un problema di risoluzione
+      spaziale o di brillanza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Di <b>brillanza</b>: troppo pochi livelli di grigio, quindi le sfumature graduali diventano gradini
+          (posterizzazione). È la quantizzazione dell'ampiezza (Cap. 3). L'immagine «a blocchi» sarebbe invece un
+          problema di risoluzione <em>spaziale</em> (troppo pochi pixel). Sono due assi distinti (§23.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s23-6"><span class="secnum">SEZIONE 23.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 23</div>
+    <ol style="margin-bottom:0">
+      <li><b>Un'immagine è un segnale 2D:</b> \(x[i,j]\), una griglia di pixel. Larghezza × altezza (pixel) +
+          profondità (bit/livelli). Colore = tre valori RGB.</li>
+      <li><b>Formazione:</b> la lente convolve la scena con la sua <b>point-spread function</b> (la risposta
+          all'impulso 2D) → sfocatura, deconvolvibile.</li>
+      <li><b>Visualizzazione:</b> luminosità, contrasto, gamma (non lineare), equalizzazione dell'istogramma —
+          trasformazioni punto per punto che cambiano ciò che vedi.</li>
+      <li><b>Due assi di qualità:</b> risoluzione <b>spaziale</b> (pixel → dettaglio, con Nyquist e moiré) e di
+          <b>brillanza</b> (livelli → sfumature, con banding). Indipendenti.</li>
+      <li><b>Tutto il DSP 1D si estende al 2D:</b> stessa teoria, una dimensione in più.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora che sappiamo cos'è un'immagine, impariamo a <em>elaborarla</em>. Il <strong>Capitolo 24</strong> porta la
+    convoluzione nel piano: la <b>convoluzione a due dimensioni</b>, i <b>kernel</b> per sfocare e per rilevare i
+    bordi, i filtri <b>separabili</b> (un trucco di efficienza che dimezza il lavoro) e la trasformata di Fourier
+    delle immagini. È il Cap. 6, ma su un foglio invece che su un filo.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* immagine continua di prova: una "scena" con sfera, sfondo a gradiente e un rettangolo scuro */
+function scene(u, v) {  // u,v in [0,1] → valore 0..1
+  let val = 0.28 + 0.32 * v;                              // sfondo a gradiente verticale
+  const dx = u - 0.38, dy = v - 0.42, r = Math.sqrt(dx * dx + dy * dy);
+  if (r < 0.24) { const sh = 1 - r / 0.24; val = 0.35 + 0.6 * Math.pow(sh, 0.7); } // sfera illuminata
+  if (u > 0.62 && u < 0.86 && v > 0.6 && v < 0.85) val = 0.15;   // rettangolo scuro
+  // qualche texture fine per rendere visibile la risoluzione
+  val += 0.05 * Math.sin(u * 55) * Math.sin(v * 55);
+  return Math.max(0, Math.min(1, val));
+}
+function gray(v) { const l = Math.round(Math.max(0, Math.min(1, v)) * 255); return `rgb(${l},${l},${l})`; }
+function drawImage(svg, N, valFn) {
+  const NS = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+  const cell = 300 / N;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', j * cell); r.setAttribute('y', i * cell);
+    r.setAttribute('width', Math.ceil(cell) + 0.5); r.setAttribute('height', Math.ceil(cell) + 0.5);
+    r.setAttribute('fill', gray(valFn((j + 0.5) / N, (i + 0.5) / N)));
+    svg.appendChild(r);
+  }
+}
+
+/* ============================================================================
+   WIDGET §23.3 — luminosità, contrasto, gamma
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wadj-svg');
+  if (!svg) return;
+  const out = document.getElementById('wadj-out');
+  const bS = document.getElementById('wadj-b'), cS = document.getElementById('wadj-c'), gS = document.getElementById('wadj-g');
+  const bV = document.getElementById('wadj-bv'), cV = document.getElementById('wadj-cv'), gV = document.getElementById('wadj-gv');
+  const N = 60;
+
+  function draw() {
+    const b = parseFloat(bS.value), c = parseFloat(cS.value), g = parseFloat(gS.value);
+    bV.textContent = b.toFixed(2); cV.textContent = c.toFixed(2); gV.textContent = g.toFixed(2);
+    drawImage(svg, N, (u, v) => {
+      let val = scene(u, v);
+      val = (val - 0.5) * c + 0.5 + b;          // contrasto attorno a 0.5, poi luminosità
+      val = Math.max(0, Math.min(1, val));
+      val = Math.pow(val, 1 / g);                // gamma
+      return val;
+    });
+    out.innerHTML = `
+      <div class="big">luminosità ${b >= 0 ? '+' : ''}${b.toFixed(2)} · contrasto ×${c.toFixed(2)} · gamma ${g.toFixed(2)}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Tre trasformazioni <b>punto per punto</b>: la <b>luminosità</b> sposta tutto in blocco, il
+        <b>contrasto</b> allarga la scala attorno al grigio medio, la <b>gamma</b> agisce in modo non lineare
+        (schiarisce le ombre con γ&gt;1). <mark>Gli stessi numeri, mostrati diversamente.</mark>
+      </div>`;
+  }
+  [bS, cS, gS].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §23.4 — risoluzione spaziale vs brillanza
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wres-svg');
+  if (!svg) return;
+  const out = document.getElementById('wres-out');
+  const nS = document.getElementById('wres-n'), lS = document.getElementById('wres-l');
+  const nV = document.getElementById('wres-nv'), lV = document.getElementById('wres-lv');
+
+  function draw() {
+    const N = parseInt(nS.value, 10), L = parseInt(lS.value, 10);
+    nV.textContent = N; lV.textContent = L;
+    drawImage(svg, N, (u, v) => {
+      let val = scene(u, v);
+      val = Math.round(val * (L - 1)) / (L - 1);   // quantizza a L livelli
+      return val;
+    });
+    out.innerHTML = `
+      <div class="big"><b>${N}×${N}</b> pixel · <b>${L}</b> livelli di grigio</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${N < 20 ? 'Pochi pixel → immagine <mark>a blocchi</mark> (bassa risoluzione spaziale).' : 'Buona risoluzione spaziale.'}
+        ${L < 8 ? ' Pochi livelli → gradienti <mark>a scalini</mark> (banding).' : ' Sfumature morbide (buona risoluzione di brillanza).'}
+        Sono due degradi <b>indipendenti</b>: prova a ridurne uno solo per volta.
+      </div>`;
+  }
+  [nS, lS].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+</script>
+</body>
+</html>

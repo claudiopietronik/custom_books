@@ -49,7 +49,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 20 — Filtri di Chebyshev
 - [x] 21 — Confronto tra filtri
 - [x] 22 — Elaborazione audio
-- [ ] 23 — Formazione e visualizzazione delle immagini
+- [x] 23 — Formazione e visualizzazione delle immagini
 - [ ] 24 — Elaborazione lineare delle immagini
 - [ ] 25 — Tecniche speciali di imaging
 - [ ] 26 — Reti neurali (e altro!)
