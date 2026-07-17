@@ -237,7 +237,7 @@ const TOC = [
     n: 16,
     titolo: "La diffrazione",
     file: "cap16-diffrazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "La diffrazione da una fenditura" },
       { id: "s16-2", n: "16.2", t: "Il reticolo di diffrazione" },
