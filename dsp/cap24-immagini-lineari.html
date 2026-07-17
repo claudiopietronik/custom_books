@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>24 · Elaborazione lineare delle immagini — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="24">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.24 — Capitolo 24</div>
+    <h1>Elaborazione lineare delle immagini</h1>
+    <p class="standfirst">
+      La convoluzione, protagonista del Cap. 6, torna qui in due dimensioni. Far scorrere un piccolo <b>kernel</b>
+      su un'immagine — sommando i pixel vicini pesati — è il gesto che sfoca, affila, rileva i bordi, incide un
+      rilievo. Un solo strumento, decine di effetti, tutti decisi dai numeri nel kernel. È il Cap. 6 su un foglio
+      invece che su un filo, e apre le porte a quasi tutta l'elaborazione delle immagini.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cuore della sezione immagini. Dopo aver capito cos'è un'immagine (Cap. 23), la elaboriamo con lo strumento
+      che già padroneggiamo — la convoluzione — esteso al piano. Il Cap. 25 andrà oltre il lineare (morfologia,
+      tomografia).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni volta che un'app «migliora» una foto — la sfoca sullo sfondo, ne affila i dettagli, ne evidenzia i
+      contorni — sta convolvendo con un kernel. Capire la convoluzione 2D significa capire, in un colpo solo, il
+      motore comune di sfocatura, nitidezza, rilevamento bordi e mille altri effetti. E il trucco dei filtri
+      <strong>separabili</strong> è ciò che li rende abbastanza veloci da girare in tempo reale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-1"><span class="secnum">SEZIONE 24.1</span>Convoluzione in due dimensioni</h2>
+
+  <p class="lead">
+    La convoluzione 2D è l'esatto analogo di quella 1D (Cap. 6), con una griglia al posto di una fila. Un piccolo
+    <b>kernel</b> (una matrice, spesso \(3\times 3\)) scorre su tutta l'immagine; per ogni posizione, moltiplica
+    i pixel sotto di sé per i pesi del kernel e ne somma i prodotti. Quella somma è il nuovo pixel.
+  </p>
+
+  <p>
+    Cambiare i nove numeri del kernel cambia completamente l'effetto. Un kernel di tutti valori positivi e uguali
+    <b>media</b> i vicini → sfoca. Un kernel con un forte positivo al centro e negativi intorno esalta le
+    differenze → affila. Un kernel che sottrae i vicini opposti <b>rileva i bordi</b>. È la stessa magia del
+    Cap. 6 — «è la scelta di \(h\) a decidere tutto» — trasferita sul piano.
+  </p>
+
+  <h3>Provalo: una galleria di kernel</h3>
+
+  <p>
+    Applica diversi kernel \(3\times 3\) alla stessa immagine e guarda l'effetto: <b>sfoca</b> (media),
+    <b>affila</b> (esalta i dettagli), <b>bordi</b> (evidenzia i contorni), <b>rilievo</b> (effetto inciso). Un
+    solo strumento — la convoluzione — e comportamenti opposti, tutti nei nove numeri.
+  </p>
+
+  <div class="widget" id="w-kern2d">
+    <div class="w-head">
+      <span>Galleria di kernel 2D</span>
+      <span class="hint">stesso strumento, effetti opposti</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap">
+      <div style="text-align:center">
+        <svg id="wk2-orig" viewBox="0 0 220 220" style="max-width:220px" role="img" aria-label="Immagine originale"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">originale</div>
+      </div>
+      <div style="text-align:center">
+        <svg id="wk2-out" viewBox="0 0 220 220" style="max-width:220px" role="img" aria-label="Immagine filtrata dal kernel scelto"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem" id="wk2-lab">sfocata</div>
+      </div>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wk2-blur">sfoca</button>
+      <button class="w-btn" id="wk2-sharp">affila</button>
+      <button class="w-btn" id="wk2-edge">bordi</button>
+      <button class="w-btn" id="wk2-emboss">rilievo</button>
+    </div>
+    <div class="w-readout" id="wk2-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-2"><span class="secnum">SEZIONE 24.2</span>Filtri separabili</h2>
+
+  <p class="lead">
+    La convoluzione 2D è potente ma costosa: un kernel \(M\times M\) richiede \(M^2\) moltiplicazioni per pixel.
+    Per kernel grandi, su immagini da milioni di pixel, il conto esplode. C'è un trucco elegante che lo abbatte.
+  </p>
+
+  <p>
+    Molti kernel utili sono <b class="termine">separabili</b>: si possono scomporre in due kernel <em>a una
+    dimensione</em>, uno orizzontale e uno verticale. Invece di una convoluzione 2D con \(M^2\) pesi, si fanno
+    <b>due convoluzioni 1D</b> in fila (prima le righe, poi le colonne), con \(M\) pesi ciascuna. Il costo scende
+    da \(M^2\) a \(2M\) per pixel: con \(M=15\), da 225 a 30 operazioni, un fattore 7. La gaussiana — il
+    levigatore più usato — è separabile, ed è uno dei motivi per cui è ovunque.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché la separabilità funziona</div>
+    <p style="margin-bottom:0">
+      Un kernel è separabile quando è il <b>prodotto esterno</b> di due kernel 1D: ogni suo elemento è il prodotto
+      di un peso di riga per un peso di colonna. Sfruttando l'associatività della convoluzione (Cap. 7),
+      convolvere con un tale kernel equivale a convolvere prima con l'uno e poi con l'altro. <mark>Due passate 1D
+      al posto di una 2D</mark>: stessa immagine, una frazione del lavoro. È lo stesso spirito della FFT —
+      spezzare un problema costoso in pezzi economici.
+    </p>
+  </div>
+
+  <h3>Provalo: sfocatura separabile a raggio variabile</h3>
+
+  <p>
+    Aumenta il raggio di sfocatura e guarda l'immagine addolcirsi. Sotto il cofano è una gaussiana separabile:
+    due passate 1D (righe, poi colonne) invece di una 2D. Il riquadro mostra quanto lavoro risparmi rispetto
+    alla convoluzione 2D piena.
+  </p>
+
+  <div class="widget" id="w-sep">
+    <div class="w-head">
+      <span>Sfocatura separabile</span>
+      <span class="hint">due passate 1D = costo 2M invece di M²</span>
+    </div>
+    <div class="w-stage" style="text-align:center">
+      <svg id="wsep-svg" viewBox="0 0 300 300" style="max-width:300px" role="img" aria-label="Un'immagine sfocata con una gaussiana separabile di raggio variabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>raggio</label><input type="range" id="wsep-r" min="0" max="10" step="1" value="2"><output id="wsep-rv">2</output></div>
+    </div>
+    <div class="w-readout" id="wsep-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-3"><span class="secnum">SEZIONE 24.3</span>Sfocatura e rilevamento dei bordi</h2>
+
+  <p class="lead">
+    Due operazioni opposte, entrambe convoluzioni, illustrano l'intera logica: una <b>somma</b> i vicini, l'altra
+    li <b>sottrae</b>.
+  </p>
+
+  <ul>
+    <li><b>Sfocatura</b> = media pesata dei vicini (kernel tutto positivo). Attenua le variazioni rapide (i
+        dettagli e il rumore) e lascia le zone lisce: è un <b>passa-basso spaziale</b>. La gaussiana è la
+        preferita per la sua forma dolce (niente artefatti).</li>
+    <li><b>Rilevamento dei bordi</b> = differenza tra pixel vicini (kernel con positivi e negativi che si
+        annullano). Dove l'immagine è liscia, la differenza è zero; dove <em>cambia</em> bruscamente — un bordo —
+        la differenza è grande. È la <b>derivata spaziale</b>, un <b>passa-alto</b>. I kernel classici (Sobel,
+        Laplaciano) sono varianti di questa idea.</li>
+  </ul>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Sempre la stessa dualità</div>
+    <p style="margin-bottom:0">
+      Riconosci lo schema del Cap. 6? Media = passa-basso = leviga; differenza = passa-alto = evidenzia i
+      cambiamenti. <mark>Nel piano dei pixel valgono le stesse due operazioni fondamentali del filo del tempo</mark>,
+      solo su due assi. Il rilevamento dei bordi è la porta d'ingresso alla visione artificiale: trovare i
+      contorni è il primo passo per riconoscere le forme.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-4"><span class="secnum">SEZIONE 24.4</span>La trasformata di Fourier delle immagini</h2>
+
+  <p class="lead">
+    Anche Fourier si estende al piano: la <b>trasformata di Fourier 2D</b> scompone un'immagine non in sinusoidi
+    lungo una retta, ma in <b>onde piane</b> che attraversano l'immagine in tutte le direzioni.
+  </p>
+
+  <p>
+    Nello spettro 2D di un'immagine: le <b>basse frequenze</b> (al centro) rappresentano le zone lisce e i toni
+    d'insieme; le <b>alte frequenze</b> (verso i bordi) rappresentano i dettagli fini, i contorni e il rumore. La
+    <em>direzione</em> di una frequenza conta: righe verticali nell'immagine producono energia orizzontale nello
+    spettro, e viceversa. Filtrare in 2D è come in 1D: moltiplicare lo spettro per una maschera. Tenere il centro
+    e togliere i bordi = sfocare (passa-basso); l'opposto = evidenziare i dettagli (passa-alto).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Tutto torna, in due dimensioni</div>
+    <p style="margin-bottom:0">
+      Il teorema di convoluzione (Cap. 10) vale anche qui: convolvere con un kernel 2D = moltiplicare gli spettri
+      2D. Quindi <mark>sfocare, affilare e rilevare bordi si possono fare anche in frequenza</mark>, e per kernel
+      grandi conviene (via FFT 2D, Cap. 18). La compressione JPEG (Cap. 27) si basa proprio su una trasformata
+      simile (la DCT), applicata a piccoli blocchi: butta via le alte frequenze che l'occhio non nota. L'intero
+      apparato del libro si trasferisce alle immagini quasi senza modifiche.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-5"><span class="secnum">SEZIONE 24.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.1</div>
+    <p style="margin-bottom:0">Un kernel \(3\times 3\) con tutti i valori uguali a \(1/9\): cosa fa
+      all'immagine? E un kernel con \(+5\) al centro e \(-1\) sui quattro lati?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Il primo <b>media</b> i 9 pixel del vicinato → <b>sfoca</b> (passa-basso). Il secondo esalta la
+          differenza del centro rispetto ai vicini → <b>affila</b> (aumenta il contrasto locale, passa-alto). È
+          la dualità media/differenza del §24.3.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.2</div>
+    <p style="margin-bottom:0">Devi applicare una sfocatura \(21\times 21\) a un'immagine da 10 megapixel. Quante
+      moltiplicazioni per pixel con la convoluzione 2D piena? E se il kernel è separabile?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>2D piena: \(21^2 = 441\) moltiplicazioni per pixel. Separabile: \(2 \times 21 = 42\) — un fattore
+          ~10 in meno. Su 10 milioni di pixel è la differenza tra 4,4 miliardi e 420 milioni di operazioni. La
+          gaussiana è separabile, per fortuna (§24.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.3</div>
+    <p style="margin-bottom:0">Nello spettro 2D di un'immagine, dove finiscono le zone lisce e dove i dettagli
+      fini e i bordi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Le zone <b>lisce</b> → <b>basse frequenze</b> (centro dello spettro). I <b>dettagli fini, i bordi e il
+          rumore</b> → <b>alte frequenze</b> (verso i bordi dello spettro). Sfocare = tenere il centro (passa-basso);
+          evidenziare i dettagli = tenere i bordi (passa-alto). È il §24.4.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-6"><span class="secnum">SEZIONE 24.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 24</div>
+    <ol style="margin-bottom:0">
+      <li><b>Convoluzione 2D:</b> un kernel scorre sull'immagine, moltiplica e somma il vicinato. I nove numeri
+          decidono l'effetto (come \(h\) nel Cap. 6).</li>
+      <li><b>Filtri separabili:</b> un kernel 2D scomponibile in due 1D si applica in due passate (righe +
+          colonne), costo \(2M\) invece di \(M^2\). La gaussiana è separabile.</li>
+      <li><b>Sfocatura</b> = media = passa-basso spaziale. <b>Bordi</b> = differenza = passa-alto (derivata
+          spaziale). La solita dualità.</li>
+      <li><b>Fourier 2D:</b> basse frequenze = zone lisce (centro), alte = dettagli/bordi (periferia). Filtrare =
+          mascherare lo spettro.</li>
+      <li><b>Tutto il DSP 1D vale in 2D:</b> convoluzione, teorema di convoluzione, FFT — solo su due assi.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la convoluzione lineare l'elaborazione delle immagini è già potentissima, ma alcuni problemi richiedono
+    strumenti <em>non</em> lineari o geometrici. Il <strong>Capitolo 25</strong> esplora le <b>tecniche speciali
+    di imaging</b>: come si misura la qualità di un'immagine (MTF, rumore), la <b>morfologia</b> (erosione e
+    dilatazione per manipolare le forme) e la meraviglia della <b>tomografia computerizzata</b>, che ricostruisce
+    l'interno del corpo da tante proiezioni. Il DSP che vede attraverso le cose.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* scena di prova (come Cap. 23) */
+function scene24(u, v) {
+  let val = 0.28 + 0.32 * v;
+  const dx = u - 0.38, dy = v - 0.42, r = Math.sqrt(dx * dx + dy * dy);
+  if (r < 0.24) { const sh = 1 - r / 0.24; val = 0.35 + 0.6 * Math.pow(sh, 0.7); }
+  if (u > 0.62 && u < 0.86 && v > 0.6 && v < 0.85) val = 0.15;
+  val += 0.06 * Math.sin(u * 48) * Math.sin(v * 48);
+  return Math.max(0, Math.min(1, val));
+}
+function grayC(v) { const l = Math.round(Math.max(0, Math.min(1, v)) * 255); return `rgb(${l},${l},${l})`; }
+function sampleImg(N) { const A = []; for (let i = 0; i < N; i++) { A.push([]); for (let j = 0; j < N; j++) A[i].push(scene24((j + 0.5) / N, (i + 0.5) / N)); } return A; }
+function renderImg(svg, A, size) {
+  const NS = 'http://www.w3.org/2000/svg'; svg.innerHTML = '';
+  const N = A.length, cell = size / N;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', j * cell); r.setAttribute('y', i * cell);
+    r.setAttribute('width', Math.ceil(cell) + 0.5); r.setAttribute('height', Math.ceil(cell) + 0.5);
+    r.setAttribute('fill', grayC(A[i][j])); svg.appendChild(r);
+  }
+}
+function conv2(A, K, offset) {
+  const N = A.length, kk = K.length, half = (kk - 1) / 2, B = [];
+  for (let i = 0; i < N; i++) { B.push([]); for (let j = 0; j < N; j++) {
+    let s = 0;
+    for (let di = 0; di < kk; di++) for (let dj = 0; dj < kk; dj++) {
+      const ii = Math.max(0, Math.min(N - 1, i + di - half)), jj = Math.max(0, Math.min(N - 1, j + dj - half));
+      s += A[ii][jj] * K[di][dj];
+    }
+    B[i].push(Math.max(0, Math.min(1, s + (offset || 0))));
+  } }
+  return B;
+}
+
+/* ============================================================================
+   WIDGET §24.1 — galleria di kernel 2D
+   ========================================================================= */
+(function () {
+  const sOrig = document.getElementById('wk2-orig'), sOut = document.getElementById('wk2-out');
+  if (!sOrig) return;
+  const out = document.getElementById('wk2-out'), lab = document.getElementById('wk2-lab');
+  const btns = { blur: document.getElementById('wk2-blur'), sharp: document.getElementById('wk2-sharp'), edge: document.getElementById('wk2-edge'), emboss: document.getElementById('wk2-emboss') };
+  const N = 56, A = sampleImg(N);
+  renderImg(sOrig, A, 220);
+  const KERN = {
+    blur: { K: [[1, 1, 1], [1, 1, 1], [1, 1, 1]].map(r => r.map(x => x / 9)), off: 0, name: 'sfocata', desc: 'media dei vicini → passa-basso: attenua dettagli e rumore.' },
+    sharp: { K: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]], off: 0, name: 'affilata', desc: 'esalta il centro rispetto ai vicini → passa-alto: aumenta il contrasto locale.' },
+    edge: { K: [[0, 1, 0], [1, -4, 1], [0, 1, 0]], off: 0.5, name: 'bordi', desc: 'differenza dai vicini (Laplaciano): le zone lisce spariscono, i contorni risaltano.' },
+    emboss: { K: [[-2, -1, 0], [-1, 1, 1], [0, 1, 2]], off: 0.3, name: 'rilievo', desc: 'kernel asimmetrico: effetto «inciso», i bordi diventano rilievi luminosi/ombra.' }
+  };
+  let sel = 'blur';
+
+  function draw() {
+    const k = KERN[sel];
+    renderImg(sOut, conv2(A, k.K, k.off), 220);
+    lab.textContent = k.name;
+    out.innerHTML = `
+      <div class="big">kernel: <b>${sel}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${k.desc}
+        <mark>Un solo strumento — la convoluzione — e quattro effetti opposti</mark>, decisi dai nove numeri del kernel.</div>`;
+  }
+  function setSel(s) { sel = s; for (const kk in btns) btns[kk].classList.toggle('on', kk === s); draw(); }
+  btns.blur.addEventListener('click', () => setSel('blur'));
+  btns.sharp.addEventListener('click', () => setSel('sharp'));
+  btns.edge.addEventListener('click', () => setSel('edge'));
+  btns.emboss.addEventListener('click', () => setSel('emboss'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §24.2 — sfocatura separabile a raggio variabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsep-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsep-out');
+  const rS = document.getElementById('wsep-r'), rV = document.getElementById('wsep-rv');
+  const N = 60, A0 = sampleImg(N);
+
+  function blur1D(A, radius, horizontal) {
+    const N = A.length, B = A.map(r => r.slice());
+    if (radius === 0) return B;
+    // kernel gaussiano 1D
+    const sig = radius / 2 + 0.3, ker = []; let sum = 0;
+    for (let d = -radius; d <= radius; d++) { const w = Math.exp(-(d * d) / (2 * sig * sig)); ker.push(w); sum += w; }
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      let s = 0;
+      for (let d = -radius; d <= radius; d++) {
+        let ii = i, jj = j;
+        if (horizontal) jj = Math.max(0, Math.min(N - 1, j + d)); else ii = Math.max(0, Math.min(N - 1, i + d));
+        s += A[ii][jj] * ker[d + radius];
+      }
+      B[i][j] = s / sum;
+    }
+    return B;
+  }
+
+  function draw() {
+    const r = parseInt(rS.value, 10);
+    rV.textContent = r;
+    // due passate 1D: separabile
+    let A = blur1D(A0, r, true);
+    A = blur1D(A, r, false);
+    renderImg(svg, A, 300);
+    const M = 2 * r + 1;
+    out.innerHTML = `
+      <div class="big">raggio <b>${r}</b> (kernel ${M}×${M})</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${r === 0 ? 'Raggio 0: immagine originale.' : 'Sfocatura gaussiana <b>separabile</b>: due passate 1D (righe, poi colonne).'}
+        Costo: <b>${2 * M}</b> moltiplicazioni/pixel invece di <b>${M * M}</b> della 2D piena
+        ${r >= 3 ? '— un bel risparmio' : ''}. <mark>Separabile = due passate 1D al posto di una 2D.</mark>
+      </div>`;
+  }
+  rS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

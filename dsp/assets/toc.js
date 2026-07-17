@@ -358,7 +358,7 @@ const TOC = [
     n: 24,
     titolo: "Elaborazione lineare delle immagini",
     file: "cap24-immagini-lineari.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s24-1", n: "24.1", t: "Convoluzione in due dimensioni" },
       { id: "s24-2", n: "24.2", t: "Filtri separabili" },
