@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30 · Anatomia del t-test — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="30">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Anatomia del t-test</h1>
+    <p class="standfirst">
+      Il test più usato al mondo, smontato pezzo per pezzo. Il t-test risponde a «questa differenza tra medie è
+      reale o è caso?» con un'idea di una semplicità disarmante: un <b>rapporto segnale/rumore</b>. La stessa
+      differenza può essere schiacciante o irrilevante — dipende tutto da quanto ballano i dati.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il primo test concreto, che mette in moto tutto il framework: statistica test (Cap. 24), distribuzione nulla
+      e p-value (Cap. 25), gradi di libertà (Cap. 27), la distribuzione t (Cap. 27). I Capitoli 31 e 32 lo
+      applicano ai casi specifici (uno, due, appaiati).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Le medie sono diverse» non basta: due medie sono <em>sempre</em> un po' diverse. La domanda è se la
+      differenza superi il rumore di fondo. Il t-test dà a questa intuizione un numero — ed è il cavallo di
+      battaglia di esperimenti, A/B test, studi clinici.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-1"><span class="secnum">SEZIONE 30.1</span>Segnale su rumore</h2>
+
+  <p class="lead">
+    L'idea in una frase: confronta la <b>differenza tra le medie</b> (il segnale, ciò che vuoi rilevare) con la
+    <b>variabilità dei dati</b> (il rumore, ciò che confonde).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La statistica t come rapporto <span class="tag">segnale ÷ rumore</span></div>
+    <div class="f-body">
+      \[ t \;=\; \frac{\hA{\text{segnale}}}{\hB{\text{rumore}}} \;=\; \frac{\hA{\text{differenza tra le medie}}}{\hB{\text{variabilità (errore standard)}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{segnale}}\)</dt><dd>l'effetto osservato: quanto le medie dei gruppi si discostano.</dd>
+        <dt>\(\hB{\text{rumore}}\)</dt><dd>quanto i dati ballano da soli, misurato dall'errore standard (Cap. 23).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>Un \(t\) grande significa «segnale forte rispetto al rumore»</mark> → differenza convincente. Un \(t\)
+      piccolo → la differenza si perde nel rumore. È lo stesso rapporto segnale/rumore dell'ingegneria: non conta
+      quanto è grande l'effetto in assoluto, ma quanto è grande <em>rispetto</em> al disturbo.
+    </div>
+  </div>
+
+  <h3>Provalo: la stessa differenza, due verdetti</h3>
+
+  <p>
+    Due gruppi con differenza tra le medie <b>fissa</b>. Muovi il rumore (la dispersione interna): a poco rumore le
+    curve si separano nette, \(t\) è grande, significativo; ad alto rumore si sovrappongono, \(t\) crolla,
+    inconcludente. <mark>La stessa differenza, verdetti opposti.</mark>
+  </p>
+
+  <div class="widget" id="w-tt">
+    <div class="w-head">
+      <span>t = segnale / rumore</span>
+      <span class="hint">stessa differenza, rumore variabile</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wtt-svg" viewBox="0 0 620 230" role="img" aria-label="Due gruppi con differenza fissa e rumore variabile: la statistica t cambia"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>rumore (dispersione)</label><input type="range" id="wtt-s" min="6" max="60" step="1" value="18"><output id="wtt-sv">1.8</output></div>
+    </div>
+    <div class="w-readout" id="wtt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-2"><span class="secnum">SEZIONE 30.2</span>La statistica t</h2>
+
+  <p class="lead">
+    Scritta per esteso (caso a due campioni), la formula dice esattamente ciò che abbiamo intuito.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Statistica t a due campioni <span class="tag">la formula esplicita</span></div>
+    <div class="f-body">
+      \[ t \;=\; \frac{\hA{\bar{x}_1 - \bar{x}_2}}{\hB{\sqrt{\dfrac{s_1^2}{n_1} + \dfrac{s_2^2}{n_2}}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\bar{x}_1 - \bar{x}_2}\)</dt><dd>il <b>segnale</b>: la differenza tra le medie dei due gruppi.</dd>
+        <dt>\(\hB{\sqrt{s_1^2/n_1 + s_2^2/n_2}}\)</dt><dd>il <b>rumore</b>: l'errore standard della differenza, che combina le variabilità dei due gruppi (Cap. 23) — più dati (\(n\) grande) → rumore piccolo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Tutto torna: numeratore = quanto sono lontane le medie; denominatore = quanto è incerta quella distanza.
+      <mark>Più dati o meno dispersione rimpiccioliscono il denominatore e fanno crescere \(t\)</mark> — ecco
+      perché campioni grandi rilevano differenze più piccole.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-3"><span class="secnum">SEZIONE 30.3</span>La distribuzione t di Student</h2>
+
+  <p class="lead">
+    Per trasformare \(t\) in un p-value serve la sua distribuzione nulla: la <b>t di Student</b>, una campana come
+    la normale ma con <b>code più pesanti</b>.
+  </p>
+
+  <p>
+    Perché non usare direttamente la normale? Perché il denominatore contiene \(s\), la deviazione standard
+    <em>stimata dai dati</em> — e quella stima porta con sé un'incertezza in più (Cap. 27). Questa incertezza
+    extra rende gli estremi più probabili: la t ha code più grasse della normale. E quanto più grasse dipende dai
+    <b>gradi di libertà</b>: con pochi dati (pochi df) le code sono molto pesanti; all'aumentare dei dati la t si
+    stringe fino a <b>coincidere con la normale</b>. È il motivo per cui le tavole del t-test dipendono da \(n\).
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> t → normale</div>
+    <p style="margin-bottom:0">
+      Con \(n\) grande (diciamo &gt; 30) la differenza tra t e normale è trascurabile, e il valore critico si
+      avvicina al celebre 1,96 (per il 5% a due code). Con campioni piccoli, invece, il critico è più grande: la t
+      «pretende» più evidenza per compensare l'incertezza sulla dispersione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-4"><span class="secnum">SEZIONE 30.4</span>Dalla t al p-value</h2>
+
+  <p class="lead">
+    L'ultimo passo è meccanico e già noto: confronta il \(t\) osservato con la distribuzione t di Student ai
+    gradi di libertà giusti, e leggi l'area di coda.
+  </p>
+
+  <p>
+    Il \(t\) calcolato dai dati è la «statistica osservata» (Cap. 24); la distribuzione t è la «distribuzione
+    nulla»; l'<b>area di coda</b> oltre \(|t|\) è il <b>p-value</b> (Cap. 25). Se \(p \le \alpha\), la differenza
+    tra le medie è statisticamente significativa. Tutto il framework dei capitoli precedenti confluisce qui: il
+    t-test non è una ricetta a sé, è quel framework applicato al confronto tra medie.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le tre facce del t-test</div>
+    <p style="margin-bottom:0">
+      Esistono tre versioni, stessa anima (segnale/rumore), denominatore diverso:
+      <b>a un campione</b> (media contro un valore atteso, Cap. 31), <b>a due campioni indipendenti</b> (due gruppi
+      distinti, Cap. 32), <b>appaiato</b> (stesse unità misurate due volte, Cap. 32). Riconoscere quale usare è
+      metà del lavoro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-5"><span class="secnum">SEZIONE 30.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.1</div>
+    <p style="margin-bottom:0">Due gruppi hanno la stessa differenza tra le medie in due esperimenti, ma nel primo
+      i dati sono molto compatti e nel secondo molto dispersi. In quale \(t\) è più grande? Quale è più probabile
+      sia significativo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Nel <b>primo</b> (dati compatti): il denominatore (rumore) è piccolo, quindi
+          \(t = \text{segnale}/\text{rumore}\) è grande → più probabilmente significativo (§30.1). La stessa
+          differenza tra medie è convincente con poco rumore e irrilevante con molto rumore: è tutto nel rapporto,
+          non nel numeratore da solo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.2</div>
+    <p style="margin-bottom:0">Perché il t-test usa la distribuzione t e non la normale? Quando le due diventano
+      praticamente uguali?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché il denominatore usa \(s\) <b>stimato dai dati</b>, con un'incertezza in
+          più che rende gli estremi più probabili: la t ha <b>code più pesanti</b> della normale (§30.3). Le due
+          coincidono quando i gradi di libertà sono grandi (campioni grandi, &gt; ~30): con tanti dati \(s\) è
+          quasi certo e la t → normale.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.3</div>
+    <p style="margin-bottom:0">Nel calcolo di \(t\), cosa succede al denominatore (e quindi a \(t\) e al p-value) se
+      quadruplichi la dimensione dei campioni, a parità di tutto il resto?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Il denominatore contiene \(\sqrt{s^2/n}\): quadruplicando \(n\), l'errore
+          standard si <b>dimezza</b> (§30.2, legge del \(1/\sqrt{n}\)). A parità di differenza tra medie, \(t\)
+          <b>raddoppia</b> e il p-value <b>diminuisce</b>. È il motivo per cui campioni più grandi rilevano
+          differenze più piccole: riducono il rumore, non il segnale.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-6"><span class="secnum">SEZIONE 30.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 30</div>
+    <ol style="margin-bottom:0">
+      <li><b>t = segnale / rumore</b> = (differenza tra medie) / (errore standard). Un \(t\) grande = differenza
+        convincente.</li>
+      <li>La <b>stessa differenza</b> può essere significativa o no, a seconda del rumore e di \(n\).</li>
+      <li><b>Distribuzione t di Student:</b> come la normale ma con code pesanti (per l'incertezza su \(s\)); → normale
+        con molti df.</li>
+      <li><b>p-value</b> = area di coda della t oltre \(|t|\). Tre versioni: un campione, due campioni, appaiato.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Capita l'anatomia, applichiamola. Il caso più semplice: confrontare la media di un campione con un
+    <em>valore atteso</em> noto — «questa fabbrica produce davvero pezzi da 500 g?». È il <b>t-test a un
+    campione</b>, nel <strong>Capitolo 31</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §30.1 — t = segnale/rumore: stessa differenza, rumore variabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wtt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wtt-out');
+  const sS = document.getElementById('wtt-s'), sV = document.getElementById('wtt-sv');
+  const mu1 = 42, mu2 = 58, n = 30;   // differenza fissa = 16
+
+  function draw() {
+    const sd = parseInt(sS.value, 10) / 10;   // 0.6 .. 6  (scala visiva ×… )
+    const spread = sd * 4;                     // dispersione in unità grafiche
+    sV.textContent = sd.toFixed(1);
+    const se = Math.sqrt(2 * spread * spread / n);
+    const t = (mu2 - mu1) / se;
+    const sig = t > 2.05;   // ~ soglia a df~58
+
+    svg.innerHTML = '';
+    const phi = (x, mu) => Math.exp(-0.5 * ((x - mu) / spread) ** 2);
+    const p = new Plot(svg, { xmin: 10, xmax: 90, ymin: 0, ymax: 1.2 });
+    p.line(10, 0, 90, 0, { color: 'var(--rule)', width: 1 });
+    p.area(x => phi(x, mu1), 10, 90, { fill: 'color-mix(in srgb, var(--accent) 18%, transparent)' });
+    p.area(x => phi(x, mu2), 10, 90, { fill: 'color-mix(in srgb, var(--warm) 18%, transparent)' });
+    p.func(x => phi(x, mu1), { color: 'var(--accent)', width: 2.2, from: 10, to: 90 });
+    p.func(x => phi(x, mu2), { color: 'var(--warm)', width: 2.2, from: 10, to: 90 });
+    p.line(mu1, 0, mu1, 1.05, { color: 'var(--accent)', width: 1.4, dash: '4 3' });
+    p.line(mu2, 0, mu2, 1.05, { color: 'var(--warm)', width: 1.4, dash: '4 3' });
+    p.text(mu1, 1.12, 'gruppo 1', { color: 'var(--accent)', size: 10 });
+    p.text(mu2, 1.12, 'gruppo 2', { color: 'var(--warm)', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">t = <b style="color:${sig ? 'var(--warm)' : 'var(--ink)'}">${t.toFixed(2)}</b> ${sig ? '(significativo)' : '(non significativo)'} &nbsp;·&nbsp; differenza fissa = 16</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${sd < 2 ? 'Poco rumore: le curve si <mark>separano nette</mark>, il rumore è piccolo, t è grande → differenza convincente.'
+                 : sd < 4 ? 'Rumore medio: le curve iniziano a sovrapporsi, t cala.'
+                 : 'Molto rumore: le curve si <mark>sovrappongono</mark>, la differenza (sempre 16!) si perde nel rumore, t piccolo → inconcludente.'}
+        Il numeratore non è cambiato: cambia solo il denominatore.
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

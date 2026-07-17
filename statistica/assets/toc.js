@@ -354,7 +354,7 @@ const TOC = [
   },
   {
     n: 30, parte: "IV · Statistica inferenziale",
-    titolo: "Anatomia del t-test", file: "cap30-anatomia-ttest.html", stato: "da-fare",
+    titolo: "Anatomia del t-test", file: "cap30-anatomia-ttest.html", stato: "pronto",
     sezioni: [
       { id: "s30-1", n: "30.1", t: "Segnale su rumore" },
       { id: "s30-2", n: "30.2", t: "La statistica t" },
