@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Elaborazione dei segnali continui — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.13 — Capitolo 13</div>
+    <h1>Elaborazione dei segnali continui</h1>
+    <p class="standfirst">
+      Una breve deviazione nel mondo <em>analogico</em>, quello continuo, non campionato. Perché studiarlo, se il
+      DSP è digitale? Perché ogni segnale nasce continuo, e i sistemi che lo trattano prima del convertitore —
+      il filtro anti-alias, l'amplificatore, il sensore — sono continui. Le idee sono le stesse del discreto
+      (convoluzione, Fourier), ma con gli <b>integrali</b> al posto delle somme. Riconoscerle è metà del lavoro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un ponte tra la teoria di Fourier (Cap. 8–12) e i filtri (Cap. 14+). Qui vediamo la versione continua degli
+      strumenti già noti, così da poter parlare la stessa lingua dei sistemi analogici — indispensabile quando,
+      nei Cap. 32–33, tradurremo i filtri analogici in digitali con Laplace e la trasformata z.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il confine tra analogico e digitale è dove vivono i problemi veri: il filtro anti-alias (Cap. 3) è
+      analogico, la ricostruzione è analogica, i componenti fisici sono analogici. Padroneggiare la
+      <b>convoluzione continua</b> e la <b>trasformata di Fourier continua</b> permette di ragionare su tutta la
+      catena, non solo sul pezzo digitale. E chiude, con eleganza, la famiglia delle trasformate.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">SEZIONE 13.1</span>La delta e la convoluzione continua</h2>
+
+  <p class="lead">
+    Nel discreto la delta era un semplice pallino di altezza 1. Nel continuo diventa un oggetto più sottile e
+    affascinante: la <b class="termine">delta di Dirac</b>, \(\delta(t)\).
+  </p>
+
+  <p>
+    Immagina un impulso sempre più stretto e sempre più alto, che mantiene però <b>area costante pari a 1</b>.
+    Nel limite ideale è infinitamente stretto e infinitamente alto: la delta di Dirac. Non è una funzione
+    ordinaria — è un'<em>idealizzazione</em> — ma è utilissima, perché ha una proprietà magica: moltiplicandola
+    per una funzione e integrando, «pesca» il valore della funzione nel suo punto. È il modo continuo di dire
+    «un campione isolato».
+  </p>
+
+  <figure class="fig wide" id="fig-dirac">
+    <svg viewBox="0 0 620 200" role="img" aria-label="La delta di Dirac come limite di un impulso sempre più stretto e alto ad area costante"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 13.1</span> — La <b>delta di Dirac</b> come limite. Un impulso rettangolare che si
+      restringe (larghezza \(\to 0\)) e si alza (altezza \(\to \infty\)) mantenendo <mark>area sempre uguale a
+      1</mark>. Al limite: larghezza nulla, altezza infinita, area unitaria. Un'astrazione, ma quella giusta per
+      rappresentare un «impulso istantaneo» nel continuo.
+    </figcaption>
+  </figure>
+
+  <p>
+    Con la delta definita, la <b>convoluzione continua</b> è l'esatto analogo di quella discreta (Cap. 6): dove
+    prima sommavamo prodotti, ora <b>integriamo</b>. La ricetta — ribalta, scorri, moltiplica, e invece di
+    sommare, calcola l'area — resta identica nello spirito.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Convoluzione continua <span class="tag">l'integrale al posto della somma</span></div>
+    <div class="f-body">
+      \[
+        \hD{y(t)} \;=\; (\sig{x}\conv \sig{h})(t) \;=\; \hA{\int_{-\infty}^{\infty}} \hB{x(\tau)}\,\hC{h(t-\tau)}\,\dd\tau
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\int}\)</dt><dd>l'<b>integrale</b> prende il posto della sommatoria \(\sum\) del caso
+            discreto.</dd>
+        <dt>\(\hB{x(\tau)}\)</dt><dd>l'ingresso, funzione della variabile d'integrazione \(\tau\).</dd>
+        <dt>\(\hC{h(t-\tau)}\)</dt><dd>la risposta all'impulso <b>ribaltata e traslata</b> a \(t\): stesso
+            \(t-\tau\) della formula discreta.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Identica alla convoluzione discreta, con \(\int\) al posto di \(\sum\) e \(\dd\tau\) al posto del passo tra
+      campioni. <mark>La convoluzione è la convoluzione</mark>, continua o discreta: cambia solo lo strumento di
+      accumulo.
+    </div>
+  </div>
+
+  <h3>Provalo: la convoluzione continua che scorre</h3>
+
+  <p>
+    Fai scorrere la risposta all'impulso <b style="color:var(--warm)">ambra</b> (ribaltata) sopra l'ingresso
+    <b style="color:var(--accent)">teal</b>. L'<b>area della sovrapposizione</b> (la zona ombreggiata) è il
+    valore dell'uscita in quel punto — e l'uscita <b style="color:var(--green)">verde</b> si costruisce mentre
+    scorri. È la stessa idea del Cap. 6, ma con curve lisce e integrali.
+  </p>
+
+  <div class="widget" id="w-cconv">
+    <div class="w-head">
+      <span>Convoluzione continua</span>
+      <span class="hint">l'area sovrapposta è l'uscita</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcc-top" viewBox="0 0 620 150" role="img" aria-label="Ingresso e risposta all'impulso ribaltata che scorre, con l'area di sovrapposizione ombreggiata"></svg>
+      <svg id="wcc-bot" viewBox="0 0 620 120" role="img" aria-label="L'uscita della convoluzione continua costruita mentre si scorre"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>posizione t</label><input type="range" id="wcc-t" min="-1" max="8" step="0.1" value="1.5"><output id="wcc-tv">1.5</output></div>
+    </div>
+    <div class="w-readout" id="wcc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">SEZIONE 13.2</span>La risposta all'impulso nel continuo</h2>
+
+  <p class="lead">
+    Come nel discreto, un sistema lineare e invariante nel tempo continuo è <b>completamente descritto</b> dalla
+    sua risposta all'impulso \(h(t)\): l'uscita quando l'ingresso è una delta di Dirac.
+  </p>
+
+  <p>
+    Un esempio familiare: un semplice circuito <b>RC</b> (una resistenza e un condensatore) è un sistema LTI
+    continuo, e la sua risposta all'impulso è un <b>esponenziale decrescente</b>, \(h(t) = \eu^{-t/\tau}\) per
+    \(t \ge 0\). Dagli un impulso e risponde con una scarica che sfuma. Nota che risponde solo <em>dopo</em> lo
+    stimolo (per \(t \ge 0\)): è <b class="termine">causale</b>, come devono essere tutti i sistemi fisici — non
+    possono reagire prima di essere stimolati. È una differenza importante rispetto ai filtri ideali (la sinc del
+    Cap. 11, simmetrica, «risponderebbe prima»: per questo è irrealizzabile in analogico).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Ogni filtro analogico è una risposta all'impulso</div>
+    <p style="margin-bottom:0">
+      Il filtro anti-alias del Cap. 3, l'equalizzatore di uno stereo, il condensatore che «liscia» un
+      alimentatore: sono tutti sistemi LTI continui, ciascuno con la sua \(h(t)\). E ciò che fanno a un segnale è,
+      esattamente, <b>convolverlo con la propria \(h(t)\)</b>. <mark>Convoluzione e risposta all'impulso non sono
+      concetti digitali: sono concetti fisici</mark>, che il digitale eredita. Capirli nel continuo li rende più
+      profondi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">SEZIONE 13.3</span>La trasformata di Fourier continua</h2>
+
+  <p class="lead">
+    Anche Fourier ha la sua versione continua. Per un segnale che si estende su tutto il tempo (aperiodico), la
+    <b>trasformata di Fourier continua</b> dà uno spettro <b>continuo</b>: una curva liscia definita per ogni
+    frequenza, non una lista di campioni.
+  </p>
+
+  <p>
+    La formula sostituisce, ancora una volta, la somma con un integrale: invece di correlare con un numero finito
+    di onde base, si «correla» con un continuo di frequenze. Il risultato è la coppia rettangolo–sinc (Cap. 11)
+    nella sua forma pura e continua: un impulso rettangolare nel tempo ha come spettro una sinc perfettamente
+    liscia, con i suoi lobi che si estendono all'infinito.
+  </p>
+
+  <h3>Provalo: impulso continuo ↔ sinc liscia</h3>
+
+  <p>
+    Cambia la larghezza dell'impulso rettangolare (sopra) e guarda la sua trasformata continua, una
+    <b>sinc</b> liscia (sotto). Vale la solita reciprocità — impulso stretto, sinc larga — ma qui, nel continuo,
+    lo spettro è una curva perfetta, non fatta di barre.
+  </p>
+
+  <div class="widget" id="w-cft">
+    <div class="w-head">
+      <span>Trasformata di Fourier continua</span>
+      <span class="hint">impulso ↔ sinc, nel continuo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcf-top" viewBox="0 0 620 130" role="img" aria-label="Un impulso rettangolare continuo di larghezza variabile"></svg>
+      <svg id="wcf-bot" viewBox="0 0 620 150" role="img" aria-label="La trasformata sinc continua dell'impulso"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>larghezza</label><input type="range" id="wcf-w" min="0.3" max="4" step="0.1" value="1.5"><output id="wcf-wv">1.5</output></div>
+    </div>
+    <div class="w-readout" id="wcf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">SEZIONE 13.4</span>La serie di Fourier</h2>
+
+  <p class="lead">
+    Se il segnale continuo è invece <b>periodico</b>, torna la <b>serie di Fourier</b> (l'abbiamo incontrata nel
+    Cap. 11): la somma di una fondamentale e delle sue armoniche.
+  </p>
+
+  <p>
+    È il caso storicamente originale, quello studiato da Fourier stesso: un segnale periodico continuo — come la
+    forma d'onda ripetuta di un suono strumentale — è la somma di infinite sinusoidi alle frequenze multiple
+    della fondamentale, ciascuna con la sua ampiezza. Lo spettro è quindi <b>a righe</b>: solo la fondamentale e
+    le armoniche, niente in mezzo. È esattamente ciò che rende riconoscibile il <em>timbro</em> di uno strumento
+    (Cap. 22).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La famiglia, completata</div>
+    <p style="margin-bottom:0">
+      Con questo capitolo abbiamo visto dal vivo tutti e quattro i membri del §8.1. <b>Continuo aperiodico</b> →
+      trasformata continua (§13.3, spettro liscio). <b>Continuo periodico</b> → serie di Fourier (§13.4, spettro a
+      righe). <b>Discreto aperiodico</b> → DTFT (Cap. 11.5). <b>Discreto periodico</b> → DFT (Cap. 8, la nostra).
+      <mark>Il campionamento collega il mondo continuo al discreto</mark>: campionare un segnale continuo e
+      prenderne \(N\) campioni è ciò che ci porta dalla trasformata continua alla DFT — con tutte le conseguenze
+      (repliche, aliasing) viste nel Cap. 3.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">SEZIONE 13.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">Qual è la differenza tra la delta discreta \(\delta[n]\) e la delta di Dirac
+      \(\delta(t)\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(\delta[n]\) è una funzione ordinaria: vale 1 in \(n=0\), 0 altrove. \(\delta(t)\) è
+          un'<b>idealizzazione</b>: larghezza nulla, altezza infinita, ma <b>area unitaria</b>. La prima ha
+          altezza 1; la seconda ha area 1 (l'altezza non è definita). Entrambe rappresentano «l'impulso
+          elementare», ma nel continuo serve l'astrazione dell'area.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">Perché la risposta all'impulso di un circuito RC (esponenziale decrescente) è
+      «causale», mentre la sinc di un filtro ideale non lo è?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>L'esponenziale del RC è nullo per \(t<0\): il circuito reagisce solo <em>dopo</em> l'impulso, come
+          impone la fisica. La sinc è <b>simmetrica</b>: ha valori diversi da zero anche per \(t<0\), cioè
+          «risponderebbe prima» dello stimolo — impossibile per un sistema fisico. Per questo un filtro passa-basso
+          ideale è irrealizzabile e va approssimato (Cap. 16).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">Uno spettro «a righe» (solo picchi a frequenze multiple) e uno spettro «continuo»
+      (curva liscia): a quali tipi di segnale corrispondono?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Spettro a <b>righe</b> ⇔ segnale <b>periodico</b> (serie di Fourier: fondamentale + armoniche).
+          Spettro <b>continuo</b> ⇔ segnale <b>aperiodico</b> (trasformata di Fourier). È la regola «periodico ↔
+          discreto in frequenza» del Cap. 11.4.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">SEZIONE 13.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li><b>Delta di Dirac:</b> impulso ideale di area 1 (larghezza nulla, altezza infinita). L'analogo continuo
+          di \(\delta[n]\).</li>
+      <li><b>Convoluzione continua:</b> identica alla discreta, con \(\int\) al posto di \(\sum\). La convoluzione
+          è un concetto fisico, non solo digitale.</li>
+      <li><b>Risposta all'impulso continua \(h(t)\):</b> descrive ogni sistema LTI continuo (es. RC →
+          esponenziale). I sistemi fisici sono <b>causali</b>: rispondono solo dopo lo stimolo.</li>
+      <li><b>Trasformata continua:</b> spettro liscio (aperiodico). <b>Serie di Fourier:</b> spettro a righe
+          (periodico). Completano la famiglia del §8.1.</li>
+      <li><b>Il campionamento</b> è il ponte che porta dal continuo al discreto — e con esso alla DFT.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il quadro teorico è completo: tempo e frequenza, discreto e continuo, convoluzione e Fourier. Ora comincia la
+    parte più applicativa e appagante del libro: i <b>filtri digitali</b>. Il <strong>Capitolo 14</strong> li
+    introduce — a cosa servono, come si descrivono, e la grande divisione tra le due famiglie, <b>FIR</b> e
+    <b>IIR</b>. Da lì costruiremo, uno dopo l'altro, i filtri veri: media mobile, windowed-sinc, ricorsivi,
+    Chebyshev. La cassetta degli attrezzi del praticante.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   FIGURA 13.1 — la delta di Dirac come limite
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-dirac svg');
+  if (!svg) return;
+  const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -0.3, ymax: 3.2 });
+  p.line(-3, 0, 3, 0, { color: 'var(--ink-faint)', width: 1.2 });
+  // tre rettangoli ad area 1: larghezze 2, 1, 0.5 → altezze 0.5, 1, 2
+  const cfgs = [{ w: 2, col: 'var(--rule)' }, { w: 1, col: 'var(--accent)' }, { w: 0.4, col: 'var(--warm)' }];
+  cfgs.forEach(c => {
+    const h = 1 / c.w;
+    p.poly([[-c.w / 2, 0], [-c.w / 2, h], [c.w / 2, h], [c.w / 2, 0]], { color: c.col, width: 2.2, close: false });
+  });
+  p.text(1.6, 2.2, 'area = 1 sempre', { color: 'var(--warm)', bold: true, size: 12, anchor: 'start' });
+  p.text(0, 3, 'larghezza → 0, altezza → ∞', { color: 'var(--ink-soft)', size: 11 });
+})();
+
+
+/* ============================================================================
+   WIDGET §13.1 — convoluzione continua (integrale che scorre)
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wcc-top'), bot = document.getElementById('wcc-bot');
+  if (!top) return;
+  const out = document.getElementById('wcc-out');
+  const tS = document.getElementById('wcc-t'), tV = document.getElementById('wcc-tv');
+  // ingresso: impulso "gobba" gaussiana centrata in 2; h: esponenziale decrescente causale
+  const f = t => Math.exp(-Math.pow((t - 2) / 0.8, 2));
+  const h = t => t >= 0 ? Math.exp(-t / 0.9) : 0;
+  // uscita per convoluzione: y(t) = ∫ f(τ) h(t-τ) dτ
+  function y(t) { let s = 0, dτ = 0.02; for (let τ = -1; τ <= 9; τ += dτ) s += f(τ) * h(t - τ) * dτ; return s; }
+
+  function draw() {
+    const t = parseFloat(tS.value);
+    tV.textContent = t.toFixed(1);
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: -1, xmax: 9, ymin: -0.2, ymax: 1.25 });
+    pt.line(-1, 0, 9, 0, { color: 'var(--ink-faint)', width: 1 });
+    // area di sovrapposizione: min(f(τ), ...) ombreggiata come f(τ)*h(t-τ) scalata
+    const pts = [[-1, 0]];
+    for (let τ = -1; τ <= 9; τ += 0.05) pts.push([τ, f(τ) * h(t - τ)]);
+    pts.push([9, 0]);
+    pt.poly(pts, { fill: 'color-mix(in srgb, var(--green) 26%, transparent)', color: 'none', close: true });
+    pt.func(f, { color: 'var(--accent)', width: 2.4 });
+    pt.func(τ => h(t - τ), { color: 'var(--warm)', width: 2, dash: '5 4' });
+    pt.text(-0.8, 1.1, 'x(τ)', { color: 'var(--accent)', anchor: 'start', size: 11 });
+    pt.text(t + 0.1, 1.1, 'h(t−τ)', { color: 'var(--warm)', anchor: 'start', size: 11 });
+
+    bot.innerHTML = '';
+    const ymaxV = 0.95;
+    const pb = new Plot(bot, { xmin: -1, xmax: 9, ymin: -0.15, ymax: ymaxV });
+    pb.line(-1, 0, 9, 0, { color: 'var(--ink-faint)', width: 1 });
+    // uscita fino a t
+    const ypts = []; for (let tt = -1; tt <= t + 1e-6; tt += 0.05) ypts.push([tt, y(tt)]);
+    pb.poly(ypts, { color: 'var(--green)', width: 2.4, close: false });
+    pb.dot(t, y(t), { color: 'var(--warm)', r: 4.5 });
+    pb.text(-0.8, ymaxV * 0.9, 'y(t) = area sovrapposta', { color: 'var(--green)', anchor: 'start', size: 11 });
+
+    out.innerHTML = `
+      <div class="big">t = <b>${t.toFixed(1)}</b> &nbsp;·&nbsp; y(t) = <b style="color:var(--warm)">${y(t).toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La zona <b style="color:var(--green)">verde</b> è la sovrapposizione tra l'ingresso e la risposta
+        ribaltata: la sua <b>area</b> è il valore dell'uscita. Scorri e guarda l'uscita costruirsi. È la
+        convoluzione del Cap. 6, con l'integrale al posto della somma.
+      </div>`;
+  }
+  tS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §13.3 — trasformata di Fourier continua (impulso ↔ sinc)
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wcf-top'), bot = document.getElementById('wcf-bot');
+  if (!top) return;
+  const out = document.getElementById('wcf-out');
+  const wS = document.getElementById('wcf-w'), wV = document.getElementById('wcf-wv');
+
+  function draw() {
+    const W = parseFloat(wS.value);
+    wV.textContent = W.toFixed(1);
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: -4, xmax: 4, ymin: -0.3, ymax: 1.35 });
+    pt.line(-4, 0, 4, 0, { color: 'var(--ink-faint)', width: 1 });
+    pt.poly([[-W / 2, 0], [-W / 2, 1], [W / 2, 1], [W / 2, 0]], { color: 'var(--accent)', width: 2.6, close: false, fill: 'color-mix(in srgb, var(--accent) 14%, transparent)' });
+    pt.text(-3.8, 1.15, 'impulso largo ' + W.toFixed(1), { color: 'var(--accent)', anchor: 'start', size: 10.5 });
+
+    bot.innerHTML = '';
+    // trasformata: W · sinc(W f) continua
+    const sinc = x => x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x);
+    const S = f => W * sinc(W * f);
+    const pb = new Plot(bot, { xmin: -6, xmax: 6, ymin: -1.2, ymax: 4.3 });
+    pb.line(-6, 0, 6, 0, { color: 'var(--ink-faint)', width: 1 });
+    pb.func(S, { color: 'var(--warm)', width: 2.4, samples: 700 });
+    pb.text(-5.8, 3.8, 'sinc continua', { color: 'var(--warm)', anchor: 'start', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">larghezza impulso = <b>${W.toFixed(1)}</b> &nbsp;·&nbsp; picco sinc = <b>${W.toFixed(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La trasformata è una <b style="color:var(--warm)">sinc liscia</b> (curva continua, non barre). Impulso
+        largo ⇒ sinc stretta e alta; impulso stretto ⇒ sinc larga e bassa: la reciprocità tempo–frequenza, nel
+        continuo. I lobi laterali proseguono all'infinito da entrambi i lati.
+      </div>`;
+  }
+  wS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
