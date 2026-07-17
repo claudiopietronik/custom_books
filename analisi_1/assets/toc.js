@@ -198,7 +198,7 @@ const TOC = [
     n: 11,
     titolo: "Formula di Taylor",
     file: "cap11-taylor.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Approssimare con un polinomio" },
       { id: "s11-2", n: "11.2", t: "Il polinomio di Taylor" },

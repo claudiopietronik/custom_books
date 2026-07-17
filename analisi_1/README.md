@@ -33,7 +33,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 8 — La derivata
 - [x] 9 — I teoremi del calcolo differenziale
 - [x] 10 — Studio di funzione
-- [ ] 11 — Formula di Taylor
+- [x] 11 — Formula di Taylor
 - [ ] 12 — L'integrale di Riemann
 - [ ] 13 — Tecniche di integrazione
 - [ ] 14 — Integrali impropri

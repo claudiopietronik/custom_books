@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Formula di Taylor — Analisi 1</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∫</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Formula di Taylor</h1>
+    <p class="standfirst">
+      Nel Capitolo 8 abbiamo approssimato una funzione con la sua <b>tangente</b> — un polinomio di grado 1.
+      Ma perché fermarsi al primo grado? Taylor raffina l'idea: <mark>sostituisce una funzione complicata con
+      un <b>polinomio</b> che le aderisce quanto vuoi</mark>, aggiungendo termini che catturano curvatura,
+      torsione, e ogni dettaglio più fine. È così che una calcolatrice calcola \(\sin\), \(\eu^x\), \(\log\);
+      è l'arma definitiva per i limiti; ed è il ponte verso le serie di potenze dell'Analisi 2.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dall'idea di approssimare con polinomi (§11.1) al <b>polinomio di Taylor</b> (§11.2), il protagonista.
+      Ne misuriamo l'errore in due modi: qualitativo (<b>resto di Peano</b>, §11.3) e quantitativo (<b>resto di
+      Lagrange</b>, §11.4). Impariamo a memoria gli <b>sviluppi notevoli</b> (§11.5), poi li mettiamo al
+      lavoro: sciogliere <b>limiti</b> altrimenti ostici (§11.6) e produrre <b>approssimazioni numeriche</b> con
+      errore controllato (§11.7).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: rendere calcolabile l'incalcolabile</div>
+    <p style="margin-bottom:0">
+      Come fa il computer a calcolare \(\sin(0{,}7)\)? Non «conosce» il seno: ne somma qualche termine di
+      Taylor. <mark>Taylor trasforma funzioni trascendenti in polinomi</mark>, che una macchina sa fare con
+      sole somme e prodotti. In fisica e ingegneria, «linearizzare» un problema (tenere solo il primo termine)
+      o spingersi al secondo ordine è pane quotidiano: dai pendoli alle correzioni relativistiche, quasi ogni
+      formula «approssimata» è un troncamento di Taylor. E per i limiti è spesso più pulito e veloce di de
+      l'Hôpital: si sostituisce, si semplifica, si legge.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Approssimare con un polinomio</h2>
+
+  <p class="lead">
+    I polinomi sono le funzioni più «gentili» che esistano: per calcolarli bastano somme e moltiplicazioni.
+    L'idea di Taylor è approssimare una funzione difficile con un polinomio che le <b>somiglia il più possibile
+    vicino a un punto</b>.
+  </p>
+
+  <p>
+    La tangente del §8.11 faceva già questo, ma con un polinomio di grado 1: imponeva a \(f\) e alla retta di
+    avere <em>lo stesso valore</em> e <em>la stessa pendenza</em> nel punto. L'intuizione di Taylor è: perché
+    non chiedere anche la <b>stessa curvatura</b> (derivata seconda), la stessa variazione di curvatura (terza),
+    e così via? <mark>Più derivate facciamo coincidere nel punto, più a lungo il polinomio resta «incollato»
+    alla funzione allontanandosi.</mark> Un polinomio di grado \(n\) ha esattamente \(n + 1\) coefficienti
+    liberi: giusto quanti servono per far combaciare valore, pendenza, curvatura… fino alla derivata
+    \(n\)-esima.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>Il polinomio di Taylor</h2>
+
+  <p class="lead">
+    Ecco la formula che realizza l'idea. Ogni termine «accende» una derivata di \(f\) nel punto-base, con un
+    fattoriale al denominatore che fa quadrare i conti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Polinomio di Taylor di grado \(n\) (centro \(x_0\)) <span class="tag">un termine per derivata</span></div>
+    <div class="f-body">
+      \[ T_n(x) = f(x_0) + f'(x_0)(x - x_0) + \frac{f''(x_0)}{2!}(x - x_0)^2 + \cdots + \frac{f^{(n)}(x_0)}{n!}(x - x_0)^n = \sum_{k=0}^{n} \frac{f^{(k)}(x_0)}{k!}(x - x_0)^k \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(f^{(k)}(x_0)\)</dt>
+        <dd>la derivata \(k\)-esima calcolata nel <b>centro</b> \(x_0\): è l'informazione «di ordine \(k\)» su
+            com'è fatta \(f\) lì. Il termine di grado \(0\) è il valore, quello di grado \(1\) la pendenza
+            (tangente!), quello di grado \(2\) la curvatura…</dd>
+        <dt>\(\dfrac{1}{k!}\)</dt>
+        <dd>il fattoriale è ciò che fa <b>combaciare le derivate</b>: derivando \(k\) volte il termine
+            \(\frac{f^{(k)}(x_0)}{k!}(x-x_0)^k\) e valutando in \(x_0\) si riottiene esattamente \(f^{(k)}(x_0)\)
+            (il \(k!\) cancella quello che nasce dal derivare la potenza). Senza, i conti non tornerebbero.</dd>
+        <dt>\((x - x_0)^k\)</dt>
+        <dd>le potenze dello <b>scostamento dal centro</b>. Vicino a \(x_0\) sono piccole, e quelle di grado
+            alto piccolissime: per questo i primi termini contano di più.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quando il centro è \(x_0 = 0\), si chiama <span class="termine">polinomio di Maclaurin</span>, ed è il
+      caso più comune: \(T_n(x) = f(0) + f'(0)x + \frac{f''(0)}{2}x^2 + \cdots\). Il widget mostra il fatto
+      centrale: <mark>al crescere del grado \(n\), il polinomio \(T_n\) abbraccia la curva su un tratto sempre
+      più lungo.</mark>
+    </div>
+  </div>
+
+  <div class="widget" id="w-taylor">
+    <div class="w-head">
+      <span>Il polinomio di Taylor abbraccia la curva</span>
+      <span class="hint">scegli la funzione e alza il grado n</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wt-svg" viewBox="0 0 560 400" role="img" aria-label="Al crescere del grado, il polinomio di Taylor approssima la funzione su un intervallo sempre più ampio"></svg>
+    </div>
+    <div class="w-controls" id="wt-btns" style="justify-content:center; flex-wrap:wrap; gap:.4rem"></div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; margin-top:.5rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">grado n</label>
+      <input type="range" id="wt-n" min="0" max="12" step="1" value="1" style="flex:1">
+    </div>
+    <div class="w-readout" id="wt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Il resto di Peano</h2>
+
+  <p class="lead">
+    Un polinomio non è la funzione: c'è un errore. La prima forma del resto lo descrive <em>qualitativamente</em>
+    — dice quanto velocemente svanisce, ed è perfetta per i limiti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Formula di Taylor con resto di Peano <span class="tag">l'errore è un o-piccolo</span></div>
+    <div class="f-body">
+      \[ f(x) = T_n(x) + \lo\big((x - x_0)^n\big) \qquad (x \to x_0) \]
+    </div>
+    <div class="f-note">
+      Il resto \(\lo((x-x_0)^n)\) (o-piccolo, §5.6) significa: l'errore tende a zero <b>più in fretta</b> di
+      \((x-x_0)^n\), cioè \(\frac{\text{errore}}{(x-x_0)^n} \to 0\). Non ti dice <em>quanto</em> vale l'errore,
+      ma che è <b>trascurabile rispetto all'ultimo termine tenuto</b>. È la versione «locale»: vale
+      vicinissimo a \(x_0\), ed è esattamente ciò che serve per i limiti (§11.6), dove tutto succede in un
+      intorno del punto. La tangente del §8.11 era il caso \(n = 1\): \(f(x) = f(x_0) + f'(x_0)(x - x_0) +
+      \lo(x - x_0)\).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Il resto di Lagrange</h2>
+
+  <p class="lead">
+    La seconda forma del resto è <em>quantitativa</em>: dà una formula esatta per l'errore, quindi permette di
+    <b>limitarlo con un numero</b>. È ciò che serve quando vuoi garantire «l'approssimazione è precisa almeno
+    fino alla quinta cifra».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Formula di Taylor con resto di Lagrange <span class="tag">un errore esatto, in un punto intermedio</span></div>
+    <div class="f-body">
+      \[ f(x) = T_n(x) + \frac{f^{(n+1)}(\xi)}{(n+1)!}(x - x_0)^{n+1} \qquad \text{per un certo } \xi \text{ tra } x_0 \text{ e } x \]
+    </div>
+    <div class="f-note">
+      Il resto ha la forma del «termine successivo» del polinomio, ma con la derivata \((n+1)\)-esima valutata
+      in un punto <b>ignoto</b> \(\xi\) da qualche parte tra \(x_0\) e \(x\). Non sappiamo <em>dove</em> sia
+      \(\xi\), ma se sappiamo <b>maggiorare</b> \(\abs{f^{(n+1)}}\) su tutto l'intervallo, otteniamo un tetto
+      sull'errore. È la generalizzazione del teorema di Lagrange (§9.3), che è proprio il caso \(n = 0\):
+      \(f(x) = f(x_0) + f'(\xi)(x - x_0)\). <mark>Peano dice «l'errore è piccolo», Lagrange dice «l'errore è al
+      massimo questo».</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Gli sviluppi notevoli</h2>
+
+  <p class="lead">
+    Come per i limiti (§6.7), esiste una manciata di sviluppi di Maclaurin da sapere a memoria. Con questi e
+    poca algebra si costruiscono quasi tutti gli altri, e si risolve la maggior parte dei limiti.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Funzione</th><th>Sviluppo di Maclaurin (per \(x \to 0\))</th><th>Valido</th></tr></thead>
+    <tbody>
+      <tr><td>\(\eu^x\)</td><td>\(1 + x + \dfrac{x^2}{2!} + \dfrac{x^3}{3!} + \cdots + \dfrac{x^n}{n!}\)</td><td>\(\forall x\)</td></tr>
+      <tr><td>\(\sin x\)</td><td>\(x - \dfrac{x^3}{3!} + \dfrac{x^5}{5!} - \cdots\)</td><td>\(\forall x\)</td></tr>
+      <tr><td>\(\cos x\)</td><td>\(1 - \dfrac{x^2}{2!} + \dfrac{x^4}{4!} - \cdots\)</td><td>\(\forall x\)</td></tr>
+      <tr><td>\(\ln(1 + x)\)</td><td>\(x - \dfrac{x^2}{2} + \dfrac{x^3}{3} - \dfrac{x^4}{4} + \cdots\)</td><td>\(-1 < x \le 1\)</td></tr>
+      <tr><td>\((1 + x)^\alpha\)</td><td>\(1 + \alpha x + \dfrac{\alpha(\alpha-1)}{2!}x^2 + \cdots\)</td><td>\(\abs x < 1\)</td></tr>
+      <tr><td>\(\dfrac{1}{1 - x}\)</td><td>\(1 + x + x^2 + x^3 + \cdots\)</td><td>\(\abs x < 1\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Riconoscere vecchi amici</div>
+    <p style="margin-bottom:0">
+      Guarda \(\eu^x\), \(\sin x\), \(\cos x\): le potenze di \(\sin\) sono tutte <b>dispari</b> (è una funzione
+      dispari!), quelle di \(\cos\) tutte <b>pari</b>. E se metti \(x = \ii\theta\) nello sviluppo di \(\eu^x\) e
+      separi parte reale e immaginaria, ottieni <em>esattamente</em> \(\cos\theta + \ii\sin\theta\): ecco la
+      dimostrazione della <b>formula di Eulero</b> (§3.6) che avevo promesso! La serie geometrica
+      \(\frac{1}{1-x} = 1 + x + x^2 + \cdots\) è la stessa somma infinita del Capitolo 5, e riapparirà come
+      <b>serie di potenze</b> in Analisi 2. <mark>Taylor cuce insieme mezzo libro.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Taylor per calcolare i limiti</h2>
+
+  <p class="lead">
+    L'applicazione più immediata e più amata. Davanti a una forma indeterminata, <b>sostituisci ogni funzione
+    col suo sviluppo</b>, tieni i termini fino all'ordine giusto, e la forma si scioglie da sola — spesso più
+    pulita che con de l'Hôpital.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Esempio: \(\displaystyle\lim_{x\to 0}\frac{1 - \cos x}{x^2}\) <span class="tag">sostituisci e semplifica</span></div>
+    <div class="f-body">
+      \[
+        \frac{1 - \cos x}{x^2} = \frac{1 - \left(1 - \frac{x^2}{2} + \lo(x^2)\right)}{x^2}
+        = \frac{\frac{x^2}{2} + \lo(x^2)}{x^2} = \frac12 + \lo(1) \ \xrightarrow{x\to 0}\ \frac12
+      \]
+    </div>
+    <div class="f-note">
+      Ho usato \(\cos x = 1 - \frac{x^2}{2} + \lo(x^2)\) (§11.5). Il «\(1\)» si cancella, resta \(\frac{x^2}{2}\)
+      che divide \(x^2\) e dà \(\frac12\); il resto \(\lo(x^2)/x^2 = \lo(1) \to 0\) sparisce. <mark>La regola
+      d'oro: sviluppa fino all'ordine del termine che «sopravvive»</mark> (qui \(x^2\), il grado del
+      denominatore). Se sviluppi troppo poco perdi informazione, se troppo fai fatica inutile. Confronta con de
+      l'Hôpital (due derivazioni): qui è un colpo solo. Il limite \(\frac{\sin x}{x}\): da \(\sin x = x -
+      \frac{x^3}{6} + \dots\), \(\frac{\sin x}{x} = 1 - \frac{x^2}{6} + \dots \to 1\) ✔.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Applicazioni: estremi e approssimazioni</h2>
+
+  <p class="lead">
+    Due usi ancora. Il resto di Lagrange (§11.4) permette di <b>calcolare numeri</b> con precisione garantita;
+    e gli sviluppi risolvono i casi «dubbi» di massimo/minimo dove il test della derivata seconda fallisce.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Approssimazione numerica con errore garantito</div>
+    <p style="margin-bottom:0">
+      Per calcolare, ad esempio, \(\eu\): usa \(\eu^x = \sum \frac{x^k}{k!}\) in \(x = 1\), cioè \(\eu \approx
+      \sum_{k=0}^n \frac{1}{k!}\). Il resto di Lagrange dà l'errore: \(\frac{\eu^\xi}{(n+1)!}\) con \(\xi \in
+      (0,1)\), quindi minore di \(\frac{3}{(n+1)!}\). Con \(n = 6\): errore \(< \frac{3}{5040} < 0{,}001\), e
+      \(\sum_{k=0}^6 \frac{1}{k!} = 2{,}71805\dots\) — già giusto alle prime tre cifre. <mark>Il fattoriale al
+      denominatore fa crollare l'errore a velocità vertiginosa</mark> (§5.9): pochi termini, tanta precisione.
+      È letteralmente ciò che fa la tua calcolatrice. Guardalo nel widget.
+    </p>
+  </div>
+
+  <div class="widget" id="w-calc">
+    <div class="w-head">
+      <span>Calcolare e come una calcolatrice</span>
+      <span class="hint">aggiungi termini 1/k! e guarda convergere a e</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcl-svg" viewBox="0 0 560 340" role="img" aria-label="Le somme parziali di uno su k fattoriale convergono rapidamente al numero e"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">termini n</label>
+      <input type="range" id="wcl-n" min="0" max="10" step="1" value="1" style="flex:1">
+    </div>
+    <div class="w-readout" id="wcl-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il test degli ordini superiori</div>
+    <p style="margin-bottom:0">
+      Quando in un punto stazionario anche \(f''(c) = 0\), il test della derivata seconda (§10.5) non decide.
+      Taylor risolve: guarda la <b>prima derivata non nulla</b>. Se la prima diversa da zero è \(f^{(k)}(c)\),
+      allora vicino a \(c\) si ha \(f(x) \approx f(c) + \frac{f^{(k)}(c)}{k!}(x-c)^k\), e il tipo di punto
+      dipende da \(k\): se \(k\) è <b>pari</b>, è un estremo (massimo se \(f^{(k)} < 0\), minimo se \(> 0\)); se
+      \(k\) è <b>dispari</b>, è un flesso a tangente orizzontale. Per \(x^4\) in \(0\): la prima non nulla è
+      \(f^{(4)} = 24 > 0\), \(k = 4\) pari → minimo. Per \(x^3\): \(f''' = 6\), \(k = 3\) dispari → flesso.
+      <mark>Taylor vede la forma locale che le derivate basse non colgono.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><b>Polinomio di Taylor:</b> \(T_n(x) = \sum_{k=0}^n \frac{f^{(k)}(x_0)}{k!}(x-x_0)^k\) (§11.2). Fa
+          coincidere \(f\) e le sue prime \(n\) derivate nel centro; <mark>più alto il grado, più a lungo
+          abbraccia la curva</mark>. Con \(x_0 = 0\): Maclaurin.</li>
+      <li><b>Resto:</b> di <b>Peano</b> \(\lo((x-x_0)^n)\) — qualitativo, per i limiti (§11.3); di <b>Lagrange</b>
+          \(\frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}\) — quantitativo, per le stime numeriche (§11.4).</li>
+      <li><b>Sviluppi notevoli</b> a memoria (§11.5): \(\eu^x, \sin, \cos, \ln(1+x), (1+x)^\alpha,
+          \frac{1}{1-x}\). Dentro \(\eu^{\ii\theta}\) c'è la formula di Eulero.</li>
+      <li><b>Limiti con Taylor</b> (§11.6): sostituisci gli sviluppi, tieni fino all'ordine del termine che
+          sopravvive, semplifica. Spesso più pulito di de l'Hôpital.</li>
+      <li><b>Approssimazioni numeriche</b> con errore garantito dal resto di Lagrange (§11.7) — è come calcola
+          la calcolatrice — e il <b>test degli ordini superiori</b> per gli estremi dubbi.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con Taylor chiudiamo l'atto della derivata: sappiamo misurare il cambiamento e approssimare qualunque
+    funzione liscia. Nel <strong>Capitolo 12</strong> cambiamo completamente domanda e affrontiamo l'altra
+    metà dell'analisi, quella promessa dal Capitolo 1: <b>l'integrale</b>, il problema dell'<em>area</em>.
+    Scopriremo — colpo di scena — che è l'operazione <b>inversa</b> della derivata (il Teorema Fondamentale del
+    Calcolo), e che sommare infiniti rettangoli infinitamente sottili è, ancora una volta, un limite.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-8"><span class="secnum">Sezione 11.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Scrivi il polinomio di Maclaurin di grado \(3\) di \(f(x) = \eu^x\), e usalo per stimare \(\eu^{0{,}2}\).
+      Confronta con il valore vero (\(\approx 1{,}2214\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Calcola con gli sviluppi di Taylor:
+      (a) \(\displaystyle\lim_{x\to 0}\frac{\eu^x - 1 - x}{x^2}\) &nbsp;·&nbsp;
+      (b) \(\displaystyle\lim_{x\to 0}\frac{\sin x - x}{x^3}\) &nbsp;·&nbsp;
+      (c) \(\displaystyle\lim_{x\to 0}\frac{\ln(1+x) - x}{x^2}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Scrivi lo sviluppo di Maclaurin di \(\cos(2x)\) fino al grado \(4\). (Suggerimento: parti da \(\cos u\) e
+      sostituisci \(u = 2x\).)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Il polinomio di Taylor di grado \(1\) è la retta tangente. &nbsp;
+      (b) \(T_n(x)\) coincide con \(f(x)\) per ogni \(x\). &nbsp;
+      (c) Per \(x\to 0\), \(\sin x = x + \lo(x^2)\). &nbsp;
+      (d) Aggiungere termini a un polinomio di Taylor migliora sempre l'approssimazione lontano dal centro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-9"><span class="secnum">Sezione 11.9</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      \((\eu^x)^{(k)}(0) = 1\) per ogni \(k\), quindi \(T_3(x) = 1 + x + \frac{x^2}{2} + \frac{x^3}{6}\). In
+      \(x = 0{,}2\): \(1 + 0{,}2 + 0{,}02 + 0{,}00133 = 1{,}22133\). Il valore vero è \(1{,}22140\): errore
+      \(\approx 7\cdot 10^{-5}\), coerente col resto \(\frac{\eu^\xi}{4!}(0{,}2)^4 < \frac{3}{24}\cdot 0{,}0016
+      \approx 2\cdot 10^{-4}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \(\eu^x = 1 + x + \frac{x^2}{2} + \lo(x^2)\), quindi \(\eu^x - 1 - x = \frac{x^2}{2} +
+      \lo(x^2)\); diviso \(x^2\) → \(\frac12\).
+      <br><b>(b)</b> \(\sin x = x - \frac{x^3}{6} + \lo(x^3)\), quindi \(\sin x - x = -\frac{x^3}{6} +
+      \lo(x^3)\); diviso \(x^3\) → \(-\frac16\).
+      <br><b>(c)</b> \(\ln(1+x) = x - \frac{x^2}{2} + \lo(x^2)\), quindi \(\ln(1+x) - x = -\frac{x^2}{2} +
+      \lo(x^2)\); diviso \(x^2\) → \(-\frac12\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      \(\cos u = 1 - \frac{u^2}{2} + \frac{u^4}{24} - \cdots\). Con \(u = 2x\): \(\cos(2x) = 1 -
+      \frac{(2x)^2}{2} + \frac{(2x)^4}{24} - \cdots = 1 - 2x^2 + \frac{16x^4}{24} = 1 - 2x^2 + \frac{2}{3}x^4 +
+      \lo(x^4)\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(T_1(x) = f(x_0) + f'(x_0)(x-x_0)\) è proprio l'equazione della retta tangente (§8.4,
+      §11.2).
+      <br><b>(b) FALSO.</b> In generale \(T_n\) è solo un'<em>approssimazione</em>: coincide con \(f\) solo se
+      \(f\) è già un polinomio di grado \(\le n\). Altrimenti c'è un resto (§11.3–11.4).
+      <br><b>(c) VERO.</b> \(\sin x = x - \frac{x^3}{6} + \dots\); il primo termine trascurato è di grado \(3\),
+      quindi \(\sin x = x + \lo(x^2)\) (anzi, \(+\lo(x^2)\) vale a maggior ragione).
+      <br><b>(d) FALSO.</b> Vicino al centro sì, ma lontano un polinomio di Taylor può <em>allontanarsi</em>
+      dalla funzione, e alzare il grado non sempre aiuta fuori dal raggio di convergenza (es. \(\ln(1+x)\) per
+      \(x > 1\), o \(\frac{1}{1-x}\) per \(\abs x \ge 1\)). Il widget lo mostra: i polinomi «divergono» ai bordi.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+const factorial = n => { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; };
+
+/* ============================================================================
+   WIDGET §11.2 — il polinomio di Taylor (Maclaurin) a grado variabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wt-out');
+  const btns = document.getElementById('wt-btns');
+  const nSlider = document.getElementById('wt-n');
+
+  // coeff di Maclaurin c_k per ciascuna funzione
+  const F = {
+    'sin x': { f: Math.sin, c: k => (k % 2 === 0) ? 0 : ((k - 1) / 2 % 2 === 0 ? 1 : -1) / factorial(k), win: { xmin: -8, xmax: 8, ymin: -3, ymax: 3 }, xs: 3 },
+    'cos x': { f: Math.cos, c: k => (k % 2 === 1) ? 0 : ((k / 2) % 2 === 0 ? 1 : -1) / factorial(k), win: { xmin: -8, xmax: 8, ymin: -2.6, ymax: 2.6 }, xs: 3 },
+    'eˣ': { f: Math.exp, c: k => 1 / factorial(k), win: { xmin: -3.5, xmax: 3.5, ymin: -1, ymax: 8 }, xs: 2 },
+    'ln(1+x)': { f: x => Math.log(1 + x), c: k => k === 0 ? 0 : (k % 2 === 1 ? 1 : -1) / k, win: { xmin: -0.95, xmax: 4, ymin: -3, ymax: 2.2 }, xs: 1.5 },
+    '1/(1−x)': { f: x => 1 / (1 - x), c: k => 1, win: { xmin: -0.95, xmax: 0.95, ymin: -1, ymax: 6 }, xs: 0.6 }
+  };
+  const names = Object.keys(F);
+  let cur = 'sin x';
+
+  function taylor(item, x, n) { let s = 0; for (let k = 0; k <= n; k++) s += item.c(k) * Math.pow(x, k); return s; }
+
+  function draw() {
+    const item = F[cur];
+    const n = parseInt(nSlider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { ...item.win });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // f
+    p.func(item.f, { color: 'var(--accent)', width: 2.8 });
+    // T_n
+    p.func(x => taylor(item, x, n), { color: 'var(--violet)', width: 2.2, dash: '6 4' });
+    // centro
+    p.dot(0, item.f(0), { color: 'var(--ink)', r: 4 });
+    // punto campione per l'errore
+    const xs = item.xs, err = Math.abs(item.f(xs) - taylor(item, xs, n));
+    p.line(xs, 0, xs, item.f(xs), { color: 'var(--warm)', width: 1, dash: '2 3' });
+
+    [...btns.children].forEach(b => b.classList.toggle('active', b.textContent === cur));
+    out.innerHTML = `
+      <div class="big">
+        <b style="color:var(--accent)">f = ${cur}</b> &nbsp;·&nbsp;
+        <b style="color:var(--violet)">T${n < 10 ? '' : ''}${n} (grado ${n})</b>
+        &nbsp;·&nbsp; errore in x=${fmt(xs)}: <b style="color:var(--warm)">${err < 1e-4 ? err.toExponential(1) : err.toFixed(4)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva <b style="color:var(--accent)">blu</b> è la funzione, la <b style="color:var(--violet)">viola tratteggiata</b>
+        il polinomio di Taylor di grado ${n} (centro 0). ${n === 0 ? 'Grado 0: solo il valore f(0), una retta orizzontale.'
+          : n === 1 ? 'Grado 1: la retta tangente (§8.11).'
+            : 'Alza n: <mark>il polinomio abbraccia la curva su un tratto sempre più largo</mark>.'}
+        ${cur === 'ln(1+x)' || cur === '1/(1−x)' ? ' Ma oltre il raggio di convergenza (qui |x|≈1) i polinomi <b>divergono</b>: alzare n non basta.' : ''}
+      </div>`;
+  }
+  names.forEach(nm => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = nm;
+    b.onclick = () => { cur = nm; draw(); };
+    btns.appendChild(b);
+  });
+  draw();
+  nSlider.addEventListener('input', draw);
+})();
+
+
+/* ============================================================================
+   WIDGET §11.7 — calcolare e con le somme parziali di 1/k!
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcl-out');
+  const slider = document.getElementById('wcl-n');
+  const E = Math.E;
+
+  function draw() {
+    const N = parseInt(slider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.5, xmax: 10.5, ymin: 0.8, ymax: 3.1 });
+    p.grid(1, 0.5); p.axes({ numbers: true, xname: 'n', yname: '' });
+    p.line(-0.5, E, 10.5, E, { color: 'var(--accent)', width: 1.6, dash: '5 4' });
+    p.text(10.3, E, 'e', { color: 'var(--accent)', bold: true, anchor: 'end', dy: -6 });
+    let S = 0;
+    for (let k = 0; k <= N; k++) {
+      S += 1 / factorial(k);
+      p.dot(k, S, { color: k === N ? 'var(--warm)' : 'var(--violet)', r: k === N ? 5.5 : 3.5 });
+    }
+    const err = Math.abs(E - S);
+    out.innerHTML = `
+      <div class="big">
+        Σ (k=0…${N}) 1/k! = <b style="color:var(--warm)">${S.toFixed(6)}</b>
+        &nbsp;·&nbsp; e = ${E.toFixed(6)} &nbsp;·&nbsp; errore = <b>${err < 1e-4 ? err.toExponential(1) : err.toFixed(6)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni termine aggiunge 1/k!: ${N === 0 ? '1' : N === 1 ? '1 + 1' : N === 2 ? '1 + 1 + 1/2' : '1 + 1 + 1/2 + 1/6 + …'}.
+        Grazie al <b>fattoriale</b> l'errore <mark>crolla a rotta di collo</mark> (§5.9): con n=${N} sei già
+        preciso a ${err < 1e-6 ? '6+' : err < 1e-4 ? '4' : err < 1e-2 ? '2' : '1'} cifre. È così che la
+        calcolatrice calcola e, senza «conoscerlo».
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
