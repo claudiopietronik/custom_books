@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Reti ricorrenti — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10 · Parte II</div>
+    <h1>Modellazione di sequenze: reti ricorrenti</h1>
+    <p class="standfirst">
+      Testo, parlato, serie temporali: dati in cui l'<b>ordine conta</b> e la lunghezza varia. Le
+      <b>reti ricorrenti</b> (RNN) li affrontano con un'idea semplice — una <b>memoria</b> che si porta avanti da
+      un passo al successivo, aggiornata dagli stessi pesi ad ogni istante. È la condivisione dei parametri
+      (§7.7) applicata <em>nel tempo</em>. <mark>Il loro tallone d'Achille — ricordare a lungo — ci porterà
+      alle LSTM</mark>, e il widget ti mostrerà esattamente perché il ricordo svanisce.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'idea di base: <b>srotolare</b> il grafo nel tempo (§10.1) e la <b>cella ricorrente</b> (§10.2). Come si
+      addestra — <b>backpropagation nel tempo</b> (§10.3). Le architetture: <b>bidirezionali ed encoder-decoder</b>
+      (§10.4), <b>profonde e ricorsive</b> (§10.5). Il problema centrale — le <b>dipendenze a lungo termine</b>
+      (§10.6, widget) — e la sua soluzione: le <b>LSTM e i gate</b> (§10.7). Un cenno alla <b>memoria esplicita</b>
+      (§10.8).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Per un decennio le RNN e le LSTM sono state <em>l'</em>architettura del linguaggio, della traduzione, del
+      riconoscimento vocale. Oggi i transformer le hanno in gran parte superate, ma <mark>le idee delle RNN —
+      stato nascosto, condivisione nel tempo, gate, il problema del gradiente che svanisce nel tempo — sono il
+      fondamento su cui i transformer stessi si capiscono.</mark> E per molte serie temporali restano
+      competitive.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Srotolare i grafi computazionali</h2>
+
+  <p class="lead">
+    Una RNN è una funzione che si applica a sé stessa, un passo alla volta. «Srotolarla» significa disegnarne il
+    calcolo come una catena — un grafo profondo quanto la sequenza è lunga.
+  </p>
+
+  <p>
+    L'idea chiave: lo <b>stato nascosto</b> \(\vv{h}_t\) riassume tutto ciò che è successo fino al passo \(t\), e
+    lo passa al passo successivo. La stessa funzione (gli stessi pesi) trasforma \((\vv{h}_{t-1},\vv{x}_t)\) in
+    \(\vv{h}_t\), per ogni \(t\). <mark>Srotolata, una RNN su una frase di 20 parole è come una rete profonda di
+    20 livelli che condividono i pesi.</mark> Questo permette di gestire sequenze di lunghezza qualsiasi con un
+    numero fisso di parametri.
+  </p>
+
+  <figure class="fig wide">
+    <svg viewBox="0 0 600 180" role="img" aria-label="Una cella ricorrente srotolata nel tempo: lo stato nascosto passa da un passo al successivo">
+      <g font-family="var(--sans)">
+        <!-- forma arrotolata -->
+        <text x="70" y="24" class="lbl-b" text-anchor="middle">arrotolata</text>
+        <rect x="45" y="70" width="50" height="40" rx="8" fill="color-mix(in srgb, var(--accent) 14%, var(--paper))" stroke="var(--accent)"/>
+        <text x="70" y="95" class="lbl-b" text-anchor="middle">h</text>
+        <path d="M95,80 C130,60 130,120 95,100" fill="none" stroke="var(--violet)" stroke-width="1.8" marker-end="url(#a10)"/>
+        <line x1="70" y1="135" x2="70" y2="112" stroke="var(--ink-faint)" stroke-width="1.5" marker-end="url(#a10)"/>
+        <text x="70" y="150" class="lbl" text-anchor="middle">x</text>
+        <text x="160" y="95" class="lbl" text-anchor="middle" font-size="20" fill="var(--ink-faint)">=</text>
+        <!-- srotolata -->
+        <text x="410" y="24" class="lbl-b" text-anchor="middle">srotolata nel tempo →</text>
+        <g>
+          <!-- 4 celle -->
+          <g id="cells"></g>
+        </g>
+        <defs>
+          <marker id="a10" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--violet)"/></marker>
+          <marker id="a10b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"/></marker>
+        </defs>
+        <!-- celle statiche -->
+        <g>
+          <rect x="220" y="70" width="46" height="40" rx="8" fill="color-mix(in srgb, var(--accent) 14%, var(--paper))" stroke="var(--accent)"/><text x="243" y="95" class="lbl-b" text-anchor="middle">h₁</text>
+          <rect x="320" y="70" width="46" height="40" rx="8" fill="color-mix(in srgb, var(--accent) 14%, var(--paper))" stroke="var(--accent)"/><text x="343" y="95" class="lbl-b" text-anchor="middle">h₂</text>
+          <rect x="420" y="70" width="46" height="40" rx="8" fill="color-mix(in srgb, var(--accent) 14%, var(--paper))" stroke="var(--accent)"/><text x="443" y="95" class="lbl-b" text-anchor="middle">h₃</text>
+          <rect x="520" y="70" width="46" height="40" rx="8" fill="color-mix(in srgb, var(--accent) 14%, var(--paper))" stroke="var(--accent)"/><text x="543" y="95" class="lbl-b" text-anchor="middle">h₄</text>
+          <g stroke="var(--violet)" stroke-width="1.8">
+            <line x1="266" y1="90" x2="318" y2="90" marker-end="url(#a10)"/>
+            <line x1="366" y1="90" x2="418" y2="90" marker-end="url(#a10)"/>
+            <line x1="466" y1="90" x2="518" y2="90" marker-end="url(#a10)"/>
+          </g>
+          <g stroke="var(--ink-faint)" stroke-width="1.5">
+            <line x1="243" y1="140" x2="243" y2="112" marker-end="url(#a10b)"/>
+            <line x1="343" y1="140" x2="343" y2="112" marker-end="url(#a10b)"/>
+            <line x1="443" y1="140" x2="443" y2="112" marker-end="url(#a10b)"/>
+            <line x1="543" y1="140" x2="543" y2="112" marker-end="url(#a10b)"/>
+          </g>
+          <text x="243" y="155" class="lbl" text-anchor="middle">x₁</text>
+          <text x="343" y="155" class="lbl" text-anchor="middle">x₂</text>
+          <text x="443" y="155" class="lbl" text-anchor="middle">x₃</text>
+          <text x="543" y="155" class="lbl" text-anchor="middle">x₄</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="n">Figura 10.1.</span> Una cella ricorrente (a sinistra) è una funzione con un
+      <b>autoanello</b>: lo stato \(\vv{h}\) rientra in sé stesso. Srotolata nel tempo (a destra), diventa una
+      catena in cui lo stato passa da un passo al successivo — <b>gli stessi pesi</b> ad ogni istante.
+    </figcaption>
+  </figure>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Le reti neurali ricorrenti (RNN)</h2>
+
+  <p class="lead">
+    Formalizziamo la cella: come si calcola il nuovo stato dal vecchio e dall'ingresso corrente.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La cella ricorrente <span class="tag">stato = f(stato precedente, ingresso)</span></div>
+    <div class="f-body">
+      \[ \vv{h}_t = \tanh\!\big(\hB{\mm{W}}\vv{h}_{t-1} + \mm{U}\vv{x}_t + \vv{b}\big), \qquad
+         \hat{\vv{y}}_t = \softmax(\mm{V}\vv{h}_t + \vv{c}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{h}_t\) — lo <b>stato nascosto</b></dt>
+        <dd>la «memoria» della rete: un riassunto di tutto l'input visto fino a \(t\).</dd>
+        <dt>\(\hB{\mm{W}}\) — i <b>pesi ricorrenti</b></dt>
+        <dd>la matrice che trasforma lo stato precedente. <mark>Sono gli stessi ad ogni passo</mark>: qui sta la
+            condivisione nel tempo — e qui nascerà il problema del gradiente (§10.6).</dd>
+        <dt>\(\mm{U}, \mm{V}\)</dt>
+        <dd>i pesi che leggono l'ingresso (\(\mm{U}\)) e producono l'uscita dallo stato (\(\mm{V}\)).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La stessa cella genera un'uscita a ogni passo (etichettare ogni parola), oppure solo alla fine (classificare
+      l'intera frase). Con questa struttura una RNN può, in teoria, ricordare informazioni da un numero
+      arbitrario di passi fa. <mark>In pratica, no</mark> — ed è la storia della §10.6.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>La backpropagation nel tempo</h2>
+
+  <p class="lead">
+    Addestrare una RNN è addestrare la sua versione srotolata: la backpropagation applicata alla catena
+    temporale. Si chiama <b>backpropagation through time</b> (BPTT).
+  </p>
+
+  <p>
+    Srotolata, la RNN è una rete profonda, e il gradiente si calcola normalmente all'indietro… ma attraverso
+    <em>tutti</em> i passi temporali. Per una sequenza di 100 elementi, il gradiente rispetto ai pesi ricorrenti
+    attraversa 100 moltiplicazioni per la stessa matrice \(\mm{W}\). <mark>Ed è proprio questa ripetizione a
+    causare il disastro del gradiente</mark> (§10.6). In pratica, per sequenze lunghe, si «tronca» la BPTT a un
+    numero fisso di passi indietro, per contenere costo e instabilità.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>RNN bidirezionali ed encoder-decoder</h2>
+
+  <p class="lead">
+    Due varianti architetturali che hanno reso le RNN utilissime: leggere in entrambe le direzioni, e mappare
+    una sequenza in un'altra di lunghezza diversa.
+  </p>
+
+  <p>
+    Una <b>RNN bidirezionale</b> processa la sequenza da sinistra a destra <em>e</em> da destra a sinistra, poi
+    combina i due stati: utile quando il significato di una parola dipende anche da ciò che <em>segue</em> (nel
+    linguaggio, quasi sempre). L'architettura <b>encoder-decoder</b> (sequence-to-sequence) usa una prima RNN
+    (<b>encoder</b>) per comprimere l'input in un vettore-contesto, e una seconda (<b>decoder</b>) per generare
+    l'output un elemento alla volta. <mark>È lo schema che ha reso possibile la traduzione automatica neurale</mark>:
+    «encoda» la frase italiana in un vettore, «decoda» quella inglese. L'aggiunta dell'<b>attenzione</b> a questo
+    schema porterà, poco dopo, ai transformer.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>RNN profonde e ricorsive</h2>
+
+  <p class="lead">
+    Si può impilare più strati ricorrenti (profondità <em>oltre</em> a quella temporale), o disporli come un
+    albero invece che come una catena.
+  </p>
+
+  <p>
+    Una <b>RNN profonda</b> impila più celle: lo stato di uno strato alimenta quello sopra, aggiungendo capacità
+    rappresentativa. Una <b>rete ricorsiva</b> applica la stessa cella lungo la struttura ad <b>albero</b> di
+    un dato (per esempio l'albero sintattico di una frase) invece che lungo una catena lineare: profonda solo
+    \(\log n\) invece di \(n\), il che allevia le dipendenze a lungo termine. Sono strumenti per adattare la
+    forma della rete alla forma dei dati.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>La sfida delle dipendenze a lungo termine</h2>
+
+  <p class="lead">
+    Ecco il problema che ha frenato le RNN per anni: <b>ricordare a lungo</b>. Il colpevole è la ripetizione
+    della stessa moltiplicazione, che fa <b>svanire o esplodere</b> il segnale.
+  </p>
+
+  <p>
+    Propagare informazione (o gradiente) per \(t\) passi significa moltiplicare per \(\mm{W}\) circa \(t\) volte,
+    cioè per \(\mm{W}^t\). Se il fattore rilevante è \(&lt;1\), \(\mm{W}^t\to 0\): il segnale <b>svanisce</b>, e
+    la rete «dimentica» ciò che è successo molti passi fa. Se è \(&gt;1\), \(\mm{W}^t\to\infty\): <b>esplode</b>,
+    e l'addestramento diventa instabile. <mark>Solo esattamente a 1 il segnale si conserva — un equilibrio
+    impossibile da mantenere.</mark> Il widget lo mostra: muovi il peso ricorrente e guarda cosa succede al
+    segnale dopo 20 passi.
+  </p>
+
+  <div class="widget" id="w-vanish">
+    <div class="w-head">
+      <span>Perché il ricordo svanisce (o esplode)</span>
+      <span class="hint">muovi il peso ricorrente</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wv-svg" viewBox="0 0 560 340" role="img" aria-label="Il segnale h_t = w^t nel tempo: svanisce se |w|<1, esplode se |w|>1, stabile a 1"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>w</label><input type="range" id="wv-w" min="0.3" max="1.5" step="0.01" value="0.8"><output id="wv-w-o">0.80</output></div>
+    </div>
+    <div class="w-readout" id="wv-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>LSTM e le reti con gate</h2>
+
+  <p class="lead">
+    La soluzione, tuttora fondamentale: la <b>LSTM</b> (Long Short-Term Memory). Invece di riscrivere lo stato ad
+    ogni passo, aggiunge una <b>cella di memoria</b> con «<b>cancelli</b>» che decidono cosa ricordare, cosa
+    dimenticare e cosa emettere.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La LSTM, in tre cancelli <span class="tag">un nastro di memoria con valvole</span></div>
+    <div class="f-body">
+      \[ \vv{c}_t = \hA{\vv{f}_t}\odot\vv{c}_{t-1} + \hC{\vv{i}_t}\odot\tilde{\vv{c}}_t, \qquad
+         \vv{h}_t = \hB{\vv{o}_t}\odot\tanh(\vv{c}_t) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{c}_t\) — la <b>cella di memoria</b></dt>
+        <dd>un «nastro» che scorre nel tempo con <b>poche interferenze</b>: il segnale può conservarsi a lungo
+            senza svanire.</dd>
+        <dt>\(\hA{\vv{f}_t}\) — <b>forget gate</b></dt>
+        <dd>decide quanto della memoria vecchia <b>cancellare</b> (valori 0–1, moltiplicati elemento per
+            elemento).</dd>
+        <dt>\(\hC{\vv{i}_t}\) — <b>input gate</b></dt>
+        <dd>decide quanta nuova informazione \(\tilde{\vv{c}}_t\) <b>scrivere</b> nella memoria.</dd>
+        <dt>\(\hB{\vv{o}_t}\) — <b>output gate</b></dt>
+        <dd>decide quanta memoria <b>rendere visibile</b> come stato \(\vv{h}_t\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il trucco è la <b>somma</b> \(\vv{c}_t = \vv{f}_t\odot\vv{c}_{t-1} + \dots\): finché il forget gate resta
+      ≈1, la memoria passa <em>quasi intatta</em> da un passo al successivo (fattore ≈1, non &lt;1), e il
+      gradiente <mark>non svanisce</mark>. I cancelli, tutti appresi, permettono alla rete di scegliere cosa
+      tenere per centinaia di passi. La <b>GRU</b> è una variante più snella con due gate. Per due decenni, LSTM
+      e GRU sono state lo standard delle sequenze.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-8"><span class="secnum">Sezione 10.8</span>La memoria esplicita</h2>
+
+  <p class="lead">
+    Ultimo passo: dare alla rete una <b>memoria esterna</b> indirizzabile, come la RAM di un computer, che può
+    leggere e scrivere.
+  </p>
+
+  <p>
+    Le LSTM tengono la memoria «dentro» lo stato; le architetture con <b>memoria esplicita</b> (Neural Turing
+    Machine, Memory Networks) le affiancano una banca di celle separata, con meccanismi di <b>attenzione</b> per
+    decidere dove leggere e scrivere. È utile per compiti che richiedono di memorizzare fatti precisi e
+    richiamarli più tardi (rispondere a domande su un testo lungo). <mark>Questi meccanismi di attenzione sono il
+    seme diretto dei transformer</mark>, che rinunciano del tutto alla ricorrenza in favore dell'attenzione — ma
+    quella è un'altra storia (Cap. 12).
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>Una RNN ha uno <b>stato nascosto</b> che si porta avanti nel tempo, aggiornato dagli <b>stessi pesi</b>
+          ad ogni passo (§10.1–10.2). Srotolata, è una rete profonda quanto la sequenza.</li>
+      <li>Si addestra con la <b>backpropagation nel tempo</b> (§10.3), ma ripetere la moltiplicazione per
+          \(\mm{W}\) fa <b>svanire o esplodere</b> il segnale (§10.6, widget).</li>
+      <li>Le <b>LSTM</b> risolvono con una <b>cella di memoria</b> e tre <b>gate</b> (forget/input/output): la
+          somma tiene la memoria ≈intatta e il gradiente non svanisce (§10.7).</li>
+      <li><b>Bidirezionali</b> ed <b>encoder-decoder</b> (§10.4) hanno reso possibile la traduzione neurale;
+          l'<b>attenzione</b> della memoria esplicita (§10.8) porta ai transformer.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo le tre grandi famiglie: dense (6), convoluzionali (9), ricorrenti (10). Ma costruire un modello che
+    funziona non è solo scegliere l'architettura: è un <b>metodo</b>. Il <strong>Capitolo 11</strong> raccoglie
+    la <b>metodologia pratica</b> — metriche, baseline, quando raccogliere più dati, come cercare gli
+    iperparametri e come fare debug quando (inevitabilmente) qualcosa non va.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-9"><span class="secnum">Sezione 10.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §10.6, con \(w=0{,}8\) quanto vale il segnale dopo 20 passi (\(0{,}8^{20}\))? E con
+      \(w=1{,}2\)? Cosa dicono questi due numeri sul ricordo a lungo termine e sulla stabilità?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Perché la cella di memoria della LSTM aggiorna con una <b>somma</b> (\(\vv{c}_t=\vv{f}_t\odot\vv{c}_{t-1}+\dots\))
+      e non con una semplice moltiplicazione per una matrice come la RNN? Che ruolo ha il forget gate ≈ 1?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      In quale situazione una RNN <b>bidirezionale</b> è preferibile a una unidirezionale? E in quale è
+      <b>impossibile</b> usarla?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Le RNN usano gli stessi pesi ad ogni passo temporale. &nbsp;
+      (b) Il gradiente che esplode si combatte anche con il gradient clipping. &nbsp;
+      (c) Le LSTM eliminano del tutto il problema del gradiente che svanisce in teoria. &nbsp;
+      (d) L'architettura encoder-decoder richiede input e output della stessa lunghezza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-10"><span class="secnum">Sezione 10.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      \(0{,}8^{20}\approx 0{,}0115\): il segnale è quasi <b>svanito</b> — dopo 20 passi ne resta l'1%, quindi la
+      rete ha di fatto «dimenticato» l'input iniziale. \(1{,}2^{20}\approx 38{,}3\): il segnale è <b>esploso</b>
+      di quasi 40 volte, e continuerebbe a crescere, rendendo l'addestramento instabile. <mark>Solo a \(w=1\) il
+      segnale si conserva</mark> — ed è il motivo per cui servono le LSTM.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      Con la somma, il gradiente rispetto a \(\vv{c}_{t-1}\) ha un termine \(\vv{f}_t\) (il forget gate) invece di
+      una matrice arbitraria. Se \(\vv{f}_t\approx 1\), <b>la memoria passa quasi intatta</b> e il gradiente si
+      propaga con fattore ≈1: non svanisce né esplode. È la «autostrada» che permette all'informazione di
+      viaggiare per molti passi. <mark>La somma, non la moltiplicazione, è il segreto delle LSTM.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      È <b>preferibile</b> quando il significato di un elemento dipende anche dal contesto <em>futuro</em>: nel
+      linguaggio (per disambiguare una parola serve spesso ciò che segue), nel riconoscimento vocale offline. È
+      <b>impossibile</b> quando devi produrre l'output <em>in tempo reale</em>, senza conoscere il futuro (per
+      esempio generare testo parola per parola, o prevedere il prossimo valore di una serie in streaming): lì il
+      futuro non è ancora disponibile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> È la condivisione dei parametri nel tempo (§10.2). <br>
+      <b>(b) VERO.</b> Il gradient clipping taglia la norma del gradiente, domando l'esplosione (§8.2, §10.6). <br>
+      <b>(c) FALSO.</b> Le LSTM <b>mitigano</b> molto il problema (grazie alla somma e ai gate), ma non lo
+      eliminano del tutto in teoria (§10.7). <br>
+      <b>(d) FALSO.</b> L'encoder-decoder è nato proprio per mappare sequenze di lunghezza <b>diversa</b> (es.
+      traduzione) (§10.4).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §10.6 — il segnale h_t = w^t nel tempo
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wv-svg');
+  if (!svg) return;
+  const out = document.getElementById('wv-out');
+  const wI = document.getElementById('wv-w'), wO = document.getElementById('wv-w-o');
+
+  function draw() {
+    const w = parseFloat(wI.value); wO.textContent = fmt(w, 2);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 20, ymin: 0, ymax: 3 });
+    p.grid(5, 0.5); p.axes({ numbers: true, stepX: 5, stepY: 0.5, xname: 'passo t', yname: 'segnale' });
+    // linea di riferimento a 1
+    p.line(0, 1, 20, 1, { color: 'var(--rule)', width: 1.5, dash: '4 4' });
+    // h_t = w^t
+    const col = w < 0.98 ? 'var(--accent)' : w > 1.02 ? 'var(--warm)' : 'var(--green)';
+    const pts = [];
+    for (let t = 0; t <= 20; t++) { const v = Math.pow(w, t); pts.push([t, Math.min(3, v)]); }
+    p.poly(pts, { color: col, width: 2.8, close: false });
+    for (const q of pts) if (q[1] <= 3) p.dot(q[0], q[1], { color: col, r: 2.6 });
+
+    const v20 = Math.pow(w, 20);
+    const regime = w < 0.98 ? 'svanisce' : w > 1.02 ? 'esplode' : 'stabile';
+    out.innerHTML = `
+      <div class="big">
+        w = <b>${fmt(w, 2)}</b> &nbsp;·&nbsp; dopo 20 passi: w²⁰ = <b style="color:${col}">${v20 < 0.01 ? v20.toExponential(1) : fmt(v20, 2)}</b>
+        &nbsp; <b style="color:${col}">(${regime})</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Propagare per t passi moltiplica per <b>wᵗ</b>.
+        ${w < 0.98 ? '<mark>w &lt; 1: il segnale (e il gradiente) svanisce verso zero: la rete «dimentica» l\'input lontano.</mark>'
+          : w > 1.02 ? '<mark>w &gt; 1: il segnale esplode: l\'addestramento diventa instabile (serve il gradient clipping).</mark>'
+          : '<mark>w ≈ 1: il segnale si conserva — ma è un equilibrio precario, impossibile da mantenere con una matrice appresa.</mark>'}
+        Le <b>LSTM</b> ottengono di fatto un fattore ≈ 1 con il forget gate (§10.7).
+      </div>`;
+  }
+  wI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

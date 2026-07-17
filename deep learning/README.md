@@ -43,7 +43,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 7 — Regolarizzazione per il deep learning
 - [x] 8 — Ottimizzazione per l'addestramento
 - [x] 9 — Reti convoluzionali
-- [ ] 10 — Modellazione di sequenze: reti ricorrenti
+- [x] 10 — Modellazione di sequenze: reti ricorrenti
 - [ ] 11 — Metodologia pratica
 - [ ] 12 — Applicazioni
 - [ ] 13 — Modelli a fattori lineari

@@ -190,7 +190,7 @@ const TOC = [
     titolo: "Modellazione di sequenze: reti ricorrenti",
     file: "cap10-ricorrenti.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Srotolare i grafi computazionali" },
       { id: "s10-2", n: "10.2", t: "Le reti neurali ricorrenti (RNN)" },
