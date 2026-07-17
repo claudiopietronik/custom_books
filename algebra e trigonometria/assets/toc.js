@@ -16,7 +16,7 @@ const TOC = [
     n: 1,
     titolo: "Ripasso dei prerequisiti",
     file: "cap01-ripasso.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Insiemi e la retta dei numeri reali" },
       { id: "s1-2", n: "1.2", t: "Esponenti interi e notazione scientifica" },
