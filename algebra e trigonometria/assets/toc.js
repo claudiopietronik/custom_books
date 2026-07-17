@@ -49,7 +49,7 @@ const TOC = [
     n: 3,
     titolo: "Funzioni e relazioni",
     file: "cap03-funzioni-relazioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Il piano cartesiano e la distanza" },
       { id: "s3-2", n: "3.2", t: "Le circonferenze" },
