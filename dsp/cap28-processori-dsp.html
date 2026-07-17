@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>28 · I processori DSP — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="28">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.28 — Capitolo 28</div>
+    <h1>I processori DSP</h1>
+    <p class="standfirst">
+      Tutta la matematica del libro, alla fine, deve <em>girare</em> su un chip — e spesso in tempo reale, con i
+      campioni che arrivano a ritmo fisso. Esistono processori progettati apposta per questo: i <b>DSP</b>. Non
+      sono più veloci in tutto; sono velocissimi nell'unica cosa che il DSP chiede di continuo — <b>moltiplicare
+      e sommare</b>. Vediamo i trucchi architetturali che glielo permettono.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Scendiamo al «metallo». Dopo aver visto tutta la teoria e le applicazioni, qui capiamo come si esegue in
+      hardware. Riprende e concretizza il Cap. 4 (il software, la moltiplica-e-accumula). Il Cap. 29 ne farà il
+      lato pratico: come scegliere e programmare un DSP reale.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il DSP in tempo reale — un filtro su un flusso audio, l'elaborazione di un modem, il controllo di un motore
+      — vive o muore sulla capacità di <b>finire i conti prima del prossimo campione</b>. I processori DSP esistono
+      proprio per garantirlo. Capire la loro architettura spiega perché certe operazioni (la convoluzione) sono
+      così naturali in hardware, e come sfruttarle.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-1"><span class="secnum">SEZIONE 28.1</span>Cosa distingue un DSP</h2>
+
+  <p class="lead">
+    Un processore normale è un tuttofare: fa girare sistemi operativi, fogli di calcolo, giochi. Un processore
+    DSP è uno <b>specialista</b>: fa una cosa sola, benissimo e in modo prevedibile — la <b>moltiplica-e-accumula</b>
+    (MAC) del Cap. 4.
+  </p>
+
+  <p>
+    Ricorda: convoluzione, filtri, trasformate, correlazione — sotto sono tutte la stessa operazione ripetuta a
+    valanga: \(\text{totale} \mathrel{+}= a \times b\). Un DSP è progettato per eseguirne <b>una per ciclo di
+    clock</b>, senza sosta, mentre un processore generico ne impiega diversi. In più, un DSP è
+    <b>deterministico</b>: garantisce che un dato calcolo finisca in un tempo preciso e ripetibile — essenziale
+    quando i campioni arrivano ogni \(1/f_s\) secondi e non puoi permetterti ritardi imprevisti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-2"><span class="secnum">SEZIONE 28.2</span>Architettura Harvard e pipeline</h2>
+
+  <p class="lead">
+    Due idee architetturali danno al DSP la sua velocità: separare le memorie (Harvard) e sovrapporre le fasi
+    (pipeline).
+  </p>
+
+  <p>
+    Un processore tradizionale (architettura <b>von Neumann</b>) tiene programma e dati nella <em>stessa</em>
+    memoria, con un solo canale: a ogni passo può leggere <em>o</em> un'istruzione <em>o</em> un dato, non
+    entrambi. È un collo di bottiglia. L'architettura <b class="termine">Harvard</b> usa memorie e canali
+    <b>separati</b> per programma e dati: così può prendere l'istruzione successiva <em>e</em> i dati da elaborare
+    <b>nello stesso ciclo</b>. Per una MAC — che deve leggere due numeri e un'istruzione insieme — è la
+    differenza tra fare un passo alla volta e farne tre in parallelo.
+  </p>
+
+  <figure class="fig wide" id="fig-harvard">
+    <svg viewBox="0 0 640 220" role="img" aria-label="Confronto tra architettura von Neumann (memoria unica) e Harvard (memorie separate per programma e dati)"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 28.1</span> — <b>Von Neumann</b> (a sinistra): una sola memoria, un solo canale —
+      istruzioni e dati fanno la fila. <b>Harvard</b> (a destra): memorie e canali <b>separati</b> per programma
+      e dati, che viaggiano in parallelo. <mark>È questa separazione a permettere di leggere istruzione e dati
+      nello stesso ciclo</mark>, il presupposto della MAC a ciclo singolo.
+    </figcaption>
+  </figure>
+
+  <p>
+    La <b class="termine">pipeline</b> aggiunge un secondo strato di parallelismo. Eseguire un'istruzione ha più
+    fasi (prendere, decodificare, eseguire). Invece di completarle una per volta, la pipeline le <b>sovrappone</b>:
+    mentre un'istruzione viene eseguita, la successiva è già in decodifica e la terza in caricamento — come una
+    catena di montaggio. A regime, <b>esce un risultato per ciclo</b>, anche se ogni singola istruzione attraversa
+    più fasi.
+  </p>
+
+  <h3>Provalo: la catena di montaggio della pipeline</h3>
+
+  <p>
+    Avanza il clock e guarda le istruzioni scorrere attraverso le fasi. All'inizio la pipeline si «riempie», poi
+    a regime <b>ne completa una a ogni ciclo</b>: è il segreto del throughput. Ogni istruzione ci mette comunque
+    tre cicli ad attraversarla — ma non aspettano una l'altra.
+  </p>
+
+  <div class="widget" id="w-pipe">
+    <div class="w-head">
+      <span>La pipeline in azione</span>
+      <span class="hint">a regime: un risultato per ciclo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpi-svg" viewBox="0 0 620 220" role="img" aria-label="Istruzioni che avanzano attraverso le fasi di una pipeline"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>ciclo</label><input type="range" id="wpi-c" min="1" max="10" step="1" value="1"><output id="wpi-cv">1</output></div>
+    </div>
+    <div class="w-readout" id="wpi-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-3"><span class="secnum">SEZIONE 28.3</span>Virgola fissa e virgola mobile</h2>
+
+  <p class="lead">
+    I DSP si dividono in due grandi categorie hardware, secondo l'aritmetica che eseguono nativamente — la scelta
+    del Cap. 4, ora incisa nel silicio.
+  </p>
+
+  <ul>
+    <li><b>DSP a virgola fissa:</b> più economici, consumano meno, ideali per prodotti a grande volume (audio di
+        consumo, controllo motori). Ma programmarli richiede attenzione al range e all'overflow (Cap. 4): il
+        progettista deve «scalare» a mano i segnali per non traboccare.</li>
+    <li><b>DSP a virgola mobile:</b> più costosi e «assetati», ma molto più facili da programmare — l'enorme
+        range dinamico assorbe gli errori di scala senza pensarci. Preferiti dove conta la rapidità di sviluppo o
+        la precisione (strumentazione, prototipi, applicazioni scientifiche).</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il solito compromesso, in hardware</div>
+    <p style="margin-bottom:0">
+      È lo stesso baratto del Cap. 4 — precisione/facilità contro costo/consumo — ma ora è una scelta di
+      <em>acquisto</em>. Un auricolare Bluetooth economico? Fixed. Uno strumento di misura di laboratorio? Float.
+      <mark>L'architettura giusta non esiste in assoluto: dipende dai vincoli del prodotto.</mark> È il Cap. 14
+      («scegli in base all'obiettivo») trasportato dall'algoritmo all'hardware.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-4"><span class="secnum">SEZIONE 28.4</span>Buffer circolari</h2>
+
+  <p class="lead">
+    Un ultimo trucco, elegante e specifico del DSP. Un filtro FIR (Cap. 15–16) deve tenere in memoria gli ultimi
+    \(M\) campioni d'ingresso — la sua «linea di ritardo». Come gestirla senza sprecare tempo?
+  </p>
+
+  <p>
+    L'idea ingenua: a ogni nuovo campione, far scorrere tutti gli altri di una posizione. Ma spostare \(M\)
+    numeri a ogni campione è costosissimo. La soluzione è il <b class="termine">buffer circolare</b>: una zona di
+    memoria trattata come un <b>anello</b>. Un puntatore indica dove scrivere; quando arriva un campione lo si
+    scrive lì e si avanza il puntatore di uno — e quando arriva in fondo, <b>riparte dall'inizio</b>. Nessuno
+    spostamento: solo il puntatore si muove. I processori DSP hanno un <b>supporto hardware</b> per questo
+    «indirizzamento circolare» (l'avanzamento con ritorno automatico), che lo rende gratuito.
+  </p>
+
+  <h3>Provalo: il buffer che gira</h3>
+
+  <p>
+    Aggiungi campioni e guarda il puntatore di scrittura avanzare nell'anello e <b>tornare all'inizio</b> quando
+    arriva in fondo. Il vecchio campione viene semplicemente sovrascritto — nessun dato viene mai spostato. È
+    così che un filtro tiene la sua finestra scorrevole senza costo.
+  </p>
+
+  <div class="widget" id="w-circ">
+    <div class="w-head">
+      <span>Buffer circolare</span>
+      <span class="hint">il puntatore gira, i dati non si spostano</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wci-svg" viewBox="0 0 620 280" role="img" aria-label="Un buffer circolare con un puntatore di scrittura che avanza e torna all'inizio"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" id="wci-add">aggiungi campione</button>
+      <button class="w-btn" id="wci-add5">+5 campioni</button>
+      <button class="w-btn" id="wci-reset">azzera</button>
+    </div>
+    <div class="w-readout" id="wci-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-5"><span class="secnum">SEZIONE 28.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.1</div>
+    <p style="margin-bottom:0">Perché l'architettura Harvard è più adatta al DSP della von Neumann?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché ha memorie e canali <b>separati</b> per programma e dati, e può quindi leggere l'istruzione e i
+          dati <b>nello stesso ciclo</b>. Una MAC deve prendere due numeri e un'istruzione insieme: con la von
+          Neumann (canale unico) farebbe la fila, con la Harvard va in parallelo. È il presupposto della MAC a
+          ciclo singolo (§28.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.2</div>
+    <p style="margin-bottom:0">Una pipeline a 3 fasi: quante istruzioni completa in 10 cicli (a regime, dopo il
+      riempimento)? Perché non 10/3?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Circa 8 (dopo i 2 cicli iniziali di riempimento, una per ciclo). Non 10/3 perché le fasi si
+          <b>sovrappongono</b>: mentre un'istruzione è in esecuzione, la successiva è già in decodifica. Ogni
+          istruzione impiega 3 cicli ad attraversare la pipeline, ma ne <b>esce una per ciclo</b> — throughput,
+          non latenza (§28.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.3</div>
+    <p style="margin-bottom:0">Un prodotto di consumo ad alto volume e basso costo (es. un giocattolo musicale):
+      DSP a virgola fissa o mobile? E uno strumento di misura di precisione?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Consumo ad alto volume: <b>virgola fissa</b> (economico, basso consumo; si accetta la fatica di
+          gestire il range). Strumento di precisione: <b>virgola mobile</b> (facile da programmare, ampio range
+          dinamico, precisione). È il compromesso del Cap. 4 come scelta d'acquisto (§28.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.4</div>
+    <p style="margin-bottom:0">Perché un buffer circolare è meglio che far scorrere tutti i campioni a ogni nuovo
+      arrivo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché far scorrere \(M\) campioni a ogni arrivo costa \(M\) spostamenti per campione. Il buffer
+          circolare invece <b>non sposta nulla</b>: scrive il nuovo campione dove indica il puntatore e avanza il
+          puntatore (che torna all'inizio in fondo). Costo \(O(1)\) invece di \(O(M)\). I DSP lo supportano in
+          hardware (§28.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-6"><span class="secnum">SEZIONE 28.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 28</div>
+    <ol style="margin-bottom:0">
+      <li><b>Un DSP è uno specialista della MAC:</b> una moltiplica-e-accumula per ciclo, in modo deterministico
+          (tempo reale garantito).</li>
+      <li><b>Architettura Harvard:</b> memorie/canali separati per programma e dati → istruzione + dati nello
+          stesso ciclo.</li>
+      <li><b>Pipeline:</b> fasi sovrapposte come una catena di montaggio → un risultato per ciclo a regime
+          (throughput, non latenza).</li>
+      <li><b>Fissa vs mobile</b> (hardware): fixed economico/basso consumo ma da gestire; float facile/preciso ma
+          costoso. Il compromesso del Cap. 4 come scelta di prodotto.</li>
+      <li><b>Buffer circolari:</b> linea di ritardo del FIR gestita come un anello, il puntatore gira e i dati
+          non si spostano (costo \(O(1)\), supportato in hardware).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo <em>come</em> un DSP fa i conti; il <strong>Capitolo 29</strong> chiude il lato pratico con il
+    <b>come iniziare</b>: scegliere un processore, l'ambiente di sviluppo, un esempio concreto, e fissa vs mobile
+    nella pratica quotidiana. Poi il libro si concede quattro capitoli di approfondimento matematico
+    (Cap. 30–33) e una curiosità affascinante (Cap. 34), per chi vuole andare sotto il cofano della teoria.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const NS28 = 'http://www.w3.org/2000/svg';
+const el28 = (n, at) => { const e = document.createElementNS(NS28, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+const txt28 = (x, y, s, cls, anchor, size) => { const t = el28('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle', 'font-size': size || 12 }); t.textContent = s; return t; };
+
+/* ============================================================================
+   FIGURA 28.1 — von Neumann vs Harvard
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-harvard svg');
+  if (!svg) return;
+  function box(x, y, w, h, label, col) {
+    const g = el28('g', {});
+    g.appendChild(el28('rect', { x, y, width: w, height: h, rx: 7, fill: 'color-mix(in srgb, ' + col + ' 12%, var(--paper))', stroke: col, 'stroke-width': 1.6 }));
+    g.appendChild(txt28(x + w / 2, y + h / 2 + 4, label, 'lbl-b', 'middle', 12));
+    return g;
+  }
+  function line(x1, y1, x2, y2, col, w) { return el28('line', { x1, y1, x2, y2, stroke: col || 'var(--ink-faint)', 'stroke-width': w || 2 }); }
+
+  // --- von Neumann ---
+  svg.appendChild(txt28(150, 26, 'VON NEUMANN', 'lbl-b', 'middle', 12));
+  svg.appendChild(box(90, 45, 120, 40, 'CPU', 'var(--ink-soft)'));
+  svg.appendChild(line(150, 85, 150, 130, 'var(--ink-faint)', 3));
+  svg.appendChild(txt28(168, 112, 'un canale', 'lbl', 'start', 10));
+  svg.appendChild(box(60, 130, 180, 42, 'memoria (programma + dati)', 'var(--warm)'));
+
+  // --- Harvard ---
+  svg.appendChild(txt28(480, 26, 'HARVARD', 'lbl-b', 'middle', 12));
+  svg.appendChild(box(420, 45, 120, 40, 'CPU', 'var(--ink-soft)'));
+  svg.appendChild(line(455, 85, 455, 130, 'var(--accent)', 3));
+  svg.appendChild(line(505, 85, 505, 130, 'var(--green)', 3));
+  svg.appendChild(box(360, 130, 100, 42, 'programma', 'var(--accent)'));
+  svg.appendChild(box(500, 130, 100, 42, 'dati', 'var(--green)'));
+  svg.appendChild(txt28(480, 196, 'due canali paralleli', 'lbl', 'middle', 10));
+})();
+
+
+/* ============================================================================
+   WIDGET §28.2 — pipeline
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpi-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpi-out');
+  const cS = document.getElementById('wpi-c'), cV = document.getElementById('wpi-cv');
+  const stages = ['Prendi', 'Decodifica', 'Esegui'];
+  const NI = 6, S = stages.length;
+
+  function draw() {
+    const cyc = parseInt(cS.value, 10);
+    cV.textContent = cyc;
+    svg.innerHTML = '';
+    const x0 = 90, y0 = 40, cw = 78, rh = 26;
+    // intestazioni fasi
+    stages.forEach((s, k) => svg.appendChild(txt28(x0 + k * cw + cw / 2, y0 - 8, s, 'lbl', 'middle', 10)));
+    let done = 0;
+    for (let i = 0; i < NI; i++) {
+      const y = y0 + i * (rh + 6);
+      svg.appendChild(txt28(x0 - 12, y + rh / 2 + 4, 'I' + (i + 1), 'lbl-b', 'end', 11));
+      // istruzione i entra alla fase 0 al ciclo i+1; sta nella fase (cyc-1-i)
+      const stage = cyc - 1 - i;
+      for (let k = 0; k < S; k++) {
+        const active = (k === stage);
+        svg.appendChild(el28('rect', { x: x0 + k * cw, y, width: cw - 6, height: rh, rx: 5, fill: active ? 'color-mix(in srgb, var(--accent) 45%, transparent)' : 'var(--paper-2)', stroke: active ? 'var(--accent)' : 'var(--rule)', 'stroke-width': active ? 1.8 : 1 }));
+      }
+      if (stage >= S) done++;   // già uscita dalla pipeline
+    }
+    out.innerHTML = `
+      <div class="big">ciclo <b>${cyc}</b> &nbsp;·&nbsp; istruzioni completate: <b style="color:var(--green)">${Math.max(0, done)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni istruzione attraversa le ${S} fasi in ${S} cicli, ma le fasi si <b>sovrappongono</b>: guarda la
+        «diagonale» avanzare. ${cyc < S ? 'La pipeline si sta ancora <mark>riempiendo</mark>.' : 'A regime <mark>ne esce una per ciclo</mark> — throughput massimo.'}
+      </div>`;
+  }
+  cS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §28.4 — buffer circolare
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wci-svg');
+  if (!svg) return;
+  const out = document.getElementById('wci-out');
+  const N = 8;
+  let buf = new Array(N).fill(null), ptr = 0, count = 0;
+
+  function add() {
+    buf[ptr] = count + 1;   // valore del campione
+    ptr = (ptr + 1) % N;
+    count++;
+    draw();
+  }
+  function draw() {
+    svg.innerHTML = '';
+    const cx = 310, cy = 140, R = 95;
+    for (let i = 0; i < N; i++) {
+      const a = -Math.PI / 2 + i * 2 * Math.PI / N;
+      const x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+      const isPtr = i === ptr;
+      svg.appendChild(el28('circle', { cx: x, cy: y, r: 26, fill: buf[i] !== null ? 'color-mix(in srgb, var(--accent) 22%, var(--paper))' : 'var(--paper-2)', stroke: isPtr ? 'var(--warm)' : 'var(--rule)', 'stroke-width': isPtr ? 3 : 1.4 }));
+      svg.appendChild(txt28(x, y + 5, buf[i] !== null ? '#' + buf[i] : '—', 'lbl-b', 'middle', 13));
+      svg.appendChild(txt28(x, y - 34, 'slot ' + i, 'lbl', 'middle', 9));
+    }
+    // freccia del puntatore
+    const a = -Math.PI / 2 + ptr * 2 * Math.PI / N;
+    svg.appendChild(el28('circle', { cx, cy, r: 4, fill: 'var(--warm)' }));
+    svg.appendChild(el28('line', { x1: cx, y1: cy, x2: cx + (R - 30) * Math.cos(a), y2: cy + (R - 30) * Math.sin(a), stroke: 'var(--warm)', 'stroke-width': 2.5 }));
+    svg.appendChild(txt28(cx, cy + 55, 'scrivi qui →', 'lbl', 'middle', 10));
+
+    out.innerHTML = `
+      <div class="big">campioni ricevuti: <b>${count}</b> &nbsp;·&nbsp; puntatore allo slot <b style="color:var(--warm)">${ptr}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni nuovo campione (#n) si scrive dove indica il <b style="color:var(--warm)">puntatore</b>, che poi
+        avanza. ${count >= N ? 'Il puntatore ha già <mark>fatto il giro</mark>: i campioni nuovi sovrascrivono i più vecchi, senza spostare nulla.' : 'Aggiungine altri e guarda il puntatore girare fino a tornare all\'inizio.'}
+        Nessun dato viene mai spostato: solo il puntatore si muove.
+      </div>`;
+  }
+  document.getElementById('wci-add').addEventListener('click', add);
+  document.getElementById('wci-add5').addEventListener('click', () => { for (let i = 0; i < 5; i++) add(); });
+  document.getElementById('wci-reset').addEventListener('click', () => { buf = new Array(N).fill(null); ptr = 0; count = 0; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

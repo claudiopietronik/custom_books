@@ -415,7 +415,7 @@ const TOC = [
     n: 28,
     titolo: "I processori DSP",
     file: "cap28-processori-dsp.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s28-1", n: "28.1", t: "Cosa distingue un DSP" },
       { id: "s28-2", n: "28.2", t: "Architettura Harvard e pipeline" },
