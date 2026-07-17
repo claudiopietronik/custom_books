@@ -144,7 +144,7 @@ const TOC = [
     n: 8,
     titolo: "La derivata",
     file: "cap08-derivata.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Il problema della tangente e della velocità" },
       { id: "s8-2", n: "8.2", t: "Il rapporto incrementale" },
