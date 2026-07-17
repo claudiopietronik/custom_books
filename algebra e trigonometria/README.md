@@ -3,7 +3,7 @@
 Un libro di matematica in HTML che copre l'algebra e la trigonometria di livello universitario/pre-analisi,
 in italiano. Niente formalismo freddo: concetti spiegati per esteso, formule smontate simbolo per simbolo,
 figure e widget interattivi. Stesso stile e stesso motore dei libri di
-[Algebra Lineare](../algebra_lineare/) e [Analisi 1](../analisi_1/).
+[Algebra Lineare](../algebra%20lineare/) e [Analisi 1](../analisi%201/).
 
 L'indice segue *College Algebra & Trigonometry* di **Julie Miller** e **Donna Gerken** (McGraw-Hill, 2017),
 ma il testo è **riscritto daccapo**: prosa, esempi, figure e widget originali. Il capitolo *R* del testo

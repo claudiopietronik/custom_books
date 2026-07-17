@@ -2,7 +2,7 @@
 
 Un libro di matematica in HTML sul calcolo di una variabile (Analisi Matematica 1), in italiano.
 Niente formalismo freddo: concetti spiegati per esteso, formule smontate simbolo per simbolo, figure e
-widget interattivi. Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/).
+widget interattivi. Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra%20lineare/).
 
 **Apri [`index.html`](index.html) con un doppio clic.** Non serve alcun server.
 

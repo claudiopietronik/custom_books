@@ -2,8 +2,8 @@
 
 Un libro di matematica in HTML sull'analisi di più variabili (Analisi Matematica 2), in italiano.
 Concetti spiegati per esteso, formule smontate simbolo per simbolo, figure e widget interattivi.
-Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/) e di
-[Analisi 1](../analisi_1/), di cui è il seguito naturale.
+Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra%20lineare/) e di
+[Analisi 1](../analisi%201/), di cui è il seguito naturale.
 
 **Apri [`index.html`](index.html) con un doppio clic.** Non serve alcun server.
 
