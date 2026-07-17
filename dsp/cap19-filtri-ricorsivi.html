@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 · Filtri ricorsivi — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="19">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.19 — Capitolo 19</div>
+    <h1>Filtri ricorsivi</h1>
+    <p class="standfirst">
+      Cambiamo famiglia. I filtri FIR calcolavano l'uscita dai soli ingressi; i filtri <b>ricorsivi</b> (IIR)
+      usano anche le <em>uscite passate</em> — la <b>retroazione</b>. È un'idea potentissima: pochi coefficienti
+      producono tagli ripidi e code lunghissime. Ma la retroazione è un'arma a doppio taglio, e per domarla
+      serviranno gli strumenti dei Cap. 32–33.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Apriamo la seconda grande famiglia di filtri, l'alternativa ai FIR (Cap. 15–18). Qui i concetti base; il
+      Cap. 20 costruirà i potenti filtri di Chebyshev, il Cap. 21 confronterà tutto, e i Cap. 32–33 daranno la
+      teoria (Laplace, trasformata z) per progettarli e garantirne la stabilità.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Quando serve efficienza estrema — un taglio ripido con pochissimi calcoli, magari su un microcontrollore
+      minuscolo — l'IIR è imbattibile: fa con 4 coefficienti ciò che un FIR fa con 400. Il prezzo è la fragilità:
+      può diventare instabile e non ha fase lineare. <strong>Sapere quando l'efficienza vale il rischio</strong> è
+      la competenza di questo capitolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-1"><span class="secnum">SEZIONE 19.1</span>Come funziona: i coefficienti ricorsivi</h2>
+
+  <p class="lead">
+    L'equazione di un filtro ricorsivo aggiunge, rispetto a un FIR, un pezzo nuovo: termini che dipendono dalle
+    <b>uscite già calcolate</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'equazione ricorsiva <span class="tag">l'uscita si «riascolta»</span></div>
+    <div class="f-body">
+      \[
+        \sig{y}[n] \;=\; \hA{a_0 x[n] + a_1 x[n-1] + \cdots} \;+\; \hB{b_1\, y[n-1] + b_2\, y[n-2] + \cdots}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{a_0 x[n] + \cdots}\)</dt><dd>la parte <b>in avanti</b>, come in un FIR: combina gli
+            <em>ingressi</em> passati e presente.</dd>
+        <dt>\(\hB{b_1 y[n-1] + \cdots}\)</dt><dd>la <b>retroazione</b>: combina le <em>uscite</em> già prodotte.
+            È il pezzo che rende il filtro «ricorsivo».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La retroazione ha un effetto sorprendente: anche con pochissimi coefficienti \(b\), l'impulso «rimbalza» nel
+      ciclo di retroazione e produce una risposta all'impulso <b>infinita</b> (che si smorza ma non finisce mai) —
+      da cui il nome <b>IIR</b>, <em>Infinite Impulse Response</em>. <mark>Pochi coefficienti, effetti lunghi:</mark>
+      è tutta qui la potenza (e il pericolo).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-2"><span class="secnum">SEZIONE 19.2</span>Il filtro a polo singolo</h2>
+
+  <p class="lead">
+    Il più semplice filtro ricorsivo ha un solo coefficiente di retroazione, e fa una cosa utilissima: un
+    passa-basso levigante, con la risposta all'impulso di un <b>esponenziale</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Passa-basso a polo singolo <span class="tag">un coefficiente, tanta levigatura</span></div>
+    <div class="f-body">
+      \[
+        \sig{y}[n] \;=\; (1-\hA{d})\,\sig{x}[n] \;+\; \hA{d}\,\sig{y}[n-1]
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{d}\)</dt><dd>il coefficiente di <b>decadimento</b>, tra 0 e 1: quanta «memoria» tiene il filtro.
+            Vicino a 0 leviga poco; vicino a 1 leviga moltissimo (e lentamente).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ogni uscita è una miscela tra il campione nuovo e l'uscita precedente. La sua risposta all'impulso è
+      \((1-d)\,d^{\,n}\): un <b>esponenziale decrescente</b>. È l'equivalente digitale di un circuito RC (Cap. 13)!
+      <mark>Con un solo coefficiente ottieni una levigatura che un FIR pagherebbe con decine di termini</mark> —
+      ma la sua risposta in frequenza è dolce, non un taglio netto.
+    </div>
+  </div>
+
+  <h3>Provalo: un coefficiente che leviga</h3>
+
+  <p>
+    Regola il decadimento \(d\). A sinistra la <b style="color:var(--accent)">risposta all'impulso</b>
+    (l'esponenziale che si allunga con \(d\)); il filtro, applicato a un segnale rumoroso, lo leviga in
+    <b style="color:var(--green)">verde</b>. Più \(d\) è vicino a 1, più leviga — e più «insegue lentamente» i
+    cambiamenti.
+  </p>
+
+  <div class="widget" id="w-pole">
+    <div class="w-head">
+      <span>Filtro a polo singolo</span>
+      <span class="hint">d vicino a 1 = più levigatura</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-imp" viewBox="0 0 620 120" role="img" aria-label="La risposta all'impulso esponenziale di un filtro a polo singolo"></svg>
+      <svg id="wp-sig" viewBox="0 0 620 140" role="img" aria-label="Il filtro a polo singolo applicato a un segnale rumoroso"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>decad. d</label><input type="range" id="wp-d" min="0" max="0.97" step="0.01" value="0.8"><output id="wp-dv">0.80</output></div>
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-3"><span class="secnum">SEZIONE 19.3</span>Passa-banda ed elimina-banda stretti</h2>
+
+  <p class="lead">
+    Aggiungendo un secondo coefficiente di retroazione si ottengono filtri <b>risonanti</b>: un passa-banda
+    strettissimo o un elimina-banda (notch) chirurgico, con appena una manciata di coefficienti.
+  </p>
+
+  <p>
+    Il <b class="termine">risonatore</b> (passa-banda a due poli) lascia passare una banda strettissima attorno a
+    una frequenza centrale, bloccando tutto il resto: la sua risposta all'impulso è una sinusoide che si smorza
+    lentamente — «risuona» come una corda pizzicata. Il <b class="termine">notch</b> fa l'opposto: elimina una
+    singola frequenza (per esempio il ronzio di rete a 50 Hz) lasciando intatto tutto il resto. Entrambi si
+    regolano con due manopole: la <b>frequenza centrale</b> e la <b>selettività</b> (il fattore \(Q\), che dice
+    quanto stretta è la banda).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché così efficienti: i poli</div>
+    <p style="margin-bottom:0">
+      Un FIR che facesse un notch altrettanto stretto richiederebbe centinaia di coefficienti. Il notch ricorsivo
+      lo fa con quattro. Il segreto sono i <b>poli</b>: valori speciali della retroazione che creano risonanze
+      acute con pochissimi parametri (li visualizzeremo nel piano \(z\), Cap. 33). <mark>La retroazione concentra
+      un enorme potere in pochi numeri</mark> — ma proprio perché quei numeri contano così tanto, sbagliarli di
+      poco può destabilizzare il filtro. Efficienza e delicatezza vanno insieme.
+    </p>
+  </div>
+
+  <h3>Provalo: risonatore e notch</h3>
+
+  <p>
+    Scegli passa-banda o elimina-banda, e regola la frequenza centrale e la selettività \(Q\). Guarda la risposta
+    in frequenza: un picco stretto (risonatore) o una fenditura acuta (notch). Alza \(Q\) e la banda si
+    <b>stringe</b> — sempre con pochissimi coefficienti.
+  </p>
+
+  <div class="widget" id="w-reso">
+    <div class="w-head">
+      <span>Risonatore / notch a due poli</span>
+      <span class="hint">Q alto = banda strettissima</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wr-svg" viewBox="0 0 620 220" role="img" aria-label="La risposta in frequenza di un risonatore o notch a Q variabile"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wr-bp">passa-banda</button>
+      <button class="w-btn" id="wr-notch">elimina-banda</button>
+      <div class="w-ctrl"><label>centro f<sub>0</sub></label><input type="range" id="wr-f" min="0.05" max="0.45" step="0.01" value="0.2"><output id="wr-fv">0.20</output></div>
+      <div class="w-ctrl"><label>Q</label><input type="range" id="wr-q" min="1" max="30" step="0.5" value="8"><output id="wr-qv">8</output></div>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-4"><span class="secnum">SEZIONE 19.4</span>Filtri di fase e risonatori</h2>
+
+  <p>
+    Gli IIR non servono solo a tagliare frequenze. Una categoria speciale — i <b class="termine">filtri
+    passa-tutto</b> (all-pass) — non altera affatto l'ampiezza di nessuna frequenza, ma ne cambia solo la
+    <b>fase</b>. Sembra inutile, e invece serve moltissimo: per correggere ritardi, per costruire riverberi (il
+    fondamento degli effetti audio, Cap. 22), e per compensare le distorsioni di fase di altri filtri.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il tallone d'Achille: fase non lineare e stabilità</div>
+    <p style="margin-bottom:0">
+      Due limiti da tenere sempre a mente sugli IIR. Primo: <b>non hanno fase lineare</b>. Ritardano frequenze
+      diverse di quantità diverse, deformando la forma d'onda — un problema quando la forma conta (transienti
+      audio, immagini). Secondo: <b>possono diventare instabili</b>. Se la retroazione amplifica invece di
+      smorzare, l'uscita diverge all'infinito (il fischio del microfono). Garantire la stabilità significa tenere
+      i <em>poli</em> dentro il «cerchio unitario» del piano \(z\) — una condizione che diventerà precisa e
+      visiva nel Cap. 33. <mark>Con i FIR nessuno di questi due problemi esiste</mark>: è il prezzo che paghi per
+      l'efficienza dell'IIR.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-5"><span class="secnum">SEZIONE 19.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.1</div>
+    <p style="margin-bottom:0">Cosa distingue un filtro ricorsivo (IIR) da un FIR, nell'equazione che calcola
+      l'uscita?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Il FIR usa solo gli <b>ingressi</b> (presente e passati). L'IIR usa anche le <b>uscite passate</b> (la
+          retroazione, i termini \(b_k\,y[n-k]\)). Questa retroazione dà risposta all'impulso <b>infinita</b> con
+          pochi coefficienti — ma introduce il rischio di instabilità e la fase non lineare.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.2</div>
+    <p style="margin-bottom:0">Nel filtro a polo singolo \(y[n]=(1-d)x[n]+d\,y[n-1]\), cosa succede alzando \(d\)
+      verso 1? E ponendo \(d=0\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con \(d \to 1\) il filtro <b>leviga sempre di più</b> (memoria lunga, risposta all'impulso
+          esponenziale che decade lentamente) e insegue i cambiamenti sempre più pigramente. Con \(d=0\):
+          \(y[n]=x[n]\), il filtro <b>non fa nulla</b> (l'uscita è l'ingresso). \(d\) regola il grado di
+          levigatura.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.3</div>
+    <p style="margin-bottom:0">Devi eliminare un ronzio di rete a 50 Hz da un segnale, con pochissimi calcoli.
+      Quale filtro, e di che famiglia?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Un <b>notch (elimina-banda) ricorsivo</b>: con appena quattro coefficienti elimina la singola
+          frequenza a 50 Hz lasciando intatto il resto (§19.3). Un FIR equivalente richiederebbe centinaia di
+          coefficienti. Se però la fase deve restare lineare, si accetta il costo di un FIR.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.4</div>
+    <p style="margin-bottom:0">Un filtro all-pass non cambia l'ampiezza di nessuna frequenza. A cosa può mai
+      servire?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Cambia la <b>fase</b> (i ritardi relativi tra frequenze) senza toccare l'ampiezza. Serve a: correggere
+          o compensare distorsioni di fase di altri filtri, creare ritardi e riverberi (effetti audio, Cap. 22),
+          e allineare temporalmente i segnali. La fase è informazione, non solo l'ampiezza.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-6"><span class="secnum">SEZIONE 19.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 19</div>
+    <ol style="margin-bottom:0">
+      <li><b>IIR = retroazione:</b> l'uscita usa anche le uscite passate. Pochi coefficienti, risposta
+          all'impulso <b>infinita</b> (che si smorza).</li>
+      <li><b>Polo singolo:</b> \(y[n]=(1-d)x[n]+d\,y[n-1]\), un passa-basso levigante con risposta esponenziale
+          (l'RC digitale). \(d\) regola la levigatura.</li>
+      <li><b>Risonatore e notch:</b> con due poli, un passa-banda strettissimo o un elimina-banda chirurgico;
+          manopole = frequenza centrale e \(Q\). Efficientissimi grazie ai poli.</li>
+      <li><b>All-pass:</b> cambia solo la fase; utile per ritardi, riverberi, correzioni.</li>
+      <li><b>I due limiti:</b> niente fase lineare, e rischio di <b>instabilità</b> (poli dentro il cerchio
+          unitario, Cap. 33). È il prezzo dell'efficienza.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il polo singolo e i risonatori sono i mattoni base degli IIR. Ma per ottenere veri passa-basso e passa-banda
+    con taglio ripido e banda passante controllata servono progetti più sofisticati. Il <strong>Capitolo
+    20</strong> presenta i <b>filtri di Chebyshev</b> (e i loro cugini Butterworth): i cavalli di battaglia degli
+    IIR, capaci di tagli molto netti con pochi coefficienti, al prezzo di una piccola increspatura controllata
+    nella banda passante. La versione «da catalogo» dei filtri ricorsivi.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* risposta all'impulso di un biquad, poi DFT per la magnitudo */
+function biquadImpulse(b0, b1, b2, a1, a2, N) {
+  const h = new Array(N).fill(0);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let n = 0; n < N; n++) {
+    const x = n === 0 ? 1 : 0;
+    const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    h[n] = y; x2 = x1; x1 = x; y2 = y1; y1 = y;
+  }
+  return h;
+}
+function magHalf(h, NF) {
+  const half = NF / 2, mag = [];
+  for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < h.length; n++) { const a = 2 * Math.PI * k * n / NF; re += h[n] * Math.cos(a); im -= h[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); }
+  return mag;
+}
+
+/* ============================================================================
+   WIDGET §19.2 — filtro a polo singolo
+   ========================================================================= */
+(function () {
+  const sImp = document.getElementById('wp-imp'), sSig = document.getElementById('wp-sig');
+  if (!sImp) return;
+  const out = document.getElementById('wp-out');
+  const dS = document.getElementById('wp-d'), dV = document.getElementById('wp-dv');
+  const N = 120;
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(31);
+  const noisy = []; for (let n = 0; n < N; n++) { const base = n < 40 ? 0.3 : n < 80 ? 1.2 : 0.6; noisy.push(base + (rng() - 0.5) * 0.5); }
+
+  function draw() {
+    const d = parseFloat(dS.value);
+    dV.textContent = d.toFixed(2);
+    // risposta all'impulso (1-d) d^n
+    const imp = []; for (let n = 0; n < 40; n++) imp.push((1 - d) * Math.pow(d, n));
+    sImp.innerHTML = '';
+    const pi = new Plot(sImp, { xmin: -1, xmax: 40, ymin: -0.05, ymax: Math.max(0.12, (1 - d) * 1.2) });
+    pi.line(-1, 0, 40, 0, { color: 'var(--ink-faint)', width: 1 });
+    pi.stem(imp, { color: 'var(--accent)', r: 2, width: 1 });
+    pi.text(39, (1 - d) * 1.05, 'impulso (1−d)·dⁿ', { color: 'var(--accent)', anchor: 'end', size: 10.5 });
+
+    // filtro applicato
+    const y = []; let prev = noisy[0];
+    for (let n = 0; n < N; n++) { prev = (1 - d) * noisy[n] + d * prev; y.push(prev); }
+    sSig.innerHTML = '';
+    const ps = new Plot(sSig, { xmin: 0, xmax: N, ymin: -0.2, ymax: 1.7 });
+    ps.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    ps.seq(noisy, { color: 'var(--ink-faint)', width: 1 });
+    ps.seq(y, { color: 'var(--green)', width: 2.4 });
+    ps.text(2, 1.6, 'grigio: rumoroso · verde: filtrato', { color: 'var(--ink-soft)', anchor: 'start', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">d = <b>${d.toFixed(2)}</b> &nbsp;·&nbsp; coefficienti usati: <b>2</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${d < 0.05 ? 'd≈0: il filtro <mark>non leviga</mark>, l\'uscita ≈ ingresso.'
+          : d > 0.9 ? 'd alto: <mark>levigatura fortissima</mark>, ma il filtro insegue i gradini con grande ritardo.'
+            : 'Buona levigatura con appena due coefficienti — un FIR equivalente ne userebbe decine.'}
+        La risposta all'impulso esponenziale è l\'RC digitale (Cap. 13).
+      </div>`;
+  }
+  dS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §19.3 — risonatore / notch
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wr-out');
+  const btns = { bp: document.getElementById('wr-bp'), notch: document.getElementById('wr-notch') };
+  const fS = document.getElementById('wr-f'), qS = document.getElementById('wr-q');
+  const fV = document.getElementById('wr-fv'), qV = document.getElementById('wr-qv');
+  let type = 'bp';
+
+  function draw() {
+    const f0 = parseFloat(fS.value), Q = parseFloat(qS.value);
+    fV.textContent = f0.toFixed(2); qV.textContent = Q;
+    const w0 = 2 * Math.PI * f0, cw = Math.cos(w0), sw = Math.sin(w0);
+    const alpha = sw / (2 * Q);
+    const a0 = 1 + alpha, a1 = -2 * cw, a2 = 1 - alpha;
+    let b0, b1, b2;
+    if (type === 'bp') { b0 = alpha; b1 = 0; b2 = -alpha; }
+    else { b0 = 1; b1 = -2 * cw; b2 = 1; }   // notch
+    const h = biquadImpulse(b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0, 400);
+    const NF = 512, mag = magHalf(h, NF), half = NF / 2;
+    const peak = Math.max(...mag, 1e-6);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 0.5, ymin: 0, ymax: 1.2 });
+    p.grid(0.1, 0.5); p.axes({ numbers: true, names: true, xname: 'frequenza', yname: '|H|', stepX: 0.1, stepY: 0.5 });
+    p.poly(mag.map((m, k) => [0.5 * k / half, m / peak]), { color: 'var(--accent)', width: 2.4, close: false });
+    p.line(f0, 0, f0, 1.2, { color: 'var(--ink-faint)', width: 1, dash: '4 3' });
+
+    out.innerHTML = `
+      <div class="big">${type === 'bp' ? 'passa-banda' : 'elimina-banda'} &nbsp;·&nbsp; f<sub>0</sub>=<b>${f0.toFixed(2)}</b> · Q=<b>${Q}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${type === 'bp' ? 'Un <b>picco</b> stretto attorno a f₀: passa solo quella banda.' : 'Una <b>fenditura</b> acuta a f₀: elimina solo quella frequenza (es. un ronzio).'}
+        Alza <b>Q</b> e la banda si <mark>stringe</mark>. Tutto questo con appena cinque coefficienti — l'efficienza degli IIR.
+      </div>`;
+  }
+  fS.addEventListener('input', draw); qS.addEventListener('input', draw);
+  function setType(t) { type = t; for (const k in btns) btns[k].classList.toggle('on', k === t); draw(); }
+  btns.bp.addEventListener('click', () => setType('bp'));
+  btns.notch.addEventListener('click', () => setType('notch'));
+  draw();
+})();
+</script>
+</body>
+</html>

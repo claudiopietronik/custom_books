@@ -289,7 +289,7 @@ const TOC = [
     n: 19,
     titolo: "Filtri ricorsivi",
     file: "cap19-filtri-ricorsivi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "Come funziona: i coefficienti ricorsivi" },
       { id: "s19-2", n: "19.2", t: "Il filtro a polo singolo" },

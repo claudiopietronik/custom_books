@@ -45,7 +45,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 16 — Filtri windowed-sinc
 - [x] 17 — Filtri su misura
 - [x] 18 — Convoluzione tramite FFT
-- [ ] 19 — Filtri ricorsivi
+- [x] 19 — Filtri ricorsivi
 - [ ] 20 — Filtri di Chebyshev
 - [ ] 21 — Confronto tra filtri
 - [ ] 22 — Elaborazione audio
