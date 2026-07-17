@@ -181,7 +181,7 @@ const TOC = [
     n: 10,
     titolo: "Studio di funzione",
     file: "cap10-studio-funzione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "La mappa completa" },
       { id: "s10-2", n: "10.2", t: "Dominio, simmetrie, segno" },
