@@ -40,7 +40,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 12 — Le onde elettromagnetiche
 
 ### Ottica
-- [ ] 13 — La natura e la propagazione della luce
+- [x] 13 — La natura e la propagazione della luce
 - [ ] 14 — L'ottica geometrica e gli strumenti ottici
 - [ ] 15 — L'interferenza
 - [ ] 16 — La diffrazione

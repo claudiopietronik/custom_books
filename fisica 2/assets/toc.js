@@ -192,7 +192,7 @@ const TOC = [
     n: 13,
     titolo: "La natura e la propagazione della luce",
     file: "cap13-natura-luce.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "La natura della luce" },
       { id: "s13-2", n: "13.2", t: "Riflessione e rifrazione" },
