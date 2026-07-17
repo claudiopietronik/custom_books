@@ -236,7 +236,7 @@ const TOC = [
   },
   {
     n: 20, parte: "III · Probabilità",
-    titolo: "Probabilità condizionata", file: "cap20-condizionata.html", stato: "da-fare",
+    titolo: "Probabilità condizionata", file: "cap20-condizionata.html", stato: "pronto",
     sezioni: [
       { id: "s20-1", n: "20.1", t: "Aggiornare con l'informazione" },
       { id: "s20-2", n: "20.2", t: "La formula e la regola del prodotto" },
