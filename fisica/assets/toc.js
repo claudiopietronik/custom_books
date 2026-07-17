@@ -260,7 +260,7 @@ const TOC = [
     n: 16,
     titolo: "Il suono e l'acustica",
     file: "cap16-suono.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Le onde sonore" },
       { id: "s16-2", n: "16.2", t: "La velocità del suono" },

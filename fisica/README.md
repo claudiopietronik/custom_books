@@ -39,7 +39,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 13 — Le oscillazioni
 - [x] 14 — La meccanica dei fluidi
 - [x] 15 — Le onde meccaniche
-- [ ] 16 — Il suono e l'acustica
+- [x] 16 — Il suono e l'acustica
 - [ ] 17 — Temperatura e calore
 - [ ] 18 — Le proprietà termiche della materia
 - [ ] 19 — La prima legge della termodinamica
