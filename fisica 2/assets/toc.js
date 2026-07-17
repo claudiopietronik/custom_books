@@ -72,7 +72,7 @@ const TOC = [
     n: 5,
     titolo: "Corrente, resistenza e forza elettromotrice",
     file: "cap05-corrente-resistenza.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "La corrente elettrica" },
       { id: "s5-2", n: "5.2", t: "Resistività e resistenza" },
