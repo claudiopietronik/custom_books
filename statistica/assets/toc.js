@@ -482,7 +482,7 @@ const TOC = [
   },
   {
     n: 41, parte: "IV · Statistica inferenziale",
-    titolo: "Somme dei quadrati e F", file: "cap41-ss-f.html", stato: "da-fare",
+    titolo: "Somme dei quadrati e F", file: "cap41-ss-f.html", stato: "pronto",
     sezioni: [
       { id: "s41-1", n: "41.1", t: "Decomporre la variabilità" },
       { id: "s41-2", n: "41.2", t: "SS totale, tra, entro" },

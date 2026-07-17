@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>41 · Somme dei quadrati e F — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="41">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Somme dei quadrati e F</h1>
+    <p class="standfirst">
+      L'ANOVA in dettaglio. La variabilità totale dei dati si scompone <em>esattamente</em> in due pezzi —
+      variabilità <b>tra</b> i gruppi e <b>dentro</b> i gruppi — attraverso le <b>somme dei quadrati</b>. Da lì,
+      dividendo per i gradi di libertà, nascono le due varianze e il loro rapporto: la statistica <b>F</b>.
+      Costruiamo la celebre tavola ANOVA riga per riga.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il macchinario dietro l'intuizione del Cap. 40. Le somme dei quadrati sono la varianza (Cap. 4) non ancora
+      divisa; i gradi di libertà sono quelli del Cap. 27. La stessa scomposizione «spiegato + residuo» riapparirà,
+      identica, nella regressione (Cap. 43) come \(R^2\).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La tavola ANOVA è l'output che leggerai in ogni software statistico. Capire da dove viene ogni numero — SS,
+      df, quadrati medi, F, p — ti permette di interpretarla con sicurezza invece di fidarti ciecamente, e di
+      accorgerti quando qualcosa non torna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-1"><span class="secnum">SEZIONE 41.1</span>Decomporre la variabilità</h2>
+
+  <p class="lead">
+    Il fatto matematico che regge tutto: la variabilità totale dei dati (rispetto alla media generale) si spezza
+    in modo <b>esatto</b> nella somma di due contributi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La scomposizione fondamentale <span class="tag">totale = tra + dentro</span></div>
+    <div class="f-body">
+      \[ \underbrace{\hC{SS_{\text{tot}}}}_{\text{totale}} \;=\; \underbrace{\hA{SS_{\text{tra}}}}_{\text{tra i gruppi}} \;+\; \underbrace{\hB{SS_{\text{dentro}}}}_{\text{dentro i gruppi}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{SS_{\text{tot}}}\)</dt><dd>somma dei quadrati totale: scarto di ogni dato dalla <b>media generale</b>, al quadrato, sommato.</dd>
+        <dt>\(\hA{SS_{\text{tra}}}\)</dt><dd>quanto le <b>medie di gruppo</b> si scostano dalla media generale (il segnale).</dd>
+        <dt>\(\hB{SS_{\text{dentro}}}\)</dt><dd>quanto i dati si scostano dalla <b>media del proprio gruppo</b> (il rumore).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È un'identità <em>esatta</em>, non un'approssimazione: ogni briciola di variabilità totale è o «tra» o
+      «dentro». <mark>La variabilità di un dato dalla media generale = (quanto il suo gruppo è lontano dalla media
+      generale) + (quanto lui è lontano dal suo gruppo).</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-2"><span class="secnum">SEZIONE 41.2</span>SS totale, tra, entro</h2>
+
+  <p class="lead">
+    Le tre somme dei quadrati, esplicite. Sono tutte «scarti al quadrato sommati» — come la varianza (Cap. 4), ma
+    senza dividere.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le tre somme dei quadrati <span class="tag">scarti² sommati</span></div>
+    <div class="f-body">
+      \[ SS_{\text{tra}} = \sum_g n_g (\bar{x}_g - \bar{x})^2, \qquad SS_{\text{dentro}} = \sum_g \sum_i (x_{ig} - \bar{x}_g)^2 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\bar{x}_g\)</dt><dd>la media del gruppo \(g\); \(\bar{x}\) la media generale; \(n_g\) la numerosità del gruppo.</dd>
+        <dt>\(SS_{\text{tra}}\)</dt><dd>somma, sui gruppi, dello scarto della media di gruppo dalla generale, pesato per \(n_g\).</dd>
+        <dt>\(SS_{\text{dentro}}\)</dt><dd>somma, su tutti i dati, dello scarto dal proprio gruppo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      \(SS_{\text{dentro}}\) è, di fatto, la somma delle varianze interne dei gruppi (non normalizzate): il
+      <b>rumore complessivo</b>. \(SS_{\text{tra}}\) misura quanto le medie di gruppo «si allontanano»: il
+      <b>segnale</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-3"><span class="secnum">SEZIONE 41.3</span>Dai quadrati medi alla F</h2>
+
+  <p class="lead">
+    Le somme dei quadrati non sono ancora varianze: vanno divise per i rispettivi <b>gradi di libertà</b>. Il
+    risultato è il <b>quadrato medio</b> (Mean Square), e il loro rapporto è F.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Quadrati medi e statistica F <span class="tag">SS ÷ df, poi il rapporto</span></div>
+    <div class="f-body">
+      \[ MS_{\text{tra}} = \frac{SS_{\text{tra}}}{\hA{k-1}}, \quad MS_{\text{dentro}} = \frac{SS_{\text{dentro}}}{\hB{N-k}}, \quad F = \frac{MS_{\text{tra}}}{MS_{\text{dentro}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{k-1}\)</dt><dd>gradi di libertà «tra»: \(k\) gruppi, meno 1 (Cap. 27).</dd>
+        <dt>\(\hB{N-k}\)</dt><dd>gradi di libertà «dentro»: \(N\) dati totali, meno i \(k\) gruppi (una media stimata per gruppo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il quadrato medio <b>è</b> una varianza (scarti² ÷ df). \(F = MS_{\text{tra}}/MS_{\text{dentro}}\) è dunque il
+      rapporto tra due varianze, proprio come al Cap. 40. <mark>Sotto \(H_0\), entrambi i quadrati medi stimano lo
+      stesso rumore, quindi \(F \approx 1\); se i gruppi differiscono, \(MS_{\text{tra}}\) si gonfia e \(F\)
+      cresce.</mark>
+    </div>
+  </div>
+
+  <h3>Provalo: la scomposizione e la tavola</h3>
+
+  <p>
+    La barra mostra come la variabilità totale si divida tra <b style="color:var(--accent)">tra i gruppi</b> e
+    <b style="color:var(--ink-faint)">dentro i gruppi</b>. Regola la separazione delle medie e osserva la tavola
+    ANOVA completa aggiornarsi: SS, df, MS, F.
+  </p>
+
+  <div class="widget" id="w-ss">
+    <div class="w-head">
+      <span>Scomposizione e tavola ANOVA</span>
+      <span class="hint">SST = SSB + SSW</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wss-svg" viewBox="0 0 620 150" role="img" aria-label="Barra della variabilità totale scomposta in tra e dentro i gruppi"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>separazione delle medie</label><input type="range" id="wss-b" min="0" max="100" step="1" value="45"><output id="wss-bv"></output></div>
+    </div>
+    <div class="w-readout" id="wss-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-4"><span class="secnum">SEZIONE 41.4</span>La tavola ANOVA</h2>
+
+  <p class="lead">
+    Tutto si riassume nella <b>tavola ANOVA</b>, l'output standard. Ogni riga è una sorgente di variabilità.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Sorgente</th><th>SS</th><th>df</th><th>MS</th><th>F</th></tr></thead>
+    <tbody>
+      <tr><td><b>Tra i gruppi</b></td><td>\(SS_{\text{tra}}\)</td><td>\(k-1\)</td><td>\(SS_{\text{tra}}/(k-1)\)</td><td>\(MS_{\text{tra}}/MS_{\text{dentro}}\)</td></tr>
+      <tr><td><b>Dentro i gruppi</b></td><td>\(SS_{\text{dentro}}\)</td><td>\(N-k\)</td><td>\(SS_{\text{dentro}}/(N-k)\)</td><td></td></tr>
+      <tr><td><b>Totale</b></td><td>\(SS_{\text{tot}}\)</td><td>\(N-1\)</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Nota che anche i gradi di libertà si scompongono: \((k-1) + (N-k) = N-1\), proprio come le somme dei quadrati.
+    Il valore \(F\) si confronta con la <b>distribuzione F</b> ai gradi di libertà \((k-1, N-k)\) per ottenere il
+    p-value. Se \(p \le \alpha\), si rifiuta \(H_0\): almeno un gruppo differisce.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-5"><span class="secnum">SEZIONE 41.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 41.1</div>
+    <p style="margin-bottom:0">Hai 4 gruppi (\(k=4\)) con 10 dati ciascuno (\(N=40\)). Quali sono i gradi di
+      libertà «tra», «dentro» e «totale»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Tra:</b> \(k-1 = 3\). <b>Dentro:</b> \(N-k = 40-4 = 36\). <b>Totale:</b>
+          \(N-1 = 39\). Verifica: \(3 + 36 = 39\) — i df si scompongono come le SS (§41.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 41.2</div>
+    <p style="margin-bottom:0">In un'ANOVA \(SS_{\text{tra}} = 120\), \(SS_{\text{dentro}} = 360\), con \(k=3\),
+      \(N=30\). Calcola F.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(MS_{\text{tra}} = 120/(3-1) = 60\). \(MS_{\text{dentro}} = 360/(30-3) = 360/27 \approx 13{,}33\).</p>
+        <p style="margin-bottom:0">\(F = 60/13{,}33 \approx \mathbf{4{,}5}\) (§41.3). Da confrontare con la
+          distribuzione F a df \((2, 27)\): il critico al 5% è ~3,35, quindi \(4{,}5 > 3{,}35\) → <b>significativo</b>.
+          Nota che \(SS_{\text{tot}} = 120 + 360 = 480\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 41.3</div>
+    <p style="margin-bottom:0">Perché si divide per i gradi di libertà invece di usare direttamente le somme dei
+      quadrati per calcolare F?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché le SS «grezze» dipendono da <b>quanti</b> termini sommi: \(SS_{\text{dentro}}\)
+          cresce con \(N\) semplicemente perché ci sono più dati, non perché c'è più rumore per dato. Dividendo per
+          i df si ottiene il <b>quadrato medio</b>, cioè una <b>varianza</b> per grado di libertà (§41.3), che è
+          confrontabile a prescindere dal numero di gruppi e dati. Solo così F confronta due varianze «alla pari».</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s41-6"><span class="secnum">SEZIONE 41.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 41</div>
+    <ol style="margin-bottom:0">
+      <li><b>Scomposizione esatta:</b> \(SS_{\text{tot}} = SS_{\text{tra}} + SS_{\text{dentro}}\) (e i df pure).</li>
+      <li><b>Quadrato medio</b> = SS ÷ df: è una varianza. \(MS_{\text{tra}}\) (df \(k-1\)), \(MS_{\text{dentro}}\)
+        (df \(N-k\)).</li>
+      <li><b>F</b> \(= MS_{\text{tra}}/MS_{\text{dentro}}\): rapporto tra due varianze. \(\approx 1\) sotto \(H_0\),
+        grande se i gruppi differiscono.</li>
+      <li>La <b>tavola ANOVA</b> raccoglie tutto; F si legge sulla distribuzione F a \((k-1, N-k)\) df.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    L'ANOVA ha detto «almeno un gruppo differisce». Ma <em>quali</em>? E cosa succede con <em>due</em> fattori
+    contemporaneamente (dieta <b>e</b> esercizio)? Il <strong>Capitolo 42</strong> chiude il blocco con i test
+    <b>post-hoc</b> e l'ANOVA a <b>due vie</b>, con la sua idea più ricca: l'<b>interazione</b>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §41.3 — scomposizione SST = SSB + SSW e tavola ANOVA
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wss-svg');
+  if (!svg) return;
+  const out = document.getElementById('wss-out');
+  const bS = document.getElementById('wss-b');
+  let seed = 88;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+
+  function draw() {
+    const sep = parseInt(bS.value, 10) / 100;
+    seed = 88;
+    const k = 3, ng = 12, N = k * ng, noise = 8;
+    const centers = [50 - 18 * sep, 50, 50 + 18 * sep];
+    const groups = centers.map(c => { const arr = []; for (let i = 0; i < ng; i++) arr.push(c + noise * g()); return arr; });
+    const all = groups.flat(), grand = all.reduce((a, b) => a + b, 0) / N;
+    let ssB = 0, ssW = 0;
+    groups.forEach(gr => { const m = gr.reduce((a, b) => a + b, 0) / gr.length; ssB += gr.length * (m - grand) ** 2; gr.forEach(v => ssW += (v - m) ** 2); });
+    const ssT = ssB + ssW;
+    const dfB = k - 1, dfW = N - k;
+    const msB = ssB / dfB, msW = ssW / dfW, F = msB / msW;
+    const sig = F > 3.28;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 3 });
+    // barra scomposizione (proporzioni di SST)
+    const fracB = ssB / ssT * 100;
+    p.rect(0, 1.4, fracB, 2.4, { fill: 'color-mix(in srgb, var(--accent) 55%, transparent)', color: 'var(--accent)', width: 1 });
+    p.rect(fracB, 1.4, 100, 2.4, { fill: 'color-mix(in srgb, var(--ink-faint) 30%, transparent)', color: 'var(--ink-faint)', width: 1 });
+    p.text(fracB / 2, 1.9, 'SS tra', { color: 'var(--accent)', size: 11 });
+    p.text(fracB + (100 - fracB) / 2, 1.9, 'SS dentro', { color: 'var(--ink-soft)', size: 11 });
+    p.text(50, 2.7, 'SS totale (100%)', { color: 'var(--ink-faint)', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">F = ${msB.toFixed(0)} / ${msW.toFixed(1)} = <b style="color:${sig ? 'var(--warm)' : 'var(--ink)'}">${F.toFixed(2)}</b> ${sig ? '(significativo)' : ''}</div>
+      <div style="margin-top:.4rem; overflow-x:auto">
+        <table class="tbl" style="font-size:.82rem; margin:0">
+          <thead><tr><th>Sorgente</th><th>SS</th><th>df</th><th>MS</th><th>F</th></tr></thead>
+          <tbody>
+            <tr><td>Tra</td><td>${ssB.toFixed(0)}</td><td>${dfB}</td><td>${msB.toFixed(1)}</td><td>${F.toFixed(2)}</td></tr>
+            <tr><td>Dentro</td><td>${ssW.toFixed(0)}</td><td>${dfW}</td><td>${msW.toFixed(1)}</td><td></td></tr>
+            <tr><td>Totale</td><td>${ssT.toFixed(0)}</td><td>${N - 1}</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.9rem; text-align:left">
+        Più separi le medie, più la quota <mark>SS tra</mark> cresce a spese di SS dentro, e F sale. La somma
+        SS tra + SS dentro resta sempre = SS totale.
+      </div>`;
+  }
+  bS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
