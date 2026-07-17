@@ -242,7 +242,7 @@ const TOC = [
     n: 15,
     titolo: "Le onde meccaniche",
     file: "cap15-onde.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Cos'è un'onda" },
       { id: "s15-2", n: "15.2", t: "Onde trasversali e longitudinali" },
