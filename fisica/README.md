@@ -36,7 +36,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 10 — Dinamica rotazionale
 - [x] 11 — Equilibrio ed elasticità
 - [x] 12 — Gravitazione
-- [ ] 13 — Le oscillazioni
+- [x] 13 — Le oscillazioni
 - [ ] 14 — La meccanica dei fluidi
 - [ ] 15 — Le onde meccaniche
 - [ ] 16 — Il suono e l'acustica
