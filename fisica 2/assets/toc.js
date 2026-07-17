@@ -251,7 +251,7 @@ const TOC = [
     n: 17,
     titolo: "La relatività ristretta",
     file: "cap17-relativita.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "I postulati di Einstein" },
       { id: "s17-2", n: "17.2", t: "La relatività della simultaneità" },
