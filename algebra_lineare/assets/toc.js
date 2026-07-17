@@ -317,7 +317,7 @@ const TOC = [
     n: 18,
     titolo: "Matrici di covarianza",
     file: "cap18-covarianza.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Correlazione" },
       { id: "s18-2", n: "18.2", t: "Varianza e deviazione standard" },

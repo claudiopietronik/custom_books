@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Matrici di covarianza — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 18</div>
+    <h1>Matrici di covarianza</h1>
+    <p class="standfirst">
+      Hai un dataset: tante variabili, tante misure. Domanda: quali variabili si <em>muovono insieme</em>?
+      La risposta è una matrice — la <b>matrice di covarianza</b> — e la sorpresa è che è fatta esattamente
+      come \(\mm{X}\T\mm{X}\). Il che significa che è <mark>simmetrica e semidefinita positiva</mark>: tutto
+      il Capitolo 17 le si applica. La varianza è una lunghezza al quadrato, la correlazione è un coseno, e i
+      suoi autovettori sono le direzioni in cui i dati si allargano. È l'ultimo pezzo prima della PCA.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Partiamo dall'intuizione — cosa vuol dire che due variabili sono <b>correlate</b> (§18.1) — e la
+      traduciamo in algebra. La <b>varianza</b> si rivela una norma al quadrato (§18.2); la <b>covarianza</b>,
+      un prodotto scalare (§18.3); il <b>coefficiente di correlazione</b>, il coseno dell'angolo del §3.3
+      (§18.4). Poi impacchettiamo tutto nella <b>matrice di covarianza</b> \(\mm{C} = \frac{1}{n-1}\mm{X}\T\mm{X}\)
+      (§18.5) — una \(\mm{A}\T\mm{A}\), quindi simmetrica e PSD (§17.6) — e chiudiamo col legame tra covarianza
+      e correlazione (§18.6). Ogni riga di questo capitolo è algebra lineare travestita da statistica.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la forma di una nuvola di dati</div>
+    <p>
+      La matrice di covarianza è il <b>ritratto</b> di un dataset: dice quanto ogni variabile oscilla
+      (diagonale) e quanto le variabili si trascinano a vicenda (fuori diagonale). <mark>È tutto ciò che serve
+      sapere sulla «forma» di una nuvola di punti gaussiana.</mark> Da lì nascono la PCA (Cap. 19), la
+      regressione multivariata, i filtri di Kalman, l'analisi del rischio finanziario, la distanza di
+      Mahalanobis.
+    </p>
+    <p style="margin-bottom:0">
+      Ma il motivo per cui la incontriamo <em>qui</em>, alla fine di un libro di algebra lineare, è che è
+      l'esempio perfetto di tutto ciò che abbiamo costruito: prodotto scalare (Cap. 3), \(\mm{A}\T\mm{A}\)
+      (Cap. 7), simmetria e autovettori ortogonali (Cap. 15), forma quadratica e definitezza (Cap. 17). Si
+      incastrano tutti in un solo oggetto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">Sezione 18.1</span>Correlazione</h2>
+
+  <p class="lead">
+    Due variabili sono <b>correlate</b> quando conoscere una ti dice qualcosa sull'altra. Altezza e peso:
+    chi è più alto tende a pesare di più (correlazione positiva). Ore di studio e numero di errori:
+    più studi, meno sbagli (correlazione negativa). Il lancio di due dadi: niente (nessuna correlazione).
+  </p>
+
+  <p>
+    Il modo di vederla è il <b>diagramma a dispersione</b> (scatter): un punto per misura, le due variabili
+    sugli assi. Se la nuvola di punti si allunga lungo una diagonale in salita, c'è correlazione positiva;
+    in discesa, negativa; se è una palla informe, nessuna. Tutto questo capitolo è un modo di trasformare
+    quell'impressione visiva in <em>un numero</em>, poi in <em>una matrice</em>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Correlazione non è causazione (ma è utile lo stesso)</div>
+    <p style="margin-bottom:0">
+      Che due variabili si muovano insieme <em>non</em> significa che una causi l'altra: gelati venduti e
+      annegamenti crescono insieme, ma è l'estate a causare entrambi. La correlazione misura solo l'andare
+      <em>insieme</em>, non il <em>perché</em>. Detto questo, è una delle misure più utili della statistica —
+      e, come stai per vedere, è pura geometria: <mark>il coseno di un angolo</mark> (§18.4).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">Sezione 18.2</span>Varianza e deviazione standard</h2>
+
+  <p class="lead">
+    Prima di misurare come due variabili variano <em>insieme</em>, serve misurare quanto <em>una sola</em>
+    variabile varia. È la <b>varianza</b> — e sotto il suo travestimento statistico c'è un vecchio amico: la
+    norma al quadrato.
+  </p>
+
+  <p>
+    Il primo gesto è <b>centrare</b> i dati: togliere la media \(\bar{x}\), così la variabile oscilla attorno
+    allo zero. Il vettore centrato \(\vv{a} = \vv{x} - \bar{x}\vv{1}\) contiene gli <em>scarti dalla media</em>.
+    La varianza è la media dei loro quadrati:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La varianza è una norma al quadrato <span class="tag">scarti dalla media, al quadrato</span></div>
+    <div class="f-body">
+      \[
+        \operatorname{Var}(x) = \frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar{x})^2
+        = \frac{1}{n-1}\,\vv{a}\T\vv{a}
+        = \frac{\norm{\vv{a}}^2}{n-1}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{a} = \vv{x} - \bar{x}\vv{1}\)</dt>
+        <dd>il vettore <b>centrato</b>: a ogni misura si sottrae la media \(\bar{x}\). \(\vv{1}\) è il vettore
+            di tutti uni (§6.5). Ora \(\vv{a}\) ha media zero.</dd>
+        <dt>\(\vv{a}\T\vv{a} = \norm{\vv{a}}^2\)</dt>
+        <dd>è il prodotto scalare di \(\vv{a}\) con sé stesso (§3.1): la <b>lunghezza al quadrato</b> del
+            vettore degli scarti. <mark>La varianza è la norma² dei dati centrati</mark>, riscalata. Grande
+            dispersione = vettore lungo.</dd>
+        <dt>\(n-1\) invece di \(n\)</dt>
+        <dd>dividiamo per \(n-1\) (non \(n\)): è la correzione di Bessel, che rende la stima corretta quando la
+            media è stimata dai dati stessi. Dettaglio statistico; per l'algebra è solo una costante davanti.</dd>
+        <dt>deviazione standard</dt>
+        <dd>\(\sigma_x = \sqrt{\operatorname{Var}(x)} = \dfrac{\norm{\vv{a}}}{\sqrt{n-1}}\): la
+            <b>lunghezza</b> (non al quadrato) del vettore centrato. È la dispersione nelle stesse unità dei
+            dati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio, con \(\vv{x} = (1, 2, 3, 4)\): media \(\bar{x} = 2.5\), scarti \(\vv{a} = (-1.5, -0.5, 0.5, 1.5)\).
+      \(\norm{\vv{a}}^2 = 2.25 + 0.25 + 0.25 + 2.25 = 5\), quindi \(\operatorname{Var}(x) = 5/3 \approx 1.67\)
+      e \(\sigma_x = \sqrt{5/3} \approx 1.29\).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">Sezione 18.3</span>Covarianza</h2>
+
+  <p class="lead">
+    Ora due variabili. La <b>covarianza</b> misura se i loro scarti dalla media hanno lo <em>stesso</em> segno
+    (crescono insieme) o segni opposti. E indovina cos'è, in algebra: il prodotto scalare dei due vettori
+    centrati.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La covarianza è un prodotto scalare <span class="tag">scarti di x per scarti di y</span></div>
+    <div class="f-body">
+      \[
+        \operatorname{Cov}(x, y) = \frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})
+        = \frac{\vv{a}\T\vv{b}}{n-1}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\((x_i - \bar{x})(y_i - \bar{y})\)</dt>
+        <dd>il prodotto degli scarti. Se in una misura <em>entrambe</em> le variabili stanno sopra la loro
+            media (o entrambe sotto), il prodotto è <b>positivo</b>; se una è sopra e l'altra sotto, è
+            <b>negativo</b>. Sommando, vince il comportamento prevalente.</dd>
+        <dt>\(\vv{a}\T\vv{b}\)</dt>
+        <dd>il <b>prodotto scalare</b> dei due vettori centrati (§3.1). <mark>Covarianza positiva = i vettori
+            puntano «nello stesso verso»; negativa = versi opposti; zero = perpendicolari.</mark> La geometria
+            del §3.3 è già tutta qui.</dd>
+        <dt>\(\operatorname{Cov}(x, x) = \operatorname{Var}(x)\)</dt>
+        <dd>la covarianza di una variabile con sé stessa è la sua varianza (\(\vv{a}\T\vv{a}\)): la varianza è
+            un caso particolare della covarianza. Servirà nel §18.5.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio, aggiungendo \(\vv{y} = (1, 3, 2, 4)\) a \(\vv{x} = (1,2,3,4)\): \(\bar{y} = 2.5\), scarti
+      \(\vv{b} = (-1.5, 0.5, -0.5, 1.5)\). Allora \(\vv{a}\T\vv{b} = (2.25) + (-0.25) + (-0.25) + (2.25) = 4\),
+      e \(\operatorname{Cov}(x, y) = 4/3 \approx 1.33\). Positiva: \(x\) e \(y\) tendono a crescere insieme.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">Sezione 18.4</span>Coefficiente di correlazione</h2>
+
+  <p class="lead">
+    La covarianza ha un difetto: dipende dalle <em>unità</em>. Misura le altezze in metri o in centimetri e la
+    covarianza cambia di cento volte, pur descrivendo la stessa relazione. La cura è normalizzare — e ne esce
+    il numero più elegante della statistica.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La correlazione è un coseno <span class="tag">la covarianza, normalizzata</span></div>
+    <div class="f-body">
+      \[
+        r_{xy} = \frac{\operatorname{Cov}(x, y)}{\sigma_x\,\sigma_y}
+        = \frac{\vv{a}\T\vv{b}}{\norm{\vv{a}}\,\norm{\vv{b}}}
+        = \cos\theta
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>divisione per \(\sigma_x\sigma_y\)</dt>
+        <dd>normalizza per la dispersione di ciascuna variabile. Le costanti \(n-1\) si semplificano, e resta
+            <em>esattamente</em> \(\dfrac{\vv{a}\T\vv{b}}{\norm{\vv{a}}\norm{\vv{b}}}\): la formula del coseno
+            dell'angolo tra due vettori (§3.3)!</dd>
+        <dt>\(r = \cos\theta\)</dt>
+        <dd>il <span class="termine">coefficiente di correlazione</span> è il <b>coseno dell'angolo</b> tra i
+            due vettori centrati. Per Cauchy-Schwarz (§3.3) sta sempre tra \(-1\) e \(1\).</dd>
+        <dt>i tre casi</dt>
+        <dd>\(r = +1\): vettori centrati <b>paralleli</b> (\(\theta = 0\)), i punti stanno su una retta in
+            salita. \(r = -1\): <b>antiparalleli</b>, retta in discesa. \(r = 0\): <b>perpendicolari</b>,
+            nessuna relazione lineare. <mark>La correlazione misura l'allineamento, come un coseno.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Sull'esempio: \(r_{xy} = \dfrac{\operatorname{Cov}(x,y)}{\sigma_x\sigma_y} = \dfrac{4/3}{\sqrt{5/3}\sqrt{5/3}}
+      = \dfrac{4/3}{5/3} = \dfrac{4}{5} = 0.8\). Forte correlazione positiva — e nota che
+      \(\sigma_x = \sigma_y\) qui, così il conto è pulito. Trascina i punti nel widget del §18.5 e guarda
+      \(r\) muoversi tra \(-1\) e \(1\).
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> r misura solo la relazione <em>lineare</em></div>
+    <p style="margin-bottom:0">
+      \(r = 0\) non vuol dire «nessuna relazione»: vuol dire «nessuna relazione <b>lineare</b>». I punti su una
+      parabola \(y = x^2\) simmetrica hanno \(r = 0\), eppure \(y\) è completamente determinata da \(x\)! Il
+      coseno vede solo l'allineamento su una retta. È lo stesso limite dei minimi quadrati (Cap. 14): l'algebra
+      lineare è potente <em>perché</em> è lineare, e cieca per lo stesso motivo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">Sezione 18.5</span>Matrici di covarianza</h2>
+
+  <p class="lead">
+    Con più di due variabili, le covarianze a coppie sono tante. Le sistemiamo in una <b>matrice</b>: e quella
+    matrice, guarda caso, è una \(\mm{X}\T\mm{X}\) — con tutte le meraviglie che ne conseguono.
+  </p>
+
+  <p>
+    Metti i dati in una matrice \(\mm{X}\): una <b>riga per misura</b>, una <b>colonna per variabile</b>
+    (\(n\) righe, \(d\) variabili). Centra ogni colonna (togli la sua media). Allora la matrice di covarianza è:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La matrice di covarianza <span class="tag">è una AᵀA — simmetrica e PSD</span></div>
+    <div class="f-body">
+      \[
+        \mm{C} = \frac{1}{n-1}\,\mm{X}\T\mm{X}
+        \qquad\text{con}\qquad
+        \mm{C}_{ij} = \operatorname{Cov}(\text{var}_i, \text{var}_j)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{X}\T\mm{X}\)</dt>
+        <dd>l'elemento \((i, j)\) è il prodotto scalare della colonna \(i\) con la colonna \(j\) (§6.9) — cioè,
+            per le colonne centrate, \((n-1)\) volte la covarianza tra la variabile \(i\) e la \(j\) (§18.3).
+            Dividendo per \(n-1\), \(\mm{C}\) raccoglie <b>tutte</b> le covarianze a coppie.</dd>
+        <dt>la <b>diagonale</b> di \(\mm{C}\)</dt>
+        <dd>\(\mm{C}_{ii} = \operatorname{Cov}(\text{var}_i, \text{var}_i) = \operatorname{Var}(\text{var}_i)\):
+            sulla diagonale ci sono le <b>varianze</b> (§18.3). Fuori diagonale, le covarianze.</dd>
+        <dt>simmetrica e PSD</dt>
+        <dd>\(\mm{C}\) è <b>simmetrica</b> (\(\operatorname{Cov}(x,y) = \operatorname{Cov}(y,x)\), ed è una
+            \(\mm{X}\T\mm{X}\), §6.6) e <b>semidefinita positiva</b> (§17.6): <mark>tutto il Capitolo 17 vale
+            per lei.</mark> Autovalori reali \(\ge 0\), autovettori ortogonali, una forma quadratica «a
+            scodella».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      E la sua forma quadratica ha un significato bellissimo: \(\vv{w}\T\mm{C}\vv{w}\) è la <b>varianza dei dati
+      proiettati sulla direzione \(\vv{w}\)</b>. Massimizzarla (quoziente di Rayleigh, §17.4) trova la
+      direzione di massima dispersione — l'autovettore dell'autovalore più grande. Hai appena visto, in
+      trasparenza, l'intera PCA (Cap. 19).
+    </div>
+  </div>
+
+  <p>
+    Sull'esempio, con le due variabili \(\vv{x} = (1,2,3,4)\) e \(\vv{y} = (1,3,2,4)\) come colonne:
+    \[
+      \mm{C} = \begin{bmatrix} \operatorname{Var}(x) &amp; \operatorname{Cov}(x,y) \\ \operatorname{Cov}(x,y) &amp; \operatorname{Var}(y) \end{bmatrix}
+      = \begin{bmatrix} 5/3 &amp; 4/3 \\ 4/3 &amp; 5/3 \end{bmatrix}.
+    \]
+    I suoi autovalori sono \(\lambda_1 = \tfrac{5}{3} + \tfrac{4}{3} = 3\) e \(\lambda_2 = \tfrac{5}{3} - \tfrac{4}{3} = \tfrac13\),
+    con autovettori \((1,1)\) e \((1,-1)\) (§15.3). L'autovettore dominante \((1,1)\) è la direzione lungo cui
+    la nuvola si allunga di più: la diagonale in salita, come ci aspettavamo da \(r = 0.8\). Entrambi
+    \(\lambda &gt; 0\): definita positiva ✔ (§17.7).
+  </p>
+
+  <div class="widget" id="w-cov">
+    <div class="w-head">
+      <span>La nuvola, la covarianza e i suoi assi</span>
+      <span class="hint">trascina i punti · prova i preset</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-svg" viewBox="0 0 560 400" role="img" aria-label="Scatter di punti con l'ellisse di covarianza e i suoi autovettori come assi principali"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="wc-pos">correlazione +</button>
+      <button class="w-btn" id="wc-neg">correlazione −</button>
+      <button class="w-btn" id="wc-nul">nessuna</button>
+    </div>
+    <div class="w-readout" id="wc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-6"><span class="secnum">Sezione 18.6</span>Da correlazione a covarianza</h2>
+
+  <p class="lead">
+    Covarianza e correlazione sono la stessa informazione in due «unità» diverse: una grezza, una
+    normalizzata. Il passaggio dall'una all'altra è una moltiplicazione per matrici diagonali — l'ultimo
+    incastro pulito del capitolo.
+  </p>
+
+  <p>
+    La <b>matrice di correlazione</b> \(\mm{R}\) ha \(1\) sulla diagonale (ogni variabile è correlata
+    perfettamente con sé stessa) e i coefficienti \(r_{ij} = \cos\theta_{ij}\) fuori. È la matrice di
+    covarianza delle variabili <em>standardizzate</em> (ciascuna divisa per la sua deviazione standard). Il
+    legame:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Covarianza = deviazioni × correlazione × deviazioni <span class="tag">D scala, R normalizza</span></div>
+    <div class="f-body">
+      \[
+        \mm{C} = \mm{D}\,\mm{R}\,\mm{D}, \qquad \mm{R} = \mm{D}\inv\mm{C}\,\mm{D}\inv,
+        \qquad \mm{D} = \diag(\sigma_1, \dots, \sigma_d)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{D} = \diag(\sigma_i)\)</dt>
+        <dd>la matrice diagonale delle deviazioni standard (§18.2). Moltiplicare per una diagonale scala righe
+            e colonne (§6.3): \(\mm{D}\) rimette le unità, \(\mm{D}\inv\) le toglie.</dd>
+        <dt>\(\mm{C} = \mm{D}\mm{R}\mm{D}\)</dt>
+        <dd>l'elemento \((i,j)\): \(\sigma_i\, r_{ij}\, \sigma_j = \operatorname{Cov}\) — proprio la definizione
+            del §18.4 rovesciata (\(\operatorname{Cov} = r\,\sigma_x\sigma_y\)). La diagonale \(\mm{D}\) porta
+            l'informazione «di scala», \(\mm{R}\) quella «di forma».</dd>
+        <dt>quale usare?</dt>
+        <dd><b>correlazione</b> \(\mm{R}\) quando le variabili hanno unità diverse (altezze e pesi) e vuoi
+            confrontarle equamente; <b>covarianza</b> \(\mm{C}\) quando le scale <em>contano</em> davvero. È la
+            stessa scelta che tornerà nel §19.4: fare la PCA sulla covarianza o sulla correlazione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel nostro esempio \(\sigma_x = \sigma_y = \sqrt{5/3}\), quindi \(\mm{D} = \sqrt{5/3}\,\mm{I}\) e
+      \(\mm{R} = \mm{D}\inv\mm{C}\mm{D}\inv = \dfrac{3}{5}\begin{bmatrix} 5/3 &amp; 4/3 \\ 4/3 &amp; 5/3 \end{bmatrix}
+      = \begin{bmatrix} 1 &amp; 0.8 \\ 0.8 &amp; 1 \end{bmatrix}\). Fuori diagonale ritrovi \(r = 0.8\) ✔.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li><b>Centra i dati</b> (togli la media): il vettore degli scarti \(\vv{a} = \vv{x} - \bar{x}\vv{1}\) è
+          il protagonista. <b>Varianza</b> = norma² dei dati centrati, \(\operatorname{Var}(x) =
+          \norm{\vv{a}}^2/(n-1)\) (§18.2).</li>
+      <li><b>Covarianza</b> = prodotto scalare dei vettori centrati, \(\operatorname{Cov}(x,y) =
+          \vv{a}\T\vv{b}/(n-1)\) (§18.3). <b>Correlazione</b> = coseno dell'angolo,
+          <mark>\(r = \cos\theta \in [-1, 1]\)</mark> (§18.4). Misura solo la relazione lineare.</li>
+      <li><b>La matrice di covarianza</b> \(\mm{C} = \frac{1}{n-1}\mm{X}\T\mm{X}\): varianze sulla diagonale,
+          covarianze fuori (§18.5). È una \(\mm{A}\T\mm{A}\), quindi <mark>simmetrica e semidefinita
+          positiva</mark> — tutto il Cap. 17 vale.</li>
+      <li><b>La forma quadratica \(\vv{w}\T\mm{C}\vv{w}\) è la varianza lungo \(\vv{w}\)</b>: massimizzarla
+          (Rayleigh, §17.4) dà l'autovettore dominante = direzione di massima dispersione. È la PCA in
+          anteprima.</li>
+      <li><b>Covarianza e correlazione</b> sono la stessa cosa in unità diverse: \(\mm{C} = \mm{D}\mm{R}\mm{D}\)
+          con \(\mm{D}\) = deviazioni standard (§18.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai il ritratto di una nuvola di dati: la matrice di covarianza, simmetrica e a scodella, coi suoi
+    autovettori che puntano lungo le direzioni di massima dispersione. Manca solo un'ultima domanda, ed è la
+    più pratica di tutte: <em>e se tenessi solo quelle direzioni?</em> Se un dataset con cento variabili in
+    realtà «vive» lungo due o tre direzioni principali, posso buttare via il resto senza perdere quasi nulla —
+    esattamente come la SVD buttava gli strati piccoli (§16.8). Diagonalizzare la matrice di covarianza e
+    tenere gli autovettori dominanti <em>è</em> l'<b>analisi delle componenti principali</b>, il
+    <b>Capitolo 19</b>: il gran finale, dove tutto il libro converge in un solo algoritmo.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise.
+   ========================================================================= */
+const nfmt = (v, d = 2) => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(d);
+};
+const norm = a => Math.hypot(...a);
+
+/* autodecomposizione simmetrica 2×2 [[a,b],[b,d]] → [{lam,v}, {lam,v}], lam1 ≥ lam2 */
+function eig2sym(A) {
+  const a = A[0][0], b = A[0][1], d = A[1][1];
+  if (Math.abs(b) < 1e-12) {
+    return a >= d ? [{ lam: a, v: [1, 0] }, { lam: d, v: [0, 1] }]
+                  : [{ lam: d, v: [0, 1] }, { lam: a, v: [1, 0] }];
+  }
+  const m = (a + d) / 2, disc = Math.hypot((a - d) / 2, b);
+  const l1 = m + disc, l2 = m - disc;
+  const vec = l => { const v = [l - d, b]; const n = norm(v) || 1; return [v[0] / n, v[1] / n]; };
+  return [{ lam: l1, v: vec(l1) }, { lam: l2, v: vec(l2) }];
+}
+
+/* media, covarianza 2×2, varianze, correlazione di una nuvola di punti [[x,y],...] */
+function stats(P) {
+  const n = P.length;
+  const mx = P.reduce((s, p) => s + p[0], 0) / n;
+  const my = P.reduce((s, p) => s + p[1], 0) / n;
+  let sxx = 0, syy = 0, sxy = 0;
+  for (const [x, y] of P) { const dx = x - mx, dy = y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+  const den = Math.max(1, n - 1);
+  const vx = sxx / den, vy = syy / den, cov = sxy / den;
+  const r = (vx > 1e-9 && vy > 1e-9) ? cov / Math.sqrt(vx * vy) : 0;
+  return { mean: [mx, my], C: [[vx, cov], [cov, vy]], vx, vy, cov, r };
+}
+
+
+/* ============================================================================
+   WIDGET §18.5 — scatter + ellisse di covarianza + autovettori
+   Trascina i punti; la matrice di covarianza, i suoi autovalori/autovettori e
+   l'ellisse (assi = √λ lungo gli autovettori) si aggiornano dal vivo.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wc-out');
+  const p = new Plot(svg, { xmin: -0.5, xmax: 5.5, ymin: -0.5, ymax: 5.5 });
+
+  const PRESETS = {
+    pos: [[1, 1], [2, 3], [3, 2], [4, 4]],
+    neg: [[1, 4], [2, 2], [3, 3], [4, 1]],
+    nul: [[1, 2.5], [2.5, 4], [3.5, 1], [4.5, 2.8]]
+  };
+  let P = PRESETS.pos.map(q => q.slice());
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const { mean, C, vx, vy, cov, r } = stats(P);
+    const eig = eig2sym(C);
+    const [{ lam: l1, v: v1 }, { lam: l2, v: v2 }] = eig;
+    const k = 2;                                   // ellisse a ~2 deviazioni standard
+
+    // ellisse di covarianza: centro = media, semiassi = k√λ lungo gli autovettori
+    if (l1 > 1e-6) {
+      const a1 = k * Math.sqrt(Math.max(l1, 0)), a2 = k * Math.sqrt(Math.max(l2, 0));
+      const ell = [];
+      for (let t = 0; t <= 6.2832; t += 0.1) {
+        const s = a1 * Math.cos(t), u = a2 * Math.sin(t);
+        ell.push([mean[0] + s * v1[0] + u * v2[0], mean[1] + s * v1[1] + u * v2[1]]);
+      }
+      p.poly(ell, { color: 'var(--accent)', width: 2, close: true,
+        fill: 'color-mix(in srgb, var(--accent) 10%, transparent)' });
+      // assi principali (autovettori scalati)
+      p.arrow(mean[0], mean[1], mean[0] + a1 * v1[0], mean[1] + a1 * v1[1], { color: 'var(--violet)', width: 2.6 });
+      p.arrow(mean[0], mean[1], mean[0] + a2 * v2[0], mean[1] + a2 * v2[1], { color: 'var(--warm)', width: 2.6 });
+    }
+    // media
+    p.dot(mean[0], mean[1], { color: 'var(--ink-soft)', r: 3.5 });
+    // punti trascinabili
+    P.forEach((q, i) => p.handle(q[0], q[1], { color: 'var(--accent)', r: 6 }, (x, y) => { P[i] = [x, y]; draw(); }));
+
+    out.innerHTML = `
+      <div class="big">
+        Var(x)=<b>${nfmt(vx)}</b> · Var(y)=<b>${nfmt(vy)}</b> · Cov=<b>${nfmt(cov)}</b>
+        &nbsp;→&nbsp; r = <b style="color:var(--accent)">${nfmt(r)}</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'<b style="color:var(--accent)">ellisse</b> è il ritratto della covarianza; i suoi assi sono gli
+        <b>autovettori</b> (<span style="color:var(--violet)">λ₁=${nfmt(l1)}</span>,
+        <span style="color:var(--warm)">λ₂=${nfmt(l2)}</span>). L'asse <span style="color:var(--violet)">viola</span>
+        è la direzione di <b>massima dispersione</b> — la prima componente principale (Cap. 19).
+        ${Math.abs(r) > 0.9 ? ' Con |r|→1 l\'ellisse si assottiglia: i dati sono quasi su una retta.'
+          : Math.abs(r) < 0.15 ? ' Con r≈0 l\'ellisse è quasi tonda: nessuna direzione privilegiata.' : ''}
+      </div>`;
+  }
+
+  document.getElementById('wc-pos').onclick = () => { P = PRESETS.pos.map(q => q.slice()); draw(); };
+  document.getElementById('wc-neg').onclick = () => { P = PRESETS.neg.map(q => q.slice()); draw(); };
+  document.getElementById('wc-nul').onclick = () => { P = PRESETS.nul.map(q => q.slice()); draw(); };
+  draw();
+})();
+</script>
+</body>
+</html>
