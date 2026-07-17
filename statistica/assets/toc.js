@@ -460,7 +460,7 @@ const TOC = [
   },
   {
     n: 39, parte: "IV · Statistica inferenziale",
-    titolo: "Similarità del coseno", file: "cap39-cosine.html", stato: "da-fare",
+    titolo: "Similarità del coseno", file: "cap39-cosine.html", stato: "pronto",
     sezioni: [
       { id: "s39-1", n: "39.1", t: "Dati come vettori" },
       { id: "s39-2", n: "39.2", t: "L'angolo tra due vettori" },

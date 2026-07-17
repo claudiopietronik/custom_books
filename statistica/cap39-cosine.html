@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>39 · Similarità del coseno — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="39">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Similarità del coseno</h1>
+    <p class="standfirst">
+      Un altro modo di misurare quanto due sequenze di numeri «vanno d'accordo»: guardarle come <b>vettori</b> e
+      misurarne l'<b>angolo</b>. La <b>similarità del coseno</b> è il coseno di quell'angolo — vale 1 se puntano
+      nella stessa direzione, 0 se sono perpendicolari. È ovunque nel machine learning e, sorpresa, è quasi
+      identica alla correlazione di Pearson.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude il blocco «relazioni». È il ponte tra la statistica e l'algebra lineare: la stessa idea di prodotto
+      scalare, vista come misura di somiglianza. Il legame con Pearson (Cap. 36) è sorprendente e istruttivo.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Motori di ricerca, sistemi di raccomandazione, NLP, embedding: la similarità del coseno è <em>il</em> modo
+      standard per misurare quanto due documenti, due utenti o due parole sono simili quando sono rappresentati da
+      vettori di numeri. È una delle formule più usate nell'IA moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s39-1"><span class="secnum">SEZIONE 39.1</span>Dati come vettori</h2>
+
+  <p class="lead">
+    Una lista di numeri è un <b>vettore</b>: un punto (o una freccia dall'origine) in uno spazio con tante
+    dimensioni quanti sono i numeri. Due liste diventano due frecce, e la loro somiglianza è una questione di
+    <em>direzione</em>.
+  </p>
+
+  <p>
+    Le valutazioni di un utente su 5 film sono un vettore in 5 dimensioni; le frequenze delle parole in un
+    documento sono un vettore con una dimensione per parola. Due utenti con gusti simili puntano nella stessa
+    direzione; due documenti sullo stesso tema pure. La <b>lunghezza</b> del vettore (quanto sono grandi i numeri)
+    spesso non interessa — conta la <b>direzione</b>, cioè il <em>pattern</em>. Ed è proprio ciò che il coseno
+    cattura, ignorando la lunghezza.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s39-2"><span class="secnum">SEZIONE 39.2</span>L'angolo tra due vettori</h2>
+
+  <div class="formula">
+    <div class="f-head">Similarità del coseno <span class="tag">coseno dell'angolo tra i vettori</span></div>
+    <div class="f-body">
+      \[ \cos\theta \;=\; \frac{\hA{\vv{a}\cdot\vv{b}}}{\hB{\norm{\vv{a}}\,\norm{\vv{b}}}} \;=\; \frac{\sum_i a_i b_i}{\sqrt{\sum_i a_i^2}\,\sqrt{\sum_i b_i^2}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\vv{a}\cdot\vv{b}}\)</dt><dd>il <b>prodotto scalare</b>: somma dei prodotti componente per componente (\(\sum a_i b_i\)).</dd>
+        <dt>\(\hB{\norm{\vv{a}}\,\norm{\vv{b}}}\)</dt><dd>il prodotto delle <b>lunghezze</b> dei due vettori: normalizza via la magnitudine.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Dividendo per le lunghezze, restano solo le <b>direzioni</b>: <mark>1 = stessa direzione (angolo 0°),
+      0 = perpendicolari (nessuna somiglianza, 90°), −1 = direzioni opposte (180°)</mark>. Il valore non dipende da
+      quanto sono «grandi» i vettori, solo da come sono orientati — utile quando la scala non conta (un documento
+      lungo e uno corto sullo stesso tema).
+    </div>
+  </div>
+
+  <h3>Provalo: ruota il vettore</h3>
+
+  <p>
+    Due vettori dall'origine; trascina la punta di quello <b style="color:var(--warm)">rosso</b>. La similarità del
+    coseno è il coseno dell'angolo \(\theta\) tra loro: massima (1) quando sono allineati, zero quando sono
+    perpendicolari, negativa quando puntano in versi opposti. Nota che allungando il vettore (stessa direzione) il
+    coseno <b>non cambia</b>.
+  </p>
+
+  <div class="widget" id="w-cos">
+    <div class="w-head">
+      <span>Similarità del coseno</span>
+      <span class="hint">conta la direzione, non la lunghezza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wco-svg" viewBox="0 0 360 320" role="img" aria-label="Due vettori dall'origine con l'angolo tra loro e la similarità del coseno"></svg>
+    </div>
+    <div class="w-readout" id="wco-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s39-3"><span class="secnum">SEZIONE 39.3</span>Coseno e correlazione</h2>
+
+  <p class="lead">
+    Ecco la sorpresa che unifica il capitolo con il resto della Parte IV: la <b>correlazione di Pearson è la
+    similarità del coseno dei dati centrati</b>.
+  </p>
+
+  <p>
+    Ricorda Pearson (Cap. 36): \(r = \sum(x_i - \bar{x})(y_i - \bar{y}) / (\ldots)\). È <em>identica</em> alla
+    formula del coseno, ma calcolata sui vettori a cui hai <b>sottratto la media</b> (i vettori «centrati»). In
+    altre parole: <mark>Pearson = coseno dopo aver centrato i dati</mark>. La differenza è tutta lì: il coseno
+    misura l'allineamento dei vettori grezzi, Pearson l'allineamento delle loro <em>fluttuazioni</em> attorno alla
+    media. Due modi di dire «puntano nella stessa direzione», con o senza rimuovere il livello medio.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Quando usare l'uno o l'altro</div>
+    <p style="margin-bottom:0">
+      Usa il <b>coseno</b> quando la scala/lunghezza dei vettori non deve contare ma il livello assoluto sì (testi,
+      raccomandazioni, embedding). Usa <b>Pearson</b> quando ti interessa la co-variazione attorno alla media
+      (rimuovendo il livello di base). Sono cugini: stessa geometria, uno centra i dati e l'altro no.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s39-4"><span class="secnum">SEZIONE 39.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 39.1</div>
+    <p style="margin-bottom:0">Due vettori \(\vv{a} = (2, 0)\) e \(\vv{b} = (10, 0)\). Qual è la loro similarità del
+      coseno? Perché non conta che \(\vv{b}\) sia molto più lungo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Puntano nella <b>stessa direzione</b> (entrambi lungo l'asse x), quindi angolo
+          0° e \(\cos\theta = \mathbf{1}\). La lunghezza non conta perché la formula <b>divide per le lunghezze</b>
+          (§39.2): resta solo la direzione. Verifica: \(\vv{a}\cdot\vv{b} = 20\), \(\norm{\vv{a}} = 2\),
+          \(\norm{\vv{b}} = 10\), \(\cos = 20/(2\cdot 10) = 1\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 39.2</div>
+    <p style="margin-bottom:0">Qual è la similarità del coseno tra \((1, 0)\) e \((0, 1)\)? Cosa significa
+      geometricamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Prodotto scalare \(= 1\cdot 0 + 0\cdot 1 = 0\), quindi \(\cos\theta =
+          \mathbf{0}\). Geometricamente i vettori sono <b>perpendicolari</b> (angolo 90°): nessuna somiglianza di
+          direzione (§39.2). In termini di dati: i due pattern sono «ortogonali», non condividono alcuna tendenza
+          comune.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 39.3</div>
+    <p style="margin-bottom:0">In che senso la correlazione di Pearson è un caso particolare della similarità del
+      coseno?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Pearson è la <b>similarità del coseno calcolata sui dati centrati</b>: sottrai
+          la media da ciascun vettore, poi applichi la formula del coseno (§39.3). Il coseno misura l'allineamento
+          dei vettori grezzi; Pearson l'allineamento delle fluttuazioni attorno alla media. Stessa geometria (il
+          coseno di un angolo), con o senza la rimozione del livello medio.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s39-5"><span class="secnum">SEZIONE 39.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 39</div>
+    <ol style="margin-bottom:0">
+      <li><b>Dati = vettori:</b> la somiglianza diventa una questione di <b>direzione</b>.</li>
+      <li><b>Similarità del coseno</b> \(= \dfrac{\vv{a}\cdot\vv{b}}{\norm{\vv{a}}\norm{\vv{b}}}\): 1 allineati,
+        0 perpendicolari, −1 opposti. Ignora la lunghezza.</li>
+      <li><b>Pearson = coseno dei dati centrati.</b> Stessa geometria; Pearson rimuove prima la media.</li>
+      <li>Onnipresente in NLP, raccomandazioni, embedding: il metro standard di somiglianza tra vettori.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Finora ogni analisi confrontava <em>due</em> cose: due gruppi, due variabili. Ma spesso i gruppi sono
+    <b>tre o più</b>, e fare tanti t-test riaprirebbe il problema dei confronti multipli (Cap. 29). Serve un test
+    unico per «almeno un gruppo è diverso?»: è l'<b>ANOVA</b>, che apre l'ultimo blocco della Parte IV nel
+    <strong>Capitolo 40</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §39.2 — similarità del coseno tra due vettori (uno trascinabile)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wco-svg');
+  if (!svg) return;
+  const out = document.getElementById('wco-out');
+  const a = [3.2, 1.4];         // vettore fisso
+  let b = [1.0, 3.0];           // vettore trascinabile
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -4, ymax: 4, iso: true });
+    p.grid(1);
+    p.axes({ numbers: false, names: false });
+    // vettori come frecce
+    p.arrow(0, 0, a[0], a[1], { color: 'var(--accent)', width: 2.6, label: 'a', lx: 12 });
+    p.arrow(0, 0, b[0], b[1], { color: 'var(--warm)', width: 2.6, label: 'b', lx: 12 });
+    // archetto dell'angolo
+    const angA = Math.atan2(a[1], a[0]), angB = Math.atan2(b[1], b[0]);
+    p.angle(0, 0, angA, angB, { color: 'var(--green)', r: 0.9, width: 1.6 });
+    // maniglia sulla punta di b
+    p.handle(b[0], b[1], { r: 7, color: 'var(--warm)' }, (x, y) => { b = [x, y]; if (Math.hypot(x, y) < 0.4) b = [0.4, 0]; draw(); });
+
+    const dot = a[0] * b[0] + a[1] * b[1];
+    const cos = dot / (Math.hypot(...a) * Math.hypot(...b));
+    const deg = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+    out.innerHTML = `
+      <div class="big">cos θ = <b style="color:${cos > 0.3 ? 'var(--accent)' : cos < -0.3 ? 'var(--warm)' : 'var(--ink)'}">${cos.toFixed(2)}</b> &nbsp;·&nbsp; angolo ≈ <b>${deg.toFixed(0)}°</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${cos > 0.9 ? 'Vettori quasi <mark>allineati</mark>: massima somiglianza (cos ≈ 1).'
+          : cos > 0.3 ? 'Direzioni simili: coseno positivo.'
+          : cos > -0.3 ? 'Quasi <mark>perpendicolari</mark>: nessuna somiglianza (cos ≈ 0).'
+          : 'Direzioni <mark>opposte</mark>: coseno negativo.'}
+        Allunga il vettore rosso <em>nella stessa direzione</em>: il coseno non cambia — conta solo l'angolo.
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
