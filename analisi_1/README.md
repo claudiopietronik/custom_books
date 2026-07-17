@@ -28,7 +28,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 3 — Numeri complessi
 - [x] 4 — Funzioni
 - [x] 5 — Successioni e limiti
-- [ ] 6 — Limiti di funzioni e continuità
+- [x] 6 — Limiti di funzioni e continuità
 - [ ] 7 — Teoremi sulle funzioni continue
 - [ ] 8 — La derivata
 - [ ] 9 — I teoremi del calcolo differenziale

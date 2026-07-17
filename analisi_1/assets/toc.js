@@ -107,7 +107,7 @@ const TOC = [
     n: 6,
     titolo: "Limiti di funzioni e continuità",
     file: "cap06-limiti-continuita.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Dal discreto al continuo" },
       { id: "s6-2", n: "6.2", t: "Definizione di limite con gli intorni" },
