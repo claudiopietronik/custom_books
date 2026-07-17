@@ -494,7 +494,7 @@ const TOC = [
   },
   {
     n: 42, parte: "IV · Statistica inferenziale",
-    titolo: "Post-hoc e due vie", file: "cap42-posthoc.html", stato: "da-fare",
+    titolo: "Post-hoc e due vie", file: "cap42-posthoc.html", stato: "pronto",
     sezioni: [
       { id: "s42-1", n: "42.1", t: "Dopo un'ANOVA significativa" },
       { id: "s42-2", n: "42.2", t: "I test post-hoc" },
