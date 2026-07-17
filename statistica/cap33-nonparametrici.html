@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>33 · Test non parametrici — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="33">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Test non parametrici</h1>
+    <p class="standfirst">
+      Quando i dati violano le assunzioni dei test classici, due strade elegantissime: lavorare sui <b>ranghi</b>
+      (Mann–Whitney, Wilcoxon) o <b>mescolare le etichette</b> per costruire la distribuzione nulla da zero (test
+      di permutazione). Nessuna assunzione sulla forma dei dati — solo il computer e un'idea brillante.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È il piano B promesso al Cap. 28, la controparte robusta del t-test (Cap. 30–32). Il test di permutazione
+      usa il campionamento del Cap. 18 e il concetto di distribuzione nulla del Cap. 24 — ma la costruisce dai
+      dati stessi, anziché assumerla. Parente stretto del bootstrap (Cap. 35).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Dati reali storti, con outlier, o su scala ordinale sono la norma, non l'eccezione. I metodi non parametrici
+      ti permettono di fare inferenza onesta anche lì, senza «fingere» una normalità che non c'è. E il test di
+      permutazione è così intuitivo che, una volta visto, il p-value non sarà più un mistero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-1"><span class="secnum">SEZIONE 33.1</span>Lavorare sui ranghi</h2>
+
+  <p class="lead">
+    L'idea centrale dei test non parametrici classici: sostituisci ogni valore col suo <b>rango</b> (la sua
+    posizione nell'ordine) e lavora su quelli. Così la <em>forma</em> dei dati smette di contare.
+  </p>
+
+  <p>
+    Ordina tutti i dati e assegna 1 al più piccolo, 2 al secondo, e così via. Un outlier mostruoso diventa
+    semplicemente «l'ultimo rango»: la sua magnitudine spropositata sparisce, resta solo «è il più grande». È la
+    stessa robustezza della mediana e dell'IQR (Cap. 5), applicata all'inferenza. I test sui ranghi non chiedono
+    che i dati siano normali — chiedono molto meno — e in cambio sono immuni a outlier e asimmetria.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Cosa testano davvero</div>
+    <p style="margin-bottom:0">
+      I test sui ranghi confrontano tipicamente le <b>distribuzioni</b> (o le mediane) dei gruppi, non le medie.
+      «I valori di un gruppo tendono a essere più grandi di quelli dell'altro?». È una domanda leggermente diversa
+      da quella del t-test (sulle medie), ma spesso è proprio quella che ti interessa.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-2"><span class="secnum">SEZIONE 33.2</span>Mann–Whitney e Wilcoxon</h2>
+
+  <p class="lead">
+    Le due controparti non parametriche dei t-test, una per i campioni indipendenti e una per gli appaiati.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Test parametrico</th><th>Non parametrico</th><th>Situazione</th></tr></thead>
+    <tbody>
+      <tr><td>t-test a due campioni indipendenti</td><td><b>Mann–Whitney U</b></td><td>due gruppi distinti</td></tr>
+      <tr><td>t-test appaiato</td><td><b>Wilcoxon signed-rank</b></td><td>coppie / prima-dopo</td></tr>
+      <tr><td>ANOVA a una via</td><td><b>Kruskal–Wallis</b></td><td>più di due gruppi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Il <b>Mann–Whitney U</b> mescola i due gruppi, li ordina, e chiede: i ranghi di un gruppo tendono a essere
+    sistematicamente più alti dell'altro? Se i due gruppi fossero identici, i ranghi si mescolerebbero
+    equamente; se uno «vince» troppo spesso, c'è una differenza. Il <b>Wilcoxon signed-rank</b> fa l'analogo sulle
+    differenze appaiate, usando ranghi con segno. In entrambi, i valori grezzi non contano — solo l'ordine.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-3"><span class="secnum">SEZIONE 33.3</span>Il test di permutazione</h2>
+
+  <p class="lead">
+    L'idea più bella e più generale di tutta l'inferenza: se \(H_0\) dice «i due gruppi sono uguali», allora le
+    <b>etichette</b> (gruppo A / gruppo B) sono <em>irrilevanti</em>. Mescolale a caso tante volte e vedi quanto è
+    speciale la differenza vera.
+  </p>
+
+  <p>
+    Sotto \(H_0\), assegnare un dato al gruppo A o B è arbitrario: potresti rimescolare le etichette senza cambiare
+    nulla. Allora: <b>rimescola</b> le etichette a caso, ricalcola la differenza tra le medie, e ripeti migliaia di
+    volte. Ottieni la <b>distribuzione nulla</b> della differenza — costruita dai dati stessi, senza assumere
+    alcuna forma. Il <b>p-value di permutazione</b> è la frazione di rimescolamenti che danno una differenza
+    estrema quanto (o più di) quella vera. Se la differenza reale è più grande di quasi tutti i rimescolamenti, è
+    difficile crederla un caso.
+  </p>
+
+  <h3>Provalo: mescola le etichette</h3>
+
+  <p>
+    Due gruppi con una differenza vera (la linea <b style="color:var(--warm)">rossa</b>). Ogni «rimescola» assegna
+    a caso i dati ai due gruppi e ricalcola la differenza, costruendo l'istogramma della distribuzione nulla.
+    Guarda dove cade la differenza vera: se è in coda, è rara sotto \(H_0\) → significativa.
+  </p>
+
+  <div class="widget" id="w-perm">
+    <div class="w-head">
+      <span>Test di permutazione</span>
+      <span class="hint">la distribuzione nulla dai dati stessi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpm-svg" viewBox="0 0 620 240" role="img" aria-label="Distribuzione nulla costruita rimescolando le etichette dei gruppi"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" id="wpm-go">+2000 rimescolamenti</button>
+      <button class="w-btn" id="wpm-reset">azzera</button>
+    </div>
+    <div class="w-readout" id="wpm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-4"><span class="secnum">SEZIONE 33.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.1</div>
+    <p style="margin-bottom:0">Perché sostituire i valori con i ranghi rende un test immune agli outlier?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché il rango dipende solo dalla <b>posizione</b>, non dal valore (§33.1). Un
+          outlier di 1 000 000 tra valori intorno a 50 diventa semplicemente «l'ultimo rango»: la sua magnitudine
+          enorme, che stravolgerebbe media e \(s\) di un t-test, non ha più alcun peso. È la stessa robustezza
+          della mediana (Cap. 3) portata nell'inferenza.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.2</div>
+    <p style="margin-bottom:0">Nel test di permutazione, cosa rappresenta la distribuzione ottenuta rimescolando le
+      etichette? Cosa assume?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Rappresenta la <b>distribuzione nulla</b>: come sarebbe distribuita la
+          differenza tra i gruppi <em>se le etichette non contassero</em>, cioè se \(H_0\) («nessuna differenza»)
+          fosse vera (§33.3). L'unica assunzione è lo <b>scambio</b> (le etichette sono intercambiabili sotto
+          \(H_0\)) — nessuna ipotesi sulla forma dei dati. Il p-value è la frazione di rimescolamenti almeno tanto
+          estremi quanto la differenza vera.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 33.3</div>
+    <p style="margin-bottom:0">Un collega ha dati fortemente asimmetrici con due outlier e insiste per usare un
+      t-test «perché dà un p-value più piccolo». Che gli rispondi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Che un p-value più piccolo non è «migliore» se il test è <b>inadeguato</b>: su
+          dati asimmetrici con outlier, le assunzioni del t-test cadono (Cap. 28) e il suo p-value può essere
+          fuorviante — non affidabile, non più credibile solo perché più piccolo. Meglio un <b>Mann–Whitney</b> o
+          un <b>test di permutazione</b> (§33.2–33.3), robusti a outlier e forma. Scegliere il test per il
+          risultato che dà è una forma di p-hacking (Cap. 25).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s33-5"><span class="secnum">SEZIONE 33.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 33</div>
+    <ol style="margin-bottom:0">
+      <li><b>Test sui ranghi:</b> usa le posizioni ordinate, non i valori. Robusti a outlier e asimmetria; nessuna
+        assunzione di normalità.</li>
+      <li><b>Mann–Whitney</b> (↔ t indipendente), <b>Wilcoxon</b> (↔ t appaiato), <b>Kruskal–Wallis</b> (↔ ANOVA).</li>
+      <li><b>Test di permutazione:</b> rimescola le etichette migliaia di volte per costruire la distribuzione
+        nulla dai dati stessi. Il p-value è la frazione di rimescolamenti almeno tanto estremi.</li>
+      <li>Prezzo della robustezza: un po' meno potenti dei parametrici <em>quando</em> le assunzioni di questi
+        reggerebbero (Cap. 28).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Finora abbiamo preso decisioni sì/no. Ma spesso la domanda vera non è «c'è un effetto?» bensì «<em>quanto</em>
+    grande, e con che margine d'incertezza?». La risposta è un <b>intervallo</b> di valori plausibili, non un
+    singolo numero: gli <b>intervalli di confidenza</b>, nel <strong>Capitolo 34</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §33.3 — test di permutazione: distribuzione nulla per rimescolamento
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpm-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpm-out');
+  const go = document.getElementById('wpm-go'), reset = document.getElementById('wpm-reset');
+  // due gruppi con differenza vera
+  const gA = [58, 62, 55, 66, 60, 64, 59];
+  const gB = [49, 52, 47, 54, 50, 46, 51];
+  const all = [...gA, ...gB], nA = gA.length;
+  const obsDiff = gA.reduce((a, b) => a + b, 0) / gA.length - gB.reduce((a, b) => a + b, 0) / gB.length;
+  let seed = 17, diffs = [];
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  function shuffleDiff() {
+    const idx = all.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(u() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    let sA = 0; for (let i = 0; i < nA; i++) sA += all[idx[i]];
+    let sB = 0; for (let i = nA; i < idx.length; i++) sB += all[idx[i]];
+    return sA / nA - sB / (all.length - nA);
+  }
+  function run(k) { for (let i = 0; i < k; i++) diffs.push(shuffleDiff()); draw(); }
+
+  function draw() {
+    svg.innerHTML = '';
+    const lim = 12;
+    const p = new Plot(svg, { xmin: -lim, xmax: lim, ymin: 0, ymax: 1 });
+    p.axes({ numbers: false, names: true, xname: 'differenza tra medie (rimescolata)', yname: '' });
+    if (diffs.length > 0) {
+      const nb = 30, w = 2 * lim / nb, c = new Array(nb).fill(0);
+      diffs.forEach(d => { let k = Math.floor((d + lim) / w); if (k < 0) k = 0; if (k >= nb) k = nb - 1; c[k]++; });
+      const maxC = Math.max(...c);
+      c.forEach((cnt, k) => p.rect(-lim + k * w, 0, -lim + (k + 1) * w, cnt / maxC * 0.9, { fill: 'color-mix(in srgb, var(--accent) 40%, transparent)', color: 'var(--accent)', width: 0.4 }));
+    }
+    // differenza vera
+    p.line(obsDiff, 0, obsDiff, 0.98, { color: 'var(--warm)', width: 2.6, dash: '5 4' });
+    p.text(obsDiff, 1.0, 'differenza vera', { color: 'var(--warm)', size: 10.5 });
+
+    const extreme = diffs.filter(d => Math.abs(d) >= Math.abs(obsDiff)).length;
+    const pval = diffs.length ? extreme / diffs.length : NaN;
+    out.innerHTML = `
+      <div class="big">${diffs.length} rimescolamenti · differenza vera = <b>${obsDiff.toFixed(1)}</b>${diffs.length ? ' · p ≈ <b style="color:' + (pval < 0.05 ? 'var(--warm)' : 'var(--ink)') + '">' + (pval < 0.0005 ? '<0,001' : pval.toFixed(3)) + '</b>' : ''}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${diffs.length === 0 ? 'Premi «+2000 rimescolamenti»: ogni volta le etichette gruppo-A/gruppo-B vengono assegnate a caso e si ricalcola la differenza.'
+          : 'La differenza vera è <mark>in coda</mark> alla distribuzione nulla: quasi nessun rimescolamento casuale la eguaglia, quindi è improbabile che sia frutto del caso. Nessuna assunzione sulla forma dei dati — solo mescolamento.'}
+      </div>`;
+  }
+  go.addEventListener('click', () => run(2000));
+  reset.addEventListener('click', () => { diffs = []; seed = 17; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

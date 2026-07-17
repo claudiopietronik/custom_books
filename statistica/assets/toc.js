@@ -389,7 +389,7 @@ const TOC = [
   },
   {
     n: 33, parte: "IV · Statistica inferenziale",
-    titolo: "Test non parametrici", file: "cap33-nonparametrici.html", stato: "da-fare",
+    titolo: "Test non parametrici", file: "cap33-nonparametrici.html", stato: "pronto",
     sezioni: [
       { id: "s33-1", n: "33.1", t: "Lavorare sui ranghi" },
       { id: "s33-2", n: "33.2", t: "Mann-Whitney e Wilcoxon" },
