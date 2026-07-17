@@ -161,7 +161,7 @@ const TOC = [
     n: 10,
     titolo: "Dinamica rotazionale",
     file: "cap10-dinamica-rotazionale.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Il momento torcente" },
       { id: "s10-2", n: "10.2", t: "La seconda legge per la rotazione" },
