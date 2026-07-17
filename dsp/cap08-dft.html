@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · La trasformata di Fourier discreta — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.08 — Capitolo 8</div>
+    <h1>La trasformata di Fourier discreta</h1>
+    <p class="standfirst">
+      Ecco il grande cambio di prospettiva. Finora abbiamo visto i segnali <em>nel tempo</em>, come sequenze di
+      campioni. Ora impariamo a guardarli <em>nella frequenza</em>: come <b>ricette di sinusoidi</b>. È l'idea di
+      Fourier — «ogni segnale è una somma di onde pure» — resa concreta e calcolabile dalla DFT. Molte operazioni
+      che nel tempo sono ostiche, in frequenza diventano ovvie. Vale il biglietto d'ingresso.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Apriamo il secondo grande dominio del DSP. La convoluzione (Cap. 6–7) viveva nel tempo; la trasformata di
+      Fourier vive nella frequenza. I due sono le facce della stessa medaglia, e nel Cap. 10 scopriremo il ponte
+      tra loro. Questo capitolo introduce lo strumento; il Cap. 9 lo mette al lavoro e il Cap. 12 lo rende
+      velocissimo (FFT).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il dominio della frequenza è dove il DSP dà il meglio. Vuoi togliere un ronzio a 50 Hz? In frequenza è un
+      singolo picco da azzerare. Vuoi capire di che note è fatto un accordo? È il suo spettro. Vuoi convolvere in
+      fretta? Passa per la frequenza (Cap. 18). <strong>Imparare a pensare in frequenza raddoppia gli strumenti a
+      tua disposizione.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">SEZIONE 8.1</span>La famiglia delle trasformate di Fourier</h2>
+
+  <p class="lead">
+    «Trasformata di Fourier» non è una sola cosa: è una famiglia di quattro, a seconda che il segnale sia
+    continuo o discreto, periodico o no. Vale la pena orientarsi, per sapere quale usiamo e perché.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Segnale</th><th>Periodico</th><th>Aperiodico</th></tr></thead>
+    <tbody>
+      <tr><td><b>Continuo</b></td><td>Serie di Fourier</td><td>Trasformata di Fourier (integrale)</td></tr>
+      <tr><td><b>Discreto</b></td><td><b style="color:var(--accent)">DFT</b> ← la nostra</td><td>DTFT</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Un calcolatore lavora con un numero <em>finito</em> di campioni. L'unica trasformata della famiglia adatta a
+    dati finiti e discreti è la <b class="termine">DFT</b> — <em>Discrete Fourier Transform</em>. Le altre tre
+    sono strumenti teorici preziosi (le incontreremo nei Cap. 11 e 13), ma quando c'è da <em>calcolare</em>,
+    è sempre la DFT. Tecnicamente la DFT tratta i segnali come se fossero <b>periodici</b>: assume che gli \(N\)
+    campioni si ripetano all'infinito. Un'assunzione con conseguenze, che affronteremo (§8.7 e Cap. 9).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">SEZIONE 8.2</span>Notazione e formato della DFT reale</h2>
+
+  <p class="lead">
+    La DFT prende \(N\) numeri (il segnale nel tempo) e restituisce \(N\) numeri (il segnale nella frequenza).
+    Nessuna informazione si crea o si perde: è solo <em>lo stesso segnale, scritto in un altro alfabeto</em>.
+  </p>
+
+  <p>
+    Nel formato reale, che usiamo qui, gli \(N\) campioni nel tempo \(x[0], \ldots, x[N-1]\) si traducono in due
+    liste di numeri: le <b>ampiezze dei coseni</b> e le <b>ampiezze dei seni</b>, per ciascuna frequenza da
+    \(0\) a \(N/2\). Ci sono quindi \(N/2 + 1\) frequenze possibili, indicizzate da \(k\): la frequenza \(k\)
+    corrisponde a un'onda che compie <b>\(k\) cicli completi</b> lungo gli \(N\) campioni.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> I due domini, in una tabella</div>
+    <ul style="margin-bottom:0">
+      <li><b>Dominio del tempo:</b> \(N\) campioni \(x[n]\), indice \(n = 0 \ldots N-1\) (il «quando»).</li>
+      <li><b>Dominio della frequenza:</b> per ogni \(k = 0 \ldots N/2\), un'ampiezza di coseno \(\Real X[k]\) e
+          una di seno \(\Imag X[k]\) (il «quanto di ciascuna onda»).</li>
+      <li>La frequenza \(k=0\) è la <b>media</b> (coseno a zero cicli = costante). La frequenza \(k=N/2\) è la
+          più alta rappresentabile — è di nuovo <b>Nyquist</b> (Cap. 3), due campioni per ciclo.</li>
+    </ul>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">SEZIONE 8.3</span>Le funzioni base: seni e coseni</h2>
+
+  <p>
+    I «mattoni» in cui la DFT scompone ogni segnale sono onde pure: coseni e seni con un numero intero di cicli
+    sulla finestra di \(N\) campioni.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le funzioni base <span class="tag">i mattoni della frequenza</span></div>
+    <div class="f-body">
+      \[
+        c_k[n] = \cos\!\left(\hA{\frac{2\pi k n}{N}}\right) \qquad\qquad
+        s_k[n] = \sin\!\left(\hA{\frac{2\pi k n}{N}}\right)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(k\)</dt><dd>l'<b>indice di frequenza</b>: quanti cicli completi l'onda compie sui \(N\) campioni.
+            \(k=1\) → un ciclo, \(k=2\) → due cicli, e così via.</dd>
+        <dt>\(n\)</dt><dd>l'indice di campione, \(0 \ldots N-1\): scorre lungo l'onda.</dd>
+        <dt>\(\hA{2\pi k n / N}\)</dt><dd>l'angolo: cresce con \(n\); il fattore \(k/N\) fissa quanti giri
+            completi (\(2\pi\)) si fanno sull'intera finestra.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Queste onde hanno una proprietà d'oro: sono <b>ortogonali</b>. Correlando due base di frequenze diverse, il
+      risultato è zero; correlando una base con sé stessa, è diverso da zero. È l'ortogonalità a permettere di
+      «estrarre» pulita l'ampiezza di ciascuna frequenza, senza che le altre interferiscano — il segreto
+      dell'analisi (§8.5).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">SEZIONE 8.4</span>La sintesi: la DFT inversa</h2>
+
+  <p class="lead">
+    Partiamo dal verso più intuitivo: la <b>sintesi</b> (o DFT inversa). Date le ampiezze delle onde, ricostruire
+    il segnale è semplice — basta <em>sommarle</em>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Sintesi: dal dominio della frequenza al tempo <span class="tag">somma le onde</span></div>
+    <div class="f-body">
+      \[
+        \sig{x}[n] \;=\; \sum_{k=0}^{N/2} \Big(\, \hB{A_k}\,\cos\!\tfrac{2\pi k n}{N} \;+\; \hC{B_k}\,\sin\!\tfrac{2\pi k n}{N} \,\Big)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hB{A_k}\)</dt><dd>l'ampiezza del <b>coseno</b> a frequenza \(k\): quanto di quell'onda-coseno c'è
+            nel segnale.</dd>
+        <dt>\(\hC{B_k}\)</dt><dd>l'ampiezza del <b>seno</b> a frequenza \(k\).</dd>
+        <dt>\(\sum_{k}\)</dt><dd>si <b>sommano tutte</b> le onde, da \(k=0\) (la media) a \(k=N/2\)
+            (Nyquist).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È letteralmente una ricetta: prendi tanto di quest'onda, tanto di quest'altra, somma tutto, ed ecco il
+      segnale. <mark>Ogni segnale è la somma delle sue sinusoidi.</mark> Il widget qui sotto ti mette in mano gli
+      ingredienti.
+    </div>
+  </div>
+
+  <h3>Provalo: costruisci un segnale sommando sinusoidi</h3>
+
+  <p>
+    Regola l'ampiezza di ciascuna armonica e guarda l'onda risultante formarsi in tempo reale. Prova il preset
+    «onda quadra»: si ottiene sommando solo le armoniche dispari con ampiezze \(1, \tfrac13, \tfrac15, \ldots\) —
+    un risultato che stupì i contemporanei di Fourier (come può una somma di curve morbide fare degli spigoli?).
+  </p>
+
+  <div class="widget" id="w-synth">
+    <div class="w-head">
+      <span>Sintesi di Fourier</span>
+      <span class="hint">somma le armoniche e costruisci l'onda</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsy-svg" viewBox="0 0 620 260" role="img" aria-label="Un'onda costruita sommando sinusoidi di ampiezza regolabile"></svg>
+    </div>
+    <div class="w-controls" id="wsy-sliders"></div>
+    <div class="w-controls" style="margin-top:.5rem">
+      <button class="w-btn" id="wsy-square">preset: onda quadra</button>
+      <button class="w-btn" id="wsy-saw">preset: dente di sega</button>
+      <button class="w-btn" id="wsy-clear">azzera</button>
+    </div>
+    <div class="w-readout" id="wsy-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">SEZIONE 8.5</span>L'analisi: calcolare la DFT</h2>
+
+  <p class="lead">
+    Il verso opposto — dal segnale alle ampiezze — è l'<b>analisi</b>. È qui che sta la magia: come faccio a
+    sapere <em>quanto</em> di ciascuna onda c'è dentro un segnale qualunque? La risposta è una parola che già
+    conosci: <b>correlazione</b> (Cap. 7).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Analisi: dal tempo alla frequenza <span class="tag">correla con ogni onda base</span></div>
+    <div class="f-body">
+      \[
+        \Real X[k] = \sum_{n=0}^{N-1} \sig{x}[n]\,\cos\!\tfrac{2\pi k n}{N}
+        \qquad
+        \Imag X[k] = -\sum_{n=0}^{N-1} \sig{x}[n]\,\sin\!\tfrac{2\pi k n}{N}
+      \]
+    </div>
+    <div class="f-note">
+      <p style="margin-bottom:0">Per ogni frequenza \(k\), <b>correliamo</b> il segnale con l'onda-coseno e con
+      l'onda-seno di quella frequenza: le due somme misurano «quanto» di ciascuna è presente. Grazie
+      all'ortogonalità (§8.3), la base della frequenza \(k\) «risponde» solo a ciò che nel segnale ha davvero
+      quella frequenza, ignorando tutto il resto. È un rilevatore selettivo, una frequenza alla volta.</p>
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Le costanti di scala: dove tutti sbagliano</div>
+    <p style="margin-bottom:0">
+      Analisi e sintesi vanno accordate da un <b>fattore di scala</b>, ed è la fonte di infiniti errori. Nella
+      convenzione più comune, per passare dalle somme dell'analisi alle ampiezze della sintesi si divide per
+      \(N/2\) — tranne le due frequenze «di bordo», \(k=0\) e \(k=N/2\), che si dividono per \(N\). Non è
+      profondo, ma va azzeccato, altrimenti ricostruisci il segnale con ampiezza sbagliata. Consiglio: verifica
+      sempre facendo un giro completo (analisi → sintesi) su un segnale noto e controlla di ritrovarlo identico.
+    </p>
+  </div>
+
+  <p>
+    Esistono <b>tre modi</b> di calcolare la DFT, matematicamente equivalenti: risolvere un sistema di equazioni
+    (lento, mai usato), la <b>correlazione</b> appena vista (chiara e diretta), e la <b>FFT</b> (un algoritmo
+    astuto che dà lo stesso risultato in una frazione del tempo, Cap. 12). Concettualmente pensa sempre alla
+    correlazione; in pratica userai sempre la FFT.
+  </p>
+
+  <h3>Provalo: lo spettro rivela le frequenze nascoste</h3>
+
+  <p>
+    Un segnale nel tempo (in alto) può sembrare un groviglio indecifrabile. Il suo <b>spettro</b> (in basso), che
+    la DFT calcola, lo scioglie: ogni <b style="color:var(--accent)">picco</b> è una sinusoide che compone il
+    segnale, e la sua altezza ne è l'ampiezza. Sposta le frequenze delle due componenti e guarda i picchi
+    muoversi; aggiungi rumore e guarda lo spettro sporcarsi senza però nascondere i picchi.
+  </p>
+
+  <div class="widget" id="w-spec">
+    <div class="w-head">
+      <span>Dal tempo allo spettro</span>
+      <span class="hint">muovi le frequenze e guarda i picchi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsp-top" viewBox="0 0 620 150" role="img" aria-label="Un segnale nel tempo, somma di due sinusoidi più rumore"></svg>
+      <svg id="wsp-bot" viewBox="0 0 620 140" role="img" aria-label="Lo spettro di ampiezza del segnale, con picchi alle frequenze delle componenti"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>freq. 1</label><input type="range" id="wsp-f1" min="1" max="30" step="1" value="4"><output id="wsp-f1v">4</output></div>
+      <div class="w-ctrl"><label>freq. 2</label><input type="range" id="wsp-f2" min="1" max="30" step="1" value="11"><output id="wsp-f2v">11</output></div>
+      <div class="w-ctrl"><label>rumore</label><input type="range" id="wsp-nz" min="0" max="1" step="0.05" value="0.2"><output id="wsp-nzv">0.20</output></div>
+    </div>
+    <div class="w-readout" id="wsp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">SEZIONE 8.6</span>Ampiezza e fase: il dominio polare</h2>
+
+  <p class="lead">
+    Il coseno e il seno di una stessa frequenza si possono fondere in <b>un'unica sinusoide</b> con una certa
+    ampiezza e una certa fase. È il <b>formato polare</b>, spesso più naturale del formato reale/immaginario.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Da reale/immaginario a modulo/fase <span class="tag">Pitagora e arcotangente</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{M[k] = \sqrt{\Real X[k]^2 + \Imag X[k]^2}}_{\text{ampiezza}}
+        \qquad
+        \underbrace{\theta[k] = \arctan\!\frac{\Imag X[k]}{\Real X[k]}}_{\text{fase}}
+      \]
+    </div>
+    <div class="f-note">
+      L'<b>ampiezza</b> \(M[k]\) dice <em>quanto è forte</em> quella frequenza (è la lunghezza del vettore
+      coseno-seno, per Pitagora). La <b>fase</b> \(\theta[k]\) dice <em>com'è sfasata</em> — se l'onda parte più
+      in anticipo o in ritardo. Nella maggior parte delle applicazioni pratiche l'occhio va all'ampiezza: lo
+      <em>spettro di ampiezza</em> è ciò che di solito si intende per «spettro» di un segnale.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché due numeri per frequenza</div>
+    <p style="margin-bottom:0">
+      Una sinusoide pura a una data frequenza ha due gradi di libertà: <em>quanto è alta</em> (ampiezza) e
+      <em>dove passa per lo zero</em> (fase). Servono due numeri per fissarli entrambi. Coseno-e-seno oppure
+      ampiezza-e-fase sono solo due modi di dare quegli stessi due numeri — come dire la posizione di un punto in
+      coordinate cartesiane oppure polari. <mark>Stessa informazione, due vestiti.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">SEZIONE 8.7</span>Le insidie del dominio polare</h2>
+
+  <p>
+    Il formato polare è comodo ma ha un paio di trappole che conviene conoscere prima di romperci la testa.
+  </p>
+
+  <ul>
+    <li><b>La fase del nulla è rumore.</b> Se l'ampiezza a una frequenza è praticamente zero, la sua fase è
+        <em>indeterminata</em> — l'arcotangente di due numeri minuscoli è dominata dal rumore numerico. Vedrai
+        fasi che «impazziscono» proprio dove il segnale non ha energia: non è un errore, semplicemente lì la
+        fase non significa niente.</li>
+    <li><b>La fase si «avvolge».</b> L'angolo vive tra \(-\pi\) e \(+\pi\): quando cresce oltre, salta di colpo
+        dall'altra parte. Un grafico di fase è pieno di questi salti artificiali (di \(2\pi\)) che non
+        corrispondono a nulla di fisico. Esistono tecniche di <em>srotolamento</em> (unwrapping) per rimuoverli.</li>
+    <li><b>Divisioni per zero.</b> L'arcotangente ingenua sballa quando \(\Real X[k] = 0\); si usa sempre la
+        versione a due argomenti (\(\operatorname{atan2}\)) che gestisce tutti i quadranti e i casi limite.</li>
+  </ul>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Regola pratica</div>
+    <p style="margin-bottom:0">
+      Quando qualcosa nel dominio della frequenza sembra assurdo — fasi caotiche, valori enormi — il colpevole è
+      quasi sempre una di queste tre insidie, non un baco nel tuo codice. Fidati dell'<b>ampiezza</b> per capire
+      «cosa c'è», e tratta la <b>fase</b> con cautela, guardandola solo dove l'ampiezza è significativa.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-8"><span class="secnum">SEZIONE 8.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">Fai la DFT di un segnale di \(N=256\) campioni. Quante frequenze ottieni? A cosa
+      corrispondono \(k=0\) e \(k=128\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Frequenze: \(N/2 + 1 = 129\) (da \(k=0\) a \(k=128\)). \(k=0\) è la <b>media</b> del segnale (coseno a
+          zero cicli = costante). \(k=128 = N/2\) è la <b>frequenza di Nyquist</b>, la più alta rappresentabile
+          (due campioni per ciclo).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">Il segnale è una sinusoide pura che compie esattamente 5 cicli sulla finestra.
+      Che aspetto ha il suo spettro di ampiezza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Un <b>unico picco</b> a \(k=5\), e zero (o quasi) ovunque altrove. Una sinusoide pura è «una sola
+          frequenza», quindi il suo spettro è concentrato in un punto. Se invece i cicli non fossero un numero
+          intero, l'energia si <em>spanderebbe</em> sulle frequenze vicine (lo <em>spectral leakage</em> del
+          Cap. 9).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">A una frequenza \(k\) trovi \(\Real X[k] = 3\) e \(\Imag X[k] = 4\). Qual è
+      l'ampiezza \(M[k]\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(M[k] = \sqrt{3^2 + 4^2} = \sqrt{9+16} = \sqrt{25} = 5\). È la solita terna pitagorica: coseno e seno
+          sono i cateti, l'ampiezza è l'ipotenusa.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">Perché la DFT restituisce esattamente \(N\) numeri partendo da \(N\) campioni, e
+      non di più né di meno?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché la trasformazione è <b>invertibile</b>: dal dominio della frequenza si deve poter ricostruire
+          esattamente il segnale di partenza, senza perdere né inventare informazione. \(N\) numeri nel tempo
+          contengono \(N\) «gradi di libertà», e servono esattamente \(N\) numeri in frequenza per rappresentarli
+          (le \(N/2+1\) ampiezze di coseno più le \(N/2-1\) di seno «utili» fanno \(N\)). È lo stesso segnale in
+          due alfabeti.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-9"><span class="secnum">SEZIONE 8.9</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li><b>Ogni segnale è una somma di sinusoidi.</b> La DFT traduce \(N\) campioni del tempo in \(N\) numeri
+          della frequenza: lo stesso segnale, altro alfabeto.</li>
+      <li><b>Sintesi</b> (frequenza → tempo) = somma le onde. <b>Analisi</b> (tempo → frequenza) = correla il
+          segnale con ogni onda base. L'ortogonalità rende l'analisi selettiva.</li>
+      <li><b>\(N/2+1\) frequenze:</b> \(k=0\) è la media, \(k=N/2\) è Nyquist. Attento ai <b>fattori di scala</b>
+          tra analisi e sintesi.</li>
+      <li><b>Formato polare:</b> ampiezza \(M=\sqrt{\Real^2+\Imag^2}\) («quanto forte») e fase
+          \(\theta=\arctan(\Imag/\Real)\) («come sfasata»). Lo «spettro» di solito è quello di ampiezza.</li>
+      <li><b>Insidie della fase:</b> è rumore dove l'ampiezza è nulla, si avvolge di \(2\pi\), va calcolata con
+          \(\operatorname{atan2}\).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sappiamo tradurre un segnale in frequenza e viceversa. Ma a cosa serve, in concreto? Il
+    <strong>Capitolo 9</strong> mette la DFT al lavoro: <b>analisi spettrale</b> (che frequenze contiene un
+    segnale), <b>filtraggio</b> passando per la frequenza, e le insidie pratiche — la <em>dispersione
+    spettrale</em> e le <b>finestre</b> per domarla. Dalla teoria alla cassetta degli attrezzi.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.4 — sintesi di Fourier: somma di armoniche
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsy-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsy-out');
+  const cont = document.getElementById('wsy-sliders');
+  const K = 6;                     // armoniche 1..6
+  const amp = [0, 1, 0, 0, 0, 0, 0];  // amp[k], k=1..K (index 0 inutilizzato)
+  // costruisci gli slider
+  for (let k = 1; k <= K; k++) {
+    const d = document.createElement('div'); d.className = 'w-ctrl';
+    d.innerHTML = `<label>a<sub>${k}</sub></label><input type="range" data-k="${k}" min="-1" max="1" step="0.05" value="${amp[k]}"><output>${amp[k].toFixed(2)}</output>`;
+    cont.appendChild(d);
+  }
+  const inputs = [...cont.querySelectorAll('input')];
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 2 * Math.PI, ymin: -1.7, ymax: 1.7 });
+    p.grid(Math.PI / 2, 1); p.axes({ numbers: false, names: false });
+    // singole armoniche, tenui
+    for (let k = 1; k <= K; k++) if (Math.abs(amp[k]) > 0.001)
+      p.func(x => amp[k] * Math.sin(k * x), { color: 'var(--rule)', width: 1 });
+    // somma
+    p.func(x => { let s = 0; for (let k = 1; k <= K; k++) s += amp[k] * Math.sin(k * x); return s; },
+      { color: 'var(--accent)', width: 2.8, samples: 600 });
+
+    const active = [];
+    for (let k = 1; k <= K; k++) if (Math.abs(amp[k]) > 0.001) active.push(`a<sub>${k}</sub>=${amp[k].toFixed(2)}`);
+    out.innerHTML = `
+      <div class="big">${active.length ? active.join(' &nbsp; ') : 'tutte le ampiezze a zero'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva <b style="color:var(--accent)">teal</b> è la somma delle armoniche (in grigio le singole).
+        Prova «onda quadra»: solo le dispari con ampiezze 1, ⅓, ⅕… <mark>sommando curve morbide si ottengono
+        gli spigoli</mark> — l'intuizione fondante di Fourier. Più armoniche aggiungi, più lo spigolo si affila.
+      </div>`;
+  }
+  inputs.forEach(inp => inp.addEventListener('input', () => {
+    amp[+inp.dataset.k] = parseFloat(inp.value);
+    inp.nextElementSibling.textContent = parseFloat(inp.value).toFixed(2);
+    draw();
+  }));
+  function setAll(fn) { for (let k = 1; k <= K; k++) { amp[k] = fn(k); const inp = inputs[k - 1]; inp.value = amp[k]; inp.nextElementSibling.textContent = amp[k].toFixed(2); } draw(); }
+  document.getElementById('wsy-square').addEventListener('click', () => setAll(k => k % 2 ? 1 / k : 0));
+  document.getElementById('wsy-saw').addEventListener('click', () => setAll(k => (k % 2 ? 1 : -1) / k));
+  document.getElementById('wsy-clear').addEventListener('click', () => setAll(() => 0));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §8.5 — dal tempo allo spettro (DFT reale di magnitudo)
+   ========================================================================= */
+(function () {
+  const top = document.getElementById('wsp-top'), bot = document.getElementById('wsp-bot');
+  if (!top) return;
+  const out = document.getElementById('wsp-out');
+  const f1S = document.getElementById('wsp-f1'), f2S = document.getElementById('wsp-f2'), nzS = document.getElementById('wsp-nz');
+  const f1V = document.getElementById('wsp-f1v'), f2V = document.getElementById('wsp-f2v'), nzV = document.getElementById('wsp-nzv');
+  const N = 64;
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(11);
+  const noise = []; for (let n = 0; n < N; n++) noise.push(rng() - 0.5);
+
+  function dftMag(x) {
+    const half = N / 2, mag = [];
+    for (let k = 0; k <= half; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); }
+      mag.push(Math.sqrt(re * re + im * im) * 2 / N);
+    }
+    return mag;
+  }
+
+  function draw() {
+    const f1 = parseInt(f1S.value, 10), f2 = parseInt(f2S.value, 10), nz = parseFloat(nzS.value);
+    f1V.textContent = f1; f2V.textContent = f2; nzV.textContent = nz.toFixed(2);
+    const x = [];
+    for (let n = 0; n < N; n++) x.push(Math.sin(2 * Math.PI * f1 * n / N) + 0.6 * Math.sin(2 * Math.PI * f2 * n / N) + nz * noise[n]);
+    const mag = dftMag(x);
+
+    // --- tempo ---
+    top.innerHTML = '';
+    const pt = new Plot(top, { xmin: 0, xmax: N, ymin: -2, ymax: 2 });
+    pt.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    pt.seq(x, { color: 'var(--ink-soft)', width: 1.6 });
+    pt.text(1, 1.8, 'segnale nel tempo x[n]', { color: 'var(--ink-soft)', anchor: 'start', size: 11 });
+
+    // --- frequenza ---
+    bot.innerHTML = '';
+    const pb = new Plot(bot, { xmin: -1, xmax: N / 2 + 1, ymin: 0, ymax: Math.max(...mag) * 1.2 + 0.01 });
+    pb.axes({ numbers: true, names: true, xname: 'k (frequenza)', yname: '', stepX: 8, fmtY: () => '' });
+    pb.bars(mag, { x0: 0, dxs: 1, bw: 0.7, fill: 'color-mix(in srgb, var(--accent) 55%, transparent)', color: 'var(--accent)' });
+
+    out.innerHTML = `
+      <div class="big">componenti a k = <b style="color:var(--accent)">${f1}</b> e
+        <b style="color:var(--accent)">${f2}</b> cicli</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In alto il segnale nel tempo: due sinusoidi ${nz > 0.4 ? 'ben nascoste nel rumore' : 'più un po&rsquo; di rumore'}.
+        In basso lo <b style="color:var(--accent)">spettro</b>: due picchi netti a k=${f1} e k=${f2}
+        smascherano le componenti. <mark>Ciò che nel tempo è confuso, in frequenza è ovvio.</mark>
+        ${nz > 0.4 ? 'Nota come il rumore alzi un po&rsquo; tutte le frequenze, ma i picchi restino riconoscibili.' : ''}
+      </div>`;
+  }
+  [f1S, f2S, nzS].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+</script>
+</body>
+</html>

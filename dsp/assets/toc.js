@@ -126,7 +126,7 @@ const TOC = [
     n: 8,
     titolo: "La trasformata di Fourier discreta (DFT)",
     file: "cap08-dft.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "La famiglia delle trasformate di Fourier" },
       { id: "s8-2", n: "8.2", t: "Notazione e formato della DFT reale" },
