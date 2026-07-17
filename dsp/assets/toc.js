@@ -261,7 +261,7 @@ const TOC = [
     n: 17,
     titolo: "Filtri su misura",
     file: "cap17-filtri-su-misura.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Quando i filtri standard non bastano" },
       { id: "s17-2", n: "17.2", t: "Progetto dal dominio della frequenza" },

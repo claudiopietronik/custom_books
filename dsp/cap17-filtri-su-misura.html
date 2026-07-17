@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17 · Filtri su misura — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="17">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.17 — Capitolo 17</div>
+    <h1>Filtri su misura</h1>
+    <p class="standfirst">
+      Finora abbiamo scelto filtri dal catalogo. Ma a volte serve qualcosa che il catalogo non ha: una risposta
+      in frequenza di forma arbitraria, un filtro che <em>annulli</em> una distorsione precisa, o che estragga in
+      modo <b>ottimo</b> un segnale noto dal rumore. Qui il DSP smette di scegliere e comincia a costruire —
+      partendo dal risultato voluto e ricavando il filtro che lo produce.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiudiamo i FIR con la loro applicazione più creativa. Media mobile (Cap. 15) e windowed-sinc (Cap. 16)
+      erano filtri «di forma fissa»; qui progettiamo la forma che vogliamo. Poi il Cap. 18 mostra come applicare
+      questi filtri, spesso lunghi, in modo efficiente con la FFT.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Deconvoluzione e filtri ottimali sono tra gli strumenti più potenti — e insidiosi — del DSP: mettono a
+      fuoco immagini sfocate, tirano fuori echi radar dal rumore, ripristinano audio degradato. Ma toccano un
+      limite profondo: <strong>non si può recuperare informazione che è stata davvero distrutta.</strong> Capire
+      dove sta quel confine è ciò che separa un ripristino onesto da un'illusione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-1"><span class="secnum">SEZIONE 17.1</span>Quando i filtri standard non bastano</h2>
+
+  <p class="lead">
+    I filtri dei capitoli precedenti coprono i casi comuni: lasciar passare o bloccare fasce di frequenza. Ma
+    tre situazioni sfuggono al catalogo.
+  </p>
+
+  <ul>
+    <li><b>Forma arbitraria.</b> Ti serve una risposta in frequenza che non è né un passa-basso né un passa-banda:
+        magari deve alzare certe frequenze, abbassarne altre, con un profilo su misura (un equalizzatore, la
+        correzione di un altoparlante).</li>
+    <li><b>Annullare una distorsione nota.</b> Il segnale è stato «convoluto» da qualcosa — un canale che sbava,
+        un obiettivo sfocato — e vuoi l'inverso: un filtro che <em>disfi</em> quella convoluzione. È la
+        deconvoluzione.</li>
+    <li><b>Estrazione ottima.</b> Sai esattamente che forma ha il segnale che cerchi, e vuoi il filtro che lo
+        distingua dal rumore <em>nel modo migliore possibile</em>. Sono i filtri ottimali.</li>
+  </ul>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-2"><span class="secnum">SEZIONE 17.2</span>Progetto dal dominio della frequenza</h2>
+
+  <p class="lead">
+    Per un filtro di forma arbitraria la ricetta è diretta, e sfrutta tutto ciò che sappiamo: <b>parti dalla
+    risposta in frequenza che vuoi, e torna indietro con la FFT inversa.</b>
+  </p>
+
+  <ol class="passi">
+    <li><b>Disegna la risposta in frequenza desiderata:</b> per ogni frequenza, il guadagno che vuoi (1 dove
+        deve passare, 0 dove bloccare, valori intermedi dove serve).</li>
+    <li><b>FFT inversa</b> di questa risposta: ottieni la risposta all'impulso corrispondente (il kernel del
+        filtro).</li>
+    <li><b>Tronca e finestra</b> il kernel (come nel Cap. 16), per renderlo finito e senza Gibbs. Il filtro è
+        pronto.</li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il windowed-sinc era già questo</div>
+    <p style="margin-bottom:0">
+      Riconosci lo schema? Il windowed-sinc del Cap. 16 <em>era</em> questo procedimento con una risposta
+      rettangolare: FFT inversa del rettangolo = sinc, poi finestra. <mark>Ora generalizziamo: qualunque forma in
+      frequenza dà, via FFT inversa, il suo kernel.</mark> Un passa-basso ideale, un equalizzatore a cinque
+      bande, la correzione della curva di un microfono: tutti nascono così. La FFT inversa è la macchina che
+      trasforma «cosa voglio in frequenza» in «come lo faccio nel tempo».
+    </p>
+  </div>
+
+  <h3>Provalo: un equalizzatore su misura</h3>
+
+  <p>
+    Regola i guadagni di tre bande (basse, medie, alte): definisci così la risposta in frequenza che vuoi (la
+    linea <b style="color:var(--ink-faint)">grigia tratteggiata</b>). La FFT inversa produce il kernel, e la
+    curva <b style="color:var(--accent)">teal</b> mostra la risposta effettivamente ottenuta — che insegue il
+    tuo bersaglio.
+  </p>
+
+  <div class="widget" id="w-eq">
+    <div class="w-head">
+      <span>Progetto dal dominio della frequenza</span>
+      <span class="hint">definisci la forma, ottieni il filtro</span>
+    </div>
+    <div class="w-stage">
+      <svg id="weq-freq" viewBox="0 0 620 160" role="img" aria-label="Risposta in frequenza bersaglio e risposta ottenuta di un equalizzatore a tre bande"></svg>
+      <svg id="weq-imp" viewBox="0 0 620 110" role="img" aria-label="Il kernel del filtro ottenuto per FFT inversa"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>basse</label><input type="range" id="weq-lo" min="0" max="2" step="0.05" value="1.4"><output id="weq-lov">1.40</output></div>
+      <div class="w-ctrl"><label>medie</label><input type="range" id="weq-mid" min="0" max="2" step="0.05" value="0.4"><output id="weq-midv">0.40</output></div>
+      <div class="w-ctrl"><label>alte</label><input type="range" id="weq-hi" min="0" max="2" step="0.05" value="1.1"><output id="weq-hiv">1.10</output></div>
+    </div>
+    <div class="w-readout" id="weq-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-3"><span class="secnum">SEZIONE 17.3</span>La deconvoluzione</h2>
+
+  <p class="lead">
+    La deconvoluzione è il sogno del ripristino: se qualcosa ha «convoluto» il tuo segnale (una sfocatura, un'eco,
+    una distorsione), la deconvoluzione lo <b>disfa</b>. In frequenza sembra banale — ma nasconde una trappola
+    profonda.
+  </p>
+
+  <p>
+    L'idea sfrutta il teorema di convoluzione (Cap. 10): se il segnale distorto è \(Y = X \cdot H\) in frequenza
+    (dove \(H\) è la distorsione), allora per recuperare \(X\) basta <b>dividere</b>: \(X = Y / H\). Elegante. Il
+    problema è che alle frequenze dove \(H\) è quasi zero — quelle che la distorsione ha <em>cancellato</em> —
+    dividere significa moltiplicare per un numero enorme, amplificando a dismisura il minimo rumore. Il risultato
+    «esplode».
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Non si resuscita l'informazione morta</div>
+    <p style="margin-bottom:0">
+      Ecco il limite invalicabile: dove la distorsione ha <b>azzerato</b> una frequenza, l'informazione lì è
+      <em>persa per sempre</em> — nessuna divisione la riporta indietro, perché non c'è più niente da dividere,
+      solo rumore da amplificare. La deconvoluzione onesta usa la <b class="termine">regolarizzazione</b>: invece
+      di dividere ciecamente, «frena» dove \(H\) è piccolo, accettando un ripristino parziale ma stabile. <mark>È
+      un compromesso tra nitidezza e rumore</mark>: spingi troppo e ottieni un'esplosione; freni troppo e resta
+      sfocato.
+    </p>
+  </div>
+
+  <h3>Provalo: deconvolvi una sfocatura</h3>
+
+  <p>
+    Il segnale originale (<b style="color:var(--ink-faint)">grigio</b>) è stato sfocato e sporcato di rumore
+    (<b>tratteggiato</b>). Regola la regolarizzazione e guarda il ripristino (<b style="color:var(--accent)">teal</b>):
+    poca regolarizzazione → i dettagli tornano ma il rumore <b>esplode</b>; troppa → stabile ma ancora
+    sfocato. Cerca il punto giusto.
+  </p>
+
+  <div class="widget" id="w-deconv">
+    <div class="w-head">
+      <span>Deconvoluzione regolarizzata</span>
+      <span class="hint">nitidezza contro esplosione del rumore</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wdc-svg" viewBox="0 0 620 260" role="img" aria-label="Un segnale sfocato deconvoluto con regolarizzazione variabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>regolar.</label><input type="range" id="wdc-r" min="-4" max="0" step="0.1" value="-2"><output id="wdc-rv">0.010</output></div>
+    </div>
+    <div class="w-readout" id="wdc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-4"><span class="secnum">SEZIONE 17.4</span>Filtri ottimali: adattato e di Wiener</h2>
+
+  <p class="lead">
+    Ultimo livello: filtri che non solo funzionano, ma sono <b>ottimali</b> secondo un criterio matematico
+    preciso. Due i più importanti, per due scopi diversi.
+  </p>
+
+  <p>
+    Il <b class="termine">filtro adattato</b> (matched filter) risponde alla domanda «c'è, nel segnale, questa
+    forma nota, e dove?» — massimizzando il rapporto segnale/rumore del rilevamento. La sua ricetta la conosciamo
+    già: è la <b>correlazione</b> col modello (Cap. 7). È l'arma dei radar e dei sonar: la forma esatta
+    dell'impulso emesso è il modello, e correlando l'eco ricevuta con esso si stana il bersaglio anche se
+    sepolto nel rumore. <mark>Per <em>trovare</em> un segnale noto, niente batte il filtro adattato.</mark>
+  </p>
+
+  <p>
+    Il <b class="termine">filtro di Wiener</b> risponde invece a «come ripulisco al meglio un segnale dal rumore,
+    conoscendo le loro caratteristiche?» — minimizzando l'errore di ricostruzione. La sua idea è pesare ciascuna
+    frequenza secondo <em>quanto è affidabile</em>: dove il segnale domina il rumore, lascia passare; dove il
+    rumore domina, attenua. È il ripristino ottimo quando conosci gli spettri di segnale e rumore, ed è la base
+    di molti algoritmi di riduzione del rumore audio e di deblurring delle immagini.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Due domande opposte, due ottimi</div>
+    <p style="margin-bottom:0">
+      Nota la simmetria: il filtro <b>adattato</b> ottimizza il <em>rilevamento</em> («c'è o non c'è?»),
+      accettando di deformare la forma; il filtro di <b>Wiener</b> ottimizza il <em>ripristino</em> («com'era
+      davvero?»), cercando di restare fedele. Non esiste «il filtro ottimo» in assoluto — esiste l'ottimo <b>per
+      un obiettivo</b>. È la stessa lezione del Cap. 14, portata all'estremo: prima di ottimizzare, decidi cosa.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-5"><span class="secnum">SEZIONE 17.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.1</div>
+    <p style="margin-bottom:0">Vuoi un filtro con una risposta in frequenza di forma insolita (tre gobbe). Come
+      lo progetti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Definisci la risposta in frequenza desiderata (le tre gobbe), fanne la <b>FFT inversa</b> per ottenere
+          il kernel, poi <b>tronca e finestra</b> (§17.2, Cap. 16). È lo stesso metodo del windowed-sinc,
+          generalizzato a una forma qualunque.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.2</div>
+    <p style="margin-bottom:0">Perché la deconvoluzione «esplode» se fatta come semplice divisione \(Y/H\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Alle frequenze dove \(H\) è quasi zero (quelle attenuate dalla distorsione), dividere per \(H\)
+          equivale a moltiplicare per un numero enorme — e lì c'è quasi solo rumore, che viene amplificato a
+          dismisura. Serve la <b>regolarizzazione</b>: frenare la divisione dove \(H\) è piccolo (§17.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.3</div>
+    <p style="margin-bottom:0">Devi rilevare la presenza di un impulso radar di forma nota, sepolto nel rumore.
+      Filtro adattato o di Wiener?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Filtro adattato</b>: massimizza l'SNR di <em>rilevamento</em> di un segnale di forma nota. In
+          pratica è la correlazione dell'eco col modello dell'impulso emesso (Cap. 7): fa un picco netto dove il
+          bersaglio è presente. Wiener servirebbe se volessi <em>ricostruire fedelmente</em> il segnale, non solo
+          rilevarlo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.4</div>
+    <p style="margin-bottom:0">Una distorsione ha azzerato completamente una banda di frequenze. La
+      deconvoluzione può recuperarla?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>No.</b> Dove la frequenza è stata azzerata, l'informazione è <b>persa per sempre</b>: non c'è
+          niente da «dividere», solo rumore. Nessun filtro la resuscita. La deconvoluzione recupera ciò che è
+          stato <em>attenuato</em>, non ciò che è stato <em>distrutto</em>. È il limite di fondo del ripristino
+          (§17.3).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-6"><span class="secnum">SEZIONE 17.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 17</div>
+    <ol style="margin-bottom:0">
+      <li><b>Progetto in frequenza:</b> definisci la risposta voluta → FFT inversa → tronca e finestra. Il
+          windowed-sinc ne è il caso particolare.</li>
+      <li><b>Deconvoluzione:</b> disfare una convoluzione = dividere gli spettri (\(Y/H\)), ma esplode dove \(H\)
+          è piccolo. Serve <b>regolarizzazione</b>: compromesso nitidezza/rumore.</li>
+      <li><b>Limite invalicabile:</b> l'informazione azzerata dalla distorsione è persa per sempre. Si recupera
+          l'attenuato, non il distrutto.</li>
+      <li><b>Filtro adattato</b> (= correlazione) → ottimo per <em>rilevare</em> un segnale noto (radar). <b>Filtro
+          di Wiener</b> → ottimo per <em>ripristinare</em> conoscendo gli spettri.</li>
+      <li><b>Non esiste l'ottimo assoluto:</b> esiste l'ottimo per un obiettivo. Decidi prima cosa vuoi.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo filtri lunghi e sofisticati; ma applicarli con la convoluzione diretta (\(\propto N M\)) è costoso.
+    Il <strong>Capitolo 18</strong> risolve il problema una volta per tutte con la <b>convoluzione tramite
+    FFT</b>: sfruttando il teorema di convoluzione (Cap. 10) e la FFT (Cap. 12), filtra segnali lunghissimi a una
+    frazione del costo, con la tecnica dell'<em>overlap-add</em>. È il pezzo che rende pratici tutti i filtri di
+    alta qualità visti finora.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function dftC(x) { const N = x.length, Re = new Array(N).fill(0), Im = new Array(N).fill(0); for (let k = 0; k < N; k++) { let re = 0, im = 0; for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } Re[k] = re; Im[k] = im; } return { Re, Im }; }
+function idftC(Re, Im) { const N = Re.length, x = new Array(N).fill(0); for (let n = 0; n < N; n++) { let s = 0; for (let k = 0; k < N; k++) { const a = 2 * Math.PI * k * n / N; s += Re[k] * Math.cos(a) - Im[k] * Math.sin(a); } x[n] = s / N; } return x; }
+
+/* ============================================================================
+   WIDGET §17.2 — equalizzatore su misura (progetto in frequenza)
+   ========================================================================= */
+(function () {
+  const sF = document.getElementById('weq-freq'), sI = document.getElementById('weq-imp');
+  if (!sF) return;
+  const out = document.getElementById('weq-out');
+  const lo = document.getElementById('weq-lo'), mid = document.getElementById('weq-mid'), hi = document.getElementById('weq-hi');
+  const lov = document.getElementById('weq-lov'), midv = document.getElementById('weq-midv'), hiv = document.getElementById('weq-hiv');
+  const N = 128, half = N / 2;
+
+  function target(k) { const f = k / half; if (f < 0.33) return +lo.value; if (f < 0.66) return +mid.value; return +hi.value; }
+
+  function draw() {
+    lov.textContent = (+lo.value).toFixed(2); midv.textContent = (+mid.value).toFixed(2); hiv.textContent = (+hi.value).toFixed(2);
+    // risposta bersaglio simmetrica → kernel reale
+    const Re = new Array(N).fill(0), Im = new Array(N).fill(0);
+    for (let k = 0; k <= half; k++) { Re[k] = target(k); if (k > 0 && k < half) Re[N - k] = target(k); }
+    let h = idftC(Re, Im);
+    // centra e finestra (Hamming) su M+1 = 41 campioni
+    const M = 40, ker = [];
+    for (let i = 0; i <= M; i++) { const idx = (i - M / 2 + N) % N; const w = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / M); ker.push(h[idx] * w); }
+    // risposta ottenuta
+    const kpad = new Array(N).fill(0); for (let i = 0; i <= M; i++) kpad[i] = ker[i];
+    const K = dftC(kpad); const mag = []; for (let k = 0; k <= half; k++) mag.push(Math.sqrt(K.Re[k] ** 2 + K.Im[k] ** 2));
+
+    sF.innerHTML = '';
+    const pf = new Plot(sF, { xmin: 0, xmax: 0.5, ymin: 0, ymax: 2.3 });
+    pf.grid(0.1, 0.5); pf.axes({ numbers: true, names: true, xname: 'frequenza', yname: '|H|', stepX: 0.1, stepY: 1 });
+    // bersaglio (grigio, a gradini)
+    const tgt = []; for (let k = 0; k <= half; k++) tgt.push([0.5 * k / half, target(k)]);
+    pf.poly(tgt, { color: 'var(--ink-faint)', width: 1.6, close: false, dash: '5 4' });
+    pf.poly(mag.map((m, k) => [0.5 * k / half, m]), { color: 'var(--accent)', width: 2.4, close: false });
+
+    sI.innerHTML = '';
+    const peak = Math.max(...ker.map(Math.abs));
+    const pi = new Plot(sI, { xmin: -1, xmax: M + 1, ymin: -peak * 1.1, ymax: peak * 1.15 });
+    pi.line(-1, 0, M + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    pi.stem(ker, { color: 'var(--violet)', r: 2, width: 1 });
+    pi.text(M, peak, 'kernel (FFT inversa)', { color: 'var(--violet)', anchor: 'end', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">basse <b>${(+lo.value).toFixed(1)}</b> · medie <b>${(+mid.value).toFixed(1)}</b> · alte <b>${(+hi.value).toFixed(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La linea <b style="color:var(--ink-faint)">grigia</b> è la risposta che <b>vuoi</b>; la
+        <b style="color:var(--accent)">teal</b> è quella che <b>ottieni</b> col kernel ricavato per FFT inversa e
+        finestrato. <mark>Definisci la forma in frequenza, e la FFT inversa ti dà il filtro.</mark>
+      </div>`;
+  }
+  [lo, mid, hi].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §17.3 — deconvoluzione regolarizzata
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wdc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wdc-out');
+  const rS = document.getElementById('wdc-r'), rV = document.getElementById('wdc-rv');
+  const N = 128;
+  // segnale originale: due picchi stretti
+  const orig = new Array(N).fill(0);
+  for (let n = 0; n < N; n++) { const t1 = (n - 45) / 3, t2 = (n - 75) / 4; orig[n] = 1.0 * Math.exp(-t1 * t1) + 0.75 * Math.exp(-t2 * t2); }
+  // kernel di sfocatura gaussiano
+  const g = new Array(N).fill(0); let gs = 0; for (let n = 0; n < N; n++) { const d = Math.min(n, N - n); const v = Math.exp(-(d * d) / (2 * 9)); g[n] = v; gs += v; } for (let n = 0; n < N; n++) g[n] /= gs;
+  // segnale sfocato + rumore
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(9);
+  const Og = dftC(orig), Gf = dftC(g);
+  const Bre = [], Bim = [];
+  for (let k = 0; k < N; k++) { Bre.push(Og.Re[k] * Gf.Re[k] - Og.Im[k] * Gf.Im[k]); Bim.push(Og.Re[k] * Gf.Im[k] + Og.Im[k] * Gf.Re[k]); }
+  let blurred = idftC(Bre, Bim); blurred = blurred.map(v => v + (rng() - 0.5) * 0.02);
+  const Bf = dftC(blurred);
+
+  function draw() {
+    const eps = Math.pow(10, parseFloat(rS.value));
+    rV.textContent = eps.toFixed(4);
+    // deconvoluzione regolarizzata: X = B·conj(G) / (|G|² + eps)
+    const Xre = [], Xim = [];
+    for (let k = 0; k < N; k++) {
+      const gm = Gf.Re[k] * Gf.Re[k] + Gf.Im[k] * Gf.Im[k];
+      const denom = gm + eps;
+      const nre = Bf.Re[k] * Gf.Re[k] + Bf.Im[k] * Gf.Im[k];
+      const nim = Bf.Im[k] * Gf.Re[k] - Bf.Re[k] * Gf.Im[k];
+      Xre.push(nre / denom); Xim.push(nim / denom);
+    }
+    const restored = idftC(Xre, Xim);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: N, ymin: -0.6, ymax: 1.5 });
+    p.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    p.seq(orig, { color: 'var(--ink-faint)', width: 1.2 });
+    p.seq(blurred, { color: 'var(--warm)', width: 1.4, dash: '4 3' });
+    p.seq(restored, { color: 'var(--accent)', width: 2.2 });
+    p.text(2, 1.4, 'grigio: originale · ambra: sfocato · teal: ripristinato', { color: 'var(--ink-soft)', anchor: 'start', size: 10 });
+
+    // errore rispetto all'originale
+    let err = 0; for (let n = 0; n < N; n++) err += (restored[n] - orig[n]) ** 2; err = Math.sqrt(err / N);
+    out.innerHTML = `
+      <div class="big">regolarizzazione ε = <b>${eps.toFixed(4)}</b> &nbsp;·&nbsp; errore = <b>${err.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${eps < 0.003 ? 'Regolarizzazione bassa: i picchi tornano affilati ma il <mark>rumore esplode</mark> in oscillazioni.'
+          : eps > 0.2 ? 'Regolarizzazione alta: stabile, ma il ripristino resta <mark>sfocato</mark> (quasi come il segnale d\'ingresso).'
+            : 'Buon compromesso: picchi <mark>recuperati</mark> senza far esplodere il rumore.'}
+        Cerca il minimo dell\'errore: è lì l\'equilibrio tra nitidezza e rumore.
+      </div>`;
+  }
+  rS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
