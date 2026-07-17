@@ -177,7 +177,7 @@ const TOC = [
     n: 11,
     titolo: "Matrici e determinanti",
     file: "cap11-matrici-determinanti.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Risolvere sistemi con le matrici" },
       { id: "s11-2", n: "11.2", t: "Sistemi impossibili e indeterminati" },
