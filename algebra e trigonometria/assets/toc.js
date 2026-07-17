@@ -100,7 +100,7 @@ const TOC = [
     n: 6,
     titolo: "Le funzioni trigonometriche",
     file: "cap06-funzioni-trigonometriche.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Angoli e loro misura" },
       { id: "s6-2", n: "6.2", t: "Trigonometria del triangolo rettangolo" },
