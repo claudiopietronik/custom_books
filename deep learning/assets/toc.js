@@ -328,7 +328,7 @@ const TOC = [
     titolo: "Affrontare la funzione di partizione",
     file: "cap18-partizione.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Il gradiente della log-verosimiglianza" },
       { id: "s18-2", n: "18.2", t: "Massima verosimiglianza stocastica e contrastive divergence" },

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Affrontare la funzione di partizione — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 18 · Parte III</div>
+    <h1>Affrontare la funzione di partizione</h1>
+    <p class="standfirst">
+      I modelli non diretti (Cap. 16) definiscono la probabilità come \(p(\vv{x})=\tilde p(\vv{x})/Z\), dove
+      \(\tilde p\) è facile da valutare ma \(Z\) — la <b>funzione di partizione</b> — è una somma su
+      <em>tutte</em> le configurazioni: intrattabile. <mark>Senza \(Z\) non sai nemmeno quanto vale la
+      probabilità di un dato</mark>, e il gradiente per addestrare ne dipende. Questo capitolo raccoglie i
+      trucchi per <b>addestrare aggirando \(Z\)</b>: contrastive divergence, score matching, noise-contrastive
+      estimation.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il nocciolo: il <b>gradiente della log-verosimiglianza</b> e le sue due «fasi» (§18.1, widget). I metodi
+      basati su MCMC: <b>massima verosimiglianza stocastica e contrastive divergence</b> (§18.2). Le alternative
+      che evitano \(Z\): <b>pseudo-verosimiglianza</b> (§18.3), <b>score matching</b> (§18.4),
+      <b>noise-contrastive estimation</b> (§18.5). E quando \(Z\) proprio serve: come <b>stimarlo</b> (§18.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      È il capitolo che spiega <em>come si addestrano davvero</em> le macchine di Boltzmann e le RBM (Cap. 20).
+      La contrastive divergence — «alza l'energia dove il modello sogna, abbassala dove ci sono i dati» — è uno
+      degli algoritmi più eleganti del campo. <mark>E la stessa difficoltà (una costante di normalizzazione
+      intrattabile) riappare, in altre vesti, in moltissimi modelli generativi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">Sezione 18.1</span>Il gradiente della log-verosimiglianza</h2>
+
+  <p class="lead">
+    Addestrare per massima verosimiglianza richiede il gradiente di \(\log p(\vv{x})\). Si spezza in <b>due
+    pezzi</b> con significati opposti — la «fase positiva» e la «fase negativa».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le due fasi <span class="tag">alza i dati, abbassa i «sogni» del modello</span></div>
+    <div class="f-body">
+      \[ \grad_{\vv{\theta}}\log p(\vv{x}) = \underbrace{\grad_{\vv{\theta}}\log\tilde p(\vv{x})}_{\hA{\text{fase positiva}}}
+         \;-\; \underbrace{\E_{\vv{x}'\dist p}\!\big[\grad_{\vv{\theta}}\log\tilde p(\vv{x}')\big]}_{\hB{\text{fase negativa}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\text{fase positiva}}\)</dt>
+        <dd>spinge in <b>alto</b> la probabilità (abbassa l'energia) dei <b>dati veri</b> \(\vv{x}\): «rendi più
+            probabile ciò che osservi».</dd>
+        <dt>\(\hB{\text{fase negativa}}\)</dt>
+        <dd>spinge in <b>basso</b> la probabilità dei campioni <b>generati dal modello</b> \(\vv{x}'\): «rendi
+            meno probabile ciò che il modello sogna». <mark>Questa aspettazione richiede di campionare da \(p\)
+            — ed è la parte difficile, dove entra Monte Carlo</mark> (Cap. 17).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'equilibrio: quando le due fasi si bilanciano, il modello genera dati indistinguibili dai veri.
+      <mark>Non serve mai calcolare \(Z\) esplicitamente</mark>: sparisce nel gradiente, lasciando questa
+      elegante «lotta» tra dati e sogni. Il widget mostra il paesaggio di energia e come \(Z\) normalizza il
+      tutto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-Z">
+    <div class="w-head">
+      <span>Energia, densità e funzione di partizione</span>
+      <span class="hint">muovi la «temperatura» β</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wZ-svg" viewBox="0 0 560 380" role="img" aria-label="Un paesaggio di energia a doppia buca, la densità non normalizzata e quella normalizzata da Z"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>β</label><input type="range" id="wZ-b" min="0.3" max="3" step="0.05" value="1"><output id="wZ-b-o">1.0</output></div>
+    </div>
+    <div class="w-readout" id="wZ-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">Sezione 18.2</span>Massima verosimiglianza stocastica e contrastive divergence</h2>
+
+  <p class="lead">
+    La fase negativa richiede campioni dal modello via MCMC — costosissimo se si aspetta la convergenza. La
+    <b>contrastive divergence</b> bara: fa pochi passi di Gibbs partendo dai dati.
+  </p>
+
+  <p>
+    Aspettare che una catena di Gibbs converga a ogni aggiornamento dei pesi sarebbe proibitivo. La
+    <span class="termine">contrastive divergence</span> (CD) approssima la fase negativa facendo <b>solo pochi
+    passi</b> di Gibbs (spesso uno!), partendo dai <b>dati veri</b> invece che da rumore. La <b>massima
+    verosimiglianza stocastica</b> (o <em>persistent CD</em>) fa meglio: mantiene una catena «persistente» tra
+    un aggiornamento e l'altro, senza ripartire ogni volta. <mark>Sono approssimazioni sporche ma
+    funzionanti</mark>: è così che si sono addestrate le RBM e le deep belief network (Cap. 20). La CD è veloce
+    ma distorta; la persistent CD è più accurata ma più delicata.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">Sezione 18.3</span>La pseudo-verosimiglianza</h2>
+
+  <p class="lead">
+    Un'idea diversa: evitare \(Z\) del tutto, sostituendo la verosimiglianza congiunta con un prodotto di
+    <b>condizionate</b> — dove \(Z\) si semplifica.
+  </p>
+
+  <p>
+    La <span class="termine">pseudo-verosimiglianza</span> massimizza \(\prod_i p(x_i\given \vv{x}_{-i})\): la
+    probabilità di ogni variabile date <em>tutte le altre</em>. Il trucco: in una condizionata, la costante di
+    normalizzazione è una somma su una <b>sola</b> variabile (le altre sono fissate), quindi è <b>trattabile</b>
+    — non serve \(Z\). <mark>Si scambia un po' di correttezza statistica per la trattabilità</mark>: la
+    pseudo-verosimiglianza non è la verosimiglianza vera, ma converge agli stessi parametri con abbastanza dati,
+    ed evita completamente il Monte Carlo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">Sezione 18.4</span>Score matching e ratio matching</h2>
+
+  <p class="lead">
+    Un altro modo di aggirare \(Z\): abbinare non le probabilità ma i loro <b>gradienti</b> (lo «score»), che di
+    \(Z\) non risentono.
+  </p>
+
+  <p>
+    Lo <span class="termine">score</span> è \(\grad_{\vv{x}}\log p(\vv{x})\): la <b>derivata rispetto ai dati</b>
+    della log-densità. Poiché \(Z\) è una costante rispetto a \(\vv{x}\), <mark>la sua derivata è zero: lo score
+    non dipende da \(Z\)</mark>. Lo <b>score matching</b> addestra il modello a far coincidere il proprio score
+    con quello dei dati, evitando del tutto la funzione di partizione. Il <b>ratio matching</b> è l'analogo per
+    dati discreti. Questi metodi hanno un legame profondo con gli autoencoder di denoising (§14.5) — imparare a
+    «riportare i punti sulla varietà» è imparare lo score — e sono l'antenato concettuale dei moderni <b>modelli
+    di diffusione</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">Sezione 18.5</span>Noise-contrastive estimation</h2>
+
+  <p class="lead">
+    L'idea più furba: trasformare la stima di densità in un problema di <b>classificazione</b> — distinguere i
+    dati veri dal rumore.
+  </p>
+
+  <p>
+    La <span class="termine">noise-contrastive estimation</span> (NCE) addestra un classificatore a distinguere
+    i dati veri da campioni di <b>rumore</b> generati da una distribuzione nota. Nel farlo, il modello è
+    <b>costretto a imparare la densità</b> dei dati (e persino \(Z\) come parametro). <mark>Un problema di
+    stima intrattabile diventa un problema di classificazione facile</mark> — la stessa filosofia, tra l'altro,
+    di come funzionano gli embedding di parole efficienti (word2vec, §12.4) e, in spirito, il discriminatore
+    delle GAN (Cap. 20).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-6"><span class="secnum">Sezione 18.6</span>Stimare la funzione di partizione</h2>
+
+  <p class="lead">
+    A volte \(Z\) serve davvero — per confrontare due modelli, o valutare la verosimiglianza su dati di test.
+    Allora la si <b>stima</b>, con Monte Carlo sofisticato.
+  </p>
+
+  <p>
+    Metodi come l'<b>annealed importance sampling</b> stimano \(Z\) costruendo un «ponte» di distribuzioni
+    intermedie tra una facile (di cui si conosce \(Z\)) e quella del modello, accumulando pesi di importanza
+    lungo il cammino. <mark>Stimare \(Z\) resta costoso e delicato</mark>, ma è a volte l'unico modo di dire
+    quale di due modelli generativi assegna più probabilità ai dati veri. È anche il motivo per cui valutare i
+    modelli generativi è notoriamente difficile (Cap. 20).
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li>Nei modelli non diretti \(p=\tilde p/Z\), con \(Z\) intrattabile. Il gradiente ha una <b>fase positiva</b>
+          (alza i dati) e una <b>negativa</b> (abbassa i campioni del modello) (§18.1, widget).</li>
+      <li>La <b>contrastive divergence</b> approssima la fase negativa con pochi passi di Gibbs dai dati; la
+          <b>persistent CD</b> tiene una catena viva (§18.2). È così che si addestrano le RBM.</li>
+      <li>Metodi che <b>evitano \(Z\)</b>: pseudo-verosimiglianza (condizionate, §18.3), <b>score matching</b>
+          (il gradiente non dipende da \(Z\), §18.4), <b>NCE</b> (classifica dati vs rumore, §18.5).</li>
+      <li>Quando \(Z\) serve, lo si <b>stima</b> (annealed importance sampling) — costoso e delicato (§18.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo aggirato \(Z\) per <em>addestrare</em>. Resta l'altra metà del problema: una volta addestrato il
+    modello, come si <b>inferiscono</b> le variabili nascoste dati i dati, quando anche questo è intrattabile? Il
+    <strong>Capitolo 19</strong> risponde con l'<b>inferenza approssimata</b>: trasformare l'inferenza in
+    un'ottimizzazione (inferenza variazionale), il motore matematico del VAE.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-7"><span class="secnum">Sezione 18.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.1</div>
+    <p style="margin-bottom:0">
+      Perché la funzione di partizione \(Z=\sum_{\vv{x}}\tilde p(\vv{x})\) è intrattabile per un modello con 100
+      variabili binarie? Su quante configurazioni bisognerebbe sommare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.2</div>
+    <p style="margin-bottom:0">
+      Descrivi in una frase la «fase positiva» e la «fase negativa» del gradiente della log-verosimiglianza.
+      Quale delle due richiede di campionare dal modello, ed è quindi la parte difficile?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.3</div>
+    <p style="margin-bottom:0">
+      Perché lo <b>score</b> \(\grad_{\vv{x}}\log p(\vv{x})\) non dipende dalla funzione di partizione \(Z\)?
+      Come sfrutta questo fatto lo score matching?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) La funzione di partizione si semplifica nel gradiente della log-verosimiglianza. &nbsp;
+      (b) La contrastive divergence aspetta che la catena di Gibbs converga del tutto. &nbsp;
+      (c) La noise-contrastive estimation trasforma la stima di densità in una classificazione. &nbsp;
+      (d) La pseudo-verosimiglianza richiede di calcolare \(Z\).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-8"><span class="secnum">Sezione 18.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.1</div>
+    <p style="margin-bottom:0">
+      Perché la somma è su <b>tutte</b> le \(2^{100}\) configurazioni possibili (§16.1) — circa \(10^{30}\),
+      più delle stelle nell'universo osservabile. Nessun computer può enumerarle: \(Z\) è <b>intrattabile</b>,
+      ed è il motivo per cui servono i trucchi di questo capitolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.2</div>
+    <p style="margin-bottom:0">
+      <b>Fase positiva</b>: alza la probabilità (abbassa l'energia) dei <b>dati veri</b>. <b>Fase negativa</b>:
+      abbassa la probabilità dei <b>campioni generati dal modello</b>. La fase <b>negativa</b> richiede di
+      campionare da \(p\) (il modello), ed è la parte difficile — quella che richiede MCMC/contrastive
+      divergence.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.3</div>
+    <p style="margin-bottom:0">
+      Perché \(\log p(\vv{x})=\log\tilde p(\vv{x})-\log Z\), e \(Z\) è una <b>costante rispetto a \(\vv{x}\)</b>:
+      derivando rispetto a \(\vv{x}\), il termine \(\log Z\) sparisce. Quindi lo score
+      \(\grad_{\vv{x}}\log p=\grad_{\vv{x}}\log\tilde p\) non contiene \(Z\). <mark>Lo score matching addestra il
+      modello a far coincidere il suo score con quello dei dati</mark>, evitando del tutto di calcolare \(Z\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(Z\) sparisce nel gradiente, lasciando le due fasi (§18.1). <br>
+      <b>(b) FALSO.</b> La CD fa <b>pochi passi</b> di Gibbs dai dati, senza aspettare la convergenza (§18.2). <br>
+      <b>(c) VERO.</b> La NCE distingue dati veri da rumore, imparando così la densità (§18.5). <br>
+      <b>(d) FALSO.</b> La pseudo-verosimiglianza usa le <b>condizionate</b>, la cui normalizzazione è
+      trattabile: evita \(Z\) (§18.3).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §18.1 — energia, densità non normalizzata e Z
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wZ-svg');
+  if (!svg) return;
+  const out = document.getElementById('wZ-out');
+  const bI = document.getElementById('wZ-b'), bO = document.getElementById('wZ-b-o');
+  const E = x => 0.6 * Math.pow(x * x - 1.6, 2);        // energia a doppia buca
+
+  function draw() {
+    const beta = parseFloat(bI.value); bO.textContent = fmt(beta, 2);
+    // Z = ∫ exp(-β E) dx  (numerico) su [-3,3]
+    const xm = -3, xM = 3, N = 600, dx = (xM - xm) / N;
+    let Z = 0; for (let i = 0; i <= N; i++) { const x = xm + i * dx; Z += Math.exp(-beta * E(x)) * dx; }
+    const ptilde = x => Math.exp(-beta * E(x));
+    const pnorm = x => ptilde(x) / Z;
+    // per il disegno scaliamo p̃ così è confrontabile
+    let maxT = 0; for (let i = 0; i <= N; i++) { const x = xm + i * dx; maxT = Math.max(maxT, ptilde(x)); }
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -0.15, ymax: 1.25 });
+    p.grid(1, 0.25); p.axes({ numbers: true, stepX: 1, stepY: 0.25, xname: 'x' });
+    // energia (riscalata) tenue
+    p.func(x => E(x) / 3, { color: 'var(--ink-faint)', width: 1.6, dash: '5 4' });
+    // densità normalizzata (l'area = 1)
+    p.area(pnorm, -3, 3, { fill: 'color-mix(in srgb, var(--violet) 16%, transparent)' });
+    p.func(pnorm, { color: 'var(--violet)', width: 2.8 });
+    out.innerHTML = `
+      <div class="big">
+        β = <b>${fmt(beta, 2)}</b> &nbsp;·&nbsp; Z = ∫ e^(−βE) dx = <b style="color:var(--warm)">${fmt(Z, 3)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'<b style="color:var(--ink-faint)">energia</b> E(x) (tratteggiata) ha due buche: gli stati a bassa
+        energia sono più probabili. La densità <b style="color:var(--violet)">p(x) = e^(−βE)/Z</b> (area = 1)
+        mette la probabilità nelle buche. <mark>Z è l'area sotto e^(−βE)</mark>: la costante che rende p una
+        probabilità. In 1D la calcoliamo; ${beta > 1.8 ? 'con β alto la distribuzione si concentra nelle buche.' : 'con β basso è più diffusa.'}
+        <b>In alta dimensione questo integrale è intrattabile</b> — ed è tutto il problema del capitolo.
+      </div>`;
+  }
+  bI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
