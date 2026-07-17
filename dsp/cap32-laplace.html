@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>32 · La trasformata di Laplace — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="32">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.32 — Capitolo 32</div>
+    <h1>La trasformata di Laplace</h1>
+    <p class="standfirst">
+      Fourier guarda i segnali che oscillano per sempre; ma il mondo è pieno di oscillazioni che <em>crescono</em>
+      o <em>si smorzano</em>. La trasformata di Laplace estende Fourier all'<b>intero piano complesso</b> — il
+      piano \(s\) — per catturare anche queste. In cambio ci regala il linguaggio più potente per descrivere i
+      sistemi: i <b>poli</b> e gli <b>zeri</b>, con cui si legge stabilità e comportamento a colpo d'occhio.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Penultimo strumento teorico, per i sistemi <em>analogici</em> (continui). Usa i numeri complessi (Cap. 30)
+      e generalizza Fourier (Cap. 31). Il Cap. 33 farà la stessa cosa per i sistemi <em>digitali</em> con la
+      trasformata z — e i due sono strettamente imparentati.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Poli e zeri sono il modo in cui ingegneri e progettisti «pensano» ai filtri e ai sistemi di controllo:
+      spostando un polo nel piano \(s\) cambi risonanza e stabilità senza risolvere una sola equazione
+      differenziale. È anche la teoria dietro i filtri di Chebyshev (Cap. 20) e la chiave per capire
+      <strong>perché un sistema è stabile o esplode.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-1"><span class="secnum">SEZIONE 32.1</span>Dal dominio della frequenza al piano s</h2>
+
+  <p class="lead">
+    Fourier scompone un segnale in oscillazioni <b>pure ed eterne</b>: seni e coseni che non crescono né
+    calano. Ma un circuito che risuona e poi si smorza, o un sistema che diverge, contengono oscillazioni
+    <em>modulate</em> da una crescita o un decadimento esponenziale. Fourier non le sa esprimere; Laplace sì.
+  </p>
+
+  <p>
+    L'idea: invece di usare come mattoni i fasori puri \(\eu^{\ii\omega t}\) (che ruotano a modulo costante),
+    Laplace usa mattoni più generali, \(\eu^{s t}\) con \(s = \sigma + \ii\omega\) <b>complesso</b>. La parte
+    reale \(\sigma\) controlla la <b>crescita o il decadimento</b> (esponenziale), la parte immaginaria \(\omega\)
+    la <b>frequenza</b> (oscillazione). Il risultato vive nel <b class="termine">piano \(s\)</b>: l'asse
+    orizzontale è \(\sigma\), quello verticale \(\omega\). <mark>Fourier è solo l'asse verticale del piano di
+    Laplace</mark> (\(\sigma = 0\): oscillazioni che non crescono né calano). Laplace guarda tutto il resto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-2"><span class="secnum">SEZIONE 32.2</span>Poli e zeri</h2>
+
+  <p class="lead">
+    Un sistema analogico è descritto dalla sua <b>funzione di trasferimento</b> \(H(s)\) — un rapporto di
+    polinomi in \(s\). E due insiemi di punti nel piano \(s\) ne raccontano tutto il carattere: gli zeri e i poli.
+  </p>
+
+  <ul>
+    <li><b>Zeri:</b> i valori di \(s\) dove \(H(s) = 0\) (le radici del numeratore). Sono le frequenze che il
+        sistema <b>annulla</b>: uno zero vicino all'asse \(\omega\) crea un «buco» (come un notch) in quella
+        frequenza.</li>
+    <li><b>Poli:</b> i valori di \(s\) dove \(H(s) \to \infty\) (le radici del denominatore). Sono le frequenze
+        che il sistema <b>esalta</b>: un polo vicino all'asse \(\omega\) crea una <b>risonanza</b>, un picco in
+        quella frequenza.</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La regola d'oro della stabilità</div>
+    <p style="margin-bottom:0">
+      La posizione dei <b>poli</b> decide la stabilità, ed è una regola visiva bellissima: <mark>poli nel
+      semipiano <b>sinistro</b> (\(\sigma < 0\)) = sistema <b>stabile</b></mark> (le sue oscillazioni si
+      smorzano); poli nel semipiano <b>destro</b> (\(\sigma > 0\)) = sistema <b>instabile</b> (le oscillazioni
+      crescono senza limite, l'uscita esplode). Poli esattamente sull'asse = oscillazione perenne, al confine.
+      Progettare un sistema stabile significa, letteralmente, <b>tenere i poli a sinistra</b>. Il widget lo rende
+      tangibile.
+    </p>
+  </div>
+
+  <h3>Provalo: poli, zeri e risonanza</h3>
+
+  <p>
+    Trascina il <b style="color:var(--warm)">polo</b> (e il suo gemello coniugato) nel piano \(s\) a sinistra, e
+    guarda la <b style="color:var(--accent)">risposta in frequenza</b> a destra. Avvicina il polo all'asse
+    verticale: compare un <b>picco di risonanza</b> sempre più acuto. Spingilo nel semipiano <b>destro</b> e il
+    sistema diventa instabile.
+  </p>
+
+  <div class="widget" id="w-pz">
+    <div class="w-head">
+      <span>Piano s: poli e risonanza</span>
+      <span class="hint">trascina il polo, guarda il picco</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap">
+      <svg id="wpz-plane" viewBox="0 0 260 260" style="max-width:260px" role="img" aria-label="Il piano s con una coppia di poli coniugati trascinabili"></svg>
+      <svg id="wpz-resp" viewBox="0 0 320 260" style="max-width:320px" role="img" aria-label="La risposta in frequenza risultante dai poli"></svg>
+    </div>
+    <div class="w-readout" id="wpz-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-3"><span class="secnum">SEZIONE 32.3</span>La trasformata di Laplace</h2>
+
+  <p class="lead">
+    La formula generalizza quella di Fourier continua (Cap. 13), sostituendo il fasore puro con l'esponenziale
+    complesso generale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La trasformata di Laplace <span class="tag">Fourier esteso al piano s</span></div>
+    <div class="f-body">
+      \[
+        X(\hA{s}) \;=\; \int_{0}^{\infty} \sig{x}(t)\; \eu^{-\hA{s}\, t}\,\dd t, \qquad \hA{s} = \sigma + \ii\omega
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{s} = \sigma + \ii\omega\)</dt><dd>la variabile complessa: \(\sigma\) = crescita/decadimento,
+            \(\omega\) = frequenza.</dd>
+        <dt>\(\eu^{-st}\)</dt><dd>il mattone generale: un esponenziale complesso che può crescere, decadere e
+            oscillare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ponendo \(\sigma = 0\) (cioè \(s = \ii\omega\)) si <b>ritrova esattamente la trasformata di Fourier</b>:
+      Laplace la contiene come caso particolare. <mark>Fourier vive sull'asse immaginario; Laplace esplora tutto
+      il piano</mark> — ed è questa esplorazione che rivela poli e zeri, invisibili se guardi solo l'asse.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-4"><span class="secnum">SEZIONE 32.4</span>Analizzare i sistemi analogici</h2>
+
+  <p class="lead">
+    Ecco il flusso di lavoro con cui, nella pratica, si progettano e si capiscono i sistemi continui — filtri
+    analogici, circuiti, controlli.
+  </p>
+
+  <ol class="passi">
+    <li>Dalle equazioni del sistema (o dal circuito) si ricava la <b>funzione di trasferimento</b> \(H(s)\).</li>
+    <li>Si trovano <b>poli e zeri</b> (le radici di denominatore e numeratore) e li si piazza nel piano \(s\).</li>
+    <li>Dalla loro posizione si legge tutto: la <b>risposta in frequenza</b> (valutando \(H\) sull'asse
+        \(\omega\)), la <b>stabilità</b> (poli a sinistra?), la <b>risonanza</b> (poli vicini all'asse).</li>
+    <li>Per <b>progettare</b>, si fa l'inverso: si <em>piazzano</em> poli e zeri dove servono per ottenere la
+        risposta voluta.</li>
+  </ol>
+
+  <p>
+    È esattamente così che nascono i filtri di Chebyshev e Butterworth (Cap. 20): come <b>configurazioni
+    precise di poli</b> nel piano \(s\) (i poli di Butterworth su un cerchio, quelli di Chebyshev su un'ellisse).
+    <mark>Progettare un filtro diventa disegnare nel piano \(s\)</mark> — un modo geometrico e intuitivo di
+    pensare, molto più maneggevole delle equazioni differenziali che descrivono lo stesso sistema.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il ponte verso il digitale</div>
+    <p style="margin-bottom:0">
+      Tutto questo vive nel mondo <em>analogico</em>. Ma i filtri che costruiamo sono digitali: come si trasporta
+      un progetto dal piano \(s\) (continuo) al mondo discreto? Con una mappa che si chiama <b>trasformazione
+      bilineare</b>, che porta il piano \(s\) nel <b>piano \(z\)</b> — il gemello discreto di Laplace, protagonista
+      del prossimo e ultimo capitolo teorico. <mark>Laplace per l'analogico, trasformata z per il digitale:
+      stessa idea, due mondi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-5"><span class="secnum">SEZIONE 32.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.1</div>
+    <p style="margin-bottom:0">In che senso la trasformata di Laplace «contiene» quella di Fourier?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Ponendo \(\sigma = 0\) (cioè \(s = \ii\omega\), l'asse immaginario del piano \(s\)) la formula di
+          Laplace diventa esattamente quella di Fourier (Cap. 13). Fourier è quindi Laplace ristretto all'asse
+          immaginario; Laplace estende l'analisi a tutto il piano complesso, aggiungendo l'asse \(\sigma\) che
+          descrive crescita/decadimento (§32.1, §32.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.2</div>
+    <p style="margin-bottom:0">Un sistema ha una coppia di poli con parte reale \(\sigma = +0{,}5\). È stabile?
+      Cosa fa la sua uscita?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Instabile:</b> i poli sono nel semipiano <b>destro</b> (\(\sigma > 0\)). La sua risposta contiene
+          un esponenziale crescente \(\eu^{+0{,}5\,t}\): l'uscita <b>esplode</b>, cresce senza limite. Per la
+          stabilità i poli devono stare a sinistra (\(\sigma < 0\), §32.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.3</div>
+    <p style="margin-bottom:0">Qual è la differenza di effetto tra un polo e uno zero vicini all'asse delle
+      frequenze?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Un <b>polo</b> vicino all'asse \(\omega\) crea un <b>picco</b> (risonanza) a quella frequenza: la
+          esalta. Uno <b>zero</b> vicino all'asse crea un <b>buco</b> (come un notch): la annulla. Poli
+          esaltano, zeri sopprimono — e più sono vicini all'asse, più l'effetto è pronunciato (§32.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.4</div>
+    <p style="margin-bottom:0">Perché progettare filtri «piazzando poli e zeri» è più comodo che risolvere
+      equazioni differenziali?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché è <b>geometrico e intuitivo</b>: la posizione dei poli/zeri nel piano \(s\) dice a colpo
+          d'occhio risonanza, stabilità e forma della risposta in frequenza, senza risolvere nulla. Spostando un
+          polo si vede subito l'effetto. I filtri Butterworth/Chebyshev (Cap. 20) sono proprio configurazioni
+          di poli su una curva. È un linguaggio di progetto, non solo di analisi (§32.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-6"><span class="secnum">SEZIONE 32.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 32</div>
+    <ol style="margin-bottom:0">
+      <li><b>Piano \(s\):</b> \(s = \sigma + \ii\omega\). \(\sigma\) = crescita/decadimento, \(\omega\) =
+          frequenza. Fourier è solo l'asse immaginario (\(\sigma=0\)).</li>
+      <li><b>Funzione di trasferimento \(H(s)\)</b> = rapporto di polinomi; <b>zeri</b> (numeratore, annullano) e
+          <b>poli</b> (denominatore, esaltano).</li>
+      <li><b>Stabilità = poli a sinistra</b> (\(\sigma<0\), decadono). Poli a destra → uscita che esplode.</li>
+      <li><b>Poli vicini all'asse</b> → risonanza (picco); <b>zeri vicini all'asse</b> → notch (buco).</li>
+      <li><b>Progettare = disegnare nel piano \(s\):</b> i filtri (Chebyshev, Butterworth) sono configurazioni di
+          poli. Ponte al digitale via trasformazione bilineare (→ piano \(z\), Cap. 33).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Laplace domina l'analogico; ma i nostri filtri sono <em>digitali</em>. L'ultimo capitolo teorico, il
+    <strong>Capitolo 33</strong>, presenta la <b>trasformata z</b>: l'analogo discreto di Laplace, che vive nel
+    <b>piano \(z\)</b> e spiega i filtri ricorsivi (Cap. 19–20) con gli stessi strumenti — poli, zeri, stabilità.
+    Scopriremo che la fatidica condizione di stabilità degli IIR (poli dentro il <em>cerchio</em> unitario) è la
+    versione discreta del «poli a sinistra» di Laplace. Il cerchio si chiude.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §32.2 — piano s: poli coniugati trascinabili → risposta in frequenza
+   ========================================================================= */
+(function () {
+  const sp = document.getElementById('wpz-plane'), sr = document.getElementById('wpz-resp');
+  if (!sp) return;
+  const out = document.getElementById('wpz-out');
+  let pole = [-0.4, 1.4];   // [σ, ω] del polo superiore; l'inferiore è il coniugato
+
+  function draw() {
+    // --- piano s ---
+    sp.innerHTML = '';
+    const pl = new Plot(sp, { xmin: -2.5, xmax: 2.5, ymin: -2.5, ymax: 2.5, iso: true });
+    // semipiano sinistro (stabile) ombreggiato
+    pl.rect(-2.5, -2.5, 0, 2.5, { fill: 'color-mix(in srgb, var(--green) 8%, transparent)', color: 'none' });
+    pl.rect(0, -2.5, 2.5, 2.5, { fill: 'color-mix(in srgb, var(--warm) 8%, transparent)', color: 'none' });
+    pl.grid(1); pl.axes({ numbers: false, names: true, xname: 'σ', yname: 'iω' });
+    pl.text(-1.4, 2.2, 'stabile', { color: 'var(--green)', size: 10 });
+    pl.text(1.4, 2.2, 'instabile', { color: 'var(--warm)', size: 10 });
+    // poli (× coniugati)
+    const drawX = (x, y) => { const s = 0.16; pl.line(x - s, y - s, x + s, y + s, { color: 'var(--warm)', width: 2.4 }); pl.line(x - s, y + s, x + s, y - s, { color: 'var(--warm)', width: 2.4 }); };
+    drawX(pole[0], -pole[1]);
+    pl.handle(pole[0], pole[1], { color: 'var(--warm)' }, (x, y) => { pole = [x, y]; draw(); });
+    drawX(pole[0], pole[1]);   // marca × anche sotto l'handle
+
+    // --- risposta in frequenza: |H(iΩ)| = 1/(|iΩ-p||iΩ-p*|) ---
+    sr.innerHTML = '';
+    const stable = pole[0] < 0;
+    const pr = new Plot(sr, { xmin: 0, xmax: 3, ymin: 0, ymax: 1.15 });
+    pr.grid(0.5, 0.5); pr.axes({ numbers: true, names: true, xname: 'frequenza Ω', yname: '|H|', stepX: 0.5, stepY: 0.5 });
+    // calcola magnitudo normalizzata
+    const mag = Om => { const d1 = Math.hypot(0 - pole[0], Om - pole[1]), d2 = Math.hypot(0 - pole[0], Om + pole[1]); return 1 / (d1 * d2); };
+    let peak = 0; for (let O = 0; O <= 3; O += 0.01) peak = Math.max(peak, mag(O));
+    pr.func(O => mag(O) / peak, { color: stable ? 'var(--accent)' : 'var(--warm)', width: 2.6, samples: 400 });
+
+    const dist = Math.abs(pole[0]);
+    out.innerHTML = `
+      <div class="big">polo a σ=<b>${pole[0].toFixed(2)}</b>, ω=<b>${pole[1].toFixed(2)}</b> &nbsp;·&nbsp;
+        <b style="color:${stable ? 'var(--green)' : 'var(--warm)'}">${stable ? 'STABILE' : 'INSTABILE'}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${stable ? `Polo nel semipiano sinistro: sistema stabile. ${dist < 0.4 ? 'È <mark>vicino all\'asse</mark>: risonanza acuta (picco alto e stretto).' : 'Lontano dall\'asse: risposta dolce, poca risonanza.'}`
+          : 'Polo nel semipiano <mark>destro</mark>: sistema <b>instabile</b>, l\'uscita esploderebbe. Riportalo a sinistra (σ<0).'}
+        Il picco della risposta cade attorno a Ω ≈ ${pole[1].toFixed(1)} (la parte immaginaria del polo).
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

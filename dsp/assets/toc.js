@@ -472,7 +472,7 @@ const TOC = [
     n: 32,
     titolo: "La trasformata di Laplace",
     file: "cap32-laplace.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s32-1", n: "32.1", t: "Dal dominio della frequenza al piano s" },
       { id: "s32-2", n: "32.2", t: "Poli e zeri" },
