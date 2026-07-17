@@ -26,7 +26,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 1 — Introduzione
 - [x] 2 — I numeri reali
 - [x] 3 — Numeri complessi
-- [ ] 4 — Funzioni
+- [x] 4 — Funzioni
 - [ ] 5 — Successioni e limiti
 - [ ] 6 — Limiti di funzioni e continuità
 - [ ] 7 — Teoremi sulle funzioni continue

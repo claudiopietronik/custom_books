@@ -64,7 +64,7 @@ const TOC = [
     n: 4,
     titolo: "Funzioni",
     file: "cap04-funzioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Cos'è una funzione" },
       { id: "s4-2", n: "4.2", t: "Dominio, codominio, immagine" },
