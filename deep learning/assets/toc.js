@@ -294,7 +294,7 @@ const TOC = [
     titolo: "Modelli probabilistici strutturati",
     file: "cap16-modelli-strutturati.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "La sfida della modellazione non strutturata" },
       { id: "s16-2", n: "16.2", t: "Usare i grafi per descrivere la struttura" },

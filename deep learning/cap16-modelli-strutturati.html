@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Modelli probabilistici strutturati — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Parte III</div>
+    <h1>Modelli probabilistici strutturati</h1>
+    <p class="standfirst">
+      Modellare la distribuzione congiunta di tante variabili è impossibile per forza bruta: \(n\) variabili
+      binarie danno \(2^n\) configurazioni. Il rimedio è <b>fattorizzare</b> la distribuzione in pezzi piccoli e
+      disegnare la fattorizzazione come un <b>grafo</b>: i nodi sono le variabili, gli archi le dipendenze
+      dirette. <mark>Un grafo trasforma un problema esponenziale in uno trattabile</mark>, ed è il linguaggio
+      con cui si descrivono quasi tutti i modelli generativi della Parte III.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema: la <b>modellazione non strutturata</b> è esponenziale (§16.1, widget). La soluzione: i
+      <b>grafi</b> (§16.2), <b>diretti</b> (reti bayesiane) e <b>non diretti</b> (campi di Markov) (§16.3). Come
+      si <b>campiona</b> (§16.4), i <b>vantaggi</b> (§16.5), e la sfida dell'<b>inferenza</b> (§16.6). Infine cosa
+      cambia con il <b>deep learning</b> (§16.7).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Le macchine di Boltzmann, le RBM, le deep belief network (Cap. 20) <em>sono</em> modelli grafici. Capire
+      come un grafo fattorizza una distribuzione — e perché campionare e fare inferenza restano difficili anche
+      con la struttura — è il prerequisito per i tre capitoli finali (Monte Carlo, funzione di partizione,
+      inferenza). <mark>È l'impalcatura teorica dei modelli generativi.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>La sfida della modellazione non strutturata</h2>
+
+  <p class="lead">
+    Provare a rappresentare una distribuzione congiunta elencando la probabilità di ogni configurazione è
+    condannato in partenza: il numero di configurazioni <b>esplode</b>.
+  </p>
+
+  <p>
+    Con \(n\) variabili binarie ci sono \(2^n\) configurazioni possibili, e una tabella «piena» richiede
+    \(2^n-1\) numeri: per \(n=30\) è già oltre un miliardo, per un'immagine di 100 pixel è astronomico. Serve
+    troppa memoria, troppi dati per stimare tutti quei numeri, e troppo tempo per usarli. <mark>La forza bruta è
+    impossibile già per poche decine di variabili.</mark> Il widget mostra il divario tra la tabella piena e una
+    versione <b>strutturata</b> che sfrutta le dipendenze locali.
+  </p>
+
+  <div class="widget" id="w-struct">
+    <div class="w-head">
+      <span>L'esplosione dei parametri: piena vs strutturata</span>
+      <span class="hint">aumenta le variabili</span>
+    </div>
+    <div class="w-stage">
+      <svg id="ws-svg" viewBox="0 0 560 320" role="img" aria-label="Numero di parametri di una distribuzione congiunta piena (esponenziale) contro una fattorizzata su catena (lineare)"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>variabili</label><input type="range" id="ws-n" min="2" max="16" step="1" value="6"><output id="ws-n-o">6</output></div>
+    </div>
+    <div class="w-readout" id="ws-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Usare i grafi per descrivere la struttura</h2>
+
+  <p class="lead">
+    L'intuizione salvifica: ogni variabile dipende <b>solo da poche altre</b>, non da tutte. Un grafo cattura
+    esattamente queste dipendenze dirette, e la congiunta si scrive come <b>prodotto di fattori</b> locali.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Fattorizzazione su grafo <span class="tag">un prodotto di pezzi piccoli</span></div>
+    <div class="f-body">
+      \[ p(x_1,\dots,x_n) = \prod_i \phi_i(\text{poche variabili vicine}) \]
+    </div>
+    <div class="f-note">
+      Invece di un unico numero per ogni configurazione globale, si moltiplicano tanti <b>fattori locali</b>,
+      ciascuno su un piccolo gruppo di variabili connesse nel grafo. <mark>Il costo passa da esponenziale a
+      lineare nel numero di variabili</mark> (a parità di connessioni locali). Il grafo <em>è</em> la struttura:
+      dice quali variabili interagiscono direttamente e quali no.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Grafi diretti e non diretti</h2>
+
+  <p class="lead">
+    Due dialetti dello stesso linguaggio: grafi con frecce (dipendenze <b>causali/direzionali</b>) e grafi senza
+    frecce (interazioni <b>simmetriche</b>).
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th></th><th>Diretti (reti bayesiane)</th><th>Non diretti (campi di Markov)</th></tr></thead>
+    <tbody>
+      <tr><td><b>Archi</b></td><td>frecce (genitore → figlio)</td><td>linee (interazione simmetrica)</td></tr>
+      <tr><td><b>Fattori</b></td><td>condizionate \(p(x_i\given \text{genitori})\)</td><td>potenziali su gruppi (cricche)</td></tr>
+      <tr><td><b>Normalizzazione</b></td><td>automatica (le condizionate sommano a 1)</td>
+        <td>serve una costante \(Z\) (la <b>funzione di partizione</b>, Cap. 18)</td></tr>
+      <tr><td><b>Adatti a</b></td><td>processi causali, sequenze (modelli autoregressivi)</td>
+        <td>interazioni reciproche (pixel vicini, macchine di Boltzmann)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 460 170" role="img" aria-label="Un grafo diretto con frecce e uno non diretto con linee">
+      <g font-family="var(--sans)">
+        <text x="110" y="20" class="lbl-b" text-anchor="middle">Diretto</text>
+        <text x="350" y="20" class="lbl-b" text-anchor="middle">Non diretto</text>
+        <!-- diretto: a->b->d, a->c->d -->
+        <g stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ar16)">
+          <line x1="70" y1="60" x2="110" y2="95"/><line x1="150" y1="60" x2="110" y2="95"/>
+          <line x1="110" y1="112" x2="110" y2="140"/>
+        </g>
+        <g fill="var(--accent)"><circle cx="65" cy="55" r="12"/><circle cx="155" cy="55" r="12"/><circle cx="110" cy="103" r="12"/><circle cx="110" cy="148" r="12"/></g>
+        <g fill="#fff" font-size="11" text-anchor="middle"><text x="65" y="59">a</text><text x="155" y="59">b</text><text x="110" y="107">c</text><text x="110" y="152">d</text></g>
+        <!-- non diretto: quadrato -->
+        <g stroke="var(--green)" stroke-width="1.8">
+          <line x1="310" y1="55" x2="390" y2="55"/><line x1="310" y1="55" x2="310" y2="120"/>
+          <line x1="390" y1="55" x2="390" y2="120"/><line x1="310" y1="120" x2="390" y2="120"/>
+        </g>
+        <g fill="var(--green)"><circle cx="310" cy="55" r="12"/><circle cx="390" cy="55" r="12"/><circle cx="310" cy="120" r="12"/><circle cx="390" cy="120" r="12"/></g>
+        <g fill="#fff" font-size="11" text-anchor="middle"><text x="310" y="59">a</text><text x="390" y="59">b</text><text x="310" y="124">c</text><text x="390" y="124">d</text></g>
+        <defs><marker id="ar16" viewBox="0 0 10 10" refX="14" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker></defs>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="n">Figura 16.1.</span> A sinistra un grafo <b>diretto</b>: \(p=p(a)p(b)p(c\mid a,b)p(d\mid c)\),
+      le frecce sono dipendenze direzionali. A destra un grafo <b>non diretto</b>: interazioni simmetriche tra
+      vicini, con una costante di normalizzazione globale.
+    </figcaption>
+  </figure>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Campionare dai modelli grafici</h2>
+
+  <p class="lead">
+    Generare un dato dal modello — <b>campionare</b> — è facile nei grafi diretti, difficile in quelli non
+    diretti.
+  </p>
+
+  <p>
+    In un grafo <b>diretto</b> si campiona in <b>ordine topologico</b>: prima i nodi senza genitori, poi i figli
+    dati i genitori già campionati (<em>ancestral sampling</em>). Un colpo solo, esatto. Nei grafi <b>non
+    diretti</b>, invece, le variabili dipendono l'una dall'altra in modo reciproco: non c'è un ordine da seguire,
+    e campionare richiede metodi iterativi come il <b>Gibbs sampling</b> (Cap. 17), che aggiornano una variabile
+    alla volta finché la catena si «stabilizza». <mark>È questa difficoltà a rendere i modelli non diretti così
+    costosi da usare</mark> — e a motivare gran parte della Parte III.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Vantaggi della modellazione strutturata</h2>
+
+  <p class="lead">
+    Perché conviene la struttura, in tre parole: meno parametri, meno calcolo, più senso.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✓</span> Cosa guadagni con un grafo</div>
+    <p style="margin-bottom:0">
+      • <b>Meno parametri</b>: fattori locali invece della tabella piena (widget §16.1) — meno memoria e meno
+        dati per stimarli.<br>
+      • <b>Meno calcolo</b>: molte operazioni sfruttano la struttura del grafo.<br>
+      • <b>Più interpretabilità</b>: il grafo esplicita <em>quali</em> variabili interagiscono, codificando la
+        nostra conoscenza del dominio.<br>
+      <mark>La struttura è conoscenza a priori</mark>: dire «questi pixel interagiscono solo con i vicini» è un
+      prior potente, come lo era la località nelle CNN (§9.4).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Inferenza e inferenza approssimata</h2>
+
+  <p class="lead">
+    Avere il modello non basta: bisogna <b>usarlo</b> per rispondere a domande — e proprio qui casca l'asino.
+  </p>
+
+  <p>
+    L'<span class="termine">inferenza</span> è calcolare probabilità di interesse dal modello: la marginale di
+    una variabile, la più probabile spiegazione date alcune osservazioni, la probabilità delle variabili
+    nascoste dati i dati (\(p(\vv{h}\given\vv{x})\)). Per grafi semplici (catene, alberi) è efficiente; per
+    grafi con cicli, e per i modelli profondi, è <b>intrattabile</b>. <mark>Da qui l'inferenza <em>approssimata</em></mark>:
+    i metodi Monte Carlo (Cap. 17) che stimano per campionamento, e l'inferenza variazionale (Cap. 19) che
+    trasforma l'inferenza in un'ottimizzazione. Sono i tre capitoli che seguono.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>L'approccio del deep learning</h2>
+
+  <p class="lead">
+    Il deep learning usa i modelli grafici in modo un po' diverso dalla tradizione statistica: grafi con molte
+    variabili <b>latenti</b>, potenziali <b>appresi</b> da reti, e tolleranza all'intrattabilità.
+  </p>
+
+  <p>
+    Nella statistica classica i grafi sono spesso piccoli, con variabili interpretabili e strutture disegnate a
+    mano. Nel deep learning i grafi hanno moltissime unità <b>nascoste</b> (non interpretabili
+    individualmente), le interazioni sono parametrizzate da <b>reti neurali</b>, e si accetta che inferenza e
+    campionamento siano solo <b>approssimati</b>. <mark>La struttura non viene disegnata: emerge
+    dall'apprendimento.</mark> Le macchine di Boltzmann e le loro versioni profonde (Cap. 20) sono l'esempio
+    tipico — modelli non diretti con tanti nodi nascosti, addestrati nonostante la funzione di partizione
+    intrattabile (Cap. 18).
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li>Una congiunta piena su \(n\) variabili binarie ha \(2^n\) configurazioni: <b>intrattabile</b> (§16.1,
+          widget). I <b>grafi</b> la fattorizzano in pezzi locali, riportando il costo a lineare (§16.2).</li>
+      <li>Grafi <b>diretti</b> (condizionate, normalizzazione automatica, facili da campionare) vs <b>non
+          diretti</b> (potenziali, serve \(Z\), difficili da campionare) (§16.3–16.4).</li>
+      <li>La struttura dà meno parametri, meno calcolo, più interpretabilità: è <b>conoscenza a priori</b>
+          (§16.5).</li>
+      <li>L'<b>inferenza</b> esatta è spesso intrattabile → Monte Carlo (Cap. 17) e variazionale (Cap. 19)
+          (§16.6). Nel deep learning i grafi hanno tante latenti apprese (§16.7).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il collo di bottiglia è chiaro: campionare e fare inferenza in questi modelli è difficile. Il
+    <strong>Capitolo 17</strong> introduce l'arma principale contro questa difficoltà: i <b>metodi Monte
+    Carlo</b> — stimare quantità impossibili da calcolare esattamente estraendo campioni casuali, dalle catene
+    di Markov al Gibbs sampling.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Quanti numeri servono per specificare la congiunta piena di 10 variabili binarie? E se le organizzi in una
+      catena (ogni variabile dipende solo dalla precedente)? Confronta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Per il grafo diretto della Figura 16.1, scrivi la fattorizzazione della congiunta \(p(a,b,c,d)\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      Perché campionare da un grafo diretto è facile (ancestral sampling) mentre da uno non diretto è difficile?
+      Cosa richiede quest'ultimo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Una congiunta piena su \(n\) variabili binarie richiede circa \(2^n\) numeri. &nbsp;
+      (b) I grafi non diretti hanno bisogno di una costante di normalizzazione \(Z\). &nbsp;
+      (c) L'inferenza esatta è sempre efficiente nei modelli grafici. &nbsp;
+      (d) Nel deep learning la struttura del grafo è sempre disegnata a mano.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-9"><span class="secnum">Sezione 16.9</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Piena: \(2^{10}-1=\mathbf{1023}\) numeri. Catena: la prima variabile (1 numero) più 9 condizionate, ognuna
+      \(p(x_i\mid x_{i-1})\) con 2 numeri (uno per ciascun valore del genitore): \(1+9\cdot2=\mathbf{19}\)
+      numeri. <mark>19 contro 1023</mark>: la struttura a catena riduce i parametri di quasi due ordini di
+      grandezza, e il divario cresce esponenzialmente con \(n\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Seguendo le frecce (ogni nodo condizionato ai suoi genitori):
+      \(p(a,b,c,d)=p(a)\,p(b)\,p(c\mid a,b)\,p(d\mid c)\). \(a\) e \(b\) non hanno genitori (marginali), \(c\)
+      dipende da \(a\) e \(b\), \(d\) da \(c\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Nel grafo <b>diretto</b> c'è un ordine (topologico): campioni prima i nodi senza genitori, poi i figli dati
+      i genitori già noti — un colpo solo, esatto (ancestral sampling). Nel <b>non diretto</b> le variabili
+      dipendono reciprocamente: non esiste un ordine, quindi serve un metodo <b>iterativo</b> (Gibbs sampling,
+      Cap. 17) che aggiorna una variabile alla volta finché la catena converge alla distribuzione giusta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(2^n\) configurazioni, \(2^n-1\) parametri liberi (§16.1). <br>
+      <b>(b) VERO.</b> I potenziali non normalizzati richiedono \(Z\), la funzione di partizione (§16.3, Cap. 18). <br>
+      <b>(c) FALSO.</b> È efficiente solo per grafi semplici (catene, alberi); in generale è intrattabile (§16.6). <br>
+      <b>(d) FALSO.</b> Nel deep learning la struttura ha tante latenti e i potenziali sono <b>appresi</b>: emerge
+      dall'addestramento (§16.7).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §16.1 — esplosione dei parametri: piena vs strutturata (catena)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('ws-svg');
+  if (!svg) return;
+  const out = document.getElementById('ws-out');
+  const nI = document.getElementById('ws-n'), nO = document.getElementById('ws-n-o');
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+  function draw() {
+    const n = parseInt(nI.value, 10); nO.textContent = n;
+    const full = Math.pow(2, n) - 1;
+    const chain = 1 + (n - 1) * 2;
+    svg.innerHTML = '';
+    const g = el('g', {}); svg.appendChild(g);
+    const W = 560, base = 250, top = 40;
+    // scala logaritmica per l'altezza
+    const maxLog = Math.log2(Math.pow(2, 16));
+    const hFull = (base - top) * Math.min(1, Math.log2(full + 1) / maxLog);
+    const hChain = (base - top) * Math.min(1, Math.log2(chain + 1) / maxLog);
+    // barre
+    g.appendChild(el('line', { x1: 40, y1: base, x2: W - 40, y2: base, class: 'axis' }));
+    g.appendChild(el('rect', { x: 150, y: base - hFull, width: 90, height: hFull, rx: 5, fill: 'var(--warm)' }));
+    g.appendChild(el('rect', { x: 330, y: base - hChain, width: 90, height: hChain, rx: 5, fill: 'var(--green)' }));
+    const t1 = el('text', { x: 195, y: base - hFull - 10, class: 'lbl-b', 'text-anchor': 'middle', fill: 'var(--warm)' }); t1.textContent = full.toLocaleString('it'); g.appendChild(t1);
+    const t2 = el('text', { x: 375, y: base - hChain - 10, class: 'lbl-b', 'text-anchor': 'middle', fill: 'var(--green)' }); t2.textContent = chain; g.appendChild(t2);
+    const l1 = el('text', { x: 195, y: base + 20, class: 'lbl', 'text-anchor': 'middle' }); l1.textContent = 'piena (2ⁿ−1)'; g.appendChild(l1);
+    const l2 = el('text', { x: 375, y: base + 20, class: 'lbl', 'text-anchor': 'middle' }); l2.textContent = 'catena (2n−1)'; g.appendChild(l2);
+    const note = el('text', { x: W / 2, y: 22, class: 'lbl', 'text-anchor': 'middle', 'font-size': 11 }); note.textContent = '(altezza in scala logaritmica)'; g.appendChild(note);
+
+    out.innerHTML = `
+      <div class="big">
+        ${n} variabili: piena <b style="color:var(--warm)">${full.toLocaleString('it')}</b> parametri &nbsp;vs&nbsp;
+        catena <b style="color:var(--green)">${chain}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La distribuzione <b style="color:var(--warm)">piena</b> cresce come \(2^n\) (esponenziale); quella
+        <b style="color:var(--green)">strutturata</b> a catena come \(2n\) (lineare).
+        <mark>A ${n} variabili il rapporto è già ${(full / chain).toFixed(full / chain > 100 ? 0 : 1)}×.</mark>
+        Aumenta le variabili e guarda la barra rossa schizzare via (nonostante la scala logaritmica).
+      </div>`;
+  }
+  nI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -49,7 +49,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 13 — Modelli a fattori lineari
 - [x] 14 — Autoencoder
 - [x] 15 — Apprendimento di rappresentazioni
-- [ ] 16 — Modelli probabilistici strutturati
+- [x] 16 — Modelli probabilistici strutturati
 - [ ] 17 — Metodi Monte Carlo
 - [ ] 18 — Affrontare la funzione di partizione
 - [ ] 19 — Inferenza approssimata
