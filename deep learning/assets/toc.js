@@ -55,7 +55,7 @@ const TOC = [
     titolo: "Probabilità e teoria dell'informazione",
     file: "cap03-probabilita.html",
     parte: P1,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Perché la probabilità" },
       { id: "s3-2", n: "3.2", t: "Variabili aleatorie e distribuzioni" },

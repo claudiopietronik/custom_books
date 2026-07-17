@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Probabilità e teoria dell'informazione — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3 · Parte I</div>
+    <h1>Probabilità e teoria dell'informazione</h1>
+    <p class="standfirst">
+      Il mondo è incerto e i dati sono rumorosi: un'immagine sfocata, una parola ambigua, un'etichetta
+      sbagliata. La <b>probabilità</b> è il linguaggio con cui il machine learning ragiona sull'incertezza, e la
+      <b>teoria dell'informazione</b> ci dà il righello per misurarla. <mark>Da questi due strumenti nascono
+      quasi tutte le funzioni di costo del libro</mark>: massima verosimiglianza, cross-entropy, divergenza KL.
+      Se il Capitolo 2 era il vocabolario, questo è la grammatica del ragionamento incerto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prima il perché (§3.1): due tipi di incertezza e perché ci arrendiamo alla probabilità. Poi gli oggetti:
+      <b>variabili aleatorie e distribuzioni</b> (§3.2), le regole per combinarle — <b>marginale e
+      condizionata</b> (§3.3), <b>catena e indipendenza</b> (§3.4) — e i loro riassunti: <b>aspettazione,
+      varianza, covarianza</b> (§3.5). Le <b>distribuzioni notevoli</b> (§3.6, con la gaussiana da toccare) e
+      il ponte tra condizionate: la <b>regola di Bayes</b> (§3.7). Infine il righello dell'informazione:
+      <b>entropia, cross-entropy e KL</b> (§3.8, il widget-cuore), e come i grafi fattorizzano distribuzioni
+      enormi (§3.9).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Una rete di classificazione non sputa «gatto»: emette una <b>distribuzione di probabilità</b> sulle
+      classi, per esempio 82% gatto, 15% cane, 3% volpe. Addestrarla significa rendere questa distribuzione
+      vicina a quella «vera» dei dati — e «vicina» si misura con la <b>divergenza KL</b>, che porta dritta alla
+      <b>cross-entropy</b>, la funzione di costo più usata in tutto il deep learning. <mark>Capire questo
+      capitolo è capire cosa minimizza davvero l'addestramento.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Perché la probabilità</h2>
+
+  <p class="lead">
+    In informatica siamo abituati a cose certe: un bit è 0 o 1. Perché allora un intero campo si fonda
+    sull'incertezza? Perché quasi tutto ciò che è interessante è <em>incerto</em>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Tre sorgenti di incertezza</div>
+    <p style="margin-bottom:0">
+      1. <b>Casualità intrinseca</b> del sistema (una moneta lanciata, il rumore quantistico).<br>
+      2. <b>Osservabilità incompleta</b>: il sistema è deterministico ma non vediamo tutte le variabili (il
+         classico problema di Monty Hall).<br>
+      3. <b>Modellazione incompleta</b>: scartiamo di proposito dei dettagli per semplificare, e ciò che
+         scartiamo diventa incertezza.<br>
+      <mark>In quasi tutti i casi pratici è più utile una regola semplice ma incerta («la maggior parte degli
+      uccelli vola») che una regola certa ma complicatissima («gli uccelli volano, tranne i giovani, i feriti,
+      i pinguini, gli struzzi…»).</mark> La probabilità estende la logica a queste affermazioni incerte.
+    </p>
+  </div>
+
+  <p>
+    Ci sono due interpretazioni. La <b>frequentista</b> lega la probabilità alla frequenza con cui un evento
+    accade su tante ripetizioni (la moneta esce testa nel 50% dei lanci). La <b>bayesiana</b> la lega a un
+    <b>grado di credenza</b> (un medico dice «40% di probabilità che sia influenza» pur non potendo ripetere il
+    paziente mille volte). Le regole matematiche sono le stesse; useremo l'una o l'altra a seconda di ciò che
+    è comodo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Variabili aleatorie e distribuzioni</h2>
+
+  <p class="lead">
+    Una <b>variabile aleatoria</b> è una variabile che può assumere valori diversi, ciascuno con una certa
+    probabilità. Una <b>distribuzione</b> dice <em>quanto</em> è probabile ogni valore.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📘</span> Discreto e continuo</div>
+    <p style="margin-bottom:0">
+      Per variabili <b>discrete</b> (esiti finiti: la faccia di un dado, la classe di un'immagine) usiamo una
+      <span class="termine">funzione di massa</span> \(P(x)\): a ogni valore associa una probabilità, con
+      \(0\le P(x)\le 1\) e \(\sum_x P(x)=1\). Per variabili <b>continue</b> (un peso, un pixel in \([0,1]\))
+      usiamo una <span class="termine">densità</span> \(p(x)\): non è la probabilità di un singolo punto (che è
+      zero), ma una <em>densità</em> da integrare, con \(p(x)\ge 0\) e \(\int p(x)\,\dd x = 1\). La probabilità
+      di un intervallo è l'<b>area</b> sotto la densità.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Una densità può superare 1</div>
+    <p style="margin-bottom:0">
+      Errore classico: pensare che \(p(x)\le 1\) sempre. <mark>Falso per le densità continue</mark>: se una
+      distribuzione è concentrata su un intervallo strettissimo, la sua densità lì può valere 100, purché
+      l'<b>area</b> totale resti 1. È la probabilità (l'area), non la densità (l'altezza), a stare tra 0 e 1.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Probabilità marginale e condizionata</h2>
+
+  <p class="lead">
+    Con più variabili nascono due operazioni fondamentali: <b>dimenticare</b> una variabile (marginalizzare) e
+    <b>fissarne</b> una (condizionare).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Marginale e condizionata <span class="tag">sommare via, oppure restringere</span></div>
+    <div class="f-body">
+      \[ \hA{P(x)} = \sum_y P(x,y), \qquad\qquad \hB{P(y\given x)} = \frac{P(x,y)}{P(x)} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{P(x)}\) — la <b>marginale</b></dt>
+        <dd>la distribuzione di \(x\) da sola, ottenuta <b>sommando</b> (o integrando) su tutti i valori
+            dell'altra variabile: «non m'importa di \(y\), qual è la probabilità di \(x\)?».</dd>
+        <dt>\(\hB{P(y\given x)}\) — la <b>condizionata</b></dt>
+        <dd>la probabilità di \(y\) <b>una volta noto</b> che \(x\) si è verificato. Restringi l'universo ai
+            casi con quel valore di \(x\) e rinormalizzi. <mark>È esattamente ciò che una rete calcola: la
+            probabilità dell'etichetta \(y\) dato l'input \(x\).</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Da queste due nasce tutto. La classificazione è modellare \(P(y\given \vv{x})\); la generazione è
+      modellare \(P(\vv{x})\); un modello condizionale generativo è \(P(\vv{x}\given y)\) («disegnami un gatto»).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>La regola della catena e l'indipendenza</h2>
+
+  <p class="lead">
+    Una distribuzione congiunta di molte variabili è enorme. La <b>regola della catena</b> la spezza in un
+    prodotto di condizionate; l'<b>indipendenza</b> ne fa collassare i pezzi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Catena e indipendenza <span class="tag">fattorizzare una congiunta</span></div>
+    <div class="f-body">
+      \[ P(x_1,\dots,x_n) = \prod_{i=1}^{n} P\!\left(x_i \given x_1,\dots,x_{i-1}\right),
+         \qquad x \perp y \iff P(x,y)=P(x)\,P(y) \]
+    </div>
+    <div class="f-note">
+      La <b>regola della catena</b> (o del prodotto) segue dalla definizione di condizionata, applicata più
+      volte: qualsiasi congiunta è un prodotto di condizionate. Se due variabili sono <b>indipendenti</b>, la
+      loro congiunta è il prodotto delle marginali — sapere una non dice nulla sull'altra. L'indipendenza
+      <b>condizionata</b> (\(x\perp y \given z\)) è più sottile e più utile: \(x\) e \(y\) diventano indipendenti
+      <em>una volta noto</em> \(z\). <mark>Su queste fattorizzazioni si reggono i modelli grafici (§3.9, Cap. 16)
+      e i modelli autoregressivi</mark> che generano testo o immagini un pezzo alla volta.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Aspettazione, varianza e covarianza</h2>
+
+  <p class="lead">
+    Tre numeri per riassumere una distribuzione: dov'è il centro, quanto è larga, e — con due variabili —
+    quanto vanno d'accordo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre riassunti <span class="tag">centro, larghezza, relazione</span></div>
+    <div class="f-body">
+      \[ \E[x] = \sum_x x\,P(x), \qquad \Var(x) = \E\!\big[(x-\E[x])^2\big], \qquad
+         \Cov(x,y) = \E\!\big[(x-\E[x])(y-\E[y])\big] \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\E[x]\) — l'<b>aspettazione</b> (media)</dt>
+        <dd>la media pesata dei valori, con pesi le probabilità: il «baricentro» della distribuzione. È
+            <b>lineare</b>: \(\E[ax+by]=a\E[x]+b\E[y]\), sempre, anche se \(x\) e \(y\) sono dipendenti.</dd>
+        <dt>\(\Var(x)\) — la <b>varianza</b></dt>
+        <dd>quanto i valori si sparpagliano attorno alla media (in unità al quadrato). La sua radice è la
+            <b>deviazione standard</b> \(\sigma\).</dd>
+        <dt>\(\Cov(x,y)\) — la <b>covarianza</b></dt>
+        <dd>segno positivo se \(x\) e \(y\) tendono a crescere insieme, negativo se in opposizione, zero se non
+            hanno relazione lineare. Raccolte in matrice, danno la <b>matrice di covarianza</b> — quella che PCA
+            autodecompone (§2.11).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Attenzione: <mark>covarianza zero non implica indipendenza</mark> (cattura solo la relazione <em>lineare</em>).
+      L'indipendenza implica covarianza zero, ma non viceversa.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Le distribuzioni notevoli</h2>
+
+  <p class="lead">
+    Un piccolo catalogo di distribuzioni che incontreremo di continuo. Regina indiscussa: la <b>gaussiana</b>.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Distribuzione</th><th>Su cosa</th><th>Dove la incontriamo</th></tr></thead>
+    <tbody>
+      <tr><td><b>Bernoulli</b></td><td>una variabile binaria (0/1)</td>
+        <td>Un neurone di uscita con sigmoide: \(P(y=1)=\sigma(z)\). Classificazione binaria.</td></tr>
+      <tr><td><b>Categorica</b> (multinoulli)</td><td>una variabile a \(k\) esiti</td>
+        <td>L'uscita softmax di un classificatore multi-classe: \(k\) probabilità che sommano a 1.</td></tr>
+      <tr><td><b>Gaussiana</b> (normale)</td><td>una variabile continua</td>
+        <td>Ovunque: rumore, inizializzazione dei pesi, priori, il teorema del limite centrale la rende «di
+            default».</td></tr>
+      <tr><td><b>Uniforme</b></td><td>continua su un intervallo</td>
+        <td>Campionamento casuale, inizializzazioni, dropout.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La gaussiana <span class="tag">la campana, con centro μ e larghezza σ</span></div>
+    <div class="f-body">
+      \[ \Norm(x;\,\hA{\mu},\hB{\sigma}^2) = \frac{1}{\hB{\sigma}\sqrt{2\pi}}\,
+         \exp\!\left(-\frac{(x-\hA{\mu})^2}{2\hB{\sigma}^2}\right) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\mu}\) — la <b>media</b></dt>
+        <dd>il centro della campana: dove sta il picco.</dd>
+        <dt>\(\hB{\sigma}\) — la <b>deviazione standard</b></dt>
+        <dd>la larghezza: piccola = campana stretta e alta; grande = larga e bassa (l'area resta 1).</dd>
+        <dt>\(\frac{1}{\sigma\sqrt{2\pi}}\) — la <b>normalizzazione</b></dt>
+        <dd>la costante che rende l'area totale esattamente 1.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché è «di default»? Per il <b>teorema del limite centrale</b>: la somma di molte piccole cause
+      indipendenti tende a una gaussiana, qualunque sia la loro distribuzione. E tra tutte le distribuzioni con
+      una data varianza, è quella di <b>massima entropia</b> (§3.8): quella che assume «meno» oltre ai dati.
+    </div>
+  </div>
+
+  <div class="widget" id="w-gauss">
+    <div class="w-head">
+      <span>La gaussiana: media e deviazione standard</span>
+      <span class="hint">muovi μ e σ</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wg-svg" viewBox="0 0 560 360" role="img" aria-label="La densità gaussiana al variare di media e deviazione standard"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>μ</label><input type="range" id="wg-mu" min="-3" max="3" step="0.1" value="0"><output id="wg-mu-o">0</output></div>
+      <div class="w-ctrl"><label>σ</label><input type="range" id="wg-sig" min="0.4" max="2.5" step="0.1" value="1"><output id="wg-sig-o">1</output></div>
+    </div>
+    <div class="w-readout" id="wg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>La regola di Bayes</h2>
+
+  <p class="lead">
+    Come si «inverte» una condizionata? Conosco \(P(\text{sintomo}\given\text{malattia})\), ma voglio
+    \(P(\text{malattia}\given\text{sintomo})\). La risposta è una delle formule più importanti della scienza.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regola di Bayes <span class="tag">invertire una probabilità condizionata</span></div>
+    <div class="f-body">
+      \[ P(y\given x) = \frac{P(x\given y)\,P(y)}{P(x)} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(P(y)\) — la <b>prior</b></dt>
+        <dd>quello che credevi <em>prima</em> di vedere il dato (quanto è comune la malattia in generale).</dd>
+        <dt>\(P(x\given y)\) — la <b>verosimiglianza</b></dt>
+        <dd>quanto il dato osservato è compatibile con l'ipotesi \(y\).</dd>
+        <dt>\(P(y\given x)\) — la <b>posterior</b></dt>
+        <dd>quello che credi <em>dopo</em> aver visto il dato: la prior aggiornata dall'evidenza.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il denominatore \(P(x)=\sum_y P(x\given y)P(y)\) è solo una costante di normalizzazione. La lezione
+      controintuitiva: <mark>anche un test molto accurato per una malattia rara dà molti falsi positivi</mark>,
+      perché la prior piccola pesa tantissimo. Bayes è il motore della statistica bayesiana (§5.6) e dei modelli
+      generativi (Parte III).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">Sezione 3.8</span>Teoria dell'informazione: entropia e divergenza KL</h2>
+
+  <p class="lead">
+    Quanta «sorpresa» c'è in un evento? Quanta informazione porta un messaggio? E quanto è diversa una
+    distribuzione da un'altra? La teoria dell'informazione risponde — e le sue risposte <em>sono</em> le nostre
+    funzioni di costo.
+  </p>
+
+  <p>
+    L'idea di partenza: un evento <b>probabile</b> porta poca informazione («domani sorge il sole»), uno
+    <b>improbabile</b> ne porta molta («domani nevica a luglio»). L'<span class="termine">informazione</span> di
+    un evento è \(I(x) = -\log P(x)\): cresce al diminuire della probabilità. L'<b>entropia</b> è la media di
+    questa sorpresa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Entropia, cross-entropy, KL <span class="tag">i tre righelli dell'informazione</span></div>
+    <div class="f-body">
+      \[ \Hent(P) = -\sum_x P(x)\log P(x), \quad
+         \hA{\Hent(P,Q)} = -\sum_x P(x)\log Q(x), \quad
+         \hB{\KL(P\,\|\,Q)} = \sum_x P(x)\log\frac{P(x)}{Q(x)} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\Hent(P)\) — l'<b>entropia</b></dt>
+        <dd>l'incertezza media di \(P\): massima quando tutti gli esiti sono equiprobabili, zero quando uno è
+            certo. È il numero minimo di bit (in \(\log_2\)) per codificare i dati.</dd>
+        <dt>\(\hA{\Hent(P,Q)}\) — la <b>cross-entropy</b></dt>
+        <dd>i bit che spendi se codifichi dati distribuiti come \(P\) usando un codice ottimizzato per \(Q\).
+            <mark>È la funzione di costo della classificazione</mark>: \(P\) è l'etichetta vera, \(Q\) la
+            previsione della rete.</dd>
+        <dt>\(\hB{\KL(P\,\|\,Q)}\) — la <b>divergenza KL</b></dt>
+        <dd>lo «spreco»: quanti bit in più paghi usando \(Q\) invece del vero \(P\). Vale
+            \(\KL = \Hent(P,Q) - \Hent(P)\), è sempre \(\ge 0\), ed è \(0\) solo se \(Q=P\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco il collegamento d'oro: poiché \(\Hent(P)\) non dipende dal modello, <mark>minimizzare la KL tra i dati
+      e il modello equivale a minimizzare la cross-entropy</mark>, che a sua volta equivale alla <b>massima
+      verosimiglianza</b> (§5.5). Tre nomi per la stessa idea. Nota: la KL <b>non è simmetrica</b>,
+      \(\KL(P\|Q)\ne\KL(Q\|P)\) — non è una «distanza», e la direzione conta (lo vedremo nell'inferenza
+      variazionale, Cap. 19).
+    </div>
+  </div>
+
+  <p>
+    Nel widget: la distribuzione <b>vera</b> \(P\) (i dati, in blu) è fissa su 3 classi. Tu muovi la previsione
+    del <b>modello</b> \(Q\) (in viola) con i cursori. Guarda cross-entropy e KL: <mark>scendono entrambe man
+    mano che \(Q\) somiglia a \(P\), e la KL tocca lo zero esatto quando \(Q=P\)</mark>. Questo, ripetuto su
+    milioni di esempi, è ciò che fa l'addestramento di un classificatore.
+  </p>
+
+  <div class="widget" id="w-kl">
+    <div class="w-head">
+      <span>Cross-entropy e KL: avvicinare il modello ai dati</span>
+      <span class="hint">muovi Q verso P</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wk-svg" viewBox="0 0 560 320" role="img" aria-label="Due distribuzioni su tre classi: cross-entropy e divergenza KL diminuiscono quando il modello Q si avvicina ai dati P"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>Q₁</label><input type="range" id="wk-q1" min="0.02" max="0.96" step="0.01" value="0.2"><output id="wk-q1-o">0.20</output></div>
+      <div class="w-ctrl"><label>Q₂</label><input type="range" id="wk-q2" min="0.02" max="0.96" step="0.01" value="0.5"><output id="wk-q2-o">0.50</output></div>
+      <button class="w-btn" id="wk-match">Q = P</button>
+    </div>
+    <div class="w-readout" id="wk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-9"><span class="secnum">Sezione 3.9</span>I modelli probabilistici strutturati</h2>
+
+  <p class="lead">
+    Una distribuzione su molte variabili è astronomicamente grande. Il trucco per domarla: <b>fattorizzarla</b>
+    in pezzi piccoli, e disegnare la fattorizzazione come un <b>grafo</b>.
+  </p>
+
+  <p>
+    Una congiunta su \(n\) variabili binarie ha \(2^n\) valori: impossibile da rappresentare direttamente già
+    per poche decine di variabili. Ma spesso ogni variabile dipende <b>solo da poche altre</b>. Un
+    <span class="termine">modello grafico</span> sfrutta questa struttura: i nodi sono le variabili, gli archi le
+    dipendenze dirette, e la congiunta si scrive come <b>prodotto di fattori</b> locali, ciascuno su poche
+    variabili. Grafi <b>diretti</b> (reti bayesiane) fattorizzano in condizionate \(\prod_i P(x_i\given
+    \text{genitori}(x_i))\); grafi <b>non diretti</b> (campi di Markov) in potenziali su gruppi di nodi. È il
+    linguaggio del Cap. 16 e la struttura nascosta dietro molti modelli generativi.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li>La probabilità è il linguaggio dell'<b>incertezza</b>; le distribuzioni (massa se discreto, densità se
+          continuo) ne sono gli oggetti (§3.1–3.2).</li>
+      <li><b>Marginalizzare</b> = sommare via una variabile; <b>condizionare</b> = fissarla. La classificazione
+          modella la condizionata \(P(y\given\vv{x})\) (§3.3). Bayes la inverte (§3.7).</li>
+      <li>Aspettazione, varianza, covarianza riassumono una distribuzione (§3.5). La <b>gaussiana</b> è la
+          distribuzione «di default» (§3.6).</li>
+      <li>La <b>cross-entropy</b> è la loss della classificazione; minimizzarla = minimizzare la <b>KL</b> tra
+          dati e modello = <b>massima verosimiglianza</b> (§3.8). Tienilo stretto: è il filo rosso di tutto il
+          libro.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo algebra lineare (Cap. 2) e probabilità (Cap. 3): il «cosa». Manca il «come» — come si <em>calcola</em>
+    tutto questo su un computer, con numeri finiti e senza esplodere. Il <strong>Capitolo 4</strong> affronta il
+    <b>calcolo numerico</b>: overflow, condizionamento, e soprattutto la <b>discesa del gradiente</b>, il motore
+    che ottimizza ogni rete.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-10"><span class="secnum">Sezione 3.10</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Un dado equo a 6 facce. Calcola \(\E[x]\) (il valore atteso) e spiega perché il risultato (3,5) non è un
+      valore che il dado può mai mostrare. Che cosa rappresenta allora?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Una malattia colpisce l'1% della popolazione. Un test la rileva nel 99% dei malati (veri positivi) ma dà
+      un 5% di falsi positivi sui sani. Se risulti positivo, qual è la probabilità di essere davvero malato?
+      Usa Bayes. Il risultato ti sorprende?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Calcola l'entropia (in bit, \(\log_2\)) di una moneta equa \(P=(0.5,0.5)\) e di una truccata
+      \(P=(0.9,0.1)\). Quale ha entropia maggiore? Che entropia ha una moneta con due teste?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      La vera etichetta di un'immagine è la classe 2 su 3, cioè \(P=(0,1,0)\) (one-hot). La rete prevede
+      \(Q=(0.2,0.7,0.1)\). Calcola la cross-entropy \(\Hent(P,Q)\) (con \(\ln\)). Verifica che coincide con
+      \(-\ln Q_2\): perché per un'etichetta one-hot la cross-entropy è solo \(-\log\) della probabilità data
+      alla classe giusta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Una densità continua \(p(x)\) non può superare 1. &nbsp;
+      (b) Se \(\Cov(x,y)=0\) allora \(x\) e \(y\) sono indipendenti. &nbsp;
+      (c) \(\KL(P\|Q)=\KL(Q\|P)\) sempre. &nbsp;
+      (d) La cross-entropy \(\Hent(P,Q)\) è minima, a \(P\) fissa, quando \(Q=P\).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-11"><span class="secnum">Sezione 3.11</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      \(\E[x]=\frac{1}{6}(1+2+3+4+5+6)=\frac{21}{6}=3{,}5\). Non è un esito possibile: l'aspettazione è la
+      <b>media pesata</b> di tanti lanci, il baricentro della distribuzione, non un valore che deve apparire.
+      Su molti lanci, la media dei risultati tende a 3,5.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      \(P(M)=0{,}01\), \(P(+\given M)=0{,}99\), \(P(+\given\lnot M)=0{,}05\). Denominatore:
+      \(P(+)=0{,}99\cdot0{,}01+0{,}05\cdot0{,}99=0{,}0099+0{,}0495=0{,}0594\). Quindi
+      \(P(M\given+)=\frac{0{,}0099}{0{,}0594}\approx \mathbf{0{,}167}\), solo il <b>17%</b>! Sorprende perché la
+      malattia è rara (prior piccola): i sani sono così tanti che il loro 5% di falsi positivi supera in numero
+      i veri malati. <mark>La prior domina.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      Equa: \(\Hent=-(0{,}5\log_2 0{,}5+0{,}5\log_2 0{,}5)=-\log_2 0{,}5=\mathbf{1}\) bit (massima per una
+      binaria). Truccata: \(-(0{,}9\log_2 0{,}9+0{,}1\log_2 0{,}1)\approx 0{,}9\cdot0{,}152+0{,}1\cdot3{,}32
+      \approx \mathbf{0{,}47}\) bit. La equa ha entropia maggiore (più incertezza). Due teste: esito certo,
+      \(\Hent=\mathbf{0}\) (nessuna sorpresa).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      \(\Hent(P,Q)=-\sum_x P(x)\ln Q(x)=-(0\cdot\ln0{,}2+1\cdot\ln0{,}7+0\cdot\ln0{,}1)=-\ln0{,}7\approx
+      \mathbf{0{,}357}\). Coincide con \(-\ln Q_2\) perché \(P\) è <b>one-hot</b>: tutti i termini si annullano
+      tranne quello della classe vera, il cui peso è 1. <mark>Per etichette one-hot, la cross-entropy premia
+      solo quanto in alto la rete mette la classe corretta.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Una densità può superare 1 in altezza, purché l'area totale sia 1 (§3.2). <br>
+      <b>(b) FALSO.</b> Covarianza nulla esclude solo la relazione <em>lineare</em>; \(x\) e \(y\) possono essere
+      dipendenti in modo non lineare (§3.5). <br>
+      <b>(c) FALSO.</b> La KL non è simmetrica: non è una distanza (§3.8). <br>
+      <b>(d) VERO.</b> \(\Hent(P,Q)=\Hent(P)+\KL(P\|Q)\); il primo termine è fisso e la KL è \(\ge0\), nulla solo
+      per \(Q=P\): lì la cross-entropy tocca il minimo (§3.8).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §3.6 — la gaussiana
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wg-out');
+  const muI = document.getElementById('wg-mu'), sigI = document.getElementById('wg-sig');
+  const muO = document.getElementById('wg-mu-o'), sigO = document.getElementById('wg-sig-o');
+
+  function gauss(x, mu, s) { return Math.exp(-((x - mu) ** 2) / (2 * s * s)) / (s * Math.sqrt(2 * Math.PI)); }
+
+  function draw() {
+    const mu = parseFloat(muI.value), s = parseFloat(sigI.value);
+    muO.textContent = fmt(mu, 1); sigO.textContent = fmt(s, 1);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -0.06, ymax: 1.05 });
+    p.grid(1, 0.2); p.axes({ numbers: true, stepY: 0.2, xname: 'x', yname: 'p(x)' });
+    // riferimento standard N(0,1), tenue
+    p.func(x => gauss(x, 0, 1), { color: 'var(--rule)', width: 1.5, dash: '5 4' });
+    // regione ±σ
+    p.area(x => gauss(x, mu, s), mu - s, mu + s, { fill: 'color-mix(in srgb, var(--accent) 16%, transparent)' });
+    p.func(x => gauss(x, mu, s), { color: 'var(--accent)', width: 2.6 });
+    // linea della media
+    p.line(mu, 0, mu, gauss(mu, mu, s), { color: 'var(--warm)', width: 1.6, dash: '4 3' });
+    p.dot(mu, gauss(mu, mu, s), { color: 'var(--warm)', r: 4 });
+
+    out.innerHTML = `
+      <div class="big">
+        N(x; μ=<b style="color:var(--warm)">${fmt(mu, 1)}</b>, σ=<b style="color:var(--accent)">${fmt(s, 1)}</b>) &nbsp;·&nbsp;
+        picco = <b>${fmt(gauss(mu, mu, s))}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--warm)">media</b> sposta la campana; la <b style="color:var(--accent)">deviazione
+        standard</b> ne cambia la larghezza. La zona colorata è l'intervallo <b>μ ± σ</b>, che contiene circa il
+        <b>68%</b> della probabilità. Nota che <mark>restringendo σ il picco supera 1</mark>: è la densità, non
+        la probabilità — l'area resta sempre 1. (Tratteggiata: la normale standard N(0,1) di riferimento.)
+      </div>`;
+  }
+  muI.addEventListener('input', draw); sigI.addEventListener('input', draw);
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §3.8 — cross-entropy e divergenza KL su 3 classi
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wk-svg');
+  if (!svg) return;
+  const out = document.getElementById('wk-out');
+  const q1I = document.getElementById('wk-q1'), q2I = document.getElementById('wk-q2');
+  const q1O = document.getElementById('wk-q1-o'), q2O = document.getElementById('wk-q2-o');
+  const matchB = document.getElementById('wk-match');
+  const P = [0.6, 0.3, 0.1];          // distribuzione "vera" (i dati)
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+  function draw() {
+    let q1 = parseFloat(q1I.value), q2 = parseFloat(q2I.value);
+    // normalizza in modo che Q sia una distribuzione valida; Q3 = resto
+    let q3 = 1 - q1 - q2;
+    if (q3 < 0.02) { const over = 0.02 - q3; q1 -= over * q1 / (q1 + q2); q2 -= over * q2 / (q1 + q2); q3 = 0.02; }
+    const Q = [q1, q2, q3];
+    q1O.textContent = fmt(q1, 2); q2O.textContent = fmt(q2, 2);
+
+    svg.innerHTML = '';
+    const W = 560, H = 320, base = 250, top = 40, bw = 46, gap = 26;
+    const groupW = bw * 2 + 14;
+    const startX = (W - (groupW * 3 + gap * 2)) / 2;
+    const labels = ['classe 1', 'classe 2', 'classe 3'];
+    const g = el('g', {}); svg.appendChild(g);
+    // asse
+    g.appendChild(el('line', { x1: 30, y1: base, x2: W - 20, y2: base, class: 'axis' }));
+    for (let i = 0; i < 3; i++) {
+      const gx = startX + i * (groupW + gap);
+      const hP = (base - top) * P[i], hQ = (base - top) * Q[i];
+      // barra P
+      g.appendChild(el('rect', { x: gx, y: base - hP, width: bw, height: hP, rx: 4, fill: 'var(--accent)' }));
+      // barra Q
+      g.appendChild(el('rect', { x: gx + bw + 14, y: base - hQ, width: bw, height: hQ, rx: 4, fill: 'var(--violet)' }));
+      const tP = el('text', { x: gx + bw / 2, y: base - hP - 6, class: 'lbl-b', 'text-anchor': 'middle' }); tP.textContent = fmt(P[i], 2); g.appendChild(tP);
+      const tQ = el('text', { x: gx + bw + 14 + bw / 2, y: base - hQ - 6, class: 'lbl-b', 'text-anchor': 'middle', fill: 'var(--violet)' }); tQ.textContent = fmt(Q[i], 2); g.appendChild(tQ);
+      const tl = el('text', { x: gx + groupW / 2, y: base + 18, class: 'lbl', 'text-anchor': 'middle' }); tl.textContent = labels[i]; g.appendChild(tl);
+    }
+    // legenda
+    const lg = el('g', {}); g.appendChild(lg);
+    lg.appendChild(el('rect', { x: 40, y: 12, width: 14, height: 14, rx: 3, fill: 'var(--accent)' }));
+    const l1 = el('text', { x: 60, y: 24, class: 'lbl' }); l1.textContent = 'P — dati (vero)'; lg.appendChild(l1);
+    lg.appendChild(el('rect', { x: 200, y: 12, width: 14, height: 14, rx: 3, fill: 'var(--violet)' }));
+    const l2 = el('text', { x: 220, y: 24, class: 'lbl' }); l2.textContent = 'Q — modello (previsione)'; lg.appendChild(l2);
+
+    // metriche
+    const Hp = -P.reduce((a, p) => a + (p > 0 ? p * Math.log(p) : 0), 0);
+    const CE = -P.reduce((a, p, i) => a + (p > 0 ? p * Math.log(Q[i]) : 0), 0);
+    const KL = CE - Hp;
+    out.innerHTML = `
+      <div class="big">
+        H(P,Q) = <b style="color:var(--violet)">${fmt(CE, 3)}</b> nat &nbsp;·&nbsp;
+        KL(P‖Q) = <b style="color:${KL < 0.005 ? 'var(--green)' : 'var(--warm)'}">${fmt(KL, 3)}</b>
+        ${KL < 0.005 ? ' ✓ Q = P!' : ''}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'entropia dei dati H(P) = ${fmt(Hp, 3)} nat è fissa. La <b style="color:var(--violet)">cross-entropy</b>
+        (il costo) e la <b>KL</b> (lo spreco) scendono man mano che il modello <b style="color:var(--violet)">Q</b>
+        somiglia ai dati <b style="color:var(--accent)">P</b>.
+        ${KL < 0.005 ? '<mark>Q = P: la KL è zero e la cross-entropy tocca il suo minimo, H(P).</mark>' : 'Muovi Q₁ e Q₂ per avvicinare le barre viola alle blu — o premi «Q = P».'}
+      </div>`;
+  }
+  q1I.addEventListener('input', draw); q2I.addEventListener('input', draw);
+  matchB.addEventListener('click', () => { q1I.value = P[0]; q2I.value = P[1]; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>
