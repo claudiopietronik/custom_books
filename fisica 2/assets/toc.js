@@ -101,7 +101,7 @@ const TOC = [
     n: 7,
     titolo: "Il campo magnetico e le forze magnetiche",
     file: "cap07-campo-magnetico.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Il magnetismo e il campo magnetico" },
       { id: "s7-2", n: "7.2", t: "La forza di Lorentz" },
