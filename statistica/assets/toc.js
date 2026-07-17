@@ -284,7 +284,7 @@ const TOC = [
   },
   {
     n: 24, parte: "IV · Statistica inferenziale",
-    titolo: "Il test d'ipotesi", file: "cap24-test-ipotesi.html", stato: "da-fare",
+    titolo: "Il test d'ipotesi", file: "cap24-test-ipotesi.html", stato: "pronto",
     sezioni: [
       { id: "s24-1", n: "24.1", t: "H₀ e H₁" },
       { id: "s24-2", n: "24.2", t: "La logica per assurdo" },

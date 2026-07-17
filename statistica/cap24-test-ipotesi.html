@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>24 · Il test d'ipotesi — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="24">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Il test d'ipotesi</h1>
+    <p class="standfirst">
+      La macchina che decide se un effetto osservato è <b>reale</b> o frutto del <b>caso</b>. La sua logica è
+      controintuitiva — si dimostra qualcosa assumendo il suo contrario e mostrando che porta all'assurdo — ma una
+      volta capita illumina ogni p-value, ogni intervallo, ogni «statisticamente significativo» che leggerai.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il cuore dell'inferenza. Usa il TLC (Cap. 23) per conoscere la distribuzione della statistica sotto
+      l'ipotesi nulla. Da questo framework discendono direttamente il p-value (Cap. 25), gli errori (Cap. 26) e
+      ogni test specifico della Parte IV (t-test, ANOVA, ecc.).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Il farmaco funziona?», «la nuova versione converte di più?», «la differenza è vera?»: ogni volta che i dati
+      devono decidere tra «effetto reale» e «coincidenza», sotto c'è un test d'ipotesi. È la grammatica delle
+      conclusioni difendibili — e capirla è l'antidoto contro le conclusioni farlocche.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-1"><span class="secnum">SEZIONE 24.1</span>H₀ e H₁</h2>
+
+  <p class="lead">
+    Ogni test contrappone due ipotesi: la <b>nulla</b> (\(H_0\), «niente di speciale») e l'<b>alternativa</b>
+    (\(H_1\), «c'è un effetto»). Sono esaustive e opposte.
+  </p>
+
+  <ul>
+    <li><b>Ipotesi nulla \(H_0\)</b> — l'ipotesi «noiosa»: nessun effetto, nessuna differenza, tutto è caso. È lo
+      scenario di default, quello che si assume vero fino a prova contraria.</li>
+    <li><b>Ipotesi alternativa \(H_1\)</b> — c'è un effetto reale. È ciò che di solito si <em>spera</em> di
+      dimostrare (che il farmaco funzioni, che il cambiamento conti).</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Esempi di coppie H₀ / H₁</div>
+    <p style="margin-bottom:0">
+      «Il farmaco non cambia la pressione» (\(H_0\)) contro «la cambia» (\(H_1\)). «Le due medie sono uguali»
+      contro «sono diverse». <mark>\(H_0\) contiene sempre l'uguaglianza</mark> (\(=\), «nessuna differenza»);
+      \(H_1\) la nega (\(\neq\), \(>\), o \(<\)).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-2"><span class="secnum">SEZIONE 24.2</span>La logica per assurdo</h2>
+
+  <p class="lead">
+    Il colpo di genio (e la fonte di ogni confusione): <b>non</b> proviamo direttamente \(H_1\). Assumiamo vera
+    \(H_0\) e ci chiediamo quanto sarebbero <em>strani</em> i nostri dati in quel mondo.
+  </p>
+
+  <p>
+    Il ragionamento è quello del processo penale. Si <b>presume l'innocenza</b> (\(H_0\): l'imputato non è
+    colpevole) e servono prove <em>forti</em> per condannare. Non si «dimostra la colpevolezza» in astratto: si
+    mostra che le prove sarebbero <b>troppo improbabili</b> se l'imputato fosse innocente. Allo stesso modo:
+    assumiamo \(H_0\), calcoliamo quanto sarebbero improbabili i dati osservati sotto questa assunzione, e se sono
+    <em>troppo</em> improbabili, <b>rifiutiamo \(H_0\)</b>.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> «Non rifiutare» non è «accettare»</div>
+    <p style="margin-bottom:0">
+      Se i dati non sono abbastanza strani, <b>non rifiutiamo</b> \(H_0\) — ma questo <mark>non prova che
+      \(H_0\) sia vera</mark>, esattamente come «non colpevole» non significa «innocente dimostrato»: significa
+      «prove insufficienti». L'assenza di evidenza non è evidenza di assenza. Un test non può mai
+      <em>confermare</em> l'ipotesi nulla, solo non riuscire a smentirla.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-3"><span class="secnum">SEZIONE 24.3</span>Statistica test e regione di rifiuto</h2>
+
+  <p class="lead">
+    Per misurare «quanto sono strani i dati» si calcola una <b>statistica test</b> e la si confronta con la sua
+    distribuzione <em>sotto \(H_0\)</em> — la <b>distribuzione nulla</b>.
+  </p>
+
+  <p>
+    Grazie al TLC (Cap. 23) sappiamo spesso che forma ha questa distribuzione nulla (una normale, una t, una F…).
+    Fissiamo una soglia di «troppo strano» — il livello \(\alpha\), di solito 0,05 — che ritaglia nelle code la
+    <b>regione di rifiuto</b>: l'insieme dei valori così estremi che, se la statistica ci cade, rifiutiamo
+    \(H_0\). Cadere nella regione di rifiuto significa: «un valore così estremo capiterebbe per puro caso meno del
+    5% delle volte, quindi non credo più che sia solo caso».
+  </p>
+
+  <h3>Provalo: dentro o fuori la regione di rifiuto</h3>
+
+  <p>
+    La curva è la distribuzione nulla (cosa ci aspettiamo <em>se \(H_0\) è vera</em>). Le code in
+    <b style="color:var(--warm)">rosso</b> sono la regione di rifiuto (area totale \(\alpha\)). Trascina la
+    statistica osservata: quando entra nel rosso, la rifiuti; regola \(\alpha\) e guarda le soglie muoversi.
+  </p>
+
+  <div class="widget" id="w-ht">
+    <div class="w-head">
+      <span>Distribuzione nulla e regione di rifiuto</span>
+      <span class="hint">trascina la statistica osservata</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wht-svg" viewBox="0 0 620 240" role="img" aria-label="La distribuzione nulla con la regione di rifiuto nelle code e una statistica osservata trascinabile"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>α (significatività)</label><input type="range" id="wht-a" min="1" max="20" step="1" value="5"><output id="wht-av">0.05</output></div>
+    </div>
+    <div class="w-readout" id="wht-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-4"><span class="secnum">SEZIONE 24.4</span>Le variabili: IV e DV</h2>
+
+  <p class="lead">
+    Un test mette in relazione due tipi di variabili, e distinguerle è il primo passo di ogni analisi.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Tipo</th><th>Ruolo</th><th>Esempio (farmaco → pressione)</th></tr></thead>
+    <tbody>
+      <tr><td><b>Indipendente (IV)</b></td><td>quella che manipoli / il predittore (la presunta causa)</td><td>il farmaco (dato o no)</td></tr>
+      <tr><td><b>Dipendente (DV)</b></td><td>quella che misuri / il risultato (il presunto effetto)</td><td>la pressione sanguigna</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    La domanda di un test è quasi sempre: «la variabile <b>indipendente</b> ha un effetto sulla <b>dipendente</b>,
+    oltre a quello che ci aspetteremmo per caso?». Nella regressione (Cap. 43) l'IV sarà il predittore \(x\) e la
+    DV la risposta \(y\); nell'ANOVA (Cap. 40) l'IV sarà il gruppo e la DV la misura. È lo stesso scheletro,
+    ovunque.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-5"><span class="secnum">SEZIONE 24.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.1</div>
+    <p style="margin-bottom:0">Vuoi testare se un nuovo metodo di studio migliora i voti. Formula \(H_0\) e
+      \(H_1\), e identifica IV e DV.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>\(H_0\):</b> il metodo non cambia i voti (voto medio col nuovo metodo = voto medio senza).
+          <b>\(H_1\):</b> il metodo cambia i voti (medie diverse; o «li migliora» per un test a una coda).</p>
+        <p style="margin-bottom:0"><b>IV</b> (manipolata): il metodo di studio (nuovo vs vecchio). <b>DV</b>
+          (misurata): il voto. Si assume \(H_0\) e si vede se i dati sono troppo improbabili sotto di essa
+          (§24.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.2</div>
+    <p style="margin-bottom:0">Un test dà «non significativo»: non si rifiuta \(H_0\). Un collega conclude «quindi
+      il trattamento non ha alcun effetto». Perché è sbagliato?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">«Non rifiutare \(H_0\)» significa <b>prove insufficienti</b> per affermare un
+          effetto, non prova che l'effetto sia zero (§24.2). Magari l'effetto esiste ma il campione era troppo
+          piccolo per rilevarlo (poca potenza, Cap. 26). L'assenza di evidenza non è evidenza di assenza: la
+          conclusione corretta è «non abbiamo trovato prove di un effetto», non «non c'è effetto».</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 24.3</div>
+    <p style="margin-bottom:0">Perché si ragiona assumendo \(H_0\) vera, invece di cercare direttamente di
+      dimostrare \(H_1\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché \(H_0\) è <b>precisa</b> («nessuna differenza», un valore esatto) e
+          permette di calcolare <em>esattamente</em> la distribuzione della statistica test (la distribuzione
+          nulla, §24.3). \(H_1\) è invece vaga («c'è una differenza», ma quanta?) e non dà una distribuzione unica
+          da cui calcolare probabilità. Assumere \(H_0\) è l'unico modo per quantificare «quanto sarebbero strani
+          i dati per caso» — la logica per assurdo del processo (§24.2).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s24-6"><span class="secnum">SEZIONE 24.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 24</div>
+    <ol style="margin-bottom:0">
+      <li><b>H₀</b> (nessun effetto, contiene l'uguaglianza) contro <b>H₁</b> (c'è un effetto).</li>
+      <li><b>Logica per assurdo:</b> assumi \(H_0\), guarda quanto sarebbero improbabili i dati; se troppo,
+        rifiuta. Come il «presunto innocente».</li>
+      <li><b>Statistica test</b> confrontata con la <b>distribuzione nulla</b>; la <b>regione di rifiuto</b> (code,
+        area \(\alpha\)) decide.</li>
+      <li><b>«Non rifiutare» ≠ «accettare» H₀:</b> assenza di evidenza non è evidenza di assenza.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    «Cadere nella regione di rifiuto» è una decisione sì/no. Ma quanto <em>esattamente</em> sono strani i dati? La
+    risposta è un numero — la probabilità di osservare qualcosa di così estremo se \(H_0\) è vera — il famigerato
+    e frainteso <b>p-value</b>, protagonista del <strong>Capitolo 25</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function probit(p){const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];const pl=0.02425;let q,r;if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}if(p<=1-pl){q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+
+/* ============================================================================
+   WIDGET §24.3 — distribuzione nulla, regione di rifiuto, statistica osservata
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wht-svg');
+  if (!svg) return;
+  const out = document.getElementById('wht-out');
+  const aS = document.getElementById('wht-a'), aV = document.getElementById('wht-av');
+  const phi = z => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  let obs = 1.2;
+
+  function draw() {
+    const alpha = parseInt(aS.value, 10) / 100;
+    aV.textContent = alpha.toFixed(2);
+    const zc = probit(1 - alpha / 2);   // soglia a due code
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: 0, ymax: 0.45 });
+    p.axes({ numbers: false, names: true, xname: 'statistica test', yname: '' });
+    // code di rifiuto
+    p.area(phi, -4, -zc, { fill: 'color-mix(in srgb, var(--warm) 30%, transparent)' });
+    p.area(phi, zc, 4, { fill: 'color-mix(in srgb, var(--warm) 30%, transparent)' });
+    p.func(phi, { color: 'var(--accent)', width: 2.4, from: -4, to: 4 });
+    p.line(-zc, 0, -zc, phi(zc) + 0.02, { color: 'var(--warm)', width: 1.4 });
+    p.line(zc, 0, zc, phi(zc) + 0.02, { color: 'var(--warm)', width: 1.4 });
+    p.text(zc, 0.42, '±' + zc.toFixed(2), { color: 'var(--warm)', size: 10 });
+    p.text(0, 0.2, 'H₀ vera', { color: 'var(--accent)', size: 11 });
+    // statistica osservata trascinabile
+    const inReject = Math.abs(obs) > zc;
+    p.line(obs, 0, obs, 0.42, { color: inReject ? 'var(--warm)' : 'var(--green)', width: 2.4, dash: '4 3' });
+    p.handle(obs, phi(obs), { r: 7, color: inReject ? 'var(--warm)' : 'var(--green)', axis: 'x' }, (x) => { obs = Math.max(-3.9, Math.min(3.9, x)); draw(); });
+
+    out.innerHTML = `
+      <div class="big">statistica osservata = <b>${obs.toFixed(2)}</b> → ${inReject ? '<b style="color:var(--warm)">RIFIUTO H₀</b>' : '<b style="color:var(--green)">non rifiuto H₀</b>'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${inReject
+          ? 'La statistica è nella <mark>regione di rifiuto</mark>: un valore così estremo capiterebbe per caso meno del ' + (alpha * 100).toFixed(0) + '% delle volte se H₀ fosse vera. Troppo strano → rifiuto.'
+          : 'La statistica è nella zona «plausibile sotto H₀»: i dati non sono abbastanza estremi per rifiutare. Non provo che H₀ sia vera, solo che non riesco a smentirla.'}
+        Alza α e le soglie ±${zc.toFixed(2)} si <b>avvicinano</b> al centro: rifiutare diventa più facile (ma cresce il rischio di falso allarme — Cap. 26).
+      </div>`;
+  }
+  aS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
