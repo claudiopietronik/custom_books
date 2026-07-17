@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>22 · Elaborazione audio — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="22">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.22 — Capitolo 22</div>
+    <h1>Elaborazione audio</h1>
+    <p class="standfirst">
+      Inizia la seconda metà del libro, tutta applicativa, e cominciamo dal senso più intuitivo: l'<b>udito</b>.
+      Il DSP dell'audio è ovunque — nella telefonata, nella musica in streaming, nell'assistente vocale — e ha
+      una particolarità affascinante: è progettato attorno ai <em>difetti</em> del nostro orecchio. Capire come
+      sentiamo è metà del mestiere di chi elabora il suono.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prima applicazione: mettiamo al lavoro Fourier (il timbro è uno spettro) e i filtri (equalizzazione,
+      companding). Il tema della <b>compressione percettiva</b> introdotto qui verrà ripreso in generale nel
+      Cap. 27. Poi passeremo dal suono alle immagini (Cap. 23–25).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      L'audio digitale è forse il DSP che «tocchi» più spesso. E insegna una lezione generale: <strong>conoscere
+      il ricevitore permette di buttare via ciò che non percepisce.</strong> L'MP3 sta in un decimo dello spazio
+      non perché comprima meglio i numeri, ma perché sa cosa l'orecchio non sentirebbe comunque. È l'idea che
+      regge metà della compressione moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-1"><span class="secnum">SEZIONE 22.1</span>Come funziona l'udito umano</h2>
+
+  <p class="lead">
+    L'orecchio non è un microfono lineare: è un analizzatore di spettro <b>logaritmico</b> con parecchi limiti
+    utili da conoscere.
+  </p>
+
+  <ul>
+    <li><b>Range:</b> sentiamo da circa \(20\) Hz a \(20\,000\) Hz (i bambini; con l'età il limite alto scende).
+        È il motivo del campionamento a \(44\,100\) Hz dei CD (Cap. 3): più del doppio di \(20\) kHz.</li>
+    <li><b>Frequenza logaritmica.</b> Non percepiamo le frequenze in modo lineare ma per <b>ottave</b>: il salto
+        da \(100\) a \(200\) Hz suona «uguale» a quello da \(1000\) a \(2000\) Hz — entrambi un raddoppio, cioè
+        un'ottava. Per questo la musica è organizzata in ottave e i grafici audio usano assi logaritmici.</li>
+    <li><b>Intensità logaritmica.</b> Anche il volume lo sentiamo in modo logaritmico, ed è il motivo dei
+        <b>decibel</b>: coprono un range di intensità enorme (un fattore mille miliardi tra il sussurro e la
+        soglia del dolore) con numeri maneggevoli.</li>
+    <li><b>Mascheramento.</b> Un suono forte «nasconde» un suono debole di frequenza vicina: semplicemente non lo
+        senti. È un difetto — ed è oro per chi comprime (§22.4).</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'orecchio fa una trasformata di Fourier</div>
+    <p style="margin-bottom:0">
+      Dentro l'orecchio, la <b>coclea</b> scompone il suono nelle sue frequenze: zone diverse rispondono a
+      frequenze diverse, come un banco di filtri passa-banda (Cap. 19) o come i bin di una DFT (Cap. 8).
+      <mark>Il tuo orecchio, in un certo senso, «calcola lo spettro» del suono in tempo reale</mark> e lo manda
+      al cervello. È per questo che Fourier è il linguaggio naturale dell'audio: descrive il suono come lo
+      percepiamo davvero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-2"><span class="secnum">SEZIONE 22.2</span>Timbro e percezione del suono</h2>
+
+  <p class="lead">
+    Perché un violino e un flauto che suonano la <em>stessa nota</em> suonano così diversi? La nota (l'altezza) è
+    la stessa, ma il <b>timbro</b> è diverso — e il timbro è, in una parola, lo <b>spettro</b>.
+  </p>
+
+  <p>
+    Un suono musicale è periodico, quindi il suo spettro è a righe (Cap. 11): una <b>fondamentale</b> (che dà
+    l'altezza della nota) e le sue <b>armoniche</b> (multipli interi). Ciò che distingue gli strumenti è
+    l'<em>intensità relativa</em> delle armoniche: un flauto ha poche armoniche (suono «puro»), un violino ne ha
+    molte (suono «ricco»), un clarinetto ha soprattutto le armoniche dispari (suono «cavo»). Cambia la ricetta di
+    armoniche, cambia lo strumento — pur restando la stessa nota.
+  </p>
+
+  <h3>Provalo: costruisci un timbro</h3>
+
+  <p>
+    Regola l'intensità delle armoniche e ascolta con gli occhi: cambia lo <b style="color:var(--warm)">spettro</b>
+    (le righe) e cambia la <b style="color:var(--accent)">forma d'onda</b>. Prova i preset: stesso «la», timbri
+    diversi. È così che un sintetizzatore imita gli strumenti — e come il tuo orecchio li riconosce.
+  </p>
+
+  <div class="widget" id="w-timbre">
+    <div class="w-head">
+      <span>Il timbro è lo spettro</span>
+      <span class="hint">cambia le armoniche, cambia lo strumento</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wtm-wave" viewBox="0 0 620 130" role="img" aria-label="La forma d'onda risultante dalle armoniche impostate"></svg>
+      <svg id="wtm-spec" viewBox="0 0 620 120" role="img" aria-label="Lo spettro a righe delle armoniche"></svg>
+    </div>
+    <div class="w-controls" id="wtm-sliders"></div>
+    <div class="w-controls" style="margin-top:.5rem">
+      <button class="w-btn" id="wtm-flute">flauto</button>
+      <button class="w-btn" id="wtm-violin">violino</button>
+      <button class="w-btn" id="wtm-clar">clarinetto</button>
+    </div>
+    <div class="w-readout" id="wtm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-3"><span class="secnum">SEZIONE 22.3</span>Sintesi e riconoscimento del parlato</h2>
+
+  <p class="lead">
+    Il parlato è l'audio più prezioso e più difficile. Il DSP lo affronta in due direzioni opposte: produrlo
+    (sintesi) e capirlo (riconoscimento).
+  </p>
+
+  <p>
+    La chiave è un modello di come nasce la voce, detto <b class="termine">sorgente-filtro</b>. Una
+    <b>sorgente</b> — le corde vocali che vibrano (per i suoni «sonori» come le vocali) o un soffio d'aria (per
+    le consonanti fricative) — produce un segnale ricco di armoniche. Questo segnale attraversa poi un
+    <b>filtro</b> — la forma della bocca, della lingua, delle labbra — che ne esalta certe frequenze (le
+    <em>formanti</em>) e ne spegne altre. Cambiando la forma del «filtro» produci vocali diverse. È, letteralmente,
+    una sorgente convoluta con la risposta all'impulso del tratto vocale (Cap. 6).
+  </p>
+
+  <ul>
+    <li><b>Sintesi vocale</b> (text-to-speech): il calcolatore genera la sorgente e simula il filtro del tratto
+        vocale per costruire le parole. È ciò che fa parlare navigatori e assistenti.</li>
+    <li><b>Riconoscimento vocale</b> (speech-to-text): la strada inversa, molto più dura. Si calcola lo
+        <b>spettrogramma</b> (lo spettro che cambia nel tempo, una sequenza di DFT) e lo si interpreta. Poiché
+        ogni voce e ogni accento è diverso, qui il DSP «classico» cede il passo alle <b>reti neurali</b>
+        (Cap. 26): è uno dei ponti storici tra le due discipline.</li>
+  </ul>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-4"><span class="secnum">SEZIONE 22.4</span>Compressione: companding e MPEG</h2>
+
+  <p class="lead">
+    L'audio occupa spazio e banda. Comprimerlo bene significa sfruttare i limiti dell'orecchio: buttare via ciò
+    che non sentiresti comunque. Due tecniche esemplari.
+  </p>
+
+  <p>
+    Il <b class="termine">companding</b> (usato nella telefonia, con le curve μ-law e A-law) sfrutta la
+    percezione <em>logaritmica</em> dell'intensità. Invece di quantizzare l'ampiezza in modo uniforme (Cap. 3) —
+    che sprecherebbe livelli sui suoni forti, dove l'orecchio è meno sensibile alle differenze — si quantizza in
+    modo <b>non lineare</b>: tanti livelli fini per i suoni deboli, pochi livelli grossi per i forti. Il
+    risultato: qualità percepita di 12 bit con soli 8 bit di dati. <mark>Allochi la precisione dove l'orecchio la
+    nota.</mark>
+  </p>
+
+  <p>
+    L'<b class="termine">MPEG</b> (l'MP3 e i suoi discendenti) va oltre, con la <b>codifica percettiva</b>:
+    calcola lo spettro del suono, e per ogni istante decide quali componenti l'orecchio <em>non percepirebbe</em>
+    — perché troppo deboli o <b>mascherate</b> (§22.1) da componenti vicine più forti — e le <b>scarta</b>. Ciò
+    che resta viene codificato con pochi bit. Il segnale non è più identico all'originale, ma <em>suona</em>
+    identico: è compressione con perdita, guidata da un modello dell'udito.
+  </p>
+
+  <h3>Provalo: la curva di companding</h3>
+
+  <p>
+    La curva mostra come il companding «piega» i valori: la parte ripida vicino allo zero dà <b>molti livelli
+    ai suoni deboli</b>; la parte piatta in alto ne dà pochi ai forti. Alza il parametro μ e guarda la curva
+    accentuarsi: più precisione dove l'orecchio la nota, meno dove non serve.
+  </p>
+
+  <div class="widget" id="w-comp">
+    <div class="w-head">
+      <span>Companding μ-law</span>
+      <span class="hint">più livelli ai suoni deboli</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcp-svg" viewBox="0 0 620 260" role="img" aria-label="La curva di companding mu-law che assegna più livelli ai segnali deboli"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>μ</label><input type="range" id="wcp-m" min="1" max="255" step="1" value="100"><output id="wcp-mv">100</output></div>
+    </div>
+    <div class="w-readout" id="wcp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-5"><span class="secnum">SEZIONE 22.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 22.1</div>
+    <p style="margin-bottom:0">Due strumenti suonano lo stesso «la» a 440 Hz ma si distinguono a orecchio. Cosa è
+      uguale e cosa è diverso, nel loro spettro?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Uguale:</b> la fondamentale a 440 Hz (che dà l'altezza della nota). <b>Diverso:</b> l'intensità
+          relativa delle <b>armoniche</b> (880, 1320, 1760 Hz…), cioè il <b>timbro</b>. È la ricetta di armoniche
+          a rendere riconoscibile lo strumento (§22.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 22.2</div>
+    <p style="margin-bottom:0">Perché l'MP3 può ridurre l'audio di dieci volte «senza» che si senta la
+      differenza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con la <b>codifica percettiva</b>: analizza lo spettro e scarta le componenti che l'orecchio non
+          percepisce comunque (troppo deboli o <b>mascherate</b> da suoni vicini più forti). Il segnale cambia,
+          ma la <em>percezione</em> no. È compressione con perdita guidata da un modello dell'udito (§22.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 22.3</div>
+    <p style="margin-bottom:0">Perché il companding usa quantizzazione non uniforme invece di quella uniforme del
+      Cap. 3?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché l'orecchio percepisce l'intensità in modo <b>logaritmico</b>: nota le differenze tra suoni
+          deboli molto più che tra suoni forti. La quantizzazione uniforme sprecherebbe livelli sui forti; quella
+          non uniforme (μ-law) mette <b>livelli fini dove servono</b> (deboli) e grossi dove non servono (forti),
+          ottenendo qualità di 12 bit con 8 bit (§22.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 22.4</div>
+    <p style="margin-bottom:0">Nel modello sorgente-filtro della voce, cosa rappresentano la «sorgente» e il
+      «filtro»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Sorgente:</b> le corde vocali che vibrano (suoni sonori) o un soffio (fricative) — un segnale ricco
+          di armoniche. <b>Filtro:</b> il tratto vocale (bocca, lingua, labbra) che esalta certe frequenze (le
+          formanti) e ne spegne altre. La voce è la sorgente <b>convoluta</b> con la risposta all'impulso del
+          tratto vocale; cambiando il filtro si producono vocali diverse (§22.3).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s22-6"><span class="secnum">SEZIONE 22.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 22</div>
+    <ol style="margin-bottom:0">
+      <li><b>L'udito è un analizzatore di spettro logaritmico:</b> range 20 Hz–20 kHz, ottave (frequenza log),
+          decibel (intensità log), <b>mascheramento</b>.</li>
+      <li><b>Il timbro è lo spettro:</b> stessa fondamentale (altezza) + ricetta di armoniche diversa = strumenti
+          diversi.</li>
+      <li><b>Voce = sorgente-filtro:</b> corde vocali (sorgente) convolute col tratto vocale (filtro). Sintesi e
+          riconoscimento (→ reti neurali, Cap. 26).</li>
+      <li><b>Compressione percettiva:</b> companding (quantizzazione non uniforme, log) e MPEG (scarta
+          l'impercettibile e il mascherato).</li>
+      <li><b>Lezione generale:</b> conoscere il ricevitore permette di buttare via ciò che non percepisce.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Dal suono passiamo alla vista. Il <strong>Capitolo 23</strong> apre la sezione sulle <b>immagini</b>: cos'è
+    un'immagine digitale, come si forma in una fotocamera, come si visualizza e cosa ne determina la qualità.
+    Scopriremo che un'immagine è solo un segnale a due dimensioni — e che quasi tutto ciò che abbiamo imparato
+    (campionamento, convoluzione, Fourier) si estende, con qualche twist geometrico, dal filo del tempo al piano
+    dei pixel.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §22.2 — costruttore di timbro
+   ========================================================================= */
+(function () {
+  const sw = document.getElementById('wtm-wave'), sp = document.getElementById('wtm-spec');
+  if (!sw) return;
+  const out = document.getElementById('wtm-out');
+  const cont = document.getElementById('wtm-sliders');
+  const K = 6;
+  const amp = [0, 1, 0.5, 0.3, 0.2, 0.15, 0.1];
+  for (let k = 1; k <= K; k++) {
+    const d = document.createElement('div'); d.className = 'w-ctrl';
+    d.innerHTML = `<label>arm.${k}</label><input type="range" data-k="${k}" min="0" max="1" step="0.05" value="${amp[k]}"><output>${amp[k].toFixed(2)}</output>`;
+    cont.appendChild(d);
+  }
+  const inputs = [...cont.querySelectorAll('input')];
+
+  function draw() {
+    // forma d'onda
+    sw.innerHTML = '';
+    const pw = new Plot(sw, { xmin: 0, xmax: 2 * Math.PI, ymin: -2.2, ymax: 2.2 });
+    pw.line(0, 0, 2 * Math.PI, 0, { color: 'var(--ink-faint)', width: 1 });
+    pw.func(x => { let s = 0; for (let k = 1; k <= K; k++) s += amp[k] * Math.sin(k * x); return s; }, { color: 'var(--accent)', width: 2.6, samples: 600 });
+    pw.text(2 * Math.PI - 0.1, 2, 'forma d\'onda', { color: 'var(--accent)', anchor: 'end', size: 10.5 });
+
+    // spettro
+    sp.innerHTML = '';
+    const ps = new Plot(sp, { xmin: 0, xmax: K + 1, ymin: 0, ymax: 1.15 });
+    ps.axes({ numbers: false, names: true, xname: 'armonica →', yname: '' });
+    const bars = []; for (let k = 1; k <= K; k++) bars.push(amp[k]);
+    ps.bars(bars, { x0: 1, dxs: 1, bw: 0.4, fill: 'color-mix(in srgb, var(--warm) 55%, transparent)', color: 'var(--warm)' });
+    ps.text(K, 1.0, 'spettro (armoniche)', { color: 'var(--warm)', anchor: 'end', size: 10.5 });
+
+    // classifica timbro
+    const odd = amp[1] + amp[3] + amp[5], even = amp[2] + amp[4] + amp[6];
+    const rich = amp.slice(2).reduce((a, b) => a + b, 0);
+    let kind = rich < 0.4 ? 'puro (tipo flauto)' : odd > even * 1.8 ? 'cavo (tipo clarinetto)' : 'ricco (tipo violino/ottone)';
+    out.innerHTML = `
+      <div class="big">timbro: <b>${kind}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Stessa nota (la fondamentale non cambia), ma <mark>ricetta di armoniche diversa = strumento diverso</mark>.
+        Poche armoniche → suono puro; molte → ricco; solo le dispari → cavo. È così che l'orecchio distingue gli
+        strumenti e un sintetizzatore li imita.
+      </div>`;
+  }
+  inputs.forEach(inp => inp.addEventListener('input', () => { amp[+inp.dataset.k] = parseFloat(inp.value); inp.nextElementSibling.textContent = parseFloat(inp.value).toFixed(2); draw(); }));
+  function setAll(arr) { for (let k = 1; k <= K; k++) { amp[k] = arr[k - 1] || 0; inputs[k - 1].value = amp[k]; inputs[k - 1].nextElementSibling.textContent = amp[k].toFixed(2); } draw(); }
+  document.getElementById('wtm-flute').addEventListener('click', () => setAll([1, 0.15, 0.05, 0, 0, 0]));
+  document.getElementById('wtm-violin').addEventListener('click', () => setAll([1, 0.7, 0.5, 0.4, 0.3, 0.25]));
+  document.getElementById('wtm-clar').addEventListener('click', () => setAll([1, 0.05, 0.6, 0.05, 0.4, 0.05]));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §22.4 — companding μ-law
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcp-out');
+  const mS = document.getElementById('wcp-m'), mV = document.getElementById('wcp-mv');
+
+  function draw() {
+    const mu = parseFloat(mS.value);
+    mV.textContent = mu;
+    const F = x => Math.sign(x) * Math.log(1 + mu * Math.abs(x)) / Math.log(1 + mu);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1, xmax: 1, ymin: -1.1, ymax: 1.1 });
+    p.grid(0.5, 0.5); p.axes({ numbers: true, names: true, xname: 'ingresso', yname: 'uscita', stepX: 0.5, stepY: 0.5 });
+    // diagonale (nessun companding)
+    p.line(-1, -1, 1, 1, { color: 'var(--rule)', width: 1.2, dash: '4 4' });
+    p.func(F, { color: 'var(--accent)', width: 2.8, samples: 500 });
+    // livelli di quantizzazione uniformi in uscita → mostra la loro spaziatura in ingresso
+    for (let i = 1; i < 8; i++) {
+      const yo = -1 + 2 * i / 8;
+      // inverti F per trovare l'ingresso
+      const xin = Math.sign(yo) * (Math.pow(1 + mu, Math.abs(yo)) - 1) / mu;
+      p.line(xin, -1.1, xin, -0.95, { color: 'var(--warm)', width: 1.4 });
+    }
+    p.text(-0.95, 1, 'μ-law', { color: 'var(--accent)', anchor: 'start', size: 11 });
+    p.text(0, -1.05, 'livelli fitti sui deboli →', { color: 'var(--warm)', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">μ = <b>${mu}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva <b style="color:var(--accent)">μ-law</b> è ripida vicino allo zero e piatta in alto: i
+        <b style="color:var(--warm)">livelli</b> (tacche ambra) sono <mark>fitti sui segnali deboli</mark> e radi
+        sui forti — esattamente dove l'orecchio nota o non nota le differenze. Con μ più alto l'effetto si
+        accentua: qualità di 12 bit in 8 bit di dati.
+      </div>`;
+  }
+  mS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

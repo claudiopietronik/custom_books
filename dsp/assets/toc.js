@@ -330,7 +330,7 @@ const TOC = [
     n: 22,
     titolo: "Elaborazione audio",
     file: "cap22-audio.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s22-1", n: "22.1", t: "Come funziona l'udito umano" },
       { id: "s22-2", n: "22.2", t: "Timbro e percezione del suono" },
