@@ -22,7 +22,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 ## Stato
 
 - [x] 1 — Introduzione
-- [ ] 2 — Successioni e serie di funzioni
+- [x] 2 — Successioni e serie di funzioni
 - [ ] 3 — Serie di potenze
 - [ ] 4 — Serie di Fourier
 - [ ] 5 — Lo spazio ℝⁿ e la topologia

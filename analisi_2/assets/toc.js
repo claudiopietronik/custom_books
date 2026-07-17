@@ -23,7 +23,7 @@ const TOC = [
     n: 2,
     titolo: "Successioni e serie di funzioni",
     file: "cap02-successioni-funzioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Da numeri a funzioni" },
       { id: "s2-2", n: "2.2", t: "Convergenza puntuale" },
