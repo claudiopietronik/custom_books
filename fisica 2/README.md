@@ -36,7 +36,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 8 — Le sorgenti del campo magnetico
 - [x] 9 — L'induzione elettromagnetica
 - [x] 10 — L'induttanza
-- [ ] 11 — Le correnti alternate
+- [x] 11 — Le correnti alternate
 - [ ] 12 — Le onde elettromagnetiche
 
 ### Ottica
