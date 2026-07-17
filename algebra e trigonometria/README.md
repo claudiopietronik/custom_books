@@ -29,7 +29,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 ## Stato
 
 - [x] 1 — Ripasso dei prerequisiti
-- [ ] 2 — Equazioni e disequazioni
+- [x] 2 — Equazioni e disequazioni
 - [ ] 3 — Funzioni e relazioni
 - [ ] 4 — Funzioni polinomiali e razionali
 - [ ] 5 — Funzioni esponenziali e logaritmiche
