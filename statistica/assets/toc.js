@@ -308,7 +308,7 @@ const TOC = [
   },
   {
     n: 26, parte: "IV · Statistica inferenziale",
-    titolo: "Errori di Tipo I e II", file: "cap26-errori.html", stato: "da-fare",
+    titolo: "Errori di Tipo I e II", file: "cap26-errori.html", stato: "pronto",
     sezioni: [
       { id: "s26-1", n: "26.1", t: "La tabella 2×2 delle decisioni" },
       { id: "s26-2", n: "26.2", t: "α, β e il loro conflitto" },
