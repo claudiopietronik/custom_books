@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Integrali multipli — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Integrali multipli</h1>
+    <p class="standfirst">
+      L'integrale di Analisi 1 misurava un'area sotto una curva; l'integrale <b>doppio</b> misura un
+      <b>volume</b> sotto una superficie, e il <b>triplo</b> integra su un solido. Li calcoleremo riducendoli a
+      integrali successivi (<b>Fubini</b>) e, quando la simmetria lo chiede, cambiando coordinate con lo
+      <b>Jacobiano</b> — passando a <mark>polari, cilindriche, sferiche</mark>. È il conto che serve ogni giorno
+      in fisica e ingegneria: volumi, masse, baricentri.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'<b>integrale doppio</b> come volume (§12.1), calcolato per <b>riduzione</b> (Fubini, §12.2) su
+      <b>domini normali</b> (§12.3). Il <b>cambio di variabili</b> con lo Jacobiano (§12.4) e il caso più utile,
+      le <b>coordinate polari</b> (§12.5). Poi il salto in 3D: <b>integrali tripli</b> (§12.6), coordinate
+      <b>cilindriche e sferiche</b> (§12.7), e le <b>applicazioni</b> — volumi, masse, baricentri (§12.8).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni «quanto ce n'è, distribuito nello spazio» è un integrale multiplo: la <b>massa</b> di un oggetto di
+      densità variabile, la <b>carica</b> di una distribuzione, la <b>probabilità</b> di una variabile a più
+      dimensioni, il <b>baricentro</b> e i <b>momenti d'inerzia</b> di un corpo. <mark>Il cambio in coordinate
+      polari/sferiche è la mossa che rende calcolabili integrali altrimenti mostruosi</mark> — ed è così che si
+      calcola, tra l'altro, l'integrale di Gauss \(\int_{-\infty}^{+\infty} \eu^{-x^2}\dd x = \sqrt\pi\), il
+      cuore della statistica, impossibile in una variabile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>L'integrale doppio</h2>
+
+  <p class="lead">
+    Come l'integrale semplice era l'area sotto una curva (limite di rettangoli), l'integrale doppio è il
+    <b>volume</b> sotto una superficie \(z = f(x, y)\): limite di tanti <b>parallelepipedi</b> su una griglia
+    che copre la regione \(D\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Integrale doppio <span class="tag">volume = limite di colonnine</span></div>
+    <div class="f-body">
+      \[ \iint_D f(x, y)\,\dd A = \lim \sum_{i} f(x_i, y_i)\,\Delta A_i \]
+    </div>
+    <div class="f-note">
+      Si divide \(D\) in tante celle di area \(\Delta A\), si costruisce su ognuna una colonnina di altezza
+      \(f\), e si sommano i volumi \(f\cdot\Delta A\); al limite (celle sempre più fini) si ottiene l'integrale
+      doppio (Analisi 1, §12.2, in due dimensioni). Se \(f = 1\), l'integrale dà l'<b>area</b> di \(D\); se
+      \(f\) è una densità, dà la <b>massa</b>; in generale, il volume sotto la superficie. L'elemento \(\dd A =
+      \dd x\,\dd y\) è la «cella infinitesima».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Formule di riduzione (Fubini)</h2>
+
+  <p class="lead">
+    Nessuno calcola un integrale doppio con la definizione. Il <b>teorema di Fubini</b> lo spezza in due
+    integrali <em>semplici</em>, uno dentro l'altro: integri prima in una variabile, poi nell'altra.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Riduzione a integrali iterati <span class="tag">un integrale dentro l'altro</span></div>
+    <div class="f-body">
+      \[ \iint_D f\,\dd A = \int_a^b\!\left(\int_{g_1(x)}^{g_2(x)} f(x, y)\,\dd y\right)\dd x \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>l'integrale <b>interno</b> (in \(y\))</dt>
+        <dd>fissa \(x\) e integra \(f\) lungo una <b>striscia verticale</b>, da \(y = g_1(x)\) a \(y = g_2(x)\):
+            somma la colonna di volume sopra quella striscia. Il risultato dipende (solo) da \(x\).</dd>
+        <dt>l'integrale <b>esterno</b> (in \(x\))</dt>
+        <dd>somma i contributi di tutte le strisce, facendo scorrere \(x\) da \(a\) a \(b\). <mark>Prima una
+            fetta, poi impili le fette.</mark></dd>
+        <dt>l'ordine è libero</dt>
+        <dd>si può integrare prima in \(x\) e poi in \(y\) (strisce orizzontali): Fubini garantisce lo stesso
+            risultato. Si sceglie l'ordine che rende i conti più facili.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il widget mostra la striscia verticale che spazza il dominio: l'integrale interno riempie la striscia,
+      quello esterno la fa scorrere.
+    </div>
+  </div>
+
+  <div class="widget" id="w-fubini">
+    <div class="w-head">
+      <span>Fubini: la striscia che spazza il dominio</span>
+      <span class="hint">muovi la striscia lungo x</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wf-svg" viewBox="0 0 560 380" role="img" aria-label="Una striscia verticale spazza il dominio: l'integrale interno la riempie, quello esterno la fa scorrere"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">striscia in x</label>
+      <input type="range" id="wf-x" min="-1.9" max="1.9" step="0.02" value="0.3" style="flex:1">
+    </div>
+    <div class="w-readout" id="wf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Domini normali</h2>
+
+  <p class="lead">
+    Perché Fubini funzioni bisogna descrivere il dominio nel modo giusto: come un intervallo per la variabile
+    «esterna», con estremi che <em>dipendono</em> da essa per quella «interna». Sono i domini normali.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Dominio normale</div>
+    <p style="margin-bottom:0">
+      Un dominio è <span class="termine">normale rispetto a \(x\)</span> se si scrive
+      \[ D = \{(x, y) : a \le x \le b,\ \ g_1(x) \le y \le g_2(x)\}. \]
+      Per ogni \(x\), la striscia verticale va da \(g_1(x)\) a \(g_2(x)\): sono <b>gli estremi dell'integrale
+      interno</b>, e dipendono da \(x\). Analogamente «normale rispetto a \(y\)» (strisce orizzontali). <mark>Il
+      segreto degli integrali doppi è tutto qui: capire il dominio e scegliere l'ordine giusto</mark> — a volte
+      un integrale impossibile in un ordine diventa facile nell'altro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Cambio di variabili e Jacobiano</h2>
+
+  <p class="lead">
+    Come in Analisi 1 la sostituzione portava un fattore \(g'\) (§13.3), in più variabili il cambio di
+    coordinate porta il <b>determinante dello Jacobiano</b>: il fattore di cui si dilatano le aree.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cambio di variabili <span class="tag">lo Jacobiano corregge le aree</span></div>
+    <div class="f-body">
+      \[ \iint_D f(x, y)\,\dd x\,\dd y = \iint_{D'} f\big(x(u,v), y(u,v)\big)\,\abs{\det J}\,\dd u\,\dd v, \qquad \det J = \pdv{(x,y)}{(u,v)} \]
+    </div>
+    <div class="f-note">
+      La trasformazione \((u, v) \mapsto (x, y)\) deforma le celle: una cella \(\dd u\,\dd v\) diventa una cella
+      di area \(\abs{\det J}\,\dd u\,\dd v\). Il <b>determinante dello Jacobiano</b> (§9.3) è esattamente
+      <mark>il fattore di dilatazione delle aree</mark> (§11 di Algebra Lineare: il determinante è il fattore
+      d'area di una trasformazione lineare). Quindi, per «tradurre» l'integrale nelle nuove coordinate, ogni
+      elemento va moltiplicato per \(\abs{\det J}\). È la generalizzazione esatta del \(\dd x = g'(u)\dd u\)
+      della sostituzione semplice.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Coordinate polari</h2>
+
+  <p class="lead">
+    Il cambio di variabili più utile: le <b>coordinate polari</b>, fatte apposta per regioni con simmetria
+    circolare (dischi, anelli, settori). Il loro Jacobiano è semplicissimo: \(r\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Coordinate polari <span class="tag">l'elemento d'area è r dr dθ</span></div>
+    <div class="f-body">
+      \[ x = r\cos\theta, \quad y = r\sin\theta, \qquad \dd x\,\dd y = r\,\dd r\,\dd\theta \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\((r, \theta)\)</dt>
+        <dd>distanza dall'origine \(r\) e angolo \(\theta\) (come nel piano complesso, Analisi 1 §3.4). Un
+            disco diventa un semplice rettangolo \(0 \le r \le R\), \(0 \le \theta \le 2\pi\).</dd>
+        <dt>il fattore \(r\) (lo Jacobiano)</dt>
+        <dd>l'elemento d'area <b>non</b> è \(\dd r\,\dd\theta\), ma \(r\,\dd r\,\dd\theta\): il «mattoncino
+            polare» è <b>più grande lontano dall'origine</b> (a parità di \(\dd r, \dd\theta\), l'arco è più
+            lungo). <mark>Dimenticare la \(r\) è l'errore numero uno</mark> degli integrali in polari. Il widget
+            mostra il mattoncino crescere con \(r\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>L'integrale di Gauss.</b> \(\int_{-\infty}^{+\infty}\eu^{-x^2}\dd x\) non ha primitiva elementare
+      (Analisi 1, §13.6). Ma il suo quadrato è un integrale doppio: \(\left(\int \eu^{-x^2}\dd x\right)^2 =
+      \iint \eu^{-(x^2+y^2)}\dd x\,\dd y\), che in polari diventa \(\int_0^{2\pi}\!\int_0^{\infty}\eu^{-r^2}
+      r\,\dd r\,\dd\theta = 2\pi\cdot\frac12 = \pi\). Quindi \(\int_{-\infty}^{+\infty}\eu^{-x^2}\dd x =
+      \sqrt\pi\). <mark>Un integrale impossibile in 1D, risolto elegantemente in 2D grazie alla \(r\)</mark> — il
+      trucco più bello del capitolo, e il fondamento della curva a campana della statistica.
+    </div>
+  </div>
+
+  <div class="widget" id="w-polari">
+    <div class="w-head">
+      <span>Coordinate polari: il mattoncino r dr dθ</span>
+      <span class="hint">sposta il raggio r: la cella cresce</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-svg" viewBox="0 0 560 400" role="img" aria-label="Nella griglia polare, l'elemento d'area cresce con la distanza dall'origine, con fattore r"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">raggio r della cella</label>
+      <input type="range" id="wp-r" min="0.4" max="2.4" step="0.05" value="1.4" style="flex:1">
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Integrali tripli</h2>
+
+  <p class="lead">
+    Salendo di una dimensione, si integra su un <b>solido</b> \(V \subseteq \R^3\). Stessa idea, stessa
+    tecnica: Fubini spezza il triplo in tre integrali semplici annidati.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Integrale triplo <span class="tag">Fubini in 3D</span></div>
+    <div class="f-body">
+      \[ \iiint_V f\,\dd V = \int_a^b\!\int_{g_1(x)}^{g_2(x)}\!\int_{h_1(x,y)}^{h_2(x,y)} f(x,y,z)\,\dd z\,\dd y\,\dd x \]
+    </div>
+    <div class="f-note">
+      Si integra prima in \(z\) (una «colonna» verticale, con estremi che dipendono da \(x, y\)), poi in \(y\),
+      poi in \(x\) — tre integrali semplici uno dentro l'altro. Con \(f = 1\) si ottiene il <b>volume</b> di
+      \(V\); con \(f\) densità, la <b>massa</b>. Il dominio va descritto «a cipolla»: la variabile più interna
+      ha estremi che dipendono dalle esterne. È esattamente Fubini (§12.2), con una fetta in più.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Coordinate cilindriche e sferiche</h2>
+
+  <p class="lead">
+    In 3D, due sistemi di coordinate rendono facili i solidi con simmetria: <b>cilindriche</b> (per cilindri e
+    coni) e <b>sferiche</b> (per sfere). Ognuno col suo Jacobiano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cilindriche e sferiche <span class="tag">i loro elementi di volume</span></div>
+    <div class="f-body">
+      \[
+        \underbrace{\dd V = r\,\dd r\,\dd\theta\,\dd z}_{\text{cilindriche } (r,\theta,z)}, \qquad
+        \underbrace{\dd V = \rho^2\sin\varphi\,\dd\rho\,\dd\varphi\,\dd\theta}_{\text{sferiche } (\rho,\varphi,\theta)}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>cilindriche</b> \((r, \theta, z)\)</dt>
+        <dd>le polari del piano \((x, y)\) più la quota \(z\). Jacobiano \(r\) (come in polari). Ideali per
+            cilindri, coni, solidi di rotazione attorno all'asse \(z\).</dd>
+        <dt><b>sferiche</b> \((\rho, \varphi, \theta)\)</dt>
+        <dd>distanza dall'origine \(\rho\), angolo dalla verticale \(\varphi\), angolo azimutale \(\theta\).
+            Jacobiano \(\rho^2\sin\varphi\). Ideali per sfere e regioni a simmetria centrale.</dd>
+        <dt>l'importante è <b>non dimenticare lo Jacobiano</b></dt>
+        <dd>come la \(r\) in polari, <mark>ogni sistema porta il suo fattore</mark>: \(r\) (cilindriche),
+            \(\rho^2\sin\varphi\) (sferiche). È lì che si annidano gli errori.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio: il <b>volume di una sfera</b> di raggio \(R\). In sferiche, \(V = \int_0^{2\pi}\!\int_0^\pi\!
+      \int_0^R \rho^2\sin\varphi\,\dd\rho\,\dd\varphi\,\dd\theta = 2\pi\cdot 2\cdot\frac{R^3}{3} =
+      \frac43\pi R^3\) ✔ — la formula della scuola, ora <em>dimostrata</em>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>Applicazioni: volumi e baricentri</h2>
+
+  <p class="lead">
+    A cosa servono, in concreto, gli integrali multipli. Tre grandezze fisiche fondamentali, tutte integrali
+    sullo stesso solido con integrande diverse.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Grandezza</th><th>Formula</th><th>Cosa misura</th></tr></thead>
+    <tbody>
+      <tr><td><b>Volume</b></td><td>\(V = \iiint_V 1\,\dd V\)</td><td>l'estensione del solido</td></tr>
+      <tr><td><b>Massa</b></td><td>\(M = \iiint_V \delta\,\dd V\)</td><td>con densità \(\delta(x,y,z)\)</td></tr>
+      <tr><td><b>Baricentro</b></td><td>\(x_G = \dfrac{1}{M}\iiint_V x\,\delta\,\dd V\) (e \(y_G, z_G\))</td><td>il «centro di massa»</td></tr>
+      <tr><td><b>Momento d'inerzia</b></td><td>\(I = \iiint_V d^2\,\delta\,\dd V\)</td><td>la resistenza a ruotare (\(d\) = distanza dall'asse)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>Integrale doppio</b> \(\iint_D f\,\dd A\) = volume sotto la superficie (§12.1). Si calcola per
+          <b>riduzione</b> (Fubini): un integrale dentro l'altro (§12.2), su <b>domini normali</b> con estremi
+          interni dipendenti dalla variabile esterna (§12.3).</li>
+      <li><b>Cambio di variabili:</b> moltiplica per \(\abs{\det J}\), il fattore di dilatazione delle aree
+          (§12.4). In <b>polari</b> \(x = r\cos\theta, y = r\sin\theta\), <mark>\(\dd x\,\dd y = r\,\dd r\,\dd\theta\)</mark>
+          (§12.5): non dimenticare la \(r\)! (Da qui l'integrale di Gauss \(= \sqrt\pi\).)</li>
+      <li><b>Integrali tripli</b> su solidi (§12.6): Fubini con tre fette. <b>Cilindriche</b> (\(\dd V = r\,\dd
+          r\,\dd\theta\,\dd z\)) e <b>sferiche</b> (\(\dd V = \rho^2\sin\varphi\,\dd\rho\,\dd\varphi\,\dd\theta\),
+          §12.7).</li>
+      <li><b>Applicazioni</b> (§12.8): volume (\(f = 1\)), massa (densità), baricentro, momento d'inerzia —
+          tutti integrali sullo stesso solido, con integrande diverse.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo integrare su regioni piane e solidi. Manca l'oggetto intermedio: le <b>superfici</b> curve nello
+    spazio. Nel <strong>Capitolo 13</strong> impariamo a parametrizzarle, misurarne l'<b>area</b> e integrarci
+    sopra — in particolare il <b>flusso</b> di un campo attraverso una superficie, «quanto fluido la
+    attraversa». È l'ultimo ingrediente prima del gran finale del <strong>Capitolo 14</strong>: i teoremi di
+    <b>Gauss e Stokes</b>, che legano integrali di volume, di superficie e di linea in un unico, magnifico
+    disegno.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-9"><span class="secnum">Sezione 12.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Calcola \(\displaystyle\iint_D x\,\dd A\) sul dominio \(D = \{0 \le x \le 1,\ 0 \le y \le x\}\)
+      (triangolo), con Fubini.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Calcola l'area del disco \(x^2 + y^2 \le 4\) con un integrale doppio in coordinate polari (\(\iint 1\,r\,
+      \dd r\,\dd\theta\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Calcola \(\displaystyle\iint_D \eu^{-(x^2+y^2)}\,\dd A\) sul disco \(x^2 + y^2 \le 1\), passando in polari.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) In polari, \(\dd x\,\dd y = \dd r\,\dd\theta\). &nbsp;
+      (b) Fubini permette di scambiare l'ordine di integrazione. &nbsp;
+      (c) \(\iint_D 1\,\dd A\) è l'area di \(D\). &nbsp;
+      (d) Lo Jacobiano delle sferiche è \(\rho^2\sin\varphi\).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-10"><span class="secnum">Sezione 12.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      \(\int_0^1\!\left(\int_0^x x\,\dd y\right)\dd x = \int_0^1 x\cdot[y]_0^x\,\dd x = \int_0^1 x\cdot x\,\dd x
+      = \int_0^1 x^2\,\dd x = \frac13\). (L'integrale interno tratta \(x\) come costante: \(\int_0^x x\,\dd y =
+      x\cdot x\).)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      \(\int_0^{2\pi}\!\int_0^2 1\cdot r\,\dd r\,\dd\theta = \int_0^{2\pi}\left[\frac{r^2}{2}\right]_0^2\dd\theta
+      = \int_0^{2\pi} 2\,\dd\theta = 4\pi\). È \(\pi R^2\) con \(R = 2\) ✔. (La \(r\) è essenziale: senza,
+      otterresti \(4\pi\)… no, \(\int_0^2 1\,\dd r = 2\), \(\times 2\pi = 4\pi\) per caso qui, ma per l'area
+      serve la \(r\).)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      In polari: \(\int_0^{2\pi}\!\int_0^1 \eu^{-r^2}\,r\,\dd r\,\dd\theta\). L'integrale interno, con
+      \(u = r^2\), \(\dd u = 2r\,\dd r\): \(\int_0^1 \eu^{-r^2} r\,\dd r = \frac12\int_0^1 \eu^{-u}\,\dd u =
+      \frac12(1 - \eu^{-1})\). Quindi il totale è \(2\pi\cdot\frac12(1 - \eu^{-1}) = \pi(1 - \eu^{-1}) \approx
+      1{,}99\). (La \(r\) rende l'integrale immediato: è il trucco di Gauss, §12.5.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> \(\dd x\,\dd y = r\,\dd r\,\dd\theta\): c'è il fattore <b>\(r\)</b> (lo Jacobiano,
+      §12.5). Dimenticarlo è l'errore classico.
+      <br><b>(b) VERO.</b> Fubini garantisce lo stesso risultato scambiando l'ordine — si sceglie il più comodo
+      (§12.2).
+      <br><b>(c) VERO.</b> Con \(f = 1\), l'integrale doppio dà l'area di \(D\) (§12.1).
+      <br><b>(d) VERO.</b> L'elemento di volume in sferiche è \(\rho^2\sin\varphi\,\dd\rho\,\dd\varphi\,\dd\theta\)
+      (§12.7).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §12.2 — Fubini: la striscia verticale che spazza il dominio
+   D = { −2 ≤ x ≤ 2, 0 ≤ y ≤ 4 − x² }
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wf-svg');
+  if (!svg) return;
+  const out = document.getElementById('wf-out');
+  const slider = document.getElementById('wf-x');
+  const g2 = x => 4 - x * x;
+
+  function draw() {
+    const x0 = parseFloat(slider.value);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -2.6, xmax: 2.6, ymin: -0.6, ymax: 4.6 });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // dominio D (sotto la parabola)
+    p.area(g2, -2, 2, { fill: 'color-mix(in srgb, var(--accent) 12%, transparent)' });
+    p.func(g2, { color: 'var(--accent)', width: 2.4, from: -2, to: 2 });
+    // striscia verticale a x0
+    const yTop = Math.max(0, g2(x0));
+    p.rect(x0 - 0.06, 0, x0 + 0.06, yTop, { fill: 'var(--violet)', color: 'var(--violet)', width: 1, opacity: 0.6 });
+    p.line(x0, 0, x0, yTop, { color: 'var(--violet)', width: 2 });
+    p.dot(x0, yTop, { color: 'var(--violet)', r: 4 });
+
+    out.innerHTML = `
+      <div class="big">
+        striscia a x = ${fmt(x0)}: &nbsp; y va da <b>0</b> a <b style="color:var(--accent)">4 − x² = ${fmt(yTop)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'integrale <b>interno</b> riempie la <b style="color:var(--violet)">striscia verticale</b>: ∫₀^{4−x²}
+        f dy (con x fisso). L'integrale <b>esterno</b> <mark>fa scorrere la striscia</mark> da x=−2 a x=2 e
+        somma. Gli estremi della striscia (0 e 4−x²) dipendono da x: è un <b>dominio normale</b> (§12.3).
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §12.5 — coordinate polari: il mattoncino r dr dθ
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wp-out');
+  const slider = document.getElementById('wp-r');
+  const dr = 0.45, dth = 0.5;   // dimensioni fisse della cella (in r e θ)
+  const th0 = 0.7;
+
+  function draw() {
+    const r0 = parseFloat(slider.value);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -2.4, ymax: 2.4, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    // griglia polare
+    for (let r = 0.5; r <= 2.8; r += 0.5) p.param(t => r * Math.cos(t), t => r * Math.sin(t), 0, 6.2832, { color: 'var(--ink-faint)', width: 1 });
+    for (let a = 0; a < 6.28; a += Math.PI / 6) p.line(0, 0, 3 * Math.cos(a), 3 * Math.sin(a), { color: 'var(--ink-faint)', width: 1 });
+    // il mattoncino [r0, r0+dr] × [th0, th0+dth]
+    const cell = [];
+    for (let a = th0; a <= th0 + dth + 1e-9; a += 0.05) cell.push([r0 * Math.cos(a), r0 * Math.sin(a)]);
+    for (let a = th0 + dth; a >= th0 - 1e-9; a -= 0.05) cell.push([(r0 + dr) * Math.cos(a), (r0 + dr) * Math.sin(a)]);
+    p.poly(cell, { color: 'var(--violet)', width: 2, fill: 'color-mix(in srgb, var(--violet) 30%, transparent)', close: true });
+
+    const area = r0 * dr * dth;  // ≈ r dr dθ
+    out.innerHTML = `
+      <div class="big">
+        cella a r = ${fmt(r0)}: &nbsp; area ≈ r·dr·dθ = ${fmt(r0)}·${dr}·${dth} = <b style="color:var(--violet)">${fmt(area)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--violet)">mattoncino polare</b> ha lati dr (radiale) e r·dθ (l'arco): la sua
+        area è <b>r·dr·dθ</b>. Con dr e dθ fissi, <mark>la cella cresce allontanandosi dall'origine</mark> —
+        perché l'arco r·dθ si allunga. Ecco perché l'elemento d'area è r dr dθ, non dr dθ: la <b>r</b> è lo
+        Jacobiano (§12.5).
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -32,7 +32,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 - [x] 9 — Ottimizzazione vincolata
 - [x] 10 — Curve e integrali di linea
 - [x] 11 — Campi vettoriali e forme differenziali
-- [ ] 12 — Integrali multipli
+- [x] 12 — Integrali multipli
 - [ ] 13 — Superfici e integrali di superficie
 - [ ] 14 — I teoremi del calcolo vettoriale
 - [ ] 15 — Equazioni differenziali ordinarie

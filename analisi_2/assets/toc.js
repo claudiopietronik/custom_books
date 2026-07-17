@@ -183,7 +183,7 @@ const TOC = [
     n: 12,
     titolo: "Integrali multipli",
     file: "cap12-integrali-multipli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "L'integrale doppio" },
       { id: "s12-2", n: "12.2", t: "Formule di riduzione (Fubini)" },
