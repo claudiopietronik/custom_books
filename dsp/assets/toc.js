@@ -61,7 +61,7 @@ const TOC = [
     n: 4,
     titolo: "Il software del DSP",
     file: "cap04-software-dsp.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Numeri interi e virgola fissa" },
       { id: "s4-2", n: "4.2", t: "Numeri in virgola mobile" },

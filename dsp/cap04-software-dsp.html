@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Il software del DSP — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.04 — Capitolo 4</div>
+    <h1>Il software del DSP</h1>
+    <p class="standfirst">
+      Un algoritmo di DSP è, alla fine, un programma che macina numeri. Ma «numero», dentro un calcolatore, non è
+      l'idea pulita della matematica: è un pacchetto di bit con range e precisione limitati. Ignorarlo significa
+      scrivere algoritmi che funzionano sulla carta e falliscono nel silicio. Questo capitolo guarda sotto il
+      cofano: come i numeri sono rappresentati, quali errori nascondono, e come far girare i conti in fretta.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È l'ultima tappa «di servizio» prima della matematica vera del DSP. Chiude le fondamenta: dopo il rumore
+      del mondo (Cap. 2) e il rumore della conversione (Cap. 3), qui incontriamo il <em>terzo</em> rumore, quello
+      del calcolatore stesso. Dal Cap. 5 in poi si costruisce: sistemi lineari, convoluzione, Fourier.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La scelta tra <strong>virgola fissa</strong> e <strong>virgola mobile</strong> decide costo, consumo e
+      precisione di un intero prodotto. E gli errori di arrotondamento, invisibili sul singolo conto, possono
+      accumularsi su milioni di operazioni fino a rovinare il risultato. Sapere <em>dove</em> i numeri finti del
+      calcolatore tradiscono i numeri veri della matematica è ciò che separa un algoritmo robusto da uno fragile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">SEZIONE 4.1</span>Numeri interi e virgola fissa</h2>
+
+  <p class="lead">
+    Il modo più semplice di rappresentare un numero è come <b>intero</b>: una sequenza di bit letta in base due.
+    Con \(B\) bit si contano \(2^B\) valori distinti — né uno di più.
+  </p>
+
+  <p>
+    Con 16 bit, per esempio, si rappresentano \(65\,536\) valori: da \(0\) a \(65\,535\) se li vogliamo tutti
+    positivi (<em>unsigned</em>), oppure da \(-32\,768\) a \(+32\,767\) se metà li dedichiamo ai negativi
+    (<em>signed</em>, con la convenzione del <b>complemento a due</b> che vedremo nel §4.4). Gli interi sono
+    <b>esatti</b>: nessun errore di arrotondamento, mai. Ma hanno due limiti feroci — non rappresentano frazioni,
+    e possono <b class="termine">traboccare</b> (overflow) se un conto supera il massimo.
+  </p>
+
+  <p>
+    La <b class="termine">virgola fissa</b> è un trucco per usare gli interi come se fossero frazionari:
+    concordiamo che il numero intero memorizzato vada inteso con una <em>scala implicita</em>. Se decidiamo che
+    l'intero \(N\) rappresenta \(N/256\), allora \(64\) significa \(0{,}25\) e \(300\) significa \(\approx 1{,}17\).
+    L'hardware continua a fare aritmetica intera — velocissima ed economica — e siamo noi a «sapere» dov'è la
+    virgola. È l'aritmetica dei processori DSP a basso costo (Cap. 28).
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il fantasma dell'overflow</div>
+    <p style="margin-bottom:0">
+      In virgola fissa la trappola è sempre in agguato: somma due numeri grandi e il risultato può superare il
+      massimo rappresentabile, «avvolgendosi» a un valore negativo assurdo. Un accumulatore che passa da
+      \(+32\,767\) a \(-32\,768\) al colpo successivo ha appena rovinato il tuo filtro. Per questo i DSP a
+      virgola fissa hanno accumulatori più larghi e istruzioni di <em>saturazione</em> (che bloccano al massimo
+      invece di avvolgersi). Progettare in virgola fissa è, in gran parte, gestire il range.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">SEZIONE 4.2</span>Numeri in virgola mobile</h2>
+
+  <p class="lead">
+    La <b>virgola mobile</b> (floating point) risolve il problema del range con l'idea della notazione
+    scientifica: invece di fissare la virgola, la si lascia <em>galleggiare</em>.
+  </p>
+
+  <p>
+    Come scriviamo \(3{,}0 \times 10^{8}\) invece di \(300\,000\,000\), un numero in virgola mobile si spezza in
+    due parti: la <b class="termine">mantissa</b> (le cifre significative) e l'<b class="termine">esponente</b>
+    (dove sta la virgola). Con lo stesso numero di bit si copre un range immenso — dal miliardesimo al miliardo —
+    perché l'esponente scala il tutto. Lo standard <b>IEEE 754</b> a singola precisione usa 32 bit (1 di segno,
+    8 di esponente, 23 di mantissa) e copre da circa \(10^{-38}\) a \(10^{38}\); la doppia precisione usa 64 bit
+    e va ben oltre.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il patto della virgola mobile: range in cambio di esattezza</div>
+    <p style="margin-bottom:0">
+      La virgola mobile non è esatta come gli interi. Ha una <b>precisione relativa</b>: mantiene sempre lo
+      stesso numero di cifre significative (circa 7 in singola precisione), qualunque sia la grandezza. Questo ha
+      una conseguenza sorprendente: <mark>i numeri rappresentabili sono fitti vicino allo zero e sempre più radi
+      man mano che crescono</mark>. Il «gradino» tra un numero e il successivo non è costante come in virgola
+      fissa: cresce con la grandezza. Il widget qui sotto lo rende visibile.
+    </p>
+  </div>
+
+  <h3>Provalo: la griglia dei numeri rappresentabili</h3>
+
+  <p>
+    Un calcolatore non può rappresentare <em>tutti</em> i numeri reali, solo una griglia di valori. Confronta le
+    due filosofie: la <b style="color:var(--accent)">virgola fissa</b> spalma i valori in modo uniforme; la
+    <b style="color:var(--warm)">virgola mobile</b> li addensa vicino allo zero e li dirada lontano. Ogni numero
+    reale viene arrotondato al pallino più vicino — e la distanza da quel pallino è l'errore.
+  </p>
+
+  <div class="widget" id="w-grid">
+    <div class="w-head">
+      <span>Fissa vs mobile: dove cadono i numeri</span>
+      <span class="hint">cambia modalità e risoluzione</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wg-svg" viewBox="0 0 620 200" role="img" aria-label="La griglia dei numeri rappresentabili: uniforme in virgola fissa, addensata verso lo zero in virgola mobile"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wg-fix">virgola fissa</button>
+      <button class="w-btn" id="wg-flo">virgola mobile</button>
+      <div class="w-ctrl"><label>risoluzione</label><input type="range" id="wg-r" min="1" max="4" step="1" value="3"><output id="wg-rv">3</output></div>
+    </div>
+    <div class="w-readout" id="wg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">SEZIONE 4.3</span>Rumore di arrotondamento ed errori numerici</h2>
+
+  <p class="lead">
+    Ogni volta che un'operazione produce un risultato che non cade esattamente su un numero rappresentabile, il
+    calcolatore arrotonda. Quel minuscolo scarto è il <b>rumore di arrotondamento</b>: singolarmente
+    trascurabile, ma il DSP fa <em>milioni</em> di operazioni.
+  </p>
+
+  <p>
+    La buona notizia è che, in virgola mobile, questi errori sono di solito casuali e minuscoli, e tendono a
+    compensarsi come il rumore del Cap. 2: crescono lentamente, come la radice del numero di operazioni. La
+    cattiva notizia è che esistono situazioni in cui <em>non</em> si compensano affatto.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La cancellazione catastrofica</div>
+    <p style="margin-bottom:0">
+      Il caso più insidioso è <b>sottrarre due numeri grandi e quasi uguali</b>. Immagina
+      \(1000000{,}2 - 1000000{,}1 = 0{,}1\): se ciascuno ha solo 7 cifre buone, quelle cifre se ne vanno quasi
+      tutte nella parte comune, e il risultato \(0{,}1\) conserva pochissima precisione. È la
+      <b class="termine">cancellazione</b>. Ricordi la formula della varianza «in una passata» del §2.3? Fa
+      esattamente questo — sottrae due somme grandi e simili — ed è per questo che va usata con prudenza su dati
+      di grande ampiezza. Regola: <mark>evita di sottrarre quantità grandi e vicine; riorganizza il conto per
+      non doverlo fare.</mark>
+    </p>
+  </div>
+
+  <h3>Provalo: l'errore che si accumula</h3>
+
+  <p>
+    Un classico: il numero \(0{,}1\) non è rappresentabile <em>esattamente</em> in binario (come \(1/3\) non lo è
+    in decimale). Sommalo a sé stesso tante volte e l'errore, invisibile al primo passo, cresce. Muovi il
+    cursore e guarda lo scarto tra la somma «vera» \(0{,}1 \times N\) e quella accumulata passo-passo dal
+    calcolatore.
+  </p>
+
+  <div class="widget" id="w-drift">
+    <div class="w-head">
+      <span>Sommare 0,1 tante volte</span>
+      <span class="hint">l'errore cresce con il numero di somme</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wd-svg" viewBox="0 0 620 260" role="img" aria-label="Lo scarto tra la somma accumulata di 0,1 e il valore esatto cresce all'aumentare del numero di addizioni"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>addizioni</label><input type="range" id="wd-n" min="10" max="100000" step="10" value="1000"><output id="wd-nv">1000</output></div>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">SEZIONE 4.4</span>Come il calcolatore rappresenta i numeri</h2>
+
+  <p>
+    Sotto ogni numero c'è un pacchetto di bit. Vale la pena aprirlo, almeno una volta, per demistificarlo.
+  </p>
+
+  <p>
+    Un <b>intero senza segno</b> è lettura diretta in base due: \(1011_2 = 8 + 0 + 2 + 1 = 11\). Per i numeri
+    <b>con segno</b>, il trucco quasi universale è il <b class="termine">complemento a due</b>: il bit più a
+    sinistra vale come peso <em>negativo</em>. Così, su 8 bit, \(11111111\) non è \(255\) ma \(-1\), e sommare
+    \(-1\) a \(+1\) dà zero con l'ordinaria addizione binaria — nessun circuito speciale per i negativi. Elegante
+    e per questo dominante.
+  </p>
+
+  <p>
+    Un numero in <b>virgola mobile</b> impacchetta i suoi tre pezzi — segno, esponente, mantissa — in bit
+    contigui, secondo lo standard IEEE 754. La figura mostra la disposizione a 32 bit.
+  </p>
+
+  <figure class="fig wide" id="fig-ieee">
+    <svg viewBox="0 0 640 150" role="img" aria-label="La disposizione dei 32 bit di un numero in virgola mobile a singola precisione: 1 bit di segno, 8 di esponente, 23 di mantissa"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 4.1</span> — Un <em>float</em> a 32 bit (IEEE 754 singola precisione). Il valore è
+      \((-1)^{\text{segno}} \times 1{,}\text{mantissa} \times 2^{\,\text{esponente}-127}\). Un solo
+      <b style="color:var(--warm)">bit di segno</b>, otto di <b style="color:var(--accent)">esponente</b> (il
+      range), ventitré di <b style="color:var(--violet)">mantissa</b> (la precisione, ~7 cifre decimali). Tutto
+      qui: ogni numero «reale» che il calcolatore maneggia è uno di questi schemi da 32 bit.
+    </figcaption>
+  </figure>
+
+  <p>
+    La morale filosofica: dentro la macchina non ci sono numeri, ci sono <em>configurazioni di bit</em> e regole
+    per interpretarle. Anche il testo (codifica ASCII o Unicode), i colori dei pixel, il suono: tutto è, in
+    fondo, interi letti secondo una convenzione. Il DSP è l'arte di scegliere le convenzioni giuste e i conti
+    giusti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">SEZIONE 4.5</span>Velocità di esecuzione e ottimizzazione</h2>
+
+  <p class="lead">
+    Il DSP spesso lavora <em>in tempo reale</em>: i campioni arrivano a un ritmo fisso, e i conti su ciascuno
+    devono finire prima che arrivi il successivo. La velocità non è un lusso, è un requisito.
+  </p>
+
+  <p>
+    Se guardi il cuore di quasi ogni algoritmo di questo libro — la convoluzione, un filtro, una trasformata —
+    trovi sempre la stessa operazione ripetuta a valanga: <b>moltiplica due numeri e aggiungi al totale</b>. È
+    la <b class="termine">moltiplica-e-accumula</b> (MAC). Non è un caso che i processori DSP siano progettati
+    per eseguirne una per ciclo di clock (Cap. 28): ottimizzare il DSP vuol dire, quasi sempre, ridurre il
+    numero di MAC.</p>
+
+  <p>
+    Da qui due leve di velocità. La prima è <b>algoritmica</b>, ed è la più potente: scegliere un metodo che fa
+    meno conti. L'esempio regale è la FFT (Cap. 12), che calcola la stessa trasformata di Fourier con una
+    frazione delle operazioni — trasformando problemi impossibili in problemi istantanei. Nessuna ottimizzazione
+    di basso livello batte un algoritmo migliore. La seconda leva è <b>implementativa</b>: cicli scritti bene,
+    accessi in memoria ordinati, uso accorto della cache. Contano, ma vengono dopo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Conta le operazioni, non i secondi</div>
+    <p style="margin-bottom:0">
+      Per stimare la velocità di un algoritmo, la mossa giusta non è cronometrarlo ma <em>contare</em> quante
+      operazioni fa in funzione della dimensione \(N\) del segnale. Una convoluzione diretta costa \(\propto N^2\)
+      operazioni; la stessa cosa via FFT costa \(\propto N\log N\). Con \(N = 10^6\), è la differenza tra
+      mille miliardi e venti milioni di operazioni: <mark>la differenza tra «impossibile» e «un batter
+      d'occhio»</mark>. Il conteggio delle operazioni è la bussola con cui sceglieremo i metodi in tutto il libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">SEZIONE 4.6</span>Tabelle e approssimazione di funzioni</h2>
+
+  <p>
+    Calcolare \(\sin\), \(\cos\), \(\log\) o una radice è costoso: sono funzioni «trascendenti» che l'hardware
+    non fa in un colpo solo. Se in un algoritmo servono milioni di volte — pensa ai seni e coseni della DFT — il
+    costo esplode. Il rimedio antico e sempreverde è la <b class="termine">tabella precalcolata</b>
+    (<em>look-up table</em>).
+  </p>
+
+  <p>
+    L'idea: calcola una volta sola i valori della funzione su una griglia fitta, memorizzali in un array, e poi,
+    a runtime, <em>leggi</em> invece di calcolare. Una lettura in memoria è enormemente più veloce di un seno. Se
+    il valore che serve cade tra due voci della tabella, si <b>interpola</b> — di solito linearmente, tirando una
+    retta tra i due punti vicini. È un baratto classico del DSP: <mark>spendere memoria per comprare
+    velocità</mark>. Più fitta la tabella, meno errore di interpolazione, più memoria occupata.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Un tema che tornerà: baratti</div>
+    <p style="margin-bottom:0">
+      Memoria contro velocità (tabelle), precisione contro range (fissa vs mobile), qualità contro costo
+      (i filtri dei prossimi capitoli): il DSP pratico è una sequenza di <em>compromessi</em> consapevoli. Non
+      esiste la scelta «migliore» in assoluto — esiste quella giusta per i vincoli che hai. Tenere d'occhio quali
+      risorse stai spendendo è metà del mestiere dell'ingegnere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">SEZIONE 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">Con 12 bit, quanti valori distinti si rappresentano? Se sono interi con segno,
+      qual è l'intervallo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Valori: \(2^{12} = 4096\). Con segno (complemento a due): da \(-2048\) a \(+2047\). Nota
+          l'asimmetria: un valore negativo in più, perché lo zero «occupa» un posto nella metà positiva.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">In un sistema a virgola fissa si conviene che l'intero \(N\) rappresenti
+      \(N/1024\). Quale numero reale rappresenta l'intero \(1536\)? E quanto vale il «gradino» tra due valori
+      consecutivi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Valore: \(1536/1024 = 1{,}5\). Gradino: \(1/1024 \approx 0{,}000977\), <b>costante</b> su tutto il
+          range (è il tratto distintivo della virgola fissa rispetto alla mobile).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">Perché sommare un milione di volte il numero \(0{,}1\) in virgola mobile non dà
+      esattamente \(100\,000\)? Come lo eviteresti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché \(0{,}1\) non è rappresentabile esattamente in binario: ogni addizione introduce un
+          minuscolo errore, e un milione di errori si accumulano (§4.3). Rimedi: moltiplicare invece di sommare
+          (\(0{,}1 \times N\), una sola operazione), usare la doppia precisione, o lavorare con interi
+          (contare i decimi come interi e dividere alla fine).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">Un filtro esegue 200 moltiplica-e-accumula per ogni campione, su un segnale
+      campionato a \(48\) kHz. Quante MAC al secondo servono? Regge un processore da 100 milioni di MAC/s?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>MAC al secondo: \(200 \times 48\,000 = 9{,}6\) milioni. Un processore da \(100\) milioni di MAC/s lo
+          regge con ampio margine (usa circa il 10% della capacità) — resta spazio per altri canali o filtri più
+          lunghi.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.5</div>
+    <p style="margin-bottom:0">Un algoritmo diretto costa \(\propto N^2\) operazioni, la sua versione FFT
+      \(\propto N\log_2 N\). Per \(N = 1024\), quante volte è più veloce (in ordine di grandezza) la seconda?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Diretto: \(N^2 = 1024^2 \approx 10^6\). FFT: \(N\log_2 N = 1024 \times 10 \approx 10^4\). Il rapporto
+          è circa \(100\): la FFT è dell'ordine di <b>cento volte</b> più veloce. E il vantaggio cresce con
+          \(N\).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">SEZIONE 4.8</span>Soluzioni</h2>
+
+  <p>
+    Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra: aprile dopo aver provato.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><b>Virgola fissa</b> = interi con scala implicita: esatta, veloce, economica, ma range limitato e
+          rischio di overflow. <b>Virgola mobile</b> = mantissa + esponente: range enorme in cambio di
+          precisione relativa (~7 cifre in singola).</li>
+      <li><b>I numeri rappresentabili sono una griglia:</b> uniforme in virgola fissa, addensata verso lo zero
+          in virgola mobile.</li>
+      <li><b>Rumore di arrotondamento:</b> minuscolo per operazione, cresce con i conti. Attento alla
+          <b>cancellazione catastrofica</b> (sottrarre grandi quasi uguali).</li>
+      <li><b>Velocità:</b> il cuore del DSP è la <b>moltiplica-e-accumula</b>. Conta le operazioni in funzione di
+          \(N\); un algoritmo migliore (FFT) batte ogni ottimizzazione di dettaglio.</li>
+      <li><b>Tabelle</b> = memoria in cambio di velocità. Il DSP pratico è una sequenza di <em>compromessi</em>
+          consapevoli.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Fondamenta chiuse: sappiamo cos'è un segnale, come misurarne il rumore, come farlo entrare nel calcolatore e
+    come i numeri vivono lì dentro. Ora comincia la vera architettura del DSP. Il <strong>Capitolo 5</strong>
+    introduce l'idea che rende tutto il resto possibile: i <b>sistemi lineari</b>. Scopriremo perché una singola,
+    modesta proprietà — la linearità — ci permette di scomporre problemi mostruosi in pezzetti semplici, e
+    perché quasi tutto il DSP «utile» vive proprio dentro questa classe di sistemi.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.2 — la griglia dei numeri rappresentabili (fissa vs mobile)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wg-out');
+  const rS = document.getElementById('wg-r'), rV = document.getElementById('wg-rv');
+  const bFix = document.getElementById('wg-fix'), bFlo = document.getElementById('wg-flo');
+  let mode = 'fix';
+
+  function points(r) {
+    if (mode === 'fix') {
+      const step = 8 / Math.pow(2, r + 2);
+      const p = [];
+      for (let x = -8; x <= 8 + 1e-9; x += step) p.push(+x.toFixed(6));
+      return { p, step };
+    } else {
+      const mant = r;                 // bit di mantissa
+      const div = Math.pow(2, mant);
+      const set = new Set([0]);
+      for (let e = -4; e <= 2; e++) {
+        for (let m = 0; m < div; m++) {
+          const v = (1 + m / div) * Math.pow(2, e);
+          if (v <= 8 + 1e-9) { set.add(+v.toFixed(6)); set.add(-+v.toFixed(6)); }
+        }
+      }
+      return { p: [...set].sort((a, b) => a - b), step: null };
+    }
+  }
+
+  function draw() {
+    const r = parseInt(rS.value, 10);
+    rV.textContent = r;
+    const { p, step } = points(r);
+    svg.innerHTML = '';
+    const plot = new Plot(svg, { xmin: -8.6, xmax: 8.6, ymin: -1, ymax: 1 });
+    plot.line(-8, 0, 8, 0, { color: 'var(--ink-faint)', width: 1.4 });
+    for (let x = -8; x <= 8; x += 2) { plot.line(x, -0.12, x, 0.12, { color: 'var(--ink-faint)', width: 1 }); plot.text(x, 0, '' + x, { dy: 26, size: 10 }); }
+    const col = mode === 'fix' ? 'var(--accent)' : 'var(--warm)';
+    p.forEach(x => { plot.line(x, -0.42, x, 0.42, { color: col, width: 1.2, opacity: 0.85 }); });
+
+    out.innerHTML = `
+      <div class="big">${mode === 'fix' ? 'Virgola FISSA' : 'Virgola MOBILE'}
+        &nbsp;·&nbsp; <b>${p.length}</b> valori rappresentabili nell'intervallo</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${mode === 'fix'
+          ? `I valori sono <mark>equidistanti</mark>: gradino costante Δ = ${step.toFixed(4)} ovunque. Semplice e prevedibile, ma spreca risoluzione sui numeri piccoli.`
+          : `I valori si <mark>addensano vicino allo zero</mark> e si diradano lontano: stessa precisione <em>relativa</em> a ogni scala. Vicino a 0 la griglia è finissima, verso 8 diventa larga.`}
+      </div>`;
+  }
+  function setMode(m) { mode = m; bFix.classList.toggle('on', m === 'fix'); bFlo.classList.toggle('on', m === 'flo'); draw(); }
+  bFix.addEventListener('click', () => setMode('fix'));
+  bFlo.addEventListener('click', () => setMode('flo'));
+  rS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §4.3 — l'errore di arrotondamento che si accumula sommando 0,1
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wd-out');
+  const nS = document.getElementById('wd-n'), nV = document.getElementById('wd-nv');
+
+  // simula la precisione singola con Math.fround: 0.1 sommato N volte
+  function drift(N) {
+    let accF = Math.fround(0), stepF = Math.fround(0.1);
+    const traj = [];
+    const SAMP = 60;
+    for (let i = 1, next = Math.max(1, Math.floor(N / SAMP)); i <= N; i++) {
+      accF = Math.fround(accF + stepF);
+      if (i % next === 0 || i === N) traj.push([i, accF - 0.1 * i]);
+    }
+    return { err: accF - 0.1 * N, traj };
+  }
+
+  function draw() {
+    const N = parseInt(nS.value, 10);
+    nV.textContent = N.toLocaleString('it');
+    const { err, traj } = drift(N);
+    const ymax = Math.max(1e-4, ...traj.map(t => Math.abs(t[1]))) * 1.3;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: N, ymin: -ymax, ymax: ymax });
+    p.grid(N / 4, ymax); p.axes({ numbers: false, names: true, xname: 'addizioni', yname: 'errore' });
+    p.line(0, 0, N, 0, { color: 'var(--ink-faint)', width: 1 });
+    p.poly(traj, { color: 'var(--warm)', width: 2, close: false });
+
+    out.innerHTML = `
+      <div class="big">dopo <b>${N.toLocaleString('it')}</b> addizioni:
+        errore = <b style="color:var(--warm)">${err.toExponential(2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva è lo scarto tra la somma accumulata in precisione singola e il valore esatto \\(0{,}1 \\times N\\).
+        Parte da zero e <mark>si allontana</mark> man mano: ogni \\(0{,}1\\) porta con sé un errore di
+        rappresentazione, e ${N < 2000 ? 'anche con poche addizioni la deriva è già misurabile.' : 'su tante addizioni diventa vistosa.'}
+        Moltiplicare (\\(0{,}1 \\times N\\)) invece di sommare eviterebbe tutto questo.
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  nS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 4.1 — la disposizione dei bit IEEE 754 (32 bit)
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-ieee svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+
+  const X0 = 30, X1 = 610, W = X1 - X0;
+  const segs = [
+    { bits: 1,  col: 'var(--warm)',   lab: 'segno', n: '1 bit' },
+    { bits: 8,  col: 'var(--accent)', lab: 'esponente', n: '8 bit' },
+    { bits: 23, col: 'var(--violet)', lab: 'mantissa', n: '23 bit' }
+  ];
+  const total = 32;
+  let x = X0;
+  segs.forEach(s => {
+    const w = W * s.bits / total;
+    el('rect', {});
+    svg.appendChild(el('rect', { x, y: 40, width: w, height: 44, fill: 'color-mix(in srgb, ' + s.col + ' 18%, var(--paper))', stroke: s.col, 'stroke-width': 1.6 }));
+    const a = txt(x + w / 2, 66, s.lab, 'lbl-b'); a.setAttribute('fill', s.col); a.setAttribute('font-size', '12.5'); svg.appendChild(a);
+    const b = txt(x + w / 2, 100, s.n, 'lbl'); b.setAttribute('font-size', '11'); b.setAttribute('fill', 'var(--ink-soft)'); svg.appendChild(b);
+    x += w;
+  });
+  const cap = txt((X0 + X1) / 2, 128, 'valore = (−1)^segno × 1,mantissa × 2^(esponente − 127)', 'lbl');
+  cap.setAttribute('font-style', 'italic'); cap.setAttribute('font-size', '11.5');
+  svg.appendChild(cap);
+  svg.appendChild(txt(X0, 28, '32 bit →', 'lbl', 'start'));
+})();
+</script>
+</body>
+</html>
