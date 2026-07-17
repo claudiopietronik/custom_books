@@ -29,7 +29,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 
 - [x] 1 — L'ampiezza e la profondità del DSP
 - [x] 2 — Statistica, probabilità e rumore
-- [ ] 3 — ADC e DAC
+- [x] 3 — ADC e DAC
 - [ ] 4 — Il software del DSP
 - [ ] 5 — Sistemi lineari
 - [ ] 6 — La convoluzione

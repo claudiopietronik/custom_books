@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · ADC e DAC — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.03 — Capitolo 3</div>
+    <h1>ADC e DAC: dal mondo analogico al digitale</h1>
+    <p class="standfirst">
+      Qui avviene il passaggio di frontiera: un segnale continuo del mondo reale diventa una lista di numeri, e
+      viceversa. Sembra un dettaglio tecnico da relegare all'hardware, ma dentro si nascondono due delle idee
+      più profonde di tutto il DSP — <em>quanti campioni bastano</em> per non perdere niente, e cosa succede se
+      ne prendi troppo pochi. La risposta alla seconda domanda è un fenomeno tanto elegante quanto pericoloso:
+      l'<b>aliasing</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Ultimo capitolo delle fondamenta «fisiche». Nel Cap. 1 abbiamo detto <em>che</em> si campiona; nel Cap. 2
+      abbiamo imparato a misurare il rumore. Qui capiamo <em>come</em> e <em>con quali regole</em> un segnale
+      entra ed esce dal calcolatore. Da qui in poi il segnale sarà sempre una sequenza di numeri, e potremo
+      dedicarci all'algebra vera del DSP.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Sbagliare la conversione rovina <em>tutto</em> ciò che viene dopo: nessun filtro, per quanto sofisticato,
+      può recuperare l'informazione persa al momento del campionamento. L'aliasing, in particolare, corrompe i
+      dati in un modo <strong>irreversibile</strong> e subdolo — non lascia tracce evidenti. Capire il teorema
+      del campionamento significa sapere dove mettere la prima, decisiva, protezione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">SEZIONE 3.1</span>Quantizzazione: discretizzare l'ampiezza</h2>
+
+  <p class="lead">
+    Digitalizzare un segnale richiede di renderlo discreto in <em>due</em> sensi. Discreto nel <b>tempo</b>: lo
+    guardiamo solo a istanti separati (è il campionamento, §3.2). E discreto nell'<b>ampiezza</b>: ogni valore
+    letto va arrotondato a uno dei livelli rappresentabili. Questo secondo passo è la <b class="termine">quantizzazione</b>.
+  </p>
+
+  <p>
+    Un convertitore a \(B\) bit dispone di \(2^B\) livelli. Un ADC a 8 bit ha \(2^8 = 256\) gradini; uno a 12 bit
+    ne ha \(4096\); l'audio dei CD usa 16 bit, cioè \(65\,536\) livelli. Ogni campione viene «incastrato» nel
+    livello più vicino: la differenza tra il valore vero e il livello scelto è l'<b class="termine">errore di
+    quantizzazione</b>. È inevitabile, ma piccolo — al più mezzo gradino — e, cosa importante, si comporta in
+    modo prevedibile.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'errore di quantizzazione è rumore</div>
+    <p style="margin-bottom:0">
+      L'errore di arrotondamento, campione dopo campione, salta imprevedibilmente tra \(-\tfrac12\) e
+      \(+\tfrac12\) gradino: a tutti gli effetti è <b>rumore</b>, uniforme e biancastro. La sua deviazione
+      standard vale \(\sigma = \Delta/\sqrt{12}\), dove \(\Delta\) è l'ampiezza di un gradino (il risultato del
+      \(\sqrt{12}\) viene dalla varianza di una distribuzione uniforme). Morale: <mark>quantizzare equivale ad
+      aggiungere un pizzico di rumore</mark>. Ogni bit in più dimezza il gradino, quindi dimezza questo rumore:
+      grosso modo <b>+6 dB di SNR per ogni bit</b>.
+    </p>
+  </div>
+
+  <h3>Provalo: meno bit, più rumore</h3>
+
+  <p>
+    Riduci i bit e guarda la curva liscia trasformarsi in una scaletta sempre più grezza; il riquadro sotto
+    misura il rumore di quantizzazione che stai introducendo. Con pochi bit la scaletta è brutale; salendo, i
+    gradini si infittiscono finché l'occhio non li distingue più.
+  </p>
+
+  <div class="widget" id="w-quant">
+    <div class="w-head">
+      <span>Quantizzazione a bit variabili</span>
+      <span class="hint">meno bit = gradini più grossi = più rumore</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wq-svg" viewBox="0 0 620 300" role="img" aria-label="Un segnale continuo quantizzato con un numero di bit regolabile: pochi bit danno una scaletta grossolana"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>bit</label><input type="range" id="wq-b" min="1" max="6" step="1" value="3"><output id="wq-bv">3</output></div>
+    </div>
+    <div class="w-readout" id="wq-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">SEZIONE 3.2</span>Il teorema del campionamento (Nyquist)</h2>
+
+  <p class="lead">
+    Ed eccoci alla domanda-madre: quanti campioni al secondo servono per <em>non perdere niente</em>? La risposta
+    è un teorema di rara bellezza, dovuto a Nyquist e Shannon, e ha un numero preciso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il teorema del campionamento <span class="tag">la regola d'oro della conversione</span></div>
+    <div class="f-body">
+      \[
+        \hA{f_s} \;>\; 2\,\hB{f_{\max}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{f_s}\)</dt><dd>la <b>frequenza di campionamento</b>: quanti campioni al secondo prendi.</dd>
+        <dt>\(\hB{f_{\max}}\)</dt><dd>la <b>frequenza più alta</b> presente nel segnale.</dd>
+        <dt>\(2\times\)</dt><dd>il cuore del teorema: servono <b>più del doppio</b> di campioni rispetto alla
+            frequenza più veloce da catturare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In parole: per catturare fedelmente un'onda ti servono <b>più di due campioni per ogni suo periodo</b>.
+      Metà della frequenza di campionamento, \(f_s/2\), si chiama <b>frequenza di Nyquist</b> ed è il confine
+      invalicabile: <mark>tutto ciò che sta sotto \(f_s/2\) è catturato correttamente, tutto ciò che sta sopra
+      è perduto — anzi, peggio, si traveste</mark> (§3.3). L'audio dei CD campiona a 44 100 Hz proprio perché
+      l'orecchio arriva a ~20 000 Hz, e \(44\,100 > 2 \times 20\,000\).
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché proprio «due volte»?</div>
+    <p style="margin-bottom:0">
+      Immagina un'onda che sale e scende. Per sapere che <em>oscilla</em>, e a che velocità, ti serve almeno un
+      campione sulla cresta e uno nella valle: due punti per ciclo. Con meno di così, i punti sono troppo radi e
+      potresti «unirli» con un'onda del tutto diversa, più lenta — e non avresti modo di accorgertene. Due
+      campioni per periodo è il minimo indispensabile per non poter confondere l'onda con nessun'altra più
+      pigra. Il widget del §3.3 rende visibile <em>esattamente</em> questo inganno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">SEZIONE 3.3</span>L'aliasing: quando le frequenze mentono</h2>
+
+  <p class="lead">
+    Cosa succede se violi il teorema, campionando un segnale più veloce di \(f_s/2\)? Non ottieni un errore
+    grossolano e riconoscibile. Ottieni qualcosa di molto peggio: una frequenza alta che si <b>traveste</b> da
+    frequenza bassa, indistinguibile da un segnale legittimo. Questo travestimento è l'<b class="termine">aliasing</b>.
+  </p>
+
+  <p>
+    Il nome (<em>alias</em> = «pseudonimo») è perfetto. Una sinusoide a \(7\) kHz campionata a \(10\) kHz produce
+    <em>gli stessi identici campioni</em> di una sinusoide a \(3\) kHz. Guardando solo i numeri, non c'è modo di
+    sapere quale delle due li ha generati: il calcolatore «vedrà» sempre quella a \(3\) kHz. L'energia della
+    frequenza alta non sparisce — si ripiega dentro la banda utile, corrompendola. È l'effetto per cui, nei
+    film, le ruote dei carri a volte sembrano girare all'indietro: la telecamera «campiona» 24 volte al secondo
+    una rotazione troppo veloce.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La frequenza dell'alias <span class="tag">a che frequenza si traveste</span></div>
+    <div class="f-body">
+      \[
+        f_{\text{alias}} \;=\; \big|\, \hA{f} - \hB{f_s}\cdot\mathrm{round}(\hA{f}/\hB{f_s}) \,\big|
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{f}\)</dt><dd>la frequenza vera del segnale.</dd>
+        <dt>\(\hB{f_s}\)</dt><dd>la frequenza di campionamento.</dd>
+        <dt>\(\mathrm{round}(\cdot)\)</dt><dd>l'intero più vicino: le frequenze si «ripiegano» attorno ai
+            multipli di \(f_s\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per \(f\) sotto Nyquist (\(f < f_s/2\)) la formula dà \(f_{\text{alias}} = f\): nessun travestimento, tutto
+      regolare. Sopra Nyquist, invece, la frequenza si specchia verso il basso. Con \(f_s = 10\): un \(7\)
+      diventa \(3\), un \(9\) diventa \(1\), un \(11\) torna a \(1\), e così via.
+    </div>
+  </div>
+
+  <h3>Provalo: guarda una frequenza travestirsi</h3>
+
+  <p>
+    La frequenza di campionamento è fissa (i campioni <b style="color:var(--warm)">ambra</b> sono sempre gli
+    stessi in numero). Alza la frequenza del segnale <b style="color:var(--accent)">teal</b>: finché resti sotto
+    Nyquist tutto fila. Ma appena la superi, compare in <b style="color:var(--violet)">indaco</b> l'<em>alias</em> —
+    una sinusoide più lenta che passa esattamente per gli stessi campioni. Da quei pallini, il calcolatore non
+    potrà mai distinguere le due.
+  </p>
+
+  <div class="widget" id="w-alias">
+    <div class="w-head">
+      <span>L'aliasing in azione</span>
+      <span class="hint">supera la linea di Nyquist e osserva l'alias</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wa-svg" viewBox="0 0 620 300" role="img" aria-label="Una sinusoide ad alta frequenza campionata sotto Nyquist produce gli stessi campioni di una sinusoide più lenta"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>freq. f</label><input type="range" id="wa-f" min="0.5" max="9.5" step="0.1" value="2"><output id="wa-fv">2.0</output></div>
+    </div>
+    <div class="w-readout" id="wa-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">SEZIONE 3.4</span>Filtri anti-alias</h2>
+
+  <p>
+    Se l'aliasing è irreversibile una volta avvenuto, l'unica difesa è <b>impedirlo prima che accada</b>. La
+    soluzione è mettere, <em>prima</em> del campionatore, un filtro analogico passa-basso che tagli via ogni
+    frequenza sopra \(f_s/2\). È il <b class="termine">filtro anti-alias</b>: rimuove l'energia pericolosa
+    finché è ancora nel mondo continuo, dove si può ancora fare. Ciò che il filtro elimina è perduto — ma è
+    energia che <em>comunque</em> non avremmo potuto rappresentare, e almeno non contamina la banda utile.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'anti-alias va PRIMA del convertitore, ed è analogico</div>
+    <p style="margin-bottom:0">
+      È l'errore concettuale classico: «filtro via l'aliasing dopo, in digitale». <b>Impossibile.</b> Una volta
+      che le frequenze si sono ripiegate, sono mescolate in modo inestricabile ai dati veri — nessun algoritmo
+      le può separare. Il filtro anti-alias deve agire <em>sul segnale analogico, a monte del campionamento</em>.
+      È l'unico filtro di questo libro che non potremo fare in software: la fisica lo pretende prima.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">SEZIONE 3.5</span>Come lavora davvero un convertitore</h2>
+
+  <p>
+    Mettiamo insieme i pezzi. Un <b class="termine">ADC</b> (Analog-to-Digital Converter) fa tre cose in fila,
+    molte volte al secondo:
+  </p>
+
+  <ol class="passi">
+    <li><b>Filtra (anti-alias).</b> Un passa-basso analogico rimuove tutto sopra \(f_s/2\).</li>
+    <li><b>Campiona e tiene (sample-and-hold).</b> A ogni tic di clock «congela» il valore istantaneo e lo
+        mantiene fermo il tempo necessario a misurarlo — un valore che si muove non si può quantizzare con
+        calma.</li>
+    <li><b>Quantizza.</b> Il valore congelato viene confrontato con i livelli disponibili e codificato nel più
+        vicino, come una parola di \(B\) bit.</li>
+  </ol>
+
+  <p>
+    Il percorso inverso lo fa il <b class="termine">DAC</b> (Digital-to-Analog Converter): prende i numeri e li
+    trasforma di nuovo in una tensione. Ma qui c'è una sottigliezza che merita una sezione a parte — perché un
+    DAC, da solo, non produce una curva liscia.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">SEZIONE 3.6</span>Ricostruzione: mantieni-e-campiona</h2>
+
+  <p class="lead">
+    Il teorema del campionamento promette che dai campioni si può ricostruire <em>esattamente</em> il segnale
+    continuo, purché sia stato campionato bene. Ma «esattamente» richiede un ultimo passo, spesso dimenticato.
+  </p>
+
+  <p>
+    Un DAC reale non sa disegnare curve: emette il valore di un campione e lo <b>tiene costante</b> fino al
+    campione dopo, producendo una <b class="termine">scaletta</b> (in gergo, <em>zero-order hold</em>). Questa
+    scaletta è vicina al segnale vero, ma non liscia: i gradini contengono frequenze spurie, copie del segnale
+    ricomparse attorno ai multipli di \(f_s\). Per ottenere la curva pulita serve un ultimo passa-basso
+    analogico — il <b class="termine">filtro di ricostruzione</b> — che «lima» i gradini e lascia solo la banda
+    originale.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Ricostruire = collegare i punti con le sinc, non con righelli</div>
+    <p style="margin-bottom:0">
+      La ricostruzione perfetta non unisce i campioni con segmenti dritti (sarebbe grezza) né con la scaletta.
+      La matematica dice che ogni campione va sostituito da una funzione <b>sinc</b> centrata su di esso
+      (l'onda \(\sin(x)/x\), che incontreremo nel Cap. 11), e le sinc vanno sommate. La loro somma passa
+      esattamente per tutti i campioni <em>e</em> ricostruisce senza errori la curva originale. Il filtro di
+      ricostruzione analogico, fisicamente, non fa che approssimare questa somma di sinc. <mark>Fra un campione
+      e l'altro l'informazione non è persa: è codificata nel modo in cui i campioni vicini «tirano» la
+      curva.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">SEZIONE 3.7</span>Il campionamento nel dominio della frequenza</h2>
+
+  <p class="lead">
+    C'è un modo di vedere tutto questo — teorema, aliasing, ricostruzione — che li rende ovvi in un colpo solo.
+    Basta guardare non il segnale nel tempo, ma il suo <b>spettro</b>: quali frequenze contiene. È un
+    anticipo del Cap. 8, ma l'immagine è troppo illuminante per aspettare.
+  </p>
+
+  <p>
+    Ecco il fatto centrale: <strong>campionare nel tempo equivale a copiare-e-incollare lo spettro nella
+    frequenza</strong>. Lo spettro del segnale originale (una «collinetta» di frequenze fino a \(f_{\max}\))
+    viene <b>replicato</b> attorno a ogni multiplo di \(f_s\): a \(0\), a \(f_s\), a \(2f_s\), e così via. Se
+    \(f_s\) è abbastanza grande, le copie stanno larghe e non si toccano — e un passa-basso può isolare la
+    copia centrale, recuperando il segnale. Se invece \(f_s\) è troppo piccola, le copie si <b>sovrappongono</b>:
+    le code si sommano, e quella sovrapposizione <em>è</em> l'aliasing.
+  </p>
+
+  <figure class="fig wide" id="fig-repliche">
+    <svg viewBox="0 0 640 320" role="img" aria-label="Lo spettro di un segnale campionato: repliche attorno ai multipli di fs, che si separano o si sovrappongono a seconda della frequenza di campionamento"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 3.1</span> — Campionare replica lo spettro. <b>In alto</b>, \(f_s\) è ampia: le
+      copie (in <b style="color:var(--ink-faint)">grigio</b>) restano separate dalla banda base (in
+      <b style="color:var(--accent)">teal</b>), e un passa-basso le taglia via ricostruendo il segnale. <b>In
+      basso</b>, \(f_s\) è troppo piccola: le copie invadono la banda base e le code si sommano — la zona
+      <b style="color:var(--warm)">ambra</b> è l'aliasing, energia estranea ormai inseparabile dai dati veri.
+      <mark>Il teorema di Nyquist non è che la condizione perché le copie non si tocchino.</mark>
+    </figcaption>
+  </figure>
+
+  <p>
+    Questa immagine spiega anche i gradini del DAC (§3.6): la scaletta contiene proprio quelle copie ad alta
+    frequenza attorno a \(f_s\), \(2f_s\), … e il filtro di ricostruzione non fa che cancellarle, lasciando la
+    sola collinetta centrale. Un'unica figura, e tre misteri risolti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">SEZIONE 3.8</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">Un segnale audio contiene frequenze fino a \(15\) kHz. Qual è la minima frequenza
+      di campionamento teorica? Perché in pratica se ne usa una più alta (es. \(44{,}1\) kHz)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Minimo teorico: \(f_s > 2 \times 15 = 30\) kHz. In pratica si sale perché il filtro anti-alias non è
+          ideale: non può tagliare a picco esattamente a \(f_s/2\), ha bisogno di una «banda di transizione».
+          Campionare più in alto lascia spazio a quella transizione senza toccare la banda utile.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">Con \(f_s = 1000\) Hz, a quale frequenza «apparirà» una sinusoide vera di
+      \(700\) Hz? E una di \(1300\) Hz?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(700\) Hz è sopra Nyquist (\(500\) Hz): alias \(= |700 - 1000\cdot\mathrm{round}(0{,}7)| = |700-1000| = 300\) Hz.</p>
+        <p>\(1300\) Hz: \(\mathrm{round}(1{,}3)=1\), alias \(= |1300 - 1000| = 300\) Hz. Entrambe si travestono
+          da <b>300 Hz</b> — e da 300 Hz sono indistinguibili.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">Passando da un ADC a 8 bit a uno a 14 bit, di quanto migliora (circa) il rapporto
+      segnale/rumore di quantizzazione, in dB?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Ogni bit vale circa \(+6\) dB. La differenza è \(14 - 8 = 6\) bit, quindi circa
+          \(6 \times 6 = \mathbf{36}\) dB in più. In ampiezza, il rumore di quantizzazione si riduce di un
+          fattore \(2^6 = 64\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">Vero o falso: «se ho campionato con aliasing, posso rimuoverlo in software con un
+      buon filtro digitale». Spiega.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Falso.</b> L'aliasing avviene <em>durante</em> il campionamento: le frequenze alte si ripiegano e
+          si sommano a quelle basse, mescolandosi ai dati veri (§3.4, §3.7). Nel dominio digitale non c'è più
+          modo di sapere quale parte del valore a 300 Hz veniva da 300 Hz e quale da 700 Hz. La difesa è solo
+          il filtro anti-alias analogico, <em>prima</em> del convertitore.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.5</div>
+    <p style="margin-bottom:0">Un DAC produce una «scaletta» invece di una curva liscia. Cosa manca, e perché
+      dal punto di vista delle frequenze quei gradini sono un problema?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Manca il <b>filtro di ricostruzione</b>, un passa-basso analogico dopo il DAC. I gradini contengono
+          copie ad alta frequenza dello spettro (attorno a \(f_s\), \(2f_s\), …, §3.7): sono frequenze estranee
+          al segnale originale. Il filtro di ricostruzione le rimuove, lasciando la sola banda base e
+          restituendo la curva liscia.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-9"><span class="secnum">SEZIONE 3.9</span>Soluzioni</h2>
+
+  <p>
+    Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra. Prima la matita, poi il triangolino.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li><b>Digitalizzare = discretizzare due volte:</b> nel tempo (campionamento) e nell'ampiezza
+          (quantizzazione). La quantizzazione aggiunge rumore, \(\sigma = \Delta/\sqrt{12}\); circa \(+6\) dB di
+          SNR per ogni bit.</li>
+      <li><b>Teorema del campionamento:</b> \(f_s > 2 f_{\max}\). Il confine è la frequenza di Nyquist
+          \(f_s/2\): sotto è salvo, sopra si perde e si traveste.</li>
+      <li><b>Aliasing:</b> una frequenza oltre Nyquist si maschera da una più bassa, indistinguibile e
+          irreversibile. Difesa unica: il <b>filtro anti-alias analogico, prima</b> del convertitore.</li>
+      <li><b>Ricostruzione:</b> il DAC dà una scaletta; serve un <b>filtro di ricostruzione</b> per lisciarla.
+          La ricostruzione perfetta è una somma di sinc.</li>
+      <li><b>Vista in frequenza:</b> campionare replica lo spettro attorno ai multipli di \(f_s\). Se le copie
+          non si toccano, tutto si recupera; se si sovrappongono, è aliasing.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il segnale è finalmente dentro il calcolatore, pulito e ben campionato. Prima di manipolarlo, però, conviene
+    una breve tappa dal lato <em>pratico</em>: come un calcolatore rappresenta davvero questi numeri, e quali
+    insidie nasconde. È il <strong>Capitolo 4</strong>, sul software del DSP — virgola fissa contro virgola
+    mobile, rumore di arrotondamento, e i trucchi per fare i conti in fretta. Un intermezzo tecnico, ma di quelli
+    che separano un algoritmo che funziona sulla carta da uno che funziona davvero.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.1 — quantizzazione a bit variabili
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wq-svg');
+  if (!svg) return;
+  const out = document.getElementById('wq-out');
+  const bS = document.getElementById('wq-b'), bV = document.getElementById('wq-bv');
+  const f = x => Math.sin(x) + 0.35 * Math.sin(2.3 * x + 0.5);   // ampiezza ~ dentro [-1.35, 1.35]
+  const AMP = 1.4;
+
+  function draw() {
+    const bits = parseInt(bS.value, 10);
+    bV.textContent = bits;
+    const L = Math.pow(2, bits);          // livelli
+    const step = 2 * AMP / L;             // ampiezza del gradino su [-AMP, AMP]
+    const q = v => {                      // quantizza a L livelli
+      let k = Math.round(v / step);
+      const kmax = L / 2;
+      k = Math.max(-kmax, Math.min(kmax - 1, k));
+      return (k + 0.5) * step;
+    };
+    svg.innerHTML = '';
+    const X = 2 * Math.PI;
+    const p = new Plot(svg, { xmin: 0, xmax: X, ymin: -AMP, ymax: AMP });
+    // linee dei livelli di quantizzazione
+    for (let k = -L / 2; k < L / 2; k++) {
+      const y = (k + 0.5) * step;
+      p.line(0, y, X, y, { color: 'var(--rule)', width: 0.8 });
+    }
+    p.axes({ numbers: false, names: false });
+    // segnale continuo
+    p.func(f, { color: 'var(--accent)', width: 1.6, dash: '4 4' });
+    // scaletta quantizzata (zero-order hold su campioni fitti)
+    const M = 64, pts = [];
+    for (let i = 0; i <= M; i++) { const x = X * i / M; const y = q(f(x)); pts.push([x, y]); if (i < M) pts.push([X * (i + 1) / M, y]); }
+    p.poly(pts, { color: 'var(--warm)', width: 2, close: false });
+
+    // rumore di quantizzazione teorico
+    const sigma = step / Math.sqrt(12);
+
+    out.innerHTML = `
+      <div class="big"><b>${bits}</b> bit → <b>${L}</b> livelli
+        &nbsp;·&nbsp; gradino Δ = <b>${step.toFixed(3)}</b>
+        &nbsp;·&nbsp; rumore σ = <b>${sigma.toFixed(4)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La curva <b style="color:var(--accent)">teal</b> tratteggiata è il segnale vero; la
+        <b style="color:var(--warm)">scaletta ambra</b> è ciò che il calcolatore memorizza.
+        ${bits <= 2 ? 'Con così pochi bit la scaletta è <mark>grossolana</mark>: il rumore di quantizzazione è enorme.'
+          : bits >= 5 ? 'I gradini sono ormai <mark>finissimi</mark>: scaletta e curva quasi coincidono.'
+            : 'I gradini si vedono ancora, ma la forma è già ben riconoscibile.'}
+        Ogni bit in più dimezza Δ, quindi dimezza σ: circa +6 dB di SNR per bit.
+      </div>`;
+  }
+  bS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §3.3 — aliasing: una frequenza alta si traveste da bassa
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wa-svg');
+  if (!svg) return;
+  const out = document.getElementById('wa-out');
+  const fS = document.getElementById('wa-f'), fV = document.getElementById('wa-fv');
+  const FS = 10;                 // campioni per secondo (finestra di 1 s)
+  const NYQ = FS / 2;
+
+  function draw() {
+    const f = parseFloat(fS.value);
+    fV.textContent = f.toFixed(1);
+    // frequenza (con segno) percepita dopo il campionamento
+    const fSigned = f - FS * Math.round(f / FS);
+    const fa = Math.abs(fSigned);
+    const aliased = fa < f - 1e-9;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 1, ymin: -1.35, ymax: 1.35 });
+    p.axes({ numbers: false, names: false, xname: 't' });
+    // segnale vero
+    p.func(x => Math.sin(2 * Math.PI * f * x), { color: 'var(--accent)', width: 2, samples: 700 });
+    // l'alias percepito (passa esattamente per i campioni)
+    if (aliased) p.func(x => Math.sin(2 * Math.PI * fSigned * x), { color: 'var(--violet)', width: 2.4, samples: 700 });
+    // i campioni
+    const data = [];
+    for (let k = 0; k <= FS; k++) data.push(Math.sin(2 * Math.PI * f * (k / FS)));
+    p.stem(data, { x0: 0, dxs: 1 / FS, color: 'var(--warm)', r: 3.4, width: 1.6 });
+
+    out.innerHTML = `
+      <div class="big">f = <b style="color:var(--accent)">${f.toFixed(1)}</b> Hz
+        &nbsp;·&nbsp; Nyquist = <b>${NYQ}</b> Hz
+        &nbsp;·&nbsp; percepita = <b style="color:${aliased ? 'var(--violet)' : 'var(--accent)'}">${fa.toFixed(1)}</b> Hz</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${aliased
+          ? `Sopra Nyquist! Il segnale vero (<b style="color:var(--accent)">teal</b>, ${f.toFixed(1)} Hz) e l'alias (<b style="color:var(--violet)">indaco</b>, ${fa.toFixed(1)} Hz) passano <mark>per gli stessi identici campioni</mark>: dai pallini ambra sono indistinguibili. Questa è la corruzione irreversibile.`
+          : `Sotto Nyquist: i campioni catturano fedelmente il segnale, nessun travestimento. Alza la frequenza oltre ${NYQ} Hz e guarda comparire l'alias.`}
+      </div>`;
+  }
+  fS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 3.1 — repliche spettrali: ben campionato vs sotto-campionato
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-repliche svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+
+  // una "collinetta" spettrale centrata in cx, semi-larghezza B, altezza h
+  function hill(cx, B, base, h, col, op) {
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const x = cx - B + (2 * B) * i / 24;
+      const y = base - h * Math.exp(-Math.pow((x - cx) / (B * 0.5), 2));
+      pts.push((i ? 'L' : 'M') + x + ',' + y);
+    }
+    return el('path', { d: pts.join(' '), fill: 'none', stroke: col, 'stroke-width': 2, opacity: op ?? 1 });
+  }
+
+  function panel(oy, fs, label) {
+    const g = el('g', {});
+    const base = oy + 90, h = 62, B = 34;
+    const cx0 = 320;                    // centro banda base
+    // asse
+    g.appendChild(el('line', { x1: 30, y1: base, x2: 610, y2: base, stroke: 'var(--ink-faint)', 'stroke-width': 1.4 }));
+    // repliche a ±fs, ±2fs (grigie)
+    for (let m = -2; m <= 2; m++) {
+      if (m === 0) continue;
+      g.appendChild(hill(cx0 + m * fs, B, base, h, 'var(--ink-faint)', 0.8));
+    }
+    // banda base (teal)
+    g.appendChild(hill(cx0, B, base, h, 'var(--accent)', 1));
+    // tacche di fs
+    [-1, 1].forEach(s => {
+      const x = cx0 + s * fs;
+      g.appendChild(el('line', { x1: x, y1: base - 4, x2: x, y2: base + 4, stroke: 'var(--ink-faint)', 'stroke-width': 1.2 }));
+      g.appendChild(txt(x, base + 18, s === 1 ? 'f_s' : '−f_s', 'lbl'));
+    });
+    g.appendChild(txt(cx0, base + 18, '0', 'lbl'));
+
+    // marca la sovrapposizione se le copie invadono la banda base
+    if (fs < 2 * B) {
+      const xa = cx0 + (fs - B), xb = cx0 + B;
+      for (let i = 0; i <= 16; i++) {
+        const x = xa + (xb - xa) * i / 16;
+        const yb = base;
+        const yt = base - h * Math.exp(-Math.pow((x - cx0) / (B * 0.5), 2)) * 0.9;
+        g.appendChild(el('line', { x1: x, y1: yt, x2: x, y2: yb, stroke: 'var(--warm)', 'stroke-width': 1, opacity: 0.5 }));
+      }
+    }
+    const lab = txt(40, oy + 26, label, 'lbl-b', 'start'); lab.setAttribute('font-size', '12.5');
+    g.appendChild(lab);
+    return g;
+  }
+
+  svg.appendChild(panel(10, 130, 'f_s ampia — copie separate: il segnale si recupera'));
+  svg.appendChild(panel(170, 58, 'f_s piccola — copie sovrapposte: ALIASING (zona ambra)'));
+})();
+</script>
+</body>
+</html>

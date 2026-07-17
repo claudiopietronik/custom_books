@@ -44,7 +44,7 @@ const TOC = [
     n: 3,
     titolo: "ADC e DAC: dal mondo analogico al digitale",
     file: "cap03-adc-dac.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Quantizzazione: discretizzare l'ampiezza" },
       { id: "s3-2", n: "3.2", t: "Il teorema del campionamento (Nyquist)" },
