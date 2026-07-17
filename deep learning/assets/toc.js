@@ -361,7 +361,7 @@ const TOC = [
     titolo: "Modelli generativi profondi",
     file: "cap20-generativi.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s20-1", n: "20.1", t: "Le macchine di Boltzmann" },
       { id: "s20-2", n: "20.2", t: "Le macchine di Boltzmann ristrette (RBM)" },

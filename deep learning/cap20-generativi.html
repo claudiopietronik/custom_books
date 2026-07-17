@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20 · Modelli generativi profondi — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="20">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 20 · Parte III</div>
+    <h1>Modelli generativi profondi</h1>
+    <p class="standfirst">
+      Il gran finale: reti che imparano a <b>creare</b>. Non a classificare o prevedere, ma a <em>generare</em>
+      dati nuovi e plausibili — volti, voci, testi mai visti. Qui convergono tutti gli strumenti della Parte III:
+      modelli grafici (16), Monte Carlo (17), la funzione di partizione (18), l'inferenza (19). Dalle
+      <b>macchine di Boltzmann</b> storiche ai due protagonisti moderni — i <b>VAE</b> e le <b>GAN</b>.
+      <mark>Imparare la distribuzione dei dati è la forma più profonda di «capirli».</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le radici: <b>macchine di Boltzmann</b> (§20.1), <b>RBM</b> (§20.2), le loro versioni profonde (§20.3). Il
+      trucco per addestrarle con la backprop: <b>derivare attraverso il caso</b> (§20.4). I due grandi modelli
+      moderni: <b>VAE</b> (§20.5) e <b>GAN</b> (§20.6, widget). Come si <b>valutano</b> (§20.7). E la
+      <b>conclusione</b> del libro (§20.8).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      I modelli generativi sono dietro l'IA che «crea»: generazione di immagini, sintesi vocale, e — in linea
+      diretta — i modelli che scrivono testo. <mark>Sono anche la prova più forte della tesi del libro</mark>: per
+      generare dati realistici, una rete deve aver <em>imparato la struttura</em> del mondo che li produce — le
+      cause, i fattori, la varietà. Generare bene è capire.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-1"><span class="secnum">Sezione 20.1</span>Le macchine di Boltzmann</h2>
+
+  <p class="lead">
+    I modelli generativi «classici» del deep learning: reti <b>non dirette</b> (Cap. 16) di unità binarie, con
+    un'<b>energia</b> che definisce quali configurazioni sono probabili.
+  </p>
+
+  <p>
+    Una <span class="termine">macchina di Boltzmann</span> è un modello a energia (Cap. 18): ogni configurazione
+    delle unità ha un'energia, e la probabilità è \(p(\vv{x})=\eu^{-E(\vv{x})}/Z\). Ha unità <b>visibili</b> (i
+    dati) e <b>nascoste</b> (le feature latenti), tutte interconnesse. Il problema: con connessioni ovunque,
+    inferenza e campionamento sono intrattabili, e l'addestramento richiede la contrastive divergence (§18.2) con
+    tutta la sua difficoltà. <mark>Erano potenti in teoria ma ingestibili in pratica</mark> — finché non si è
+    limitata la struttura.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-2"><span class="secnum">Sezione 20.2</span>Le macchine di Boltzmann ristrette (RBM)</h2>
+
+  <p class="lead">
+    La versione domata: si <b>tolgono</b> le connessioni tra unità dello stesso strato, lasciando solo quelle
+    tra visibili e nascoste. Un piccolo vincolo, un enorme guadagno.
+  </p>
+
+  <p>
+    In una <span class="termine">RBM</span> le unità visibili si connettono solo alle nascoste e viceversa
+    (grafo bipartito). Ne segue una proprietà d'oro: <mark>date le visibili, tutte le nascoste sono indipendenti
+    (e viceversa)</mark>. Questo rende le condizionate immediate da campionare — un solo passo aggiorna tutto uno
+    strato in parallelo — e il Gibbs sampling (§17.4) diventa efficiente. Le RBM, addestrate con contrastive
+    divergence, sono state il primo modello generativo profondo davvero pratico, e il mattone delle deep belief
+    network.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-3"><span class="secnum">Sezione 20.3</span>Deep belief network e deep Boltzmann machine</h2>
+
+  <p class="lead">
+    Impilando RBM si ottengono modelli generativi <b>profondi</b> — e la scintilla che, nel 2006, riaccese
+    l'interesse per il deep learning.
+  </p>
+
+  <p>
+    Una <b>deep belief network</b> si costruisce impilando RBM, addestrate una alla volta (il pretraining greedy
+    di §15.1); una <b>deep Boltzmann machine</b> ha più strati nascosti tutti non diretti. Storicamente,
+    <mark>fu proprio il successo delle deep belief network nel 2006 a mostrare che le reti profonde si potevano
+    addestrare</mark>, avviando la terza ondata (§1.5). Oggi sono meno usate — VAE e GAN, addestrabili
+    direttamente con la backpropagation, le hanno in gran parte sostituite — ma il loro ruolo storico è
+    incancellabile.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-4"><span class="secnum">Sezione 20.4</span>Backpropagation attraverso operazioni casuali</h2>
+
+  <p class="lead">
+    Per addestrare i modelli generativi moderni con la backprop serve un trucco: come si deriva attraverso un
+    passo <b>casuale</b> (campionare da una distribuzione)?
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il reparametrization trick <span class="tag">spostare il caso fuori dal cammino del gradiente</span></div>
+    <div class="f-body">
+      \[ \vv{z} \dist \Norm(\vv{\mu},\vv{\sigma}^2) \quad\Longleftrightarrow\quad
+         \vv{z} = \vv{\mu} + \vv{\sigma}\odot\vv{\epsilon}, \quad \vv{\epsilon}\dist\Norm(0,\mm{I}) \]
+    </div>
+    <div class="f-note">
+      Campionare è un'operazione casuale: non si può derivare «attraverso» il dado. Il
+      <span class="termine">reparametrization trick</span> riscrive il campionamento spostando la casualità in una
+      variabile ausiliaria \(\vv{\epsilon}\) <b>indipendente dai parametri</b>: ora \(\vv{z}\) è una funzione
+      <em>deterministica</em> di \(\vv{\mu},\vv{\sigma}\) (derivabile!) e di un rumore fisso. <mark>Il gradiente
+      può fluire attraverso il campionamento</mark>: è il pezzo mancante che rende addestrabile il VAE con la
+      normale backpropagation.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-5"><span class="secnum">Sezione 20.5</span>Gli autoencoder variazionali (VAE)</h2>
+
+  <p class="lead">
+    Il primo grande modello generativo moderno: un autoencoder (Cap. 14) reso probabilistico, addestrato con
+    l'inferenza variazionale (Cap. 19). Encoder + decoder, con un codice <b>casuale</b>.
+  </p>
+
+  <p>
+    Un <span class="termine">VAE</span> ha un <b>encoder</b> che mappa \(\vv{x}\) in una distribuzione
+    \(q(\vv{z}\given\vv{x})\) sul codice (inferenza ammortizzata, §19.5) e un <b>decoder</b> che dal codice
+    genera \(p(\vv{x}\given\vv{z})\). Si addestra massimizzando l'<b>ELBO</b> (§19.1): un termine di
+    <b>ricostruzione</b> (come un autoencoder) più un termine di <b>regolarità</b> che tiene il codice vicino a
+    una gaussiana standard. <mark>Una volta addestrato, si generano dati nuovi campionando un codice
+    \(\vv{z}\dist\Norm(0,\mm{I})\) e passandolo al decoder.</mark> Il codice è uno spazio latente continuo e
+    liscio: interpolare tra due codici genera transizioni fluide (un volto che si trasforma in un altro). I VAE
+    danno campioni un po' «sfocati» ma uno spazio latente ben strutturato.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-6"><span class="secnum">Sezione 20.6</span>Le reti generative avversarie (GAN)</h2>
+
+  <p class="lead">
+    L'idea più spettacolare: due reti che si <b>sfidano</b>. Un <b>generatore</b> crea falsi, un
+    <b>discriminatore</b> cerca di smascherarli; addestrandosi l'una contro l'altra, il generatore impara a
+    produrre dati indistinguibili dai veri.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il gioco minimax delle GAN <span class="tag">falsario contro poliziotto</span></div>
+    <div class="f-body">
+      \[ \min_{G}\ \max_{D}\ \E_{\vv{x}\dist \text{dati}}[\log D(\vv{x})]
+         + \E_{\vv{z}}[\log(1 - D(G(\vv{z})))] \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(D\) — il <b>discriminatore</b></dt>
+        <dd>cerca di <b>massimizzare</b>: dare probabilità alta ai dati veri, bassa ai falsi. È un classificatore
+            «vero vs falso».</dd>
+        <dt>\(G\) — il <b>generatore</b></dt>
+        <dd>trasforma rumore \(\vv{z}\) in dati falsi \(G(\vv{z})\), e cerca di <b>minimizzare</b>: ingannare
+            \(D\), fargli dire «vero» sui falsi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È una gara: il discriminatore migliora, il generatore migliora per ingannarlo, e così via. All'<b>equilibrio</b>,
+      il generatore produce dati <b>indistinguibili</b> dai veri, e il discriminatore è ridotto a <b>tirare a
+      indovinare</b> (50%). <mark>Le GAN danno immagini nitidissime</mark>, ma il loro addestramento è notoriamente
+      instabile (le due reti devono restare in equilibrio). Il widget mostra il gioco: avvicina il generatore ai
+      dati e guarda il discriminatore perdere ogni capacità di distinguere.
+    </div>
+  </div>
+
+  <div class="widget" id="w-gan">
+    <div class="w-head">
+      <span>Il gioco GAN: generatore vs discriminatore</span>
+      <span class="hint">porta il generatore sui dati</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wgan-svg" viewBox="0 0 560 360" role="img" aria-label="La distribuzione dei dati e quella del generatore; quando coincidono, il discriminatore non distingue più (50%)"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>μ_G</label><input type="range" id="wgan-m" min="-3" max="3" step="0.05" value="-2"><output id="wgan-m-o">-2.0</output></div>
+      <div class="w-ctrl"><label>σ_G</label><input type="range" id="wgan-s" min="0.3" max="2" step="0.05" value="1.1"><output id="wgan-s-o">1.1</output></div>
+      <button class="w-btn" id="wgan-win">Equilibrio</button>
+    </div>
+    <div class="w-readout" id="wgan-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-7"><span class="secnum">Sezione 20.7</span>Valutare i modelli generativi</h2>
+
+  <p class="lead">
+    Un problema sorprendentemente difficile: come si <b>misura</b> quanto è buono un modello che genera? Non
+    c'è un'«accuratezza» ovvia.
+  </p>
+
+  <p>
+    Valutare un classificatore è facile (giusto o sbagliato); valutare un generatore no. La <b>verosimiglianza</b>
+    sui dati di test richiede \(Z\) (§18.6), spesso intrattabile. Le metriche automatiche (come l'Inception
+    Score o l'FID) approssimano quanto i campioni siano realistici e vari, ma imperfettamente. E il giudizio
+    umano è costoso e soggettivo. <mark>Un modello può avere ottima verosimiglianza e campioni brutti, o campioni
+    bellissimi e verosimiglianza pessima</mark>: le due cose non coincidono. La valutazione dei modelli
+    generativi resta un problema aperto e attivo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-8"><span class="secnum">Sezione 20.8</span>Conclusione</h2>
+
+  <p class="lead">
+    Siamo alla fine di un viaggio che è partito da un paradosso — le macchine battono i campioni di scacchi ma
+    non riconoscono un gatto — e arriva a reti che <em>creano</em> volti mai esistiti.
+  </p>
+
+  <p>
+    Il filo che ha tenuto insieme venti capitoli è uno solo, quello del Capitolo 1: <b>imparare rappresentazioni</b>.
+    Dai fasci di pixel ai bordi, dai bordi alle parti, dalle parti agli oggetti; dalle parole ai vettori, dai
+    vettori al significato; dai dati ai fattori nascosti che li generano. <mark>Ogni modello del libro è una
+    variazione sul tema «trasforma i dati grezzi in una rappresentazione che rende il problema facile»</mark> — e
+    la scommessa profonda è che il mondo abbia una struttura composizionale che le reti profonde possono
+    catturare (§5.11, §15.5).
+  </p>
+
+  <p>
+    Questo testo (2016) si ferma alle soglie dell'era dei transformer e dei grandi modelli. Ma i suoi fondamenti
+    — algebra lineare e probabilità, discesa del gradiente e backpropagation, convoluzioni e attenzione,
+    rappresentazioni e generazione — sono esattamente ciò su cui quei modelli sono costruiti. <mark>Chi ha capito
+    questo libro ha capito le fondamenta di tutto ciò che è venuto dopo.</mark>
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 20 (e dal libro)</div>
+    <ol style="margin-bottom:0">
+      <li>Le <b>macchine di Boltzmann</b>/RBM (modelli a energia non diretti) furono i primi generativi profondi;
+          le <b>deep belief network</b> riaccesero il campo nel 2006 (§20.1–20.3).</li>
+      <li>Il <b>reparametrization trick</b> fa fluire il gradiente attraverso il campionamento (§20.4), rendendo
+          addestrabile il <b>VAE</b>: encoder + decoder probabilistici, spazio latente liscio (§20.5).</li>
+      <li>Le <b>GAN</b> sono un gioco tra generatore e discriminatore: all'equilibrio i falsi sono
+          indistinguibili e il discriminatore tira a indovinare (§20.6, widget). Campioni nitidi, addestramento
+          instabile.</li>
+      <li>Valutare i generativi è difficile (§20.7). Il messaggio del libro: <b>generare bene è capire</b> —
+          imparare la struttura che genera i dati (§20.8).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Qui finisce <strong>Deep Learning</strong>. Sei partito da unità e vettori (Cap. 2) e sei arrivato a reti che
+    dipingono volti dal rumore. Il resto — transformer, diffusione, grandi modelli linguistici — è la naturale
+    prosecuzione di queste idee, non una loro sostituzione. <mark>Il vocabolario per leggerle è tutto qui.</mark>
+    Buon deep learning.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-9"><span class="secnum">Sezione 20.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §20.6, a cosa tende l'«accuratezza» del discriminatore quando la distribuzione del generatore
+      coincide con quella dei dati? Perché quello è l'obiettivo del generatore?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.2</div>
+    <p style="margin-bottom:0">
+      Perché la proprietà «date le visibili, le nascoste sono indipendenti» rende una RBM molto più pratica di
+      una macchina di Boltzmann generale? Cosa permette di fare in modo efficiente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.3</div>
+    <p style="margin-bottom:0">
+      Spiega a parole il reparametrization trick: perché scrivere \(\vv{z}=\vv{\mu}+\vv{\sigma}\odot\vv{\epsilon}\)
+      permette di derivare attraverso il campionamento, mentre \(\vv{z}\dist\Norm(\vv{\mu},\vv{\sigma}^2)\) no?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.4</div>
+    <p style="margin-bottom:0">
+      Confronta VAE e GAN in una riga ciascuno: come generano, e qual è il tipico pregio/difetto di ognuno
+      (qualità dei campioni, spazio latente, stabilità dell'addestramento)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) All'equilibrio di una GAN il discriminatore ha accuratezza vicina al 50%. &nbsp;
+      (b) Il VAE si addestra massimizzando l'ELBO. &nbsp;
+      (c) Le RBM hanno connessioni tra unità dello stesso strato. &nbsp;
+      (d) Valutare un modello generativo è tanto facile quanto valutare un classificatore.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-10"><span class="secnum">Sezione 20.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.1</div>
+    <p style="margin-bottom:0">
+      Tende al <b>50%</b>: se il generatore produce esattamente la stessa distribuzione dei dati, nessun
+      discriminatore può fare meglio di tirare a indovinare (i campioni veri e falsi sono statisticamente
+      identici). È l'obiettivo del generatore perché significa che i suoi falsi sono <b>indistinguibili</b> dai
+      dati veri — <mark>ha «vinto» il gioco</mark>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.2</div>
+    <p style="margin-bottom:0">
+      Perché rende le <b>condizionate</b> \(p(\vv{h}\given\vv{v})\) e \(p(\vv{v}\given\vv{h})\) fattorizzate:
+      ogni unità nascosta si può campionare <b>in parallelo</b>, indipendentemente dalle altre, in un solo passo.
+      Questo rende il Gibbs sampling (e quindi la contrastive divergence) efficiente — mentre in una macchina di
+      Boltzmann generale, con connessioni ovunque, ogni unità dipende da tutte le altre e il campionamento è
+      lentissimo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.3</div>
+    <p style="margin-bottom:0">
+      Campionare direttamente \(\vv{z}\dist\Norm(\vv{\mu},\vv{\sigma}^2)\) è un'operazione <b>casuale</b>: non c'è
+      una derivata di \(\vv{z}\) rispetto a \(\vv{\mu}\) e \(\vv{\sigma}\) attraverso il «dado». Riscrivendo
+      \(\vv{z}=\vv{\mu}+\vv{\sigma}\odot\vv{\epsilon}\) con \(\vv{\epsilon}\) rumore fisso e indipendente dai
+      parametri, \(\vv{z}\) diventa una funzione <b>deterministica</b> e derivabile di \(\vv{\mu},\vv{\sigma}\):
+      il caso è «messo da parte» in \(\vv{\epsilon}\), e <mark>il gradiente può passare</mark>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.4</div>
+    <p style="margin-bottom:0">
+      <b>VAE</b>: genera passando un codice \(\vv{z}\dist\Norm(0,\mm{I})\) al decoder; pregio = spazio latente
+      liscio e ben strutturato (facile interpolare), addestramento stabile; difetto = campioni un po' sfocati.
+      <b>GAN</b>: genera passando rumore al generatore, addestrato contro un discriminatore; pregio = campioni
+      nitidissimi; difetto = addestramento instabile e spazio latente meno controllabile (rischio di «mode
+      collapse»).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> All'equilibrio i falsi sono indistinguibili: il discriminatore tira a indovinare (§20.6). <br>
+      <b>(b) VERO.</b> Il VAE massimizza l'ELBO (ricostruzione + regolarità del codice) (§20.5, §19.1). <br>
+      <b>(c) FALSO.</b> Le RBM tolgono proprio le connessioni intra-strato (grafo bipartito) (§20.2). <br>
+      <b>(d) FALSO.</b> Valutare un generativo è notoriamente <b>difficile</b>: nessuna «accuratezza» ovvia
+      (§20.7).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §20.6 — il gioco GAN: dati vs generatore, e l'accuratezza del discriminatore
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wgan-svg');
+  if (!svg) return;
+  const out = document.getElementById('wgan-out');
+  const mI = document.getElementById('wgan-m'), sI = document.getElementById('wgan-s');
+  const mO = document.getElementById('wgan-m-o'), sO = document.getElementById('wgan-s-o');
+  const winB = document.getElementById('wgan-win');
+  const g = (x, mu, s) => Math.exp(-((x - mu) ** 2) / (2 * s * s)) / (s * Math.sqrt(2 * Math.PI));
+  const DATA_M = 0.4, DATA_S = 0.7;
+  const pdata = x => g(x, DATA_M, DATA_S);
+
+  function draw() {
+    const mu = parseFloat(mI.value), s = parseFloat(sI.value);
+    mO.textContent = fmt(mu, 2); sO.textContent = fmt(s, 2);
+    const pgen = x => g(x, mu, s);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -0.1, ymax: 0.75 });
+    p.grid(1, 0.2); p.axes({ numbers: true, stepX: 1, stepY: 0.2, xname: 'x' });
+    p.area(pdata, -5, 5, { fill: 'color-mix(in srgb, var(--accent) 16%, transparent)' });
+    p.func(pdata, { color: 'var(--accent)', width: 2.6 });
+    p.func(pgen, { color: 'var(--warm)', width: 2.6 });
+    // discriminatore ottimo D(x) = pd/(pd+pg)
+    p.func(x => { const pd = pdata(x), pg2 = pgen(x); return 0.6 * pd / (pd + pg2 + 1e-9); }, { color: 'var(--green)', width: 2, dash: '5 4' });
+    p.text(-3.5, 0.66, 'D(x)', { color: 'var(--green)', bold: true });
+    // accuratezza del discriminatore ottimo = 0.5 + 0.25 ∫|pd - pg|
+    const xm = -6, xM = 6, N = 500, dx = (xM - xm) / N; let tv = 0;
+    for (let i = 0; i <= N; i++) { const x = xm + i * dx; tv += Math.abs(pdata(x) - pgen(x)) * dx; }
+    const acc = 0.5 + 0.25 * tv;
+    const won = acc < 0.56;
+    out.innerHTML = `
+      <div class="big">
+        accuratezza del discriminatore: <b style="color:${won ? 'var(--green)' : 'var(--warm)'}">${fmt(acc * 100, 1)}%</b>
+        ${won ? ' &nbsp;<b style="color:var(--green)">← il generatore ha vinto!</b>' : ''}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        <b style="color:var(--accent)">Dati</b> (blu) contro <b style="color:var(--warm)">generatore</b> (rosso);
+        la curva <b style="color:var(--green)">D(x)</b> è la fiducia «è vero» del discriminatore ottimo.
+        ${won ? '<mark>Le due distribuzioni coincidono: il discriminatore non può fare meglio del 50% — tira a indovinare. Equilibrio raggiunto.</mark>'
+          : 'Le distribuzioni sono diverse: il discriminatore distingue facilmente (accuratezza alta). Porta μ_G ≈ 0,4 e σ_G ≈ 0,7 sui dati — o premi «Equilibrio».'}
+      </div>`;
+  }
+  mI.addEventListener('input', draw); sI.addEventListener('input', draw);
+  winB.addEventListener('click', () => { mI.value = DATA_M; sI.value = DATA_S; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

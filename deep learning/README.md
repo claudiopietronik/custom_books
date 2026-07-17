@@ -53,7 +53,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 17 — Metodi Monte Carlo
 - [x] 18 — Affrontare la funzione di partizione
 - [x] 19 — Inferenza approssimata
-- [ ] 20 — Modelli generativi profondi
+- [x] 20 — Modelli generativi profondi
 
 ## Nota
 
