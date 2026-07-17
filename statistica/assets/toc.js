@@ -424,7 +424,7 @@ const TOC = [
   },
   {
     n: 36, parte: "IV · Statistica inferenziale",
-    titolo: "Covarianza e Pearson", file: "cap36-covarianza-pearson.html", stato: "da-fare",
+    titolo: "Covarianza e Pearson", file: "cap36-covarianza-pearson.html", stato: "pronto",
     sezioni: [
       { id: "s36-1", n: "36.1", t: "Variare insieme" },
       { id: "s36-2", n: "36.2", t: "La covarianza" },
