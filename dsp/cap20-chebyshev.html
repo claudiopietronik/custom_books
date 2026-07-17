@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20 · Filtri di Chebyshev — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="20">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.20 — Capitolo 20</div>
+    <h1>Filtri di Chebyshev</h1>
+    <p class="standfirst">
+      I cavalli di battaglia degli IIR. Se il polo singolo del Cap. 19 era un mattone, i filtri di Chebyshev sono
+      l'edificio: passa-basso e passa-banda con taglio molto ripido e pochissimi coefficienti. Il loro segreto è
+      un baratto astuto — accettare una piccola <b>increspatura controllata</b> nella banda passante in cambio di
+      una transizione molto più netta. Con i loro cugini Butterworth, coprono la gran parte del filtraggio IIR.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il vertice pratico dei filtri ricorsivi. Dopo i mattoni del Cap. 19, qui c'è la «versione da catalogo».
+      Il Cap. 21 metterà a confronto Chebyshev, windowed-sinc e media mobile per aiutarti a scegliere; i
+      Cap. 32–33 daranno la teoria (poli, piano \(z\)) che spiega <em>perché</em> funzionano.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Quando serve un taglio ripido a basso costo — filtri anti-alias digitali, separazione di bande in tempo
+      reale, audio su hardware modesto — i Chebyshev sono spesso la risposta. Capire la moneta di scambio (ripple
+      contro ripidità) e i rischi di stabilità ti permette di ottenere prestazioni da FIR lungo con una manciata
+      di coefficienti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-1"><span class="secnum">SEZIONE 20.1</span>Butterworth e Chebyshev a confronto</h2>
+
+  <p class="lead">
+    Due filosofie di progetto, entrambe realizzate con pochi coefficienti ricorsivi, ma con un carattere diverso
+    nella banda passante.
+  </p>
+
+  <ul>
+    <li><b>Butterworth: massima piattezza.</b> La banda passante è <em>perfettamente liscia</em>, senza la minima
+        increspatura — l'ideale se la fedeltà nella banda utile è sacra. Il prezzo è un roll-off relativamente
+        <b>dolce</b>: la transizione tra passa e blocca è graduale.</li>
+    <li><b>Chebyshev: massima ripidità.</b> Accetta una piccola increspatura controllata nella banda passante,
+        e in cambio ottiene una transizione molto più <b>netta</b> a parità di ordine. Se ti serve un taglio
+        affilato e puoi tollerare qualche decimo di dB di ondulazione, è la scelta migliore.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Una famiglia di compromessi</div>
+    <p style="margin-bottom:0">
+      Butterworth e Chebyshev sono i due estremi di una scala. C'è anche l'<b>ellittico</b> (Cauer), che accetta
+      ripple in <em>entrambe</em> le bande e ottiene la transizione più ripida in assoluto. La logica è sempre la
+      stessa: <mark>quanto disordine sei disposto a tollerare, e dove, in cambio di quanta ripidità.</mark>
+      Butterworth = zero ripple, transizione dolce. Chebyshev = ripple in banda passante, transizione ripida.
+      Ellittico = ripple ovunque, transizione ripidissima. Scegli in base a cosa la tua applicazione perdona.
+    </p>
+  </div>
+
+  <h3>Provalo: piattezza contro ripidità</h3>
+
+  <p>
+    Confronta i due tipi e aumenta l'<b>ordine</b> (il numero di poli). Il <b style="color:var(--accent)">Butterworth</b>
+    resta liscio ma taglia dolcemente; il <b style="color:var(--warm)">Chebyshev</b> increspa un po' la banda
+    passante ma taglia molto più netto. Più alto l'ordine, più ripido il taglio — per entrambi.
+  </p>
+
+  <div class="widget" id="w-bc">
+    <div class="w-head">
+      <span>Butterworth vs Chebyshev</span>
+      <span class="hint">confronta e alza l'ordine</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbc-svg" viewBox="0 0 620 240" role="img" aria-label="Confronto tra la risposta in frequenza di un filtro Butterworth e uno Chebyshev al variare dell'ordine"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wbc-both">entrambi</button>
+      <button class="w-btn" id="wbc-butter">Butterworth</button>
+      <button class="w-btn" id="wbc-cheby">Chebyshev</button>
+      <div class="w-ctrl"><label>ordine</label><input type="range" id="wbc-o" min="2" max="12" step="1" value="4"><output id="wbc-ov">4</output></div>
+    </div>
+    <div class="w-readout" id="wbc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-2"><span class="secnum">SEZIONE 20.2</span>Il ripple in banda passante</h2>
+
+  <p class="lead">
+    Il parametro distintivo del Chebyshev è la quantità di <b>ripple</b> — l'ampiezza dell'increspatura che
+    accetti nella banda passante. È una manopola con un effetto chiaro e diretto.
+  </p>
+
+  <p>
+    Più ripple concedi, più ripida diventa la transizione (a parità di ordine). Un ripple dello \(0{,}5\%\)
+    (circa \(0{,}05\) dB) è quasi impercettibile e già regala un taglio molto più netto del Butterworth. Salendo
+    a qualche punto percentuale la transizione si affila ulteriormente, ma l'ondulazione comincia a farsi notare.
+    Il valore tipico è tra lo \(0{,}5\%\) e l'\(1\%\): un ottimo compromesso per la maggior parte degli usi.
+  </p>
+
+  <h3>Provalo: il ripple compra ripidità</h3>
+
+  <p>
+    Aumenta il ripple ammesso e guarda due cose insieme: l'increspatura nella <b style="color:var(--green)">banda
+    passante</b> crescere, e la transizione <b>affilarsi</b>. È un baratto quantificabile: ondulazione contro
+    nitidezza del taglio.
+  </p>
+
+  <div class="widget" id="w-ripple">
+    <div class="w-head">
+      <span>Ripple ↔ ripidità</span>
+      <span class="hint">più ripple, taglio più netto</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wrp-svg" viewBox="0 0 620 240" role="img" aria-label="L'effetto del ripple ammesso sulla ripidità della transizione di un filtro Chebyshev"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>ripple</label><input type="range" id="wrp-r" min="0.05" max="3" step="0.05" value="0.5"><output id="wrp-rv">0.5</output></div>
+      <div class="w-ctrl"><label>ordine</label><input type="range" id="wrp-o" min="2" max="10" step="1" value="6"><output id="wrp-ov">6</output></div>
+    </div>
+    <div class="w-readout" id="wrp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-3"><span class="secnum">SEZIONE 20.3</span>Calcolare i coefficienti</h2>
+
+  <p class="lead">
+    Come si passa dalle specifiche (tipo, frequenza di taglio, ordine, ripple) ai coefficienti \(a\) e \(b\)
+    dell'equazione ricorsiva? Con formule note — o, meglio ancora, senza calcolarle a mano.
+  </p>
+
+  <p>
+    Il metodo classico progetta il filtro nel mondo <b>analogico</b> (i poli di Butterworth stanno su un cerchio,
+    quelli di Chebyshev su un'ellisse, li vedremo nel piano \(s\), Cap. 32) e poi lo «trasporta» nel discreto con
+    una mappa chiamata <b>trasformazione bilineare</b> (Cap. 33). Il risultato sono i coefficienti ricorsivi. Ma
+    il punto pratico è un altro: <mark>questi conti sono tabulati e automatizzati da decenni</mark> — dai una
+    funzione le specifiche, ti restituisce i coefficienti. Il tuo compito è capire cosa chiedere e come
+    implementare, non derivare le formule.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Implementa in biquad, non in un colpo solo</div>
+    <p style="margin-bottom:0">
+      C'è una regola d'oro implementativa: un filtro di ordine alto <b>non</b> va realizzato con un'unica lunga
+      equazione ricorsiva, ma come <b>cascata di stadi del secondo ordine</b> (i <em>biquad</em>, Cap. 19). Il
+      motivo è la precisione numerica (Cap. 4): i coefficienti di un filtro di ordine 8 «tutto intero» sono
+      così sensibili che il rumore di arrotondamento può spostare i poli e <b>destabilizzare</b> il filtro.
+      Spezzandolo in biquad, ogni stadio è robusto. <mark>Cascata di biquad = stabilità numerica.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-4"><span class="secnum">SEZIONE 20.4</span>Stabilità e limiti pratici</h2>
+
+  <p class="lead">
+    I Chebyshev sono potenti, ma proprio la loro efficienza li rende delicati. Tre limiti pratici da conoscere.
+  </p>
+
+  <ul>
+    <li><b>Instabilità a ordine alto.</b> Più poli metti (transizione più ripida), più i poli si avvicinano al
+        bordo del cerchio unitario, e più il filtro è sensibile agli errori di arrotondamento. Oltre un certo
+        ordine (tipicamente ~8–12), diventa difficile mantenerlo stabile: la cascata di biquad aiuta, ma c'è un
+        limite.</li>
+    <li><b>Fase non lineare.</b> Come tutti gli IIR (Cap. 19), i Chebyshev deformano la fase. Se la forma d'onda
+        conta (transienti), è un problema — e allora si torna ai FIR.</li>
+    <li><b>Overshoot al gradino.</b> La ripidità in frequenza si paga con sovraelongazioni nel tempo (parente di
+        Gibbs, Cap. 11): la risposta al gradino «schizza» e oscilla. Più ripido il taglio, più marcato
+        l'overshoot.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La scelta, in una frase</div>
+    <p style="margin-bottom:0">
+      <mark>Chebyshev quando conta l'efficienza e la separazione netta delle frequenze; FIR (windowed-sinc)
+      quando contano la fase lineare e la forma d'onda.</mark> Non c'è un vincitore assoluto: c'è lo strumento
+      giusto per l'obiettivo, esattamente come predicato dal Cap. 14. Il prossimo capitolo li mette faccia a
+      faccia proprio per rendere questa scelta un riflesso.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-5"><span class="secnum">SEZIONE 20.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.1</div>
+    <p style="margin-bottom:0">Ti serve una banda passante perfettamente piatta, senza la minima ondulazione, e
+      puoi tollerare un taglio dolce. Butterworth o Chebyshev?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Butterworth</b>: è «massimamente piatto» in banda passante, senza ripple. Il prezzo è il roll-off
+          più dolce, che qui è accettabile. Se invece servisse un taglio netto, il Chebyshev lo darebbe in cambio
+          di un po' di ripple.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.2</div>
+    <p style="margin-bottom:0">In un Chebyshev, cosa ottieni aumentando il ripple ammesso? E aumentando
+      l'ordine?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Più <b>ripple</b> → transizione più <b>ripida</b> (a parità di ordine), ma banda passante più
+          ondulata. Più <b>ordine</b> → transizione più ripida <em>e</em> più poli (più calcolo), con maggior
+          rischio di instabilità e overshoot. Sono due manopole diverse per la stessa ripidità.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.3</div>
+    <p style="margin-bottom:0">Perché un Chebyshev di ordine 8 va implementato come quattro biquad in cascata e
+      non come un'unica equazione ricorsiva?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per la <b>precisione numerica</b> (Cap. 4). I coefficienti di un filtro di ordine 8 «monolitico» sono
+          estremamente sensibili: il rumore di arrotondamento può spostare i poli fuori dal cerchio unitario e
+          rendere il filtro <b>instabile</b>. Spezzandolo in stadi del secondo ordine (biquad), ogni stadio è
+          numericamente robusto (§20.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.4</div>
+    <p style="margin-bottom:0">Un tecnico osserva che il suo Chebyshev a taglio ripido «schizza» sui fronti
+      (overshoot). È un baco?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>No</b>, è fisiologico. La ripidità in frequenza comporta sovraelongazioni nel tempo (parente di
+          Gibbs, §20.4): un taglio netto genera overshoot al gradino. Per ridurlo bisogna ammorbidire il taglio
+          (meno ripido) o passare a un filtro con risposta al gradino più pulita — accettando un compromesso in
+          frequenza.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-6"><span class="secnum">SEZIONE 20.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 20</div>
+    <ol style="margin-bottom:0">
+      <li><b>Butterworth</b> = banda passante massimamente piatta, roll-off dolce. <b>Chebyshev</b> = ripple
+          controllato in banda passante in cambio di transizione ripida. <b>Ellittico</b> = ripple ovunque,
+          ripidità massima.</li>
+      <li><b>Ripple</b> e <b>ordine</b> sono le due manopole della ripidità (tipico ripple 0,5–1%).</li>
+      <li><b>Coefficienti:</b> progetto analogico + trasformazione bilineare, ma in pratica tabulati/automatici.
+          <b>Implementa in cascata di biquad</b> per la stabilità numerica.</li>
+      <li><b>Limiti:</b> instabilità a ordine alto, fase non lineare, overshoot al gradino.</li>
+      <li><b>La scelta:</b> Chebyshev per efficienza e taglio netto; FIR per fase lineare e forma d'onda.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo tutti i filtri principali: media mobile, windowed-sinc, su misura, ricorsivi, Chebyshev. Come si
+    sceglie, davanti a un problema concreto? Il <strong>Capitolo 21</strong> li mette a <b>confronto</b> diretto —
+    nel dominio del tempo e in quello della frequenza — e distilla una piccola guida decisionale: quale filtro
+    per quale obiettivo. È il capitolo che trasforma la conoscenza dei singoli filtri in <em>saggezza</em> nella
+    scelta.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* magnitudo dei prototipi analogici (normalizzati a fc) */
+function cheb(n, x) { // polinomio di Chebyshev T_n(x)
+  if (x <= 1 && x >= -1) return Math.cos(n * Math.acos(x));
+  return Math.cosh(n * Math.acosh(Math.abs(x)));
+}
+function butterMag(f, fc, n) { return 1 / Math.sqrt(1 + Math.pow(f / fc, 2 * n)); }
+function chebyMag(f, fc, n, rippleDB) {
+  const eps = Math.sqrt(Math.pow(10, rippleDB / 10) - 1);
+  const t = cheb(n, f / fc);
+  return 1 / Math.sqrt(1 + eps * eps * t * t);
+}
+
+/* ============================================================================
+   WIDGET §20.1 — Butterworth vs Chebyshev
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbc-out');
+  const btns = { both: document.getElementById('wbc-both'), butter: document.getElementById('wbc-butter'), cheby: document.getElementById('wbc-cheby') };
+  const oS = document.getElementById('wbc-o'), oV = document.getElementById('wbc-ov');
+  let show = 'both';
+  const fc = 0.28, ripple = 0.5;
+
+  function draw() {
+    const n = parseInt(oS.value, 10);
+    oV.textContent = n;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 0.5, ymin: 0, ymax: 1.15 });
+    p.grid(0.1, 0.5); p.axes({ numbers: true, names: true, xname: 'frequenza', yname: '|H|', stepX: 0.1, stepY: 0.5 });
+    p.line(fc, 0, fc, 1.15, { color: 'var(--ink-faint)', width: 1, dash: '4 3' });
+    const bpts = [], cpts = [];
+    for (let f = 0; f <= 0.5; f += 0.002) { bpts.push([f, butterMag(f, fc, n)]); cpts.push([f, chebyMag(f, fc, n, ripple)]); }
+    if (show === 'both' || show === 'butter') p.poly(bpts, { color: 'var(--accent)', width: 2.4, close: false });
+    if (show === 'both' || show === 'cheby') p.poly(cpts, { color: 'var(--warm)', width: 2.4, close: false });
+    if (show !== 'cheby') p.text(0.02, 1.08, 'Butterworth', { color: 'var(--accent)', anchor: 'start', size: 10.5 });
+    if (show !== 'butter') p.text(0.48, 1.08, 'Chebyshev', { color: 'var(--warm)', anchor: 'end', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">ordine <b>${n}</b> &nbsp;·&nbsp; taglio a f<sub>c</sub>=${fc}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--accent)">Butterworth</b> è liscio ma scende dolcemente; il
+        <b style="color:var(--warm)">Chebyshev</b> (ripple ${ripple}%) <mark>increspa</mark> la banda passante ma
+        taglia molto più netto. Alza l'ordine: la transizione si affila per entrambi, ma il Chebyshev resta più
+        ripido a parità di ordine.
+      </div>`;
+  }
+  oS.addEventListener('input', draw);
+  function setShow(s) { show = s; for (const k in btns) btns[k].classList.toggle('on', k === s); draw(); }
+  btns.both.addEventListener('click', () => setShow('both'));
+  btns.butter.addEventListener('click', () => setShow('butter'));
+  btns.cheby.addEventListener('click', () => setShow('cheby'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §20.2 — ripple ↔ ripidità
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wrp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wrp-out');
+  const rS = document.getElementById('wrp-r'), oS = document.getElementById('wrp-o');
+  const rV = document.getElementById('wrp-rv'), oV = document.getElementById('wrp-ov');
+  const fc = 0.28;
+
+  function draw() {
+    const ripple = parseFloat(rS.value), n = parseInt(oS.value, 10);
+    rV.textContent = ripple.toFixed(2); oV.textContent = n;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 0.5, ymin: 0, ymax: 1.15 });
+    // banda passante evidenziata
+    p.rect(0, 0, fc, 1.15, { fill: 'color-mix(in srgb, var(--green) 9%, transparent)', color: 'none' });
+    p.grid(0.1, 0.5); p.axes({ numbers: true, names: true, xname: 'frequenza', yname: '|H|', stepX: 0.1, stepY: 0.5 });
+    p.line(fc, 0, fc, 1.15, { color: 'var(--ink-faint)', width: 1, dash: '4 3' });
+    const pts = [];
+    for (let f = 0; f <= 0.5; f += 0.0015) pts.push([f, chebyMag(f, fc, n, ripple)]);
+    p.poly(pts, { color: 'var(--warm)', width: 2.4, close: false });
+
+    // stima larghezza transizione: da |H|=0.95 a |H|=0.05
+    let fp = 0, fs = 0.5;
+    for (let f = 0; f <= fc; f += 0.001) if (chebyMag(f, fc, n, ripple) >= 0.95) fp = f;
+    for (let f = fc; f <= 0.5; f += 0.001) { if (chebyMag(f, fc, n, ripple) <= 0.05) { fs = f; break; } }
+    const trans = fs - fp;
+    out.innerHTML = `
+      <div class="big">ripple <b>${ripple.toFixed(2)}%</b> · ordine <b>${n}</b> &nbsp;·&nbsp; transizione ≈ <b>${trans.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Nella <b style="color:var(--green)">banda passante</b> vedi ${ripple < 0.3 ? 'un\'ondulazione appena percettibile' : ripple > 1.5 ? 'un\'ondulazione ben visibile' : 'una lieve ondulazione'};
+        in cambio la transizione è <mark>${trans < 0.06 ? 'molto ripida' : 'più ripida che con Butterworth'}</mark>.
+        Alza il ripple e guarda il taglio affilarsi: è la moneta di scambio del Chebyshev.
+      </div>`;
+  }
+  rS.addEventListener('input', draw); oS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

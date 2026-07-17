@@ -303,7 +303,7 @@ const TOC = [
     n: 20,
     titolo: "Filtri di Chebyshev",
     file: "cap20-chebyshev.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s20-1", n: "20.1", t: "Butterworth e Chebyshev a confronto" },
       { id: "s20-2", n: "20.2", t: "Il ripple in banda passante" },
