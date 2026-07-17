@@ -225,7 +225,7 @@ const TOC = [
   },
   {
     n: 19, parte: "III · Probabilità",
-    titolo: "Valore atteso", file: "cap19-valore-atteso.html", stato: "da-fare",
+    titolo: "Valore atteso", file: "cap19-valore-atteso.html", stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "La media di una distribuzione" },
       { id: "s19-2", n: "19.2", t: "La formula del valore atteso" },
