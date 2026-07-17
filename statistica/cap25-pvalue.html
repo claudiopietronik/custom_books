@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>25 · Il p-value — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="25">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Il p-value</h1>
+    <p class="standfirst">
+      Il numero più citato e più frainteso della statistica. Il <b>p-value</b> misura <em>quanto</em> i dati sono
+      strani sotto l'ipotesi nulla: la probabilità di osservare un risultato <b>almeno così estremo</b> se \(H_0\)
+      fosse vera. Piccolo p-value = dati sorprendenti = sospetto contro \(H_0\). Ma attento: <em>non</em> è la
+      probabilità che \(H_0\) sia vera.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Trasforma la decisione sì/no del Cap. 24 in un numero continuo. È l'area di coda della CDF (Cap. 17) sulla
+      distribuzione nulla, e sarà l'output finale di ogni test della Parte IV. Il suo rovescio — gli errori che
+      può causare — è il Cap. 26.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «\(p < 0{,}05\)» decide pubblicazioni, approvazioni di farmaci, scelte aziendali. Eppure è frainteso da
+      studenti, giornalisti e persino ricercatori. Capirlo <em>davvero</em> — cosa dice e cosa no — è forse la
+      singola competenza statistica che protegge di più da conclusioni sbagliate.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-1"><span class="secnum">SEZIONE 25.1</span>Cosa misura davvero</h2>
+
+  <p class="lead">
+    Il <b>p-value</b> è la probabilità di ottenere un risultato estremo <em>quanto</em> (o più di) quello
+    osservato, <b>assumendo vera \(H_0\)</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il p-value <span class="tag">quanto sono strani i dati sotto H₀</span></div>
+    <div class="f-body">
+      \[ p\text{-value} \;=\; \Prob\big(\,\text{statistica} \ge \text{osservata} \;\big|\; \hA{H_0}\,\big) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\ge \text{osservata}\)</dt><dd>«almeno così estrema»: il p-value include il valore visto <b>e tutti quelli più estremi</b>.</dd>
+        <dt>\(\hA{H_0}\)</dt><dd>tutto è calcolato <b>nel mondo in cui \(H_0\) è vera</b> (la distribuzione nulla).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È un'<b>area di coda</b> sulla distribuzione nulla (Cap. 17): \(1 - F(\text{osservata})\). Piccolo →
+      il risultato è raro sotto \(H_0\) → <mark>i dati mal si accordano con \(H_0\)</mark>. Grande → il risultato
+      è banale sotto \(H_0\) → nessun sospetto.
+    </div>
+  </div>
+
+  <h3>Provalo: il p-value come area di coda</h3>
+
+  <p>
+    Trascina la statistica osservata e guarda l'<b style="color:var(--warm)">area di coda</b> — il p-value —
+    restringersi man mano che ti spingi verso l'estremo. Passa da una a due code e osserva il p-value
+    raddoppiare.
+  </p>
+
+  <div class="widget" id="w-pv">
+    <div class="w-head">
+      <span>Il p-value è un'area</span>
+      <span class="hint">più estremo = p più piccolo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpv-svg" viewBox="0 0 620 240" role="img" aria-label="Il p-value come area di coda sotto la distribuzione nulla"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wpv-two">due code</button>
+      <button class="w-btn" id="wpv-one">una coda</button>
+    </div>
+    <div class="w-readout" id="wpv-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-2"><span class="secnum">SEZIONE 25.2</span>La soglia α</h2>
+
+  <p class="lead">
+    Per trasformare il p-value in una decisione serve una soglia: il livello di significatività \(\alpha\),
+    fissato <b>prima</b> di guardare i dati.
+  </p>
+
+  <p>
+    La convenzione più diffusa è \(\alpha = 0{,}05\). La regola: se \(p \le \alpha\) si rifiuta \(H_0\)
+    («risultato statisticamente significativo»); se \(p > \alpha\) non si rifiuta. Ma \(\alpha = 0{,}05\) non ha
+    nulla di sacro — è una convenzione storica. In fisica delle particelle si pretende \(\alpha\) minuscoli
+    («5 sigma», \(p \approx 3\times 10^{-7}\)); in studi esplorativi si è più permissivi. <mark>La soglia va
+    scelta prima</mark>, non aggiustata dopo aver visto il p-value.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Significativo ≠ importante</div>
+    <p style="margin-bottom:0">
+      «Statisticamente significativo» significa solo «improbabile per caso», <b>non</b> «grande» o «rilevante».
+      Con un campione enorme, differenze <em>minuscole</em> e praticamente inutili risultano significative
+      (\(p\) piccolo). Sempre da affiancare al p-value: la <b>dimensione dell'effetto</b> (di quanto?) e
+      l'<b>intervallo di confidenza</b> (Cap. 34). Un \(p = 0{,}001\) su un effetto trascurabile è un trionfo
+      inutile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-3"><span class="secnum">SEZIONE 25.3</span>Una e due code</h2>
+
+  <p class="lead">
+    La domanda cambia da che parte guardi. Un test a <b>due code</b> cerca una differenza in <em>qualunque</em>
+    direzione; uno a <b>una coda</b>, solo in una direzione specifica.
+  </p>
+
+  <ul>
+    <li><b>Due code</b> (\(H_1: \neq\)): «le medie sono diverse», senza dire in che verso. Il p-value somma
+      entrambe le code. È il default prudente.</li>
+    <li><b>Una coda</b> (\(H_1: >\) oppure \(<\)): «la media è <em>maggiore</em>». Il p-value è una sola coda,
+      quindi <b>metà</b> — più facile risultare significativi, ma solo se hai deciso la direzione <em>prima</em>
+      per una ragione sostanziale.</li>
+  </ul>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> La trappola dell'una coda</div>
+    <p style="margin-bottom:0">
+      Scegliere «una coda» <em>dopo</em> aver visto che i dati vanno in quella direzione, solo per dimezzare il
+      p-value e scavallare 0,05, è una forma di <b>p-hacking</b>. La direzione va giustificata a priori. Nel
+      dubbio, usa <b>due code</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-4"><span class="secnum">SEZIONE 25.4</span>Cosa il p-value NON è</h2>
+
+  <p class="lead">
+    Qui si annidano gli errori più gravi. Impara questi «non è» a memoria: ti salveranno da conclusioni sbagliate
+    per tutta la vita.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> I quattro «non è» del p-value</div>
+    <ol style="margin-bottom:0">
+      <li><b>NON è \(\Prob(H_0\text{ vera})\).</b> È \(\Prob(\text{dati}\mid H_0)\), non
+        \(\Prob(H_0\mid \text{dati})\) — invertire il condizionamento è l'errore di Bayes (Cap. 21). Il p-value
+        assume \(H_0\) vera, non ne calcola la probabilità.</li>
+      <li><b>NON è la probabilità di aver sbagliato.</b> Quella dipende anche dal prior e dalla potenza.</li>
+      <li><b>NON misura la dimensione dell'effetto.</b> Un \(p\) piccolissimo può accompagnare un effetto minuscolo
+        (§25.2).</li>
+      <li><b>\(p > 0{,}05\) NON prova \(H_0\).</b> Assenza di evidenza non è evidenza di assenza (Cap. 24).</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-5"><span class="secnum">SEZIONE 25.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.1</div>
+    <p style="margin-bottom:0">Un test dà \(p = 0{,}03\) con \(\alpha = 0{,}05\). Qual è la decisione? E come
+      interpreti correttamente quel 0,03?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Poiché \(0{,}03 \le 0{,}05\): si <b>rifiuta \(H_0\)</b> (risultato significativo).</p>
+        <p style="margin-bottom:0">Interpretazione: «se \(H_0\) fosse vera, un risultato estremo quanto quello
+          osservato capiterebbe solo il 3% delle volte» (§25.1). <b>Non</b> significa «c'è il 3% che \(H_0\) sia
+          vera» né «il 97% che l'effetto sia reale» (§25.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.2</div>
+    <p style="margin-bottom:0">Uno studio su 500 000 persone trova che un integratore aumenta l'altezza di 0,1 mm,
+      con \(p = 0{,}001\). Ti impressiona?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>No.</b> Il p-value minuscolo dice solo che l'effetto è
+          <em>improbabile per caso</em>, non che sia grande (§25.2). 0,1 mm è del tutto irrilevante nella pratica:
+          con un campione enorme anche effetti trascurabili diventano «significativi». Significativo ≠ importante:
+          guarda sempre la <b>dimensione dell'effetto</b>, non solo il p-value.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 25.3</div>
+    <p style="margin-bottom:0">Un ricercatore ottiene \(p = 0{,}07\) a due code, poi passa a una coda per ottenere
+      \(p = 0{,}035\) e dichiarare significatività. Cosa c'è che non va?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">È <b>p-hacking</b> (§25.3): la scelta tra una e due code va fatta <em>prima</em>
+          di vedere i dati, per una ragione sostanziale, non dopo per far scendere il p-value sotto 0,05.
+          Passare a una coda a posteriori dimezza artificialmente il p-value e gonfia il tasso di falsi positivi.
+          La conclusione «significativa» così ottenuta non è credibile.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s25-6"><span class="secnum">SEZIONE 25.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 25</div>
+    <ol style="margin-bottom:0">
+      <li><b>p-value</b> = \(\Prob(\text{risultato almeno così estremo} \mid H_0)\). Un'area di coda sulla
+        distribuzione nulla.</li>
+      <li><b>Decisione:</b> \(p \le \alpha\) → rifiuta \(H_0\). \(\alpha\) (di solito 0,05) va scelto <b>prima</b>.</li>
+      <li><b>Una vs due code:</b> due code è il default prudente; una coda solo se la direzione è giustificata a
+        priori.</li>
+      <li><b>Non è</b> \(\Prob(H_0)\), non misura l'effetto, e \(p>\alpha\) non prova \(H_0\). Significativo ≠
+        importante.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Fissare una soglia \(\alpha\) significa accettare di sbagliare, ogni tanto. Ma sbagliare come? Ci sono
+    <em>due</em> modi opposti di prendere la decisione sbagliata — condannare un innocente o assolvere un
+    colpevole — e sono in tensione tra loro. È il tema degli <b>errori di Tipo I e II</b> e della <b>potenza</b>,
+    nel <strong>Capitolo 26</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function normalCDF(z){return 0.5*(1+erf(z/Math.SQRT2));}
+function erf(x){const t=1/(1+0.3275911*Math.abs(x));const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y;}
+
+/* ============================================================================
+   WIDGET §25.1 — il p-value come area di coda (una / due code)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpv-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpv-out');
+  const bTwo = document.getElementById('wpv-two'), bOne = document.getElementById('wpv-one');
+  const phi = z => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  let obs = 1.6, twoTailed = true;
+
+  function draw() {
+    bTwo.classList.toggle('on', twoTailed); bOne.classList.toggle('on', !twoTailed);
+    const oneTailP = 1 - normalCDF(Math.abs(obs));
+    const pval = twoTailed ? 2 * oneTailP : oneTailP;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: 0, ymax: 0.45 });
+    p.axes({ numbers: false, names: true, xname: 'statistica test', yname: '' });
+    // area di coda = p-value
+    p.area(phi, Math.abs(obs), 4, { fill: 'color-mix(in srgb, var(--warm) 32%, transparent)' });
+    if (twoTailed) p.area(phi, -4, -Math.abs(obs), { fill: 'color-mix(in srgb, var(--warm) 32%, transparent)' });
+    p.func(phi, { color: 'var(--accent)', width: 2.4, from: -4, to: 4 });
+    p.line(obs, 0, obs, phi(obs) + 0.03, { color: 'var(--warm)', width: 2.4, dash: '4 3' });
+    p.handle(obs, phi(obs), { r: 7, color: 'var(--warm)', axis: 'x' }, (x) => { obs = Math.max(-3.9, Math.min(3.9, x)); draw(); });
+    p.text(0, 0.2, 'H₀ vera', { color: 'var(--accent)', size: 11 });
+
+    const sig = pval <= 0.05;
+    out.innerHTML = `
+      <div class="big">p-value = <b style="color:${sig ? 'var(--warm)' : 'var(--ink)'}">${pval < 0.001 ? pval.toExponential(1) : pval.toFixed(3)}</b> ${sig ? '(≤ 0,05: significativo)' : '(> 0,05)'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il p-value è l'<mark>area arancione</mark> ${twoTailed ? '(entrambe le code)' : '(una coda sola)'}: la
+        probabilità di un risultato estremo quanto ${obs.toFixed(2)} se H₀ è vera. Spingi la statistica verso
+        l'estremo e l'area si riduce. ${twoTailed ? 'Passando a una coda, il p-value si dimezza.' : 'A una coda conti solo il lato destro: p è metà di quello a due code.'}
+      </div>`;
+  }
+  bTwo.addEventListener('click', () => { twoTailed = true; draw(); });
+  bOne.addEventListener('click', () => { twoTailed = false; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

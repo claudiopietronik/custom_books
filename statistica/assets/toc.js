@@ -296,7 +296,7 @@ const TOC = [
   },
   {
     n: 25, parte: "IV · Statistica inferenziale",
-    titolo: "Il p-value", file: "cap25-pvalue.html", stato: "da-fare",
+    titolo: "Il p-value", file: "cap25-pvalue.html", stato: "pronto",
     sezioni: [
       { id: "s25-1", n: "25.1", t: "Cosa misura davvero" },
       { id: "s25-2", n: "25.2", t: "La soglia α" },
