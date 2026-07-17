@@ -37,7 +37,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 13 — Proiezioni
 - [x] 14 — Minimi quadrati
 - [x] 15 — Autodecomposizione
-- [ ] 16 — La SVD
+- [x] 16 — La SVD
 - [ ] 17 — Forma quadratica
 - [ ] 18 — Matrici di covarianza
 - [ ] 19 — PCA

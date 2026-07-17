@@ -282,7 +282,7 @@ const TOC = [
     n: 16,
     titolo: "La SVD",
     file: "cap16-svd.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Decomposizione ai valori singolari" },
       { id: "s16-2", n: "16.2", t: "Calcolare la SVD" },

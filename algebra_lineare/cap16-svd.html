@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · La SVD — Algebra Lineare</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16</div>
+    <h1>La SVD</h1>
+    <p class="standfirst">
+      L'autodecomposizione era splendida ma capricciosa: pretende una matrice <b>quadrata</b> e a volte
+      <b>fallisce</b>. La decomposizione ai valori singolari non si arrende mai. Qualunque matrice — alta,
+      larga, singolare, storta — si spezza in <mark>ruota, allunga, ruota</mark>: due rotazioni ortogonali e
+      uno stiramento lungo assi perpendicolari. È la decomposizione più importante di tutta l'algebra lineare,
+      e da qui in poi useremo <em>lei</em>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prendiamo il meglio del Capitolo 15 — le due matrici ortogonali del teorema spettrale (§15.8) — e lo
+      estendiamo a <em>ogni</em> matrice del mondo. Definiamo \(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\)
+      (§16.1) e impariamo a calcolarla via \(\mm{A}\T\mm{A}\) (§16.2), chiarendo il legame con gli autovalori
+      (§§16.3–16.4). Poi il colpo di teatro: la SVD <b>illumina i quattro sottospazi</b> (§16.5) e dà il
+      <b>rango</b> vero (§16.6). Da lì le applicazioni che fanno la SVD famosa: strati di rango basso e
+      compressione (§§16.7–16.9), numero di condizionamento (§16.10), inversa (§16.11) e infine la
+      <b>pseudoinversa</b> che chiude il cerchio con i minimi quadrati (§16.12).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la chiave universale</div>
+    <p>
+      Compressione di immagini, sistemi di raccomandazione (la SVD di Netflix), riduzione del rumore,
+      ricostruzione di dati mancanti, la pseudoinversa, la PCA, l'analisi semantica latente: <mark>sono tutte
+      la stessa decomposizione.</mark> Ogni volta che una matrice rappresenta dei dati e vuoi trovarne la
+      struttura, la direzione dominante, o «la parte che conta», la risposta è la SVD.
+    </p>
+    <p style="margin-bottom:0">
+      Il motivo profondo è che la SVD dice, di qualunque matrice, <em>tutto</em>: rango, quattro sottospazi,
+      norma, condizionamento, migliore approssimazione. È il coltellino svizzero — e a differenza
+      dell'autodecomposizione, <b>esiste sempre</b>. Il Capitolo 15 era la prova generale; questo è lo
+      spettacolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>Decomposizione ai valori singolari</h2>
+
+  <p class="lead">
+    L'idea in una riga: <b>ogni</b> trasformazione lineare, per quanto storta, è in fondo una rotazione, poi
+    uno stiramento lungo assi perpendicolari, poi un'altra rotazione. La SVD trova quei tre gesti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La decomposizione ai valori singolari <span class="tag">ruota · allunga · ruota</span></div>
+    <div class="f-body">
+      \[ \boxed{\;\mm{A} = \mm{U}\,\boldsymbol{\Sigma}\,\mm{V}\T\;} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\) — \(M\times N\)</dt>
+        <dd>qualunque matrice: <b>non serve</b> che sia quadrata, invertibile, o alcunché. È la grande
+            libertà rispetto al Capitolo 15.</dd>
+        <dt>\(\mm{V}\) — \(N\times N\), <b>ortogonale</b></dt>
+        <dd>le colonne \(\vv{v}_i\) sono i <span class="termine">vettori singolari destri</span>: una base
+            ortonormale dello spazio di partenza (\(\R^N\)). \(\mm{V}\T = \mm{V}\inv\) (§13.4). La prima
+            rotazione, letta come \(\mm{V}\T\), <em>allinea</em> gli assi giusti.</dd>
+        <dt>\(\boldsymbol{\Sigma}\) — \(M\times N\), <b>diagonale ≥ 0</b></dt>
+        <dd>sulla diagonale i <span class="termine">valori singolari</span>
+            \(\sigma_1 \ge \sigma_2 \ge \dots \ge 0\): i fattori di stiramento, ordinati dal più grande.
+            Sempre reali e non negativi (§16.3). Fuori diagonale, zeri. È lo stiramento puro.</dd>
+        <dt>\(\mm{U}\) — \(M\times M\), <b>ortogonale</b></dt>
+        <dd>le colonne \(\vv{u}_i\) sono i <span class="termine">vettori singolari sinistri</span>: base
+            ortonormale dello spazio d'arrivo (\(\R^M\)). La seconda rotazione, che rimette gli assi stirati
+            nella loro posizione finale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un modo compatto di leggerla: la matrice manda i vettori ortonormali \(\vv{v}_i\) nei vettori ortogonali
+      \(\sigma_i\vv{u}_i\). Cioè \(\mm{A}\vv{v}_i = \sigma_i\vv{u}_i\): <mark>una base ortonormale in
+      partenza, un'altra in arrivo, e in mezzo solo delle scale.</mark> È l'equazione degli autovalori
+      (§15.1), ma con due basi diverse — ed è ciò che la fa esistere sempre.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il cerchio che diventa ellisse</div>
+    <p style="margin-bottom:0">
+      Ecco l'immagine da tenere in testa per sempre. Prendi tutti i vettori unitari: formano un
+      <b>cerchio</b>. Applica \(\mm{A}\): il cerchio diventa un'<b>ellisse</b>. Gli assi dell'ellisse puntano
+      lungo i \(\vv{u}_i\), e le loro semi-lunghezze sono i \(\sigma_i\). I vettori del cerchio che finiscono
+      <em>esattamente</em> sugli assi dell'ellisse sono i \(\vv{v}_i\). <mark>I valori singolari sono
+      quanto la matrice allunga nelle sue direzioni migliori e peggiori.</mark> Il widget qui sotto è
+      quest'immagine, viva.
+    </p>
+  </div>
+
+  <div class="widget" id="w-svd">
+    <div class="w-head">
+      <span>Il cerchio unitario diventa un'ellisse</span>
+      <span class="hint">scegli una matrice: guarda gli assi σ₁u₁, σ₂u₂</span>
+    </div>
+    <div class="w-stage">
+      <svg id="ws-svg" viewBox="0 0 560 400" role="img" aria-label="Il cerchio unitario trasformato in ellisse dalla matrice A, con gli assi principali dati dai valori singolari"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn" id="ws-a">A = [[3,0],[4,5]]</button>
+      <button class="w-btn" id="ws-b">A = [[2,1],[1,2]]</button>
+      <button class="w-btn" id="ws-c">A = [[1,2],[2,4]] (rango 1)</button>
+    </div>
+    <div class="w-readout" id="ws-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Calcolare la SVD</h2>
+
+  <p class="lead">
+    Come si trovano \(\mm{U}\), \(\boldsymbol{\Sigma}\), \(\mm{V}\)? Con un trucco che riporta tutto al
+    Capitolo 15: moltiplica \(\mm{A}\) per la sua trasposta e ottieni una matrice <b>simmetrica</b>, di cui
+    sai già tutto.
+  </p>
+
+  <p>
+    Parti da \(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\) e costruisci \(\mm{A}\T\mm{A}\). Le \(\mm{U}\) si
+    elidono (\(\mm{U}\T\mm{U} = \mm{I}\), §13.4) e resta qualcosa di puramente in termini di \(\mm{V}\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La SVD nasce dagli autovettori di \(\mm{A}\T\mm{A}\) <span class="tag">simmetrica → teorema spettrale</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\T\mm{A} = (\mm{U}\boldsymbol{\Sigma}\mm{V}\T)\T(\mm{U}\boldsymbol{\Sigma}\mm{V}\T)
+        = \mm{V}\boldsymbol{\Sigma}\T\mm{U}\T\mm{U}\boldsymbol{\Sigma}\mm{V}\T
+        = \mm{V}\,(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma})\,\mm{V}\T
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\mm{A}\T\mm{A} = \mm{V}(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma})\mm{V}\T\)</dt>
+        <dd>è <em>esattamente</em> l'autodecomposizione di una matrice simmetrica (§15.8)! Quindi i vettori
+            singolari destri \(\mm{V}\) sono gli <b>autovettori di \(\mm{A}\T\mm{A}\)</b>, e
+            \(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma}\) ne ha gli autovalori sulla diagonale.</dd>
+        <dt>\(\sigma_i = \sqrt{\lambda_i}\)</dt>
+        <dd>gli autovalori di \(\mm{A}\T\mm{A}\) sono i \(\sigma_i^2\): i <b>valori singolari sono le radici</b>
+            degli autovalori di \(\mm{A}\T\mm{A}\). Reali e \(\ge 0\) perché \(\mm{A}\T\mm{A}\) è semidefinita
+            positiva (§7.7, §17.6): i suoi autovalori non sono mai negativi.</dd>
+        <dt>\(\vv{u}_i = \dfrac{1}{\sigma_i}\mm{A}\vv{v}_i\)</dt>
+        <dd>trovati i \(\vv{v}_i\) e i \(\sigma_i\), i vettori singolari sinistri escono dalla relazione
+            \(\mm{A}\vv{v}_i = \sigma_i\vv{u}_i\). (In alternativa: \(\mm{U}\) sono gli autovettori di
+            \(\mm{A}\mm{A}\T\), §7.7.)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <p>
+    Facciamolo su \(\mm{A} = \begin{bmatrix} 3 &amp; 0 \\ 4 &amp; 5 \end{bmatrix}\).
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>\(\mm{A}\T\mm{A}\):</b> \(\begin{bmatrix} 3 &amp; 4 \\ 0 &amp; 5 \end{bmatrix}\begin{bmatrix} 3 &amp; 0 \\ 4 &amp; 5 \end{bmatrix}
+      = \begin{bmatrix} 25 &amp; 20 \\ 20 &amp; 25 \end{bmatrix}\). Autovalori: \((25-\lambda)^2 - 400 = 0\) →
+      \(\lambda = 45,\ 5\). Quindi \(\sigma_1 = \sqrt{45} = 3\sqrt5,\ \sigma_2 = \sqrt5\).
+    </li>
+    <li>
+      <b>Vettori singolari destri</b> (autovettori di \(\mm{A}\T\mm{A}\), §15.3):
+      \(\lambda = 45 \to \vv{v}_1 = \tfrac{1}{\sqrt2}(1, 1)\); \(\lambda = 5 \to \vv{v}_2 = \tfrac{1}{\sqrt2}(1, -1)\).
+    </li>
+    <li>
+      <b>Vettori singolari sinistri</b> \(\vv{u}_i = \mm{A}\vv{v}_i / \sigma_i\):
+      \(\mm{A}\vv{v}_1 = \tfrac{1}{\sqrt2}(3, 9)\), diviso \(3\sqrt5\): \(\vv{u}_1 = \tfrac{1}{\sqrt{10}}(1, 3)\).
+      \(\mm{A}\vv{v}_2 = \tfrac{1}{\sqrt2}(3, -1)\), diviso \(\sqrt5\): \(\vv{u}_2 = \tfrac{1}{\sqrt{10}}(3, -1)\).
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il controllo che non tradisce</div>
+    <p style="margin-bottom:0">
+      La somma dei quadrati dei valori singolari è la norma di Frobenius al quadrato (§6.10):
+      \(\sum_i \sigma_i^2 = \norm{\mm{A}}_F^2 = \sum_{ij} a_{ij}^2\). Qui: \(45 + 5 = 50\), e
+      \(3^2 + 0^2 + 4^2 + 5^2 = 9 + 16 + 25 = 50\) ✔. Inoltre \(\prod_i \sigma_i = \abs{\det\mm{A}}\):
+      \(3\sqrt5 \cdot \sqrt5 = 15 = \abs{\det\mm{A}}\) ✔ (l'area del §11.1). Due verifiche in dieci secondi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Valori singolari e autovalori</h2>
+
+  <p class="lead">
+    Attenzione a non confonderli: valori singolari e autovalori sono <em>cugini, non gemelli</em>. Coincidono
+    solo in un caso speciale, e le differenze contano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il legame, e le differenze <span class="tag">σ dalle radici di AᵀA</span></div>
+    <div class="f-body">
+      \[ \sigma_i(\mm{A}) = \sqrt{\lambda_i(\mm{A}\T\mm{A})} \]
+    </div>
+    <div class="f-note">
+      In generale i \(\sigma_i\) <b>non</b> sono i \(\abs{\lambda_i(\mm{A})}\). Le differenze chiave:
+      i valori singolari sono <b>sempre reali e \(\ge 0\)</b> (anche quando gli autovalori sono complessi o
+      negativi, §15.7); esistono <b>per ogni matrice</b>, anche rettangolare o difettosa (dove gli autovalori
+      falliscono, §15.5); e i vettori singolari sinistri e destri sono <b>ortonormali per costruzione</b>
+      (gli autovettori no, a meno che \(\mm{A}\) sia simmetrica). È tutto ciò che rende la SVD robusta dove
+      l'autodecomposizione è fragile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>SVD di una matrice simmetrica</h2>
+
+  <p class="lead">
+    C'è un caso in cui SVD e autodecomposizione quasi si toccano: le matrici simmetriche. Vale la pena
+    guardarlo, perché mostra <em>esattamente</em> dove le due decomposizioni divergono.
+  </p>
+
+  <p>
+    Sia \(\mm{A}\) simmetrica, con decomposizione spettrale \(\mm{A} = \mm{Q}\boldsymbol{\Lambda}\mm{Q}\T\)
+    (§15.8), autovalori reali \(\lambda_i\). Allora \(\mm{A}\T\mm{A} = \mm{A}^2 = \mm{Q}\boldsymbol{\Lambda}^2\mm{Q}\T\),
+    con autovalori \(\lambda_i^2\). Quindi:
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Per una simmetrica: \(\sigma_i = \abs{\lambda_i}\)</div>
+    <p style="margin-bottom:0">
+      I valori singolari di una matrice simmetrica sono i <b>moduli</b> dei suoi autovalori:
+      \(\sigma_i = \sqrt{\lambda_i^2} = \abs{\lambda_i}\). Se tutti i \(\lambda_i \ge 0\) (matrice
+      <b>semidefinita positiva</b>, §17.5), allora SVD e autodecomposizione <mark>coincidono</mark>:
+      \(\mm{U} = \mm{V} = \mm{Q}\) e \(\boldsymbol{\Sigma} = \boldsymbol{\Lambda}\). Se qualche \(\lambda_i\) è
+      <b>negativo</b>, la SVD lo rende positivo (\(\sigma = \abs{\lambda}\)) e «parcheggia» il segno meno
+      dentro \(\mm{U}\) o \(\mm{V}\): quel vettore singolare sinistro è l'opposto del destro
+      (\(\vv{u}_i = -\vv{v}_i\)). La SVD non ammette scale negative — le trasforma in una riflessione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>SVD e i quattro sottospazi</h2>
+
+  <p class="lead">
+    Qui la SVD ripaga tutto il Capitolo 8 in un colpo solo. Le colonne di \(\mm{U}\) e \(\mm{V}\), divise dal
+    rango, sono <b>basi ortonormali pronte</b> per i quattro sottospazi fondamentali. Nient'altro le dà così,
+    gratis.
+  </p>
+
+  <p>
+    Sia \(r\) il rango di \(\mm{A}\) (§16.6): il numero di valori singolari non nulli. Allora le prime \(r\)
+    colonne e le ultime si spartiscono lo spazio con precisione chirurgica:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Basi ortonormali per i quattro sottospazi <span class="tag">il grande disegno del §8.9</span></div>
+    <div class="f-body">
+      \[
+        \begin{array}{ll}
+          \vv{v}_1, \dots, \vv{v}_r &amp; \text{base di } \Row(\mm{A}) \\
+          \vv{v}_{r+1}, \dots, \vv{v}_N &amp; \text{base di } \Null(\mm{A}) \\
+          \vv{u}_1, \dots, \vv{u}_r &amp; \text{base di } \Col(\mm{A}) \\
+          \vv{u}_{r+1}, \dots, \vv{u}_M &amp; \text{base di } \Null(\mm{A}\T)
+        \end{array}
+      \]
+    </div>
+    <div class="f-note">
+      I <b>primi</b> \(r\) vettori singolari (destri e sinistri) coprono lo spazio delle righe e delle colonne;
+      gli <b>ultimi</b> (quelli con \(\sigma = 0\)) coprono i due spazi nulli. E poiché \(\mm{U}\) e \(\mm{V}\)
+      sono ortogonali, queste basi sono <b>ortonormali</b> e i sottospazi risultano automaticamente
+      <b>perpendicolari</b> a coppie (§8.9): \(\Row \perp \Null\), \(\Col \perp \Null(\mm{A}\T)\). La
+      «cambiale» dei quattro spazi, saldata per l'ultima volta — e nel modo più pulito possibile.
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> \(\mm{A}\vv{v}_i = \sigma_i\vv{u}_i\), riletta</div>
+    <p style="margin-bottom:0">
+      La relazione fondamentale spiega tutto. Se \(\sigma_i > 0\): \(\vv{v}_i\) (nello spazio delle righe)
+      viene mandato in \(\sigma_i\vv{u}_i\) (nello spazio delle colonne) — la matrice <em>lavora</em> su questa
+      direzione. Se \(\sigma_i = 0\): \(\mm{A}\vv{v}_i = \vv{0}\), cioè \(\vv{v}_i \in \Null(\mm{A})\) — la
+      matrice <em>butta via</em> questa direzione (§8.6). <mark>I valori singolari non nulli contano le
+      direzioni su cui la matrice agisce; gli zeri contano quelle che annienta.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>SVD e rango</h2>
+
+  <p class="lead">
+    Il rango, che nel Capitolo 7 abbiamo faticato a definire con precisione, dalla SVD si legge a occhio: è
+    <b>quanti valori singolari sono diversi da zero</b>. Semplice, e soprattutto <em>affidabile</em>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il rango è il numero di \(\sigma\) non nulli</div>
+    <p style="margin-bottom:0">
+      \[ \rank(\mm{A}) = \#\{\, i : \sigma_i > 0 \,\}. \]
+      Ogni valore singolare positivo è una direzione su cui la matrice agisce davvero (§16.5); ogni zero è una
+      dimensione persa. Sul \(\mm{A} = \begin{bmatrix} 1 &amp; 2 \\ 2 &amp; 4 \end{bmatrix}\) del widget:
+      \(\mm{A}\T\mm{A} = \begin{bmatrix} 5 &amp; 10 \\ 10 &amp; 20 \end{bmatrix}\), autovalori \(25\) e \(0\),
+      dunque \(\sigma_1 = 5,\ \sigma_2 = 0\): <b>rango 1</b> — righe e colonne proporzionali, una sola
+      direzione (§7.2).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il rango numerico: perché la SVD vince</div>
+    <p style="margin-bottom:0">
+      Nel §11.9 e §15.9 avevo avvertito: contare pivot o autovalori nulli è fragile quando i numeri sono
+      «sporchi» (misure, arrotondamenti). Un valore che <em>dovrebbe</em> essere \(0\) esce come
+      \(0{.}00000004\), e un algoritmo ingenuo grida «rango pieno!». La SVD risolve il problema alla radice:
+      guardi i valori singolari, e quelli minuscoli (sotto una soglia) li chiami zero. Questo è il
+      <span class="termine">rango numerico</span>, ed è il modo in cui il rango si calcola <em>davvero</em>
+      nella pratica. <mark>La SVD trasforma una domanda sì/no fragile in una misura continua e robusta.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Teoria spettrale via SVD</h2>
+
+  <p class="lead">
+    Come per le simmetriche (§15.10), la SVD si può leggere come una <b>somma di strati</b> di rango 1 — ma
+    ora per <em>qualsiasi</em> matrice. È la forma che rende naturale la compressione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La matrice come somma di strati <span class="tag">un valore singolare, uno strato</span></div>
+    <div class="f-body">
+      \[ \mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T = \sum_{i=1}^{r} \sigma_i\,\vv{u}_i\vv{v}_i\T \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\vv{u}_i\vv{v}_i\T\)</dt>
+        <dd>è un <b>prodotto esterno</b> (§3.6): una matrice \(M\times N\) di <b>rango 1</b> (§7.1), lo strato
+            \(i\)-esimo. Ha norma 1 (\(\vv{u}_i\) e \(\vv{v}_i\) sono unitari).</dd>
+        <dt>\(\sigma_i\)</dt>
+        <dd>è il <b>peso</b> dello strato: la sua importanza. Poiché \(\sigma_1 \ge \sigma_2 \ge \dots\), gli
+            strati sono già ordinati dal più al meno importante.</dd>
+        <dt>somma fino a \(r\)</dt>
+        <dd>solo i \(\sigma_i > 0\) contribuiscono (§16.6): la matrice è la somma di \(r\) strati, uno per
+            direzione su cui agisce. <mark>Ogni matrice è una pila di prodotti esterni pesati.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È la stessa idea degli «eigenlayer» del §15.10, generalizzata: là servivano matrici simmetriche e
+      autovalori; qui vale per <em>tutte</em> le matrici, con i valori singolari. E poiché i pesi sono in
+      ordine, tenere solo i primi è un'ottima approssimazione — la prossima sezione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Approssimazioni a rango basso</h2>
+
+  <p class="lead">
+    Ecco l'applicazione regina. Se la matrice è una somma di strati ordinati per importanza, <b>butta via gli
+    strati piccoli</b>: ottieni una matrice più semplice che assomiglia moltissimo all'originale. È la base
+    della compressione e del denoising.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La migliore approssimazione di rango \(k\) <span class="tag">tieni i primi k strati</span></div>
+    <div class="f-body">
+      \[ \mm{A}_k = \sum_{i=1}^{k} \sigma_i\,\vv{u}_i\vv{v}_i\T \qquad (k < r) \]
+    </div>
+    <div class="f-note">
+      Il <b>teorema di Eckart-Young</b> dice qualcosa di forte: fra <em>tutte</em> le matrici di rango \(k\),
+      questa \(\mm{A}_k\) è la <b>più vicina possibile</b> ad \(\mm{A}\) (in norma). Non c'è approssimazione di
+      rango \(k\) migliore. E l'errore che commetti è esattamente il primo valore singolare buttato via:
+      \(\norm{\mm{A} - \mm{A}_k} = \sigma_{k+1}\). <mark>I valori singolari ti dicono in anticipo quanto ti
+      costerà semplificare.</mark>
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Comprimere un'immagine, per capirla</div>
+    <p style="margin-bottom:0">
+      Un'immagine in scala di grigi è una matrice di pixel. Farne la SVD e tenere solo i primi \(k\) strati
+      (\(k\) piccolo) la ricostruisce quasi identica, ma memorizzando pochi vettori invece di tutta la
+      griglia: da \(M\cdot N\) numeri a \(k(M + N + 1)\). Se i valori singolari <b>crollano</b> in fretta —
+      come succede quasi sempre nei dati reali, che hanno struttura — pochi strati bastano. Le direzioni con
+      \(\sigma\) grande portano la <em>forma</em>; quelle con \(\sigma\) piccolo, il <em>dettaglio fine e il
+      rumore</em>. Buttare il rumore <em>migliora</em> i dati: è il denoising.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-9"><span class="secnum">Sezione 16.9</span>Normalizzare i valori singolari</h2>
+
+  <p class="lead">
+    Per decidere quanti strati tenere serve una domanda quantitativa: «quanta parte dei dati cattura ciascun
+    valore singolare?». La risposta si legge normalizzando i \(\sigma\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Percentuale di «energia» spiegata <span class="tag">σ² perché conta l'energia</span></div>
+    <div class="f-body">
+      \[ p_i = \frac{\sigma_i^2}{\sum_{j} \sigma_j^2} \qquad (\text{frazione spiegata dallo strato } i) \]
+    </div>
+    <div class="f-note">
+      Si normalizza \(\sigma_i^2\), non \(\sigma_i\), perché il denominatore \(\sum\sigma_j^2 =
+      \norm{\mm{A}}_F^2\) è l'«energia» totale (§16.2). Ogni \(p_i\) è la frazione catturata dallo strato
+      \(i\)-esimo, e sommano a 1. Sul nostro \(\mm{A} = \begin{bmatrix} 3 &amp; 0 \\ 4 &amp; 5 \end{bmatrix}\):
+      \(p_1 = 45/50 = 90\%\), \(p_2 = 5/50 = 10\%\). Il primo strato da solo spiega il 90% della matrice.
+    </div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> Lo scree plot e il gomito</div>
+    <p style="margin-bottom:0">
+      Se disegni i \(p_i\) in ordine ottieni uno <span class="termine">scree plot</span> (grafico a ghiaione):
+      quasi sempre precipita e poi si appiattisce. Il «gomito» — dove smette di scendere ripido — suggerisce
+      quanti strati tenere: prima del gomito c'è il segnale, dopo il rumore. È il criterio pratico che
+      ritroveremo <em>identico</em> nella PCA (§19.2), dove i \(p_i\) diventano la «varianza spiegata» da ogni
+      componente principale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-10"><span class="secnum">Sezione 16.10</span>Numero di condizionamento</h2>
+
+  <p class="lead">
+    I valori singolari misurano quanto una matrice allunga (\(\sigma_{\max}\)) e quanto <em>schiaccia</em>
+    (\(\sigma_{\min}\)). Il loro rapporto dice quanto è «pericolosa» da invertire — ed è la risposta al
+    tremore promesso alla fine del Capitolo 14.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Numero di condizionamento <span class="tag">il più grande diviso il più piccolo</span></div>
+    <div class="f-body">
+      \[ \kappa(\mm{A}) = \frac{\sigma_{\max}}{\sigma_{\min}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\kappa\) vicino a \(1\)</dt>
+        <dd>matrice <b>ben condizionata</b>: allunga più o meno uguale in ogni direzione (il cerchio diventa
+            un'ellisse quasi tonda). Invertirla e risolvere sistemi è <em>stabile</em>: piccoli errori nei dati
+            danno piccoli errori nella risposta. Una matrice ortogonale ha \(\kappa = 1\) (§13.4): il minimo
+            possibile.</dd>
+        <dt>\(\kappa\) enorme</dt>
+        <dd>matrice <b>mal condizionata</b>: l'ellisse è un ago sottilissimo. Lungo la direzione schiacciata
+            (\(\sigma_{\min}\) minuscolo) l'inversa <em>amplifica</em> enormemente — un errore microscopico nei
+            dati diventa gigantesco nella soluzione. <mark>È il tremore dei minimi quadrati (§14.4): quando le
+            colonne sono quasi collineari, \(\sigma_{\min} \to 0\) e \(\kappa \to \infty\).</mark></dd>
+        <dt>\(\kappa = \infty\)</dt>
+        <dd>\(\sigma_{\min} = 0\): matrice <b>singolare</b>, non invertibile del tutto (§16.6). Il
+            condizionamento è la versione «continua» della singolarità: non solo <em>se</em> è invertibile, ma
+            <em>quanto bene</em>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La regolarizzazione del §14.4 (sommare \(\lambda\mm{I}\)) funziona proprio qui: alza \(\sigma_{\min}\)
+      lontano da zero, abbassa \(\kappa\), stabilizza l'inversa. Ora sai <em>perché</em>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-11"><span class="secnum">Sezione 16.11</span>SVD e inversa di una matrice</h2>
+
+  <p class="lead">
+    Per una matrice quadrata invertibile, la SVD dà l'inversa quasi senza lavoro: rovescia la catena (§6.4) e
+    inverti solo dei numeri.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'inversa via SVD <span class="tag">trasponi le rotazioni, inverti le scale</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\inv = (\mm{U}\boldsymbol{\Sigma}\mm{V}\T)\inv
+        = \mm{V}\,\boldsymbol{\Sigma}\inv\,\mm{U}\T
+      \]
+    </div>
+    <div class="f-note">
+      Tre regali. L'ordine si rovescia (§6.4). Le due rotazioni si invertono <b>gratis</b> per trasposizione
+      (\(\mm{U}\inv = \mm{U}\T\), \(\mm{V}\inv = \mm{V}\T\), §13.4). E \(\boldsymbol{\Sigma}\inv\) è banale:
+      una diagonale si inverte elemento per elemento, \(\diag(1/\sigma_1, \dots, 1/\sigma_N)\) (§12.2). Qui si
+      vede a occhio nudo il condizionamento: se un \(\sigma_i\) è minuscolo, \(1/\sigma_i\) è enorme e l'inversa
+      <b>esplode</b> lungo quella direzione (§16.10).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-12"><span class="secnum">Sezione 16.12</span>La pseudoinversa MP, parte 2</h2>
+
+  <p class="lead">
+    E arriviamo alla vetta, la promessa del §12.8. La formula dell'inversa via SVD ha un difetto: se qualche
+    \(\sigma_i = 0\), \(1/\sigma_i\) non esiste. La <b>pseudoinversa</b> risolve con una mossa di puro genio —
+    e vale per <em>qualunque</em> matrice.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La pseudoinversa di Moore-Penrose <span class="tag">inverti ciò che puoi, ignora gli zeri</span></div>
+    <div class="f-body">
+      \[ \boxed{\;\mm{A}^{+} = \mm{V}\,\boldsymbol{\Sigma}^{+}\,\mm{U}\T\;} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\boldsymbol{\Sigma}^{+}\)</dt>
+        <dd>si costruisce da \(\boldsymbol{\Sigma}\) così: <b>inverti i valori singolari non nulli</b>
+            (\(\sigma_i \to 1/\sigma_i\)) e <b>lascia gli zeri come zeri</b>, poi trasponi la forma (\(N\times M\)).
+            È l'idea geniale: dove la matrice ha buttato via una dimensione (\(\sigma = 0\)), la pseudoinversa
+            non prova a resuscitarla — la lascia a zero.</dd>
+        <dt>\(\mm{A}^{+}\)</dt>
+        <dd>esiste <b>sempre</b>: quadrata o rettangolare, invertibile o singolare, rango pieno o no.
+            <mark>È l'inversa quando c'è, e la miglior cosa possibile quando non c'è.</mark></dd>
+        <dt>i casi che già conosci</dt>
+        <dd>se \(\mm{A}\) è invertibile, \(\mm{A}^{+} = \mm{A}\inv\) (§16.11). Se è alta a rango pieno,
+            \(\mm{A}^{+} = (\mm{A}\T\mm{A})\inv\mm{A}\T\), l'<b>inversa sinistra</b> dei minimi quadrati (§12.6,
+            §14.4). La SVD unifica tutte le pseudoinverse del libro in una sola formula.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco perché i minimi quadrati del Capitolo 14 «funzionavano sempre» anche quando l'inversa non esisteva:
+      dietro le quinte lavorava \(\mm{A}^{+}\). La soluzione ai minimi quadrati di \(\mm{A}\vv{x} = \vv{b}\) è
+      \(\hat{\vv{x}} = \mm{A}^{+}\vv{b}\) — e quando ci sono infinite soluzioni, \(\mm{A}^{+}\) sceglie quella
+      di <b>norma minima</b>. È la risposta più onesta che l'algebra lineare sappia dare.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li><b>La SVD</b> \(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\) esiste <mark>per ogni matrice</mark>:
+          \(\mm{U}, \mm{V}\) ortogonali (rotazioni), \(\boldsymbol{\Sigma}\) diagonale \(\ge 0\) (scale).
+          Geometria: <b>il cerchio diventa un'ellisse</b>, assi \(\vv{u}_i\), semi-lunghezze \(\sigma_i\)
+          (§16.1).</li>
+      <li><b>Si calcola</b> dagli autovettori di \(\mm{A}\T\mm{A}\) (= \(\mm{V}\)), con \(\sigma_i =
+          \sqrt{\lambda_i(\mm{A}\T\mm{A})}\), e \(\vv{u}_i = \mm{A}\vv{v}_i/\sigma_i\) (§16.2). I \(\sigma\)
+          sono sempre reali \(\ge 0\), a differenza degli autovalori (§16.3); per una simmetrica
+          \(\sigma_i = \abs{\lambda_i}\) (§16.4).</li>
+      <li><b>Legge tutto della matrice:</b> le colonne di \(\mm{U}, \mm{V}\) sono basi ortonormali dei
+          <b>quattro sottospazi</b> (§16.5), e <mark>il rango è il numero di \(\sigma\) non nulli</mark> — il
+          modo robusto di contarlo (§16.6).</li>
+      <li><b>Somma di strati</b> \(\mm{A} = \sum \sigma_i\vv{u}_i\vv{v}_i\T\) (§16.7): tenere i primi \(k\) dà
+          la <b>migliore approssimazione di rango \(k\)</b> (Eckart-Young, §16.8) — compressione e denoising.
+          I \(\sigma_i^2\) normalizzati dicono quanta energia cattura ciascuno (§16.9).</li>
+      <li><b>Applicazioni:</b> \(\kappa = \sigma_{\max}/\sigma_{\min}\) misura il condizionamento (§16.10);
+          \(\mm{A}\inv = \mm{V}\boldsymbol{\Sigma}\inv\mm{U}\T\) (§16.11); e la <b>pseudoinversa</b>
+          \(\mm{A}^{+} = \mm{V}\boldsymbol{\Sigma}^{+}\mm{U}\T\) — inverti i \(\sigma\) non nulli, lascia gli
+          zeri — <mark>esiste sempre e unifica tutte le inverse del libro</mark> (§16.12).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la SVD hai in mano lo strumento definitivo: qualunque matrice, aperta nelle sue direzioni e nelle sue
+    scale. I capitoli che restano sono la SVD <em>applicata</em>. Prima però una domanda geometrica rimasta in
+    sospeso: quando fai \(\vv{x}\T\mm{A}\vv{x}\) — un numero che dipende da una matrice e da una direzione —
+    che superficie disegni? È la <b>forma quadratica</b>, il <b>Capitolo 17</b>, e collega gli autovalori
+    (positivi? negativi?) alla <em>forma</em> di quella superficie: colline, valli, o selle. È il ponte verso
+    le matrici di covarianza e la PCA, l'ultimo tratto di strada.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   Utilità condivise.
+   ========================================================================= */
+const nfmt = v => {
+  const r = Math.round(v);
+  return Math.abs(v - r) < 1e-7 ? String(r) : v.toFixed(2);
+};
+const norm2 = a => Math.hypot(a[0], a[1]);
+
+/* SVD di una 2×2 via autodecomposizione di AᵀA (simmetrica, forma chiusa).
+   Ritorna { U:[u1,u2], S:[σ1,σ2], V:[v1,v2] } con σ1 ≥ σ2 ≥ 0. */
+function svd2(A) {
+  const a = A[0][0], b = A[0][1], c = A[1][0], d = A[1][1];
+  // AᵀA = [[p, q],[q, s]]
+  const p = a * a + c * c, q = a * b + c * d, s = b * b + d * d;
+  // autovalori della simmetrica [[p,q],[q,s]]
+  const tr = p + s, det = p * s - q * q;
+  const disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  const l1 = tr / 2 + disc, l2 = Math.max(0, tr / 2 - disc);
+  const s1 = Math.sqrt(l1), s2 = Math.sqrt(l2);
+  // autovettori di AᵀA → vettori singolari destri
+  const evec = (lam) => {
+    let v;
+    if (Math.abs(q) > 1e-9) v = [lam - s, q];
+    else v = (p >= s) ? [1, 0] : [0, 1];      // già diagonale
+    const n = norm2(v) || 1; return [v[0] / n, v[1] / n];
+  };
+  const v1 = evec(l1), v2 = evec(l2);
+  const mul = (M, x) => [M[0][0] * x[0] + M[0][1] * x[1], M[1][0] * x[0] + M[1][1] * x[1]];
+  // vettori singolari sinistri u = A v / σ (fallback ortogonale se σ ≈ 0)
+  const uFrom = (v, sig) => {
+    if (sig > 1e-9) { const w = mul(A, v); return [w[0] / sig, w[1] / sig]; }
+    return null;
+  };
+  let u1 = uFrom(v1, s1), u2 = uFrom(v2, s2);
+  if (!u1) u1 = [1, 0];
+  if (!u2) u2 = [-u1[1], u1[0]];               // completa la base ortonormale
+  return { U: [u1, u2], S: [s1, s2], V: [v1, v2] };
+}
+
+
+/* ============================================================================
+   WIDGET §16.1 — il cerchio unitario diventa ellisse
+   Applica A al cerchio; disegna l'ellisse e gli assi principali σ_i u_i, più i
+   vettori singolari destri v_i sul cerchio di partenza.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('ws-svg');
+  if (!svg) return;
+  const out = document.getElementById('ws-out');
+  const p = new Plot(svg, { xmin: -6.5, xmax: 6.5, ymin: -4.6, ymax: 4.6 });
+
+  const MATS = {
+    a: [[3, 0], [4, 5]],
+    b: [[2, 1], [1, 2]],
+    c: [[1, 2], [2, 4]]
+  };
+  let cur = 'a';
+
+  function draw() {
+    p.clear(); p.grid(); p.axes({ numbers: true });
+    const A = MATS[cur];
+    const { U, S, V } = svd2(A);
+    const mul = (M, x) => [M[0][0] * x[0] + M[0][1] * x[1], M[1][0] * x[0] + M[1][1] * x[1]];
+
+    // cerchio unitario (partenza) e la sua immagine (ellisse)
+    const circ = [], elli = [];
+    for (let t = 0; t <= 6.2832; t += 0.08) {
+      const x = [Math.cos(t), Math.sin(t)];
+      circ.push(x); elli.push(mul(A, x));
+    }
+    p.poly(circ, { color: 'var(--ink-faint)', width: 1.2 });
+    p.poly(elli, { color: 'var(--accent)', width: 2.4 });
+
+    // vettori singolari destri v_i (sul cerchio, tenui)
+    p.arrow(0, 0, V[0][0], V[0][1], { color: 'var(--ink-soft)', width: 1.8, dash: '4 3', label: 'v₁' });
+    p.arrow(0, 0, V[1][0], V[1][1], { color: 'var(--ink-soft)', width: 1.8, dash: '4 3', label: 'v₂' });
+
+    // assi principali dell'ellisse: σ_i u_i
+    const a1 = [S[0] * U[0][0], S[0] * U[0][1]];
+    const a2 = [S[1] * U[1][0], S[1] * U[1][1]];
+    p.arrow(0, 0, a1[0], a1[1], { color: 'var(--violet)', width: 3, label: 'σ₁u₁' });
+    if (S[1] > 1e-6) p.arrow(0, 0, a2[0], a2[1], { color: 'var(--warm)', width: 3, label: 'σ₂u₂' });
+
+    const rank = (S[1] > 1e-6) ? 2 : 1;
+    const kappa = S[1] > 1e-9 ? S[0] / S[1] : Infinity;
+    out.innerHTML = `
+      <div class="big">
+        σ₁ = <b style="color:var(--violet)">${nfmt(S[0])}</b>,
+        &nbsp; σ₂ = <b style="color:var(--warm)">${nfmt(S[1])}</b>
+        &nbsp; · &nbsp; rango = <b>${rank}</b>
+        &nbsp; · &nbsp; κ = <b>${kappa === Infinity ? '∞' : nfmt(kappa)}</b>
+      </div>
+      <div style="margin-top:.4rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il cerchio unitario (tenue) diventa l'<b style="color:var(--accent)">ellisse</b>. I suoi assi puntano
+        lungo u₁, u₂ e sono lunghi σ₁, σ₂. I vettori <b>v₁, v₂</b> (tratteggiati) sono i punti del cerchio che
+        finiscono <em>esattamente</em> sugli assi: A v_i = σ_i u_i.
+        ${rank === 1
+          ? ' <mark>σ₂ = 0</mark>: l\'ellisse è schiacciata su un segmento — rango 1, e κ = ∞ (singolare, §16.6/§16.10).'
+          : ` κ = σ₁/σ₂ = ${nfmt(kappa)} misura quanto è «allungata»: più è grande, più la matrice è mal condizionata (§16.10).`}
+      </div>`;
+  }
+
+  document.getElementById('ws-a').onclick = () => { cur = 'a'; draw(); };
+  document.getElementById('ws-b').onclick = () => { cur = 'b'; draw(); };
+  document.getElementById('ws-c').onclick = () => { cur = 'c'; draw(); };
+  draw();
+})();
+</script>
+</body>
+</html>
