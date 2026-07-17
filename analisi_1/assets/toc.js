@@ -215,7 +215,7 @@ const TOC = [
     n: 12,
     titolo: "L'integrale di Riemann",
     file: "cap12-integrale.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Il problema dell'area" },
       { id: "s12-2", n: "12.2", t: "Somme superiori e inferiori" },

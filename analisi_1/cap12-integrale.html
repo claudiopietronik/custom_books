@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · L'integrale di Riemann — Analisi 1</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∫</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>L'integrale di Riemann</h1>
+    <p class="standfirst">
+      L'altra metà dell'analisi, il secondo dei due problemi fondatori (Cap. 1): l'<b>area</b> sotto una curva.
+      L'idea è antica quanto Archimede — <mark>riempire la regione con rettangoli sempre più stretti e sommare</mark>
+      — ma la chiusura è mozzafiato: scopriremo che calcolare aree è l'operazione <b>inversa</b> del derivare.
+      È il Teorema Fondamentale del Calcolo, il ponte tra le due metà del libro, e uno dei risultati più belli
+      di tutta la matematica.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dal problema dell'area (§12.1) alla sua conquista con <b>somme superiori e inferiori</b> (§12.2), che
+      definiscono l'<b>integrale definito</b> (§12.3). Vediamo <b>quali funzioni</b> sono integrabili (§12.4) e
+      le <b>proprietà</b> del calcolo (§12.5), poi il <b>teorema della media</b> (§12.6). Il finale in tre atti:
+      la <b>funzione integrale</b> (§12.7), il <b>Teorema Fondamentale</b> che la lega alla derivata (§12.8), e
+      le <b>primitive</b> con cui si calcolano davvero gli integrali (§12.9).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: sommare l'infinitamente piccolo</div>
+    <p style="margin-bottom:0">
+      Se la derivata risponde a «quanto sta cambiando?», l'integrale risponde a «quanto si è accumulato?».
+      Spazio percorso da una velocità, lavoro fatto da una forza, carica accumulata da una corrente, probabilità
+      sotto una densità, massa di un oggetto di densità variabile: <mark>ogni «totale» che nasce sommando
+      contributi infinitesimi è un integrale.</mark> È l'operazione con cui si passa dal <em>ritmo locale</em>
+      alla <em>quantità globale</em> — e il Teorema Fondamentale ci dirà che, sorprendentemente, per farlo basta
+      «leggere la derivata al contrario».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Il problema dell'area</h2>
+
+  <p class="lead">
+    Sai calcolare l'area di rettangoli, triangoli, poligoni. Ma l'area di una regione dal bordo <b>curvo</b> —
+    sotto il grafico di una funzione — sfugge alla geometria elementare. Serve un'idea nuova, la stessa di
+    Archimede duemila anni fa.
+  </p>
+
+  <p>
+    L'idea: <b>approssimare la regione curva con tante colonne rettangolari</b>, che l'area la sappiamo
+    calcolare (base per altezza), e poi <b>rimpicciolire la base facendola tendere a zero</b>, aumentando il
+    numero di colonne. Le colonne riempiono la regione sempre meglio; la loro area totale tende all'area vera.
+    È — di nuovo — un <b>limite</b>: come la derivata era il limite di un rapporto, l'integrale sarà il limite
+    di una somma. Il widget del §12.2 mostra le colonne mangiarsi l'area man mano che si assottigliano.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Somme superiori e inferiori</h2>
+
+  <p class="lead">
+    Rendiamo l'idea rigorosa «stringendo» l'area vera tra due stime: una sicuramente <em>troppo piccola</em>
+    (rettangoli bassi) e una sicuramente <em>troppo grande</em> (rettangoli alti). Quando le due si toccano,
+    abbiamo catturato l'area.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Somme di Riemann inferiore e superiore</div>
+    <p style="margin-bottom:0">
+      Dividi \([a, b]\) in \(n\) sottointervalli (una <span class="termine">partizione</span>). Su ciascuno,
+      costruisci due rettangoli: uno alto quanto il <b>minimo</b> di \(f\) lì (rettangolo «basso») e uno alto
+      quanto il <b>massimo</b> (rettangolo «alto»). Sommando: la <span class="termine">somma inferiore</span>
+      \(s_n\) (con i minimi) e la <span class="termine">somma superiore</span> \(S_n\) (con i massimi). Per
+      costruzione, qualunque sia \(n\):
+      \[ s_n \ \le\ \text{area vera} \ \le\ S_n. \]
+      <mark>Raffinando la partizione, \(s_n\) cresce e \(S_n\) cala</mark>: le due morse si stringono attorno
+      all'area, come i due razionali attorno a \(\sqrt2\) (§2.3).
+    </p>
+  </div>
+
+  <div class="widget" id="w-riemann">
+    <div class="w-head">
+      <span>Le somme di Riemann riempiono l'area</span>
+      <span class="hint">aumenta n · cambia il punto-campione</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wr-svg" viewBox="0 0 560 380" role="img" aria-label="Rettangoli sempre più stretti approssimano l'area sotto una curva; la somma tende all'integrale"></svg>
+    </div>
+    <div class="w-controls" id="wr-mode" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; margin-top:.5rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">rettangoli n</label>
+      <input type="range" id="wr-n" min="1" max="60" step="1" value="6" style="flex:1">
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>L'integrale definito</h2>
+
+  <p class="lead">
+    Quando la stima per difetto e quella per eccesso convergono allo <b>stesso</b> numero, quel numero è, per
+    definizione, l'area — l'<b>integrale definito</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Integrale definito <span class="tag">il limite comune delle due somme</span></div>
+    <div class="f-body">
+      \[ \int_a^b f(x)\,\dd x = \lim_{n \to \infty} s_n = \lim_{n \to \infty} S_n \qquad (\text{quando i due coincidono}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\displaystyle\int_a^b\) — il segno di integrale</dt>
+        <dd>una «S» allungata, per <b>Summa</b>: ricorda che stiamo sommando. \(a\) e \(b\) sono gli <b>estremi
+            di integrazione</b> (da dove a dove).</dd>
+        <dt>\(f(x)\) — l'<b>integranda</b></dt>
+        <dd>la funzione di cui misuriamo l'area sotto il grafico (l'altezza delle colonne).</dd>
+        <dt>\(\dd x\) — il differenziale</dt>
+        <dd>la «larghezza infinitesima» della colonna: ricorda la base \(\to 0\) dei rettangoli. Insieme,
+            \(f(x)\,\dd x\) è l'area di una colonna infinitamente sottile; il segno \(\int\) le somma tutte.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Attenzione: l'integrale definito è un <b>numero</b>, non una funzione (la \(x\) è «muta»: \(\int_a^b
+      f(x)\dd x = \int_a^b f(t)\dd t\)). E rappresenta l'<span class="termine">area con segno</span>: dove
+      \(f < 0\), le colonne stanno sotto l'asse e contano <b>negative</b>. \(\int_0^{2\pi}\sin x\,\dd x = 0\)
+      perché la gobba positiva e quella negativa si cancellano.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Funzioni integrabili</h2>
+
+  <p class="lead">
+    Non tutte le funzioni si lasciano integrare così: serve che la morsa \(s_n \le \text{area} \le S_n\) si
+    chiuda davvero. Quali funzioni lo garantiscono? La risposta, per fortuna, copre tutto ciò che ci serve.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Chi è integrabile secondo Riemann</div>
+    <p style="margin-bottom:0">
+      Su un intervallo chiuso e limitato \([a, b]\), sono integrabili:
+      <br>• le funzioni <b>continue</b> (il caso principe);
+      <br>• le funzioni <b>monotone</b> (anche se hanno qualche salto);
+      <br>• le funzioni <b>limitate con un numero finito di discontinuità</b>.
+      <br>La chiave del caso continuo è il teorema di <b>Heine-Cantor</b> (§7.7): su \([a, b]\) una funzione
+      continua è <em>uniformemente</em> continua, e questo permette di rendere \(S_n - s_n\) piccola a piacere
+      su tutto l'intervallo insieme. <mark>Ecco perché quel teorema «tecnico» era un pilastro nascosto.</mark>
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Una funzione non integrabile (secondo Riemann)</div>
+    <p style="margin-bottom:0">
+      La funzione di Dirichlet — \(1\) sui razionali, \(0\) sugli irrazionali — è il controesempio classico. In
+      <em>ogni</em> sottointervallo, per quanto piccolo, ci sono sia razionali che irrazionali (densità, §2.8):
+      il minimo di \(f\) è sempre \(0\) e il massimo sempre \(1\). Così \(s_n = 0\) e \(S_n = b - a\) per ogni
+      partizione: le due morse <b>non si toccano mai</b>. Non è Riemann-integrabile. (Servirà un'idea più
+      potente, l'integrale di Lebesgue, che vedrai in corsi successivi.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Proprietà dell'integrale</h2>
+
+  <p class="lead">
+    Prima di calcolare, raccogliamo le regole di manovra: come si spezza, si somma, si confronta un integrale.
+    Sono tutte «ovvie» pensando alle aree.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le proprietà fondamentali <span class="tag">linearità, additività, monotonia</span></div>
+    <div class="f-body">
+      \[
+        \begin{aligned}
+          &\int_a^b (\alpha f + \beta g) = \alpha\!\int_a^b f + \beta\!\int_a^b g &&\text{(linearità)}\\[3pt]
+          &\int_a^b f = \int_a^c f + \int_c^b f &&\text{(additività sugli intervalli)}\\[3pt]
+          &f \le g \ \Rightarrow\ \int_a^b f \le \int_a^b g, \qquad \int_b^a f = -\int_a^b f &&\text{(monotonia, orientamento)}
+        \end{aligned}
+      \]
+    </div>
+    <div class="f-note">
+      La <b>linearità</b> (l'integrale «entra» in somme e costanti) e l'<b>additività</b> (spezzare l'intervallo
+      in un punto \(c\) e sommare le due aree) sono le più usate. L'<b>orientamento</b> \(\int_b^a = -\int_a^b\)
+      dice che «percorrere all'indietro» cambia segno all'area — una convenzione che rende additività e Teorema
+      Fondamentale sempre coerenti, anche quando gli estremi si scambiano. E \(\int_a^a f = 0\): area di
+      larghezza nulla.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Il teorema della media integrale</h2>
+
+  <p class="lead">
+    Ogni integrale nasconde un'<b>altezza media</b>: il livello a cui andrebbe messo un rettangolo, largo tutto
+    l'intervallo, per avere la stessa area. E per le funzioni continue, quell'altezza è <em>raggiunta</em> da
+    qualche parte.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema della media integrale <span class="tag">l'altezza media è un valore assunto</span></div>
+    <div class="f-body">
+      \[ \exists\, c \in [a, b] : \ f(c) = \frac{1}{b - a}\int_a^b f(x)\,\dd x \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\dfrac{1}{b-a}\displaystyle\int_a^b f\) — il <b>valor medio</b></dt>
+        <dd>l'area totale distribuita uniformemente sulla larghezza \((b-a)\): l'altezza del rettangolo
+            equivalente. È la media «continua» dei valori di \(f\) — la temperatura media di una giornata, la
+            velocità media di un viaggio.</dd>
+        <dt>\(f(c) = \dots\) — <b>è raggiunto</b></dt>
+        <dd>se \(f\) è continua, quel valor medio non è solo un numero astratto: esiste un punto \(c\) dove \(f\)
+            vale <em>esattamente</em> la media (per i valori intermedi, §7.3: \(f\) sta tra il suo min e il suo
+            max, quindi passa anche per la media in mezzo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È il cugino integrale del teorema di Lagrange (§9.3), e sarà il mattone con cui dimostreremo il Teorema
+      Fondamentale (§12.8).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>La funzione integrale</h2>
+
+  <p class="lead">
+    Un'idea che cambia tutto: invece di fissare gli estremi, lasciamo <b>libero l'estremo superiore</b>.
+    L'integrale diventa così una <b>funzione</b> di quel punto — «l'area accumulata fin qui» — e sta per
+    rivelare il suo segreto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La funzione integrale <span class="tag">l'area come funzione dell'estremo</span></div>
+    <div class="f-body">
+      \[ A(x) = \int_a^x f(t)\,\dd t \]
+    </div>
+    <div class="f-note">
+      \(A(x)\) misura l'area sotto \(f\) da un punto fisso \(a\) fino al punto mobile \(x\): l'«area finora».
+      Se allarghi \(x\) verso destra, \(A\) cresce (aggiungi area); dove \(f\) è alta, \(A\) cresce in fretta;
+      dove \(f\) è bassa, piano; dove \(f < 0\), \(A\) <em>cala</em>. <mark>Nota bene questa frase — «\(A\)
+      cresce tanto più in fretta quanto più \(f\) è alta» — perché è già, in incognito, il Teorema
+      Fondamentale.</mark> (Uso \(t\) come variabile muta dentro l'integrale per non confonderla con l'estremo
+      \(x\).)
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>Il teorema fondamentale del calcolo</h2>
+
+  <p class="lead">
+    Il vertice del libro, la promessa del Capitolo 1. Deriva la funzione integrale \(A(x)\) e riottieni…
+    \(f(x)\). <mark>Derivare disfa l'integrare.</mark> Le due grandi operazioni dell'analisi sono l'una
+    l'inversa dell'altra — e questo rende gli integrali <em>calcolabili</em>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema Fondamentale del Calcolo <span class="tag">derivata e integrale si annullano a vicenda</span></div>
+    <div class="f-body">
+      \[
+        \textbf{Parte 1:}\quad \frac{\dd}{\dd x}\int_a^x f(t)\,\dd t = f(x)
+        \qquad\qquad
+        \textbf{Parte 2:}\quad \int_a^b f(x)\,\dd x = F(b) - F(a)
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Parte 1</b> — \(A'(x) = f(x)\)</dt>
+        <dd>la derivata dell'area accumulata è l'altezza attuale. Perché: allargando \(x\) di un pochino
+            \(h\), l'area aggiunta è una fettina alta \(\approx f(x)\) e larga \(h\), quindi \(A(x+h) - A(x)
+            \approx f(x)\,h\); dividendo per \(h\) e passando al limite, \(A'(x) = f(x)\) (rigoroso col teorema
+            della media, §12.6). <mark>Ogni funzione continua ha una primitiva: \(A(x)\) stessa.</mark></dd>
+        <dt><b>Parte 2</b> — la formula del calcolo</dt>
+        <dd>per calcolare \(\int_a^b f\), trova una qualsiasi <span class="termine">primitiva</span> \(F\) (una
+            funzione con \(F' = f\)) e fai \(F(b) - F(a)\). <b>Niente più rettangoli</b>: l'area si legge dai
+            valori di \(F\) agli estremi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio: \(\int_0^{\pi}\sin x\,\dd x\). Una primitiva del seno è \(-\cos x\) (perché \((-\cos x)' = \sin
+      x\)). Quindi l'area \(= [-\cos x]_0^{\pi} = -\cos\pi - (-\cos 0) = -(-1) + 1 = 2\). Confrontalo col widget
+      del §12.2, dove le colonne faticavano ad avvicinarsi a \(2\): qui, due righe. <b>Questo</b> è il potere
+      del teorema. Il widget qui sotto mostra la Parte 1: la pendenza dell'area accumulata \(A(x)\) è, in ogni
+      punto, l'altezza \(f(x)\).
+    </div>
+  </div>
+
+  <div class="widget" id="w-tfc">
+    <div class="w-head">
+      <span>Il Teorema Fondamentale: A'(x) = f(x)</span>
+      <span class="hint">trascina x: l'area accumulata cresce al ritmo di f</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wtfc-svg" viewBox="0 0 560 400" role="img" aria-label="L'area accumulata sotto f, come funzione dell'estremo superiore, ha per derivata la funzione f stessa"></svg>
+    </div>
+    <div class="w-readout" id="wtfc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-9"><span class="secnum">Sezione 12.9</span>Primitive e integrale indefinito</h2>
+
+  <p class="lead">
+    Il Teorema Fondamentale sposta il problema: calcolare aree diventa <b>trovare primitive</b>. È come
+    derivare, ma al contrario — e come ogni «al contrario», ha una piccola sorpresa: la costante \(+C\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Integrale indefinito <span class="tag">tutte le primitive, la famiglia +C</span></div>
+    <div class="f-body">
+      \[ \int f(x)\,\dd x = F(x) + C \qquad \text{dove } F'(x) = f(x) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(F(x)\) — una <b>primitiva</b></dt>
+        <dd>una funzione la cui derivata è \(f\). Trovarla è «leggere all'indietro» la tabella delle derivate
+            (§8.7).</dd>
+        <dt>\(+ C\) — la <b>costante di integrazione</b></dt>
+        <dd>siccome la derivata di una costante è \(0\), se \(F\) è una primitiva lo è anche \(F + 5\), \(F -
+            \pi\)… <mark>le primitive sono infinite, tutte a distanza costante l'una dall'altra</mark> (§9.4).
+            L'integrale <em>indefinito</em> è l'intera famiglia, ecco il \(+C\). Dimenticarlo è l'errore più
+            classico.</dd>
+        <dt>indefinito vs definito</dt>
+        <dd>l'integrale <b>indefinito</b> \(\int f\,\dd x\) è una <em>funzione</em> (\(+C\)); quello
+            <b>definito</b> \(\int_a^b f\,\dd x\) è un <em>numero</em>. Il \(+C\) sparisce nel definito, perché
+            \(F(b) + C - (F(a) + C)\) elide la costante.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>\(\int f\,\dd x\)</th><th>Primitiva</th><th>\(\int f\,\dd x\)</th><th>Primitiva</th></tr></thead>
+    <tbody>
+      <tr><td>\(\int x^n\,\dd x\ (n \ne -1)\)</td><td>\(\dfrac{x^{n+1}}{n+1} + C\)</td><td>\(\int \cos x\,\dd x\)</td><td>\(\sin x + C\)</td></tr>
+      <tr><td>\(\int \dfrac1x\,\dd x\)</td><td>\(\ln\abs x + C\)</td><td>\(\int \sin x\,\dd x\)</td><td>\(-\cos x + C\)</td></tr>
+      <tr><td>\(\int \eu^x\,\dd x\)</td><td>\(\eu^x + C\)</td><td>\(\int \dfrac{1}{1+x^2}\,\dd x\)</td><td>\(\arctan x + C\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>L'integrale è un'area</b>, definita come limite di <b>somme di Riemann</b>: rettangoli sempre più
+          sottili tra la stima per difetto \(s_n\) e per eccesso \(S_n\) (§§12.1–12.3). È un <b>numero</b>
+          (area con segno).</li>
+      <li>Sono integrabili le funzioni <b>continue</b> (grazie a Heine-Cantor, §7.7), monotone, o con finite
+          discontinuità (§12.4). Proprietà: <b>linearità, additività, monotonia, orientamento</b> (§12.5).</li>
+      <li>Il <b>valor medio</b> \(\frac{1}{b-a}\int_a^b f\) è un valore assunto da \(f\) continua (§12.6). La
+          <b>funzione integrale</b> \(A(x) = \int_a^x f\) misura l'«area finora» (§12.7).</li>
+      <li><mark>Teorema Fondamentale</mark> (§12.8): <b>Parte 1</b> \(A'(x) = f(x)\) (derivare disfa integrare;
+          ogni continua ha primitiva); <b>Parte 2</b> \(\int_a^b f = F(b) - F(a)\) (l'area dai valori di una
+          primitiva).</li>
+      <li>Calcolare integrali = trovare <b>primitive</b>. L'<b>integrale indefinito</b> \(\int f = F + C\) è la
+          famiglia di tutte le primitive: <b>non dimenticare il \(+C\)</b> (§12.9).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sai <em>cosa</em> è un integrale e <em>perché</em> si calcola con le primitive. Ma trovare una primitiva
+    non è sempre immediato: derivare è meccanico, «anti-derivare» è un'arte. Nel <strong>Capitolo 13</strong>
+    impariamo le <b>tecniche di integrazione</b> — sostituzione (la regola della catena al contrario), per parti
+    (la regola del prodotto al contrario), fratti semplici — l'arsenale per trasformare integrali ostici in
+    integrali noti. È la parte «artigianale» del calcolo, e con un po' di pratica diventa un piacere.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-10"><span class="secnum">Sezione 12.10</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Calcola con il Teorema Fondamentale (trova una primitiva, poi valuta):
+      (a) \(\displaystyle\int_0^2 (3x^2 - 2x)\,\dd x\) &nbsp;·&nbsp;
+      (b) \(\displaystyle\int_1^{\eu} \frac1x\,\dd x\) &nbsp;·&nbsp;
+      (c) \(\displaystyle\int_0^{\pi/2} \cos x\,\dd x\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Calcola il valor medio di \(f(x) = x^2\) sull'intervallo \([0, 3]\), e trova il punto \(c\) del teorema
+      della media in cui \(f(c)\) uguaglia quel valor medio.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Usa la Parte 1 del Teorema Fondamentale (ed eventualmente la regola della catena) per derivare:
+      (a) \(A(x) = \displaystyle\int_0^x \eu^{-t^2}\,\dd t\) &nbsp;·&nbsp;
+      (b) \(B(x) = \displaystyle\int_1^{x^2} \ln t\,\dd t\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) \(\int_a^b f\,\dd x\) è sempre positivo. &nbsp;
+      (b) Se \(f\) è continua su \([a,b]\) allora è integrabile lì. &nbsp;
+      (c) \(\int_0^{2\pi}\sin x\,\dd x = 0\). &nbsp;
+      (d) L'integrale indefinito di \(f\) è un numero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-11"><span class="secnum">Sezione 12.11</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> primitiva \(x^3 - x^2\): \([x^3 - x^2]_0^2 = (8 - 4) - 0 = 4\).
+      <br><b>(b)</b> primitiva \(\ln\abs x\): \([\ln x]_1^{\eu} = \ln\eu - \ln 1 = 1 - 0 = 1\).
+      <br><b>(c)</b> primitiva \(\sin x\): \([\sin x]_0^{\pi/2} = 1 - 0 = 1\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      \(\int_0^3 x^2\,\dd x = \left[\frac{x^3}{3}\right]_0^3 = 9\); valor medio \(\frac{1}{3-0}\cdot 9 = 3\).
+      Cerco \(c\) con \(c^2 = 3\), cioè \(c = \sqrt3 \approx 1{,}73 \in [0, 3]\) ✔. (Il valor medio \(3\) è
+      minore del massimo \(9\) e maggiore del minimo \(0\): coerente.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> Parte 1 diretta: \(A'(x) = \eu^{-x^2}\). (Nota: \(\eu^{-t^2}\) non ha primitiva elementare, ma
+      la sua funzione integrale si deriva senza problemi!)
+      <br><b>(b)</b> estremo superiore \(x^2\): per la catena, \(B'(x) = \ln(x^2)\cdot(x^2)' = \ln(x^2)\cdot 2x
+      = 4x\ln\abs x\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> È un'area <em>con segno</em>: dove \(f < 0\) contribuisce negativamente. Es.
+      \(\int_0^1 (-1)\,\dd x = -1\) (§12.3).
+      <br><b>(b) VERO.</b> Le funzioni continue su un chiuso limitato sono integrabili (§12.4), grazie
+      all'uniforme continuità (Heine-Cantor, §7.7).
+      <br><b>(c) VERO.</b> La gobba positiva su \([0,\pi]\) e quella negativa su \([\pi, 2\pi]\) hanno aree
+      uguali e opposte: si cancellano (§12.3).
+      <br><b>(d) FALSO.</b> L'integrale <em>indefinito</em> è una <b>funzione</b> (\(F + C\)); è quello
+      <em>definito</em> a essere un numero (§12.9).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §12.2 — somme di Riemann  (f = sin su [0, π], area vera = 2)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wr-out');
+  const btns = document.getElementById('wr-mode');
+  const nSlider = document.getElementById('wr-n');
+  const f = x => Math.sin(x), a = 0, b = Math.PI, VERO = 2;
+  const modi = [{ k: 'sinistra', m: 'left' }, { k: 'centro', m: 'mid' }, { k: 'destra', m: 'right' }];
+  let mode = 'mid';
+
+  function draw() {
+    const n = parseInt(nSlider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.35, xmax: 3.5, ymin: -0.2, ymax: 1.25 });
+    p.grid(1, 0.5); p.axes({ numbers: true });
+    p.riemann(f, a, b, n, { mode });
+    p.func(f, { color: 'var(--accent)', width: 2.8, from: a, to: b });
+    // somma
+    const w = (b - a) / n;
+    let S = 0;
+    for (let i = 0; i < n; i++) {
+      const xL = a + i * w, xR = xL + w;
+      const xs = mode === 'left' ? xL : mode === 'right' ? xR : (xL + xR) / 2;
+      S += f(xs) * w;
+    }
+    [...btns.children].forEach(bb => bb.classList.toggle('active', bb.dataset.m === mode));
+    out.innerHTML = `
+      <div class="big">
+        n = ${n} rettangoli (${modi.find(x => x.m === mode).k}): &nbsp;
+        somma = <b style="color:var(--violet)">${S.toFixed(4)}</b> &nbsp;→&nbsp; area vera = <b>2</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        \\(\\int_0^\\pi \\sin x\\,dx\\): i rettangoli approssimano l'area sotto il seno. Errore attuale:
+        <b>${Math.abs(S - VERO).toFixed(4)}</b>. ${n < 5 ? 'Con pochi rettangoli la stima è grezza.'
+          : n < 20 ? 'Assottigliandoli, la somma si avvicina a 2.'
+            : '<mark>Tanti rettangoli sottili → l\'area esatta 2</mark>. È il limite che definisce l\'integrale (§12.3).'}
+      </div>`;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+  modi.forEach(it => {
+    const bb = document.createElement('button');
+    bb.className = 'w-btn'; bb.textContent = it.k; bb.dataset.m = it.m;
+    bb.onclick = () => { mode = it.m; draw(); };
+    btns.appendChild(bb);
+  });
+  draw();
+  nSlider.addEventListener('input', draw);
+})();
+
+
+/* ============================================================================
+   WIDGET §12.8 — Teorema Fondamentale: A(x) = ∫₀ˣ f, con A'(x) = f(x)
+   f = 1 + 0.6 sin x  →  A(x) = x + 0.6 − 0.6 cos x
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wtfc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wtfc-out');
+  const f = x => 1 + 0.6 * Math.sin(x);
+  const A = x => x + 0.6 - 0.6 * Math.cos(x);
+  let x0 = 3;
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.4, xmax: 8, ymin: -0.6, ymax: 9 });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // area accumulata sotto f da 0 a x0
+    p.area(f, 0, x0, { fill: 'color-mix(in srgb, var(--accent) 18%, transparent)' });
+    // f e A
+    p.func(f, { color: 'var(--accent)', width: 2.6 });
+    p.func(A, { color: 'var(--violet)', width: 2.4, to: x0 });
+    // punto su A e su f in x0
+    const ax = A(x0), fx = f(x0);
+    p.dot(x0, ax, { color: 'var(--violet)', r: 5 });
+    p.dot(x0, fx, { color: 'var(--accent)', r: 5 });
+    // tangente ad A in x0 (pendenza = f(x0))
+    p.line(x0 - 1.2, ax - 1.2 * fx, x0 + 1.2, ax + 1.2 * fx, { color: 'var(--warm)', width: 2, dash: '4 3' });
+    p.handle(x0, ax, { color: 'var(--violet)', axis: 'x' }, (x) => { x0 = Math.max(0.15, Math.min(7.8, x)); draw(); });
+
+    out.innerHTML = `
+      <div class="big">
+        x = <b>${fmt(x0)}</b>: &nbsp; area A(x) = <b style="color:var(--violet)">${ax.toFixed(3)}</b>
+        &nbsp;·&nbsp; pendenza di A = <b style="color:var(--warm)">${fx.toFixed(3)}</b> = f(x) = <b style="color:var(--accent)">${fx.toFixed(3)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'area azzurra è <b style="color:var(--violet)">A(x) = ∫₀ˣ f</b> (curva viola). La sua
+        <b style="color:var(--warm)">pendenza</b> in ogni punto è <mark>esattamente l'altezza
+        <b style="color:var(--accent)">f(x)</b></mark>: dove f è alta, l'area cresce ripida; dove f è bassa,
+        piano. Questo è A'(x) = f(x), la Parte 1 del Teorema Fondamentale (§12.8).
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
