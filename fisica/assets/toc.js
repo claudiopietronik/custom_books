@@ -177,7 +177,7 @@ const TOC = [
     n: 11,
     titolo: "Equilibrio ed elasticità",
     file: "cap11-equilibrio.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Le condizioni di equilibrio" },
       { id: "s11-2", n: "11.2", t: "Il centro di gravità" },
