@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Quantili, IQR e QQ plot — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte I · Statistica descrittiva</div>
+    <h1>Quantili, IQR e QQ plot</h1>
+    <p class="standfirst">
+      Media e deviazione standard si fanno trascinare dagli estremi. Qui costruiamo la famiglia
+      <b>robusta</b> di misure — quartili, scarto interquartile, box plot — che guarda alle <em>posizioni</em>
+      invece che ai valori. E poi uno strumento diverso da tutti: il <b>QQ plot</b>, il colpo d'occhio che
+      risponde alla domanda «i miei dati sono normali?».
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È ancora dispersione, ma robusta: la mediana (Cap. 3) è alla tendenza centrale ciò che l'IQR di questo
+      capitolo è alla dispersione. Il box plot che costruiamo qui riappare al Cap. 8 (violin plot), e il QQ plot
+      diventerà cruciale nella Parte IV, dove tanti test <em>presumono</em> dati normali.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      I dati reali sono pieni di outlier e code storte. Chi conosce solo media e deviazione standard viene
+      ingannato da un singolo valore anomalo; chi sa leggere quartili e QQ plot vede la forma vera della
+      distribuzione — e sa se ha il <em>diritto</em> di usare i test della statistica classica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">SEZIONE 5.1</span>Percentili e quartili</h2>
+
+  <p class="lead">
+    L'idea della mediana — «il valore che lascia metà dati sotto» — si generalizza a qualunque frazione. È il
+    concetto di <b>quantile</b>.
+  </p>
+
+  <p>
+    Ordina i dati e cammina lungo la fila dallo 0% al 100%: il <b>quantile</b> \(p\) è il punto dove ti sei
+    lasciato dietro la frazione \(p\) dei dati. Lo stesso concetto ha tre nomi, a seconda della «griglia» che
+    usi:
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Nome</th><th>Griglia</th><th>Esempio</th></tr></thead>
+    <tbody>
+      <tr><td><b>Quantile</b></td><td>frazione qualsiasi (0…1)</td><td>quantile 0,37</td></tr>
+      <tr><td><b>Percentile</b></td><td>in percentuale (0…100)</td><td>37° percentile = quantile 0,37</td></tr>
+      <tr><td><b>Quartile</b></td><td>i tagli a 0,25 / 0,50 / 0,75</td><td>\(Q_1, Q_2, Q_3\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>I <b>quartili</b> dividono i dati ordinati in quattro parti uguali:</p>
+
+  <ul>
+    <li><b>\(Q_1\)</b> (primo quartile) = 25° percentile: sotto di esso sta il 25% dei dati. È la «mediana della
+      metà inferiore».</li>
+    <li><b>\(Q_2\)</b> (secondo quartile) = 50° percentile: è la <b>mediana</b>.</li>
+    <li><b>\(Q_3\)</b> (terzo quartile) = 75° percentile: sotto di esso sta il 75% dei dati.</li>
+  </ul>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Sono valori, non percentuali</div>
+    <p style="margin-bottom:0">
+      \(Q_1\) è un numero <b>nelle stesse unità dei dati</b> (se misuri in cm, \(Q_1\) è in cm): è il
+      <em>valore</em> sotto cui cade il 25% dei dati, non «il 25%». E tutte queste misure di posizione
+      richiedono di <b>ordinare</b> prima i dati — a differenza di media e varianza, a cui l'ordine non importa.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> L'interpolazione (perché NumPy e pandas differiscono un po')</div>
+    <p style="margin-bottom:0">
+      Se il punto di taglio cade <em>tra</em> due valori, si <b>interpola</b> (la media dei due è solo il caso «a
+      metà strada»). Esistono metodi di interpolazione leggermente diversi, perciò su dataset piccoli NumPy e
+      pandas possono restituire quartili un filo diversi. È normale, non è un bug.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">SEZIONE 5.2</span>Lo scarto interquartile (IQR)</h2>
+
+  <p class="lead">
+    L'<b>IQR</b> è la larghezza della «pancia» della distribuzione: la distanza tra il terzo e il primo quartile.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Scarto interquartile <span class="tag">il 50% centrale</span></div>
+    <div class="f-body">
+      \[ \text{IQR} \;=\; \hA{Q_3} - \hB{Q_1} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{Q_3}\)</dt><dd>terzo quartile (75° percentile).</dd>
+        <dt>\(\hB{Q_1}\)</dt><dd>primo quartile (25° percentile).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'IQR contiene il <b>50% centrale</b> dei dati. Essendo costruito solo sui quartili,
+      <mark>ignora completamente le code</mark>: un outlier mostruoso non tocca \(Q_1\) e \(Q_3\), quindi l'IQR
+      resta stabile. È la versione robusta della deviazione standard.
+    </div>
+  </div>
+
+  <p>
+    <b>Esempio.</b> Dati ordinati \([1,3,5,7,9,11,13,15]\), \(n=8\):
+  </p>
+  <ul>
+    <li>\(Q_2\) (mediana): i due centrali sono 7 e 9 → \((7+9)/2 = 8\).</li>
+    <li>Metà inferiore \([1,3,5,7]\) → \(Q_1 = (3+5)/2 = 4\).</li>
+    <li>Metà superiore \([9,11,13,15]\) → \(Q_3 = (11+13)/2 = 12\).</li>
+    <li><b>IQR</b> \(= 12 - 4 = 8\).</li>
+  </ul>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">SEZIONE 5.3</span>Il box plot</h2>
+
+  <p class="lead">
+    Il <b>box plot</b> (o «diagramma a scatola e baffi») disegna tutta questa informazione in un colpo solo: la
+    scatola è l'IQR, la linea è la mediana, i baffi cercano gli estremi «legittimi», e ciò che sporge è
+    sospetto.
+  </p>
+
+  <p>La ricetta standard:</p>
+  <ul>
+    <li>la <b>scatola</b> va da \(Q_1\) a \(Q_3\) (larghezza = IQR);</li>
+    <li>la <b>linea</b> dentro la scatola è la mediana \(Q_2\);</li>
+    <li>i <b>baffi</b> si allungano fino al dato più lontano entro \(1{,}5\times\text{IQR}\) oltre i quartili;</li>
+    <li>i punti <b>oltre i baffi</b> sono segnalati come sospetti <b>outlier</b> (la regola \(1{,}5\times\)IQR,
+      che rivedremo al Cap. 11).</li>
+  </ul>
+
+  <h3>Provalo: costruisci un box plot</h3>
+
+  <p>
+    Trascina il punto <b style="color:var(--warm)">rosso</b> per aggiungere un valore estremo e guarda: la
+    <b style="color:var(--accent)">scatola</b> (l'IQR) resta quasi immobile — è robusta — mentre il punto, appena
+    supera il baffo a \(1{,}5\times\)IQR, viene marcato come outlier.
+  </p>
+
+  <div class="widget" id="w-box">
+    <div class="w-head">
+      <span>Box plot e regola 1,5 × IQR</span>
+      <span class="hint">trascina il punto rosso oltre il baffo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbx-svg" viewBox="0 0 620 190" role="img" aria-label="Un box plot con scatola IQR, baffi e un punto trascinabile che diventa outlier"></svg>
+    </div>
+    <div class="w-readout" id="wbx-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">SEZIONE 5.4</span>Il QQ plot: i dati sono normali?</h2>
+
+  <p class="lead">
+    Il <b>QQ plot</b> (quantile-quantile) ha uno scopo diverso da tutto il resto del capitolo: non misura la
+    dispersione, ma risponde a <b>«i miei dati seguono una distribuzione normale?»</b> — l'assunzione nascosta di
+    moltissimi test.
+  </p>
+
+  <p>
+    L'idea: confronta i <b>quantili osservati</b> dei tuoi dati con i <b>quantili teorici</b> che ti aspetteresti
+    se i dati fossero perfettamente gaussiani. Ogni punto ha per ascissa il quantile ideale (dove
+    <em>dovrebbe</em> stare) e per ordinata quello osservato (dove <em>sta davvero</em>).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🧍</span> L'analogia delle due file</div>
+    <p style="margin-bottom:0">
+      Immagina due file di persone in ordine di altezza: <b>Fila A</b> i tuoi dati veri, <b>Fila B</b> persone
+      generate da una gaussiana perfetta. Accoppi il più basso di A col più basso di B (un punto: x = ideale,
+      y = tuo dato), poi il secondo col secondo, e così via. Se le altezze combaciano, tutti i punti cadono sulla
+      <b>diagonale</b>.
+    </p>
+  </div>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Aspetto del grafico</th><th>Interpretazione</th></tr></thead>
+    <tbody>
+      <tr><td>punti su una <b>retta diagonale</b></td><td>dati ~normali</td></tr>
+      <tr><td>punti che si <b>incurvano agli estremi</b></td><td>code diverse dalla normale (spesso più pesanti, più outlier)</td></tr>
+      <tr><td>curvatura a <b>«S» / banana</b></td><td>asimmetria (skew)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Provalo: piega la diagonale</h3>
+
+  <p>
+    Parti da dati normali (punti sulla diagonale) e introduci asimmetria o code pesanti: guarda i punti staccarsi
+    dalla retta e incurvarsi. Il QQ plot è <b>visivo e qualitativo</b> — non dà un numero, dà un colpo d'occhio su
+    <em>quanto</em> e <em>come</em> i dati si allontanano dalla normalità.
+  </p>
+
+  <div class="widget" id="w-qq">
+    <div class="w-head">
+      <span>QQ plot contro la normale</span>
+      <span class="hint">deforma i dati e osserva la curvatura</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wqq-svg" viewBox="0 0 460 300" role="img" aria-label="Un QQ plot i cui punti si incurvano quando i dati non sono normali"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>deformazione</label><input type="range" id="wqq-k" min="-100" max="100" step="1" value="0"><output id="wqq-kv">normale</output></div>
+    </div>
+    <div class="w-readout" id="wqq-out"></div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🎯</span> Non solo la normale</div>
+    <p style="margin-bottom:0">
+      Il meccanismo funziona contro <em>qualsiasi</em> distribuzione teorica: ordini i tuoi dati, ordini i
+      quantili teorici di quella distribuzione, li accoppi. Ma non tutte sono a campana: gaussiana e t di Student
+      sono campane simmetriche (la t con code più pesanti); chi-quadro e F sono asimmetriche e solo positive.
+      Quando si dice «QQ plot» senza specificare, si intende quasi sempre il confronto con la <b>normale</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">SEZIONE 5.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">Per i dati ordinati \([2, 4, 4, 6, 8, 10, 12, 14]\) calcola \(Q_1\), \(Q_2\),
+      \(Q_3\) e l'IQR.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(n=8\). \(Q_2\): centrali 6 e 8 → \((6+8)/2 = 7\). Metà inferiore \([2,4,4,6]\) → \(Q_1 = (4+4)/2 = 4\).
+          Metà superiore \([8,10,12,14]\) → \(Q_3 = (10+12)/2 = 11\).</p>
+        <p style="margin-bottom:0"><b>IQR</b> \(= 11 - 4 = 7\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">Con \(Q_1 = 4\) e \(Q_3 = 11\) (IQR \(= 7\)), oltre quale valore un dato viene
+      segnalato come outlier «alto» dalla regola \(1{,}5\times\)IQR?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Il baffo superiore arriva a \(Q_3 + 1{,}5\times\text{IQR} = 11 + 1{,}5\times 7 = 11 + 10{,}5 =
+          \mathbf{21{,}5}\). Ogni dato oltre 21,5 è un sospetto outlier.</p>
+        <p style="margin-bottom:0">(Analogamente il baffo inferiore è \(Q_1 - 1{,}5\times\text{IQR} = 4 - 10{,}5 =
+          -6{,}5\).)</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">In un dataset, sostituisci il valore massimo con uno dieci volte più grande. Come
+      cambiano la deviazione standard e l'IQR? Cosa ti dice del perché l'IQR è «robusto»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La <b>deviazione standard</b> aumenta molto: dipende dai valori, e uno scarto enorme al quadrato pesa
+          moltissimo (§4.2). L'<b>IQR</b> resta praticamente invariato: dipende solo da \(Q_1\) e \(Q_3\), che
+          guardano le <em>posizioni</em> nel 25–75% centrale, indifferenti a cosa succede in coda.</p>
+        <p style="margin-bottom:0">È la stessa robustezza della mediana contro la media (§3.2): misure basate
+          sull'ordine ignorano gli estremi.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">In un QQ plot contro la normale, i punti formano una chiara curva a «S». Cosa
+      concludi sui dati?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Una curva a «S» (o a banana) indica <b>asimmetria</b>: i dati sono skewed, non
+          simmetrici come la normale. Se invece i punti seguissero la diagonale al centro ma si impennassero solo
+          agli estremi, la diagnosi sarebbe <b>code pesanti</b> (più outlier del previsto). In entrambi i casi:
+          attenzione a usare test che presumono la normalità (Parte IV) — o passa alle loro versioni non
+          parametriche (Cap. 33).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">SEZIONE 5.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><b>Quantile / percentile / quartile:</b> stesso concetto, griglie diverse. Sono valori nelle unità dei
+        dati e richiedono di <b>ordinare</b>.</li>
+      <li><b>IQR</b> \(= Q_3 - Q_1\): il 50% centrale, la dispersione <b>robusta</b> che ignora le code.</li>
+      <li><b>Box plot:</b> scatola = IQR, linea = mediana, baffi a \(1{,}5\times\)IQR, oltre = outlier sospetti.</li>
+      <li><b>QQ plot:</b> confronta quantili osservati e teorici. Sulla diagonale → normali; incurvati → code
+        diverse; a «S» → asimmetria. Strumento visivo, non un numero.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo centro (Cap. 3), dispersione (Cap. 4) e ora robustezza e forma (qui). Manca un modo per
+    <em>quantificare</em> la forma — quanto è storta, quanto sono pesanti le code — con dei numeri anziché a
+    occhio. È il compito dei <b>momenti statistici</b>: il <strong>Capitolo 6</strong> scopre che media,
+    varianza, asimmetria e curtosi sono tutti membri di un'unica famiglia.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function sortNum(a) { return [...a].sort((x, y) => x - y); }
+function quantile(sorted, p) {
+  const idx = (sorted.length - 1) * p, lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
+}
+// inversa della CDF normale standard (approssimazione di Acklam)
+function probit(p) {
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+  const pl = 0.02425;
+  let q, r;
+  if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+  if (p <= 1 - pl) { q = p - 0.5; r = q * q; return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); }
+  q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+}
+
+/* ============================================================================
+   WIDGET §5.3 — box plot con punto trascinabile e regola 1,5×IQR
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbx-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbx-out');
+  const fixed = [22, 26, 29, 31, 33, 35, 37, 40, 43, 47, 52];
+  let drag = 60;
+
+  function draw() {
+    const data = sortNum([...fixed, drag]);
+    const q1 = quantile(data, 0.25), q2 = quantile(data, 0.5), q3 = quantile(data, 0.75);
+    const iqr = q3 - q1;
+    const loFence = q1 - 1.5 * iqr, hiFence = q3 + 1.5 * iqr;
+    const inside = data.filter(x => x >= loFence && x <= hiFence);
+    const whiskLo = Math.min(...inside), whiskHi = Math.max(...inside);
+    const isOut = drag > hiFence || drag < loFence;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 15, xmax: 90, ymin: 0, ymax: 1 });
+    p.line(15, 0.2, 90, 0.2, { color: 'var(--rule)', width: 1 });
+    // baffi
+    p.line(whiskLo, 0.55, whiskHi, 0.55, { color: 'var(--ink-soft)', width: 1.6 });
+    p.line(whiskLo, 0.45, whiskLo, 0.65, { color: 'var(--ink-soft)', width: 1.6 });
+    p.line(whiskHi, 0.45, whiskHi, 0.65, { color: 'var(--ink-soft)', width: 1.6 });
+    // scatola IQR
+    p.rect(q1, 0.4, q3, 0.7, { fill: 'color-mix(in srgb, var(--accent) 16%, transparent)', color: 'var(--accent)', width: 2 });
+    p.line(q2, 0.4, q2, 0.7, { color: 'var(--accent)', width: 2.6 });
+    p.text((q1 + q3) / 2, 0.82, 'IQR = ' + iqr.toFixed(1), { color: 'var(--accent)', size: 11 });
+    // punti fissi (piccoli, sotto)
+    fixed.forEach(x => p.dot(x, 0.2, { r: 3, color: 'var(--ink-faint)', stroke: 'var(--paper)', sw: 0.8 }));
+    // baffo-limite superiore
+    p.line(hiFence, 0.12, hiFence, 0.28, { color: 'var(--warm)', width: 1.2, dash: '3 3' });
+    p.text(hiFence, 0.05, 'Q3+1,5·IQR', { color: 'var(--warm)', size: 9.5 });
+    // punto trascinabile
+    p.handle(drag, 0.2, { r: 7, color: isOut ? 'var(--warm)' : 'var(--green)', axis: 'x' }, (x) => { drag = Math.max(16, Math.min(89, x)); draw(); });
+
+    out.innerHTML = `
+      <div class="big">Q1 = <b>${q1.toFixed(1)}</b> · mediana = <b>${q2.toFixed(1)}</b> · Q3 = <b>${q3.toFixed(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${isOut
+          ? 'Il punto rosso ha superato il baffo a Q3+1,5·IQR = ' + hiFence.toFixed(1) + ': è marcato come <mark>outlier</mark>. Nota però che la scatola (IQR) si è mossa pochissimo — è robusta.'
+          : 'Il punto (verde) è dentro i baffi: un dato regolare. Trascinalo verso destra oltre ' + hiFence.toFixed(1) + ' e diventerà un outlier.'}
+      </div>`;
+  }
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §5.4 — QQ plot: la diagonale si piega con la non-normalità
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wqq-svg');
+  if (!svg) return;
+  const out = document.getElementById('wqq-out');
+  const kS = document.getElementById('wqq-k'), kV = document.getElementById('wqq-kv');
+  const n = 40;
+  // quantili teorici normali (fissi) per n punti
+  const theo = [];
+  for (let i = 0; i < n; i++) theo.push(probit((i + 0.5) / n));
+
+  function draw() {
+    const k = parseInt(kS.value, 10) / 100;   // -1..1
+    // deforma i quantili osservati: k>0 asimmetria destra, k<0 sinistra, |k| grande code pesanti
+    const obs = theo.map(z => {
+      const skew = k * 0.6 * z * Math.abs(z);        // termine cubico → asimmetria/curvatura a S
+      const heavy = Math.abs(k) * 0.4 * z * z * z;   // code pesanti
+      return z + skew + (k > 0 ? heavy : -heavy) * 0.0;
+    });
+    kV.textContent = Math.abs(k) < 0.03 ? 'normale' : (k > 0 ? 'coda destra +' + Math.round(k * 100) : 'coda sinistra ' + Math.round(k * 100));
+
+    svg.innerHTML = '';
+    const lim = 3.2;
+    const p = new Plot(svg, { xmin: -lim, xmax: lim, ymin: -lim, ymax: lim, iso: true });
+    p.grid(1);
+    p.axes({ numbers: false, names: true, xname: 'quantili teorici', yname: 'osservati' });
+    // diagonale di riferimento
+    p.line(-lim, -lim, lim, lim, { color: 'var(--ink-faint)', width: 1.4, dash: '5 4' });
+    // punti QQ
+    theo.forEach((x, i) => p.dot(x, obs[i], { r: 3, color: 'var(--accent)', stroke: 'var(--paper)', sw: 0.8 }));
+
+    out.innerHTML = `
+      <div style="color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${Math.abs(k) < 0.03
+          ? 'I punti giacciono sulla <b>diagonale</b>: dati indistinguibili da una normale.'
+          : 'I punti si <mark>incurvano</mark> via dalla diagonale: i quantili osservati non combaciano con quelli gaussiani. ' + (k > 0 ? 'Coda allungata a destra' : 'Coda allungata a sinistra') + ' → asimmetria. In un caso reale, qui esiteresti a usare un test che presume la normalità.'}
+      </div>`;
+  }
+  kS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

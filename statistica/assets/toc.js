@@ -58,7 +58,7 @@ const TOC = [
   },
   {
     n: 5, parte: "I · Statistica descrittiva",
-    titolo: "Quantili, IQR e QQ plot", file: "cap05-quantili-iqr.html", stato: "da-fare",
+    titolo: "Quantili, IQR e QQ plot", file: "cap05-quantili-iqr.html", stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Percentili e quartili" },
       { id: "s5-2", n: "5.2", t: "Lo scarto interquartile (IQR)" },
