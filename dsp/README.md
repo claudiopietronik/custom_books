@@ -53,7 +53,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 24 — Elaborazione lineare delle immagini
 - [x] 25 — Tecniche speciali di imaging
 - [x] 26 — Reti neurali (e altro!)
-- [ ] 27 — Compressione dei dati
+- [x] 27 — Compressione dei dati
 - [ ] 28 — I processori DSP
 - [ ] 29 — Iniziare con i DSP
 - [ ] 30 — I numeri complessi

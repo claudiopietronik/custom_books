@@ -401,7 +401,7 @@ const TOC = [
     n: 27,
     titolo: "Compressione dei dati",
     file: "cap27-compressione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s27-1", n: "27.1", t: "Perché e quando comprimere" },
       { id: "s27-2", n: "27.2", t: "Run-length e Huffman" },

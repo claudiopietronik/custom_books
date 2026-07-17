@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>27 · Compressione dei dati — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="27">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.27 — Capitolo 27</div>
+    <h1>Compressione dei dati</h1>
+    <p class="standfirst">
+      I segnali occupano spazio, e lo spazio costa. Comprimere significa <b>far entrare la stessa informazione in
+      meno bit</b>, sfruttando la ridondanza. Ci sono due filosofie: senza perdita (ricostruzione esatta) e con
+      perdita (approssimata, ma molto più piccola, guidata dai limiti della percezione). Dalla foto sul telefono
+      allo streaming, la compressione è il DSP che rende praticabile il digitale.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Riprende e generalizza il tema della compressione percettiva già visto per l'audio (Cap. 22). Usa la
+      trasformata (Cap. 8) e i limiti percettivi (Cap. 22–23) per un obiettivo nuovo: la dimensione. È l'ultima
+      applicazione «di sistema» prima delle chiusure hardware (Cap. 28–29).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Senza compressione, internet come lo conosciamo non esisterebbe: le immagini peserebbero dieci volte
+      tanto, i video cento. Capire come si <em>spreme</em> l'informazione — e quando conviene <em>buttarne</em>
+      un po' con criterio — è capire un pilastro invisibile del mondo digitale. E mostra un uso inatteso della
+      trasformata di Fourier: non per filtrare, ma per <strong>impacchettare</strong>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-1"><span class="secnum">SEZIONE 27.1</span>Perché e quando comprimere</h2>
+
+  <p class="lead">
+    Comprimere è possibile perché i dati reali sono <b>ridondanti</b>: contengono ripetizioni, regolarità,
+    prevedibilità. Un'immagine ha grandi zone di colore simile; un testo ripete le stesse parole; un suono varia
+    dolcemente. La compressione trova questa ridondanza e la rappresenta in modo più compatto.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Senza perdita vs con perdita</div>
+    <ul style="margin-bottom:0">
+      <li><b>Senza perdita</b> (lossless): il file compresso si può ricostruire <b>identico</b> all'originale,
+          bit per bit. Obbligatoria per testo, programmi, dati (ZIP, PNG). Rapporti di compressione modesti
+          (2–5×).</li>
+      <li><b>Con perdita</b> (lossy): si <b>scarta</b> informazione impercettibile, ottenendo file molto più
+          piccoli (10–100×) ma non identici. Perfetta per foto, audio, video (JPEG, MP3, H.264), dove l'occhio o
+          l'orecchio non nota la differenza (Cap. 22).</li>
+    </ul>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-2"><span class="secnum">SEZIONE 27.2</span>Run-length e Huffman</h2>
+
+  <p class="lead">
+    Due tecniche senza perdita, semplici e potenti, alla base di quasi tutto.
+  </p>
+
+  <p>
+    Il <b class="termine">run-length encoding</b> (RLE) sfrutta le <b>ripetizioni consecutive</b>: invece di
+    scrivere «nero, nero, nero, nero, nero» scrive «5 × nero». Fenomenale su immagini con grandi aree uniformi
+    (fax, icone, disegni), inutile su dati già variabili. Il <b class="termine">codice di Huffman</b> sfrutta
+    invece le <b>frequenze diverse</b> dei simboli: assegna codici <em>corti</em> ai simboli frequenti e
+    <em>lunghi</em> a quelli rari. Come nel codice Morse, dove la «e» (comunissima) è un solo punto e la «q» è
+    lunga. È il codice a lunghezza variabile ottimale.
+  </p>
+
+  <h3>Provalo: codici corti ai simboli frequenti</h3>
+
+  <p>
+    Sposta lo <b>squilibrio</b> della distribuzione: se tutti i simboli sono ugualmente probabili, non c'è nulla
+    da guadagnare; ma più la distribuzione è sbilanciata (pochi simboli dominanti), più Huffman risparmia,
+    dando codici cortissimi ai dominanti. Il riquadro mostra i bit medi per simbolo e il guadagno.
+  </p>
+
+  <div class="widget" id="w-huff">
+    <div class="w-head">
+      <span>Codici di Huffman</span>
+      <span class="hint">distribuzione sbilanciata = più risparmio</span>
+    </div>
+    <div class="w-stage">
+      <svg id="whf-svg" viewBox="0 0 620 220" role="img" aria-label="Frequenze dei simboli e lunghezze dei codici di Huffman"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>squilibrio</label><input type="range" id="whf-s" min="0" max="1.2" step="0.02" value="0.5"><output id="whf-sv">0.50</output></div>
+    </div>
+    <div class="w-readout" id="whf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-3"><span class="secnum">SEZIONE 27.3</span>Delta encoding e LZW</h2>
+
+  <p class="lead">
+    Due tecniche senza perdita più raffinate, che sfruttano forme di ridondanza diverse.
+  </p>
+
+  <p>
+    Il <b class="termine">delta encoding</b> memorizza le <b>differenze</b> tra campioni consecutivi invece dei
+    valori assoluti. Se un segnale varia lentamente (un'immagine liscia, un audio grave), le differenze sono
+    piccole — e i numeri piccoli si comprimono molto meglio di quelli grandi (con Huffman, per esempio). È la
+    prima differenza del Cap. 7 al servizio della compressione. Il <b class="termine">LZW</b> (e i suoi parenti,
+    dentro ZIP, GIF, PNG) costruisce invece al volo un <b>dizionario</b> delle sequenze ricorrenti: la prima
+    volta che incontra «tion» lo aggiunge al dizionario, e le volte successive lo sostituisce con un breve codice.
+    Trova ripetizioni <em>non</em> consecutive che a RLE sfuggirebbero.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Ogni tecnica caccia una ridondanza diversa</div>
+    <p style="margin-bottom:0">
+      Nota lo schema: RLE caccia le <em>ripetizioni consecutive</em>, Huffman le <em>frequenze sbilanciate</em>,
+      delta la <em>lentezza</em>, LZW le <em>sequenze ricorrenti</em>. I compressori reali (ZIP, PNG) le
+      <b>combinano</b>: prima delta o LZW per ridurre la ridondanza strutturale, poi Huffman per impacchettare i
+      simboli risultanti. <mark>Non c'è una tecnica sola: c'è una pipeline che spreme ridondanze di natura
+      diversa, una dopo l'altra.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-4"><span class="secnum">SEZIONE 27.4</span>Compressione con perdita: JPEG</h2>
+
+  <p class="lead">
+    Ed eccoci al punto in cui il DSP entra in scena da protagonista. Il JPEG — lo standard delle foto — comprime
+    le immagini con perdita usando una <b>trasformata</b>, esattamente come l'MP3 fa con l'audio.
+  </p>
+
+  <p>
+    Lo schema, semplificato: (1) si divide l'immagine in <b>blocchi \(8\times 8\)</b> pixel; (2) di ogni blocco
+    si calcola la <b class="termine">DCT</b> (una parente della trasformata di Fourier, Cap. 8) — che ne dà le
+    frequenze spaziali; (3) si <b>quantizzano</b> le frequenze, scartando aggressivamente le <b>alte</b> (i
+    dettagli finissimi che l'occhio nota poco, Cap. 23); (4) si comprimono senza perdita i coefficienti rimasti
+    (Huffman, RLE). Poiché in un blocco tipico quasi tutta l'energia sta in poche frequenze basse, buttare le
+    alte riduce enormemente i dati con un impatto visivo minimo.
+  </p>
+
+  <h3>Provalo: la qualità JPEG</h3>
+
+  <p>
+    Abbassa la <b>qualità</b> e guarda due cose insieme: la dimensione crollare e, alle qualità basse, comparire
+    i tipici <b>quadratini</b> (i blocchi \(8\times 8\) diventano visibili) e la perdita di dettaglio. È il
+    baratto della compressione con perdita: quanto sei disposto a degradare in cambio di quanto spazio.
+  </p>
+
+  <div class="widget" id="w-jpeg">
+    <div class="w-head">
+      <span>Compressione JPEG</span>
+      <span class="hint">qualità vs dimensione</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap">
+      <div style="text-align:center">
+        <svg id="wjp-orig" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="Immagine originale"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">originale</div>
+      </div>
+      <div style="text-align:center">
+        <svg id="wjp-out" viewBox="0 0 200 200" style="max-width:200px" role="img" aria-label="Immagine compressa JPEG"></svg>
+        <div style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-top:.3rem">compressa</div>
+      </div>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>qualità</label><input type="range" id="wjp-q" min="1" max="100" step="1" value="60"><output id="wjp-qv">60</output></div>
+    </div>
+    <div class="w-readout" id="wjp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-5"><span class="secnum">SEZIONE 27.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.1</div>
+    <p style="margin-bottom:0">Per archiviare un documento di testo o un programma, useresti compressione con o
+      senza perdita? E per una foto da mettere online?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Testo e programmi: <b>senza perdita</b> (ZIP) — un solo bit sbagliato rovinerebbe il file. Foto per il
+          web: <b>con perdita</b> (JPEG) — l'occhio non nota le piccole approssimazioni e il file è molto più
+          piccolo. La regola: senza perdita quando ogni bit conta, con perdita quando conta solo la percezione.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.2</div>
+    <p style="margin-bottom:0">Perché Huffman assegna codici di lunghezza diversa ai simboli, invece che tutti
+      uguali?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per sfruttare le <b>frequenze diverse</b>: dando codici <b>corti ai simboli frequenti</b> e lunghi ai
+          rari, la lunghezza <em>media</em> per simbolo cala sotto quella fissa. Se i simboli fossero tutti
+          equiprobabili non ci sarebbe guadagno; più la distribuzione è sbilanciata, più Huffman risparmia
+          (§27.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.3</div>
+    <p style="margin-bottom:0">Perché il delta encoding (memorizzare le differenze) aiuta a comprimere un segnale
+      che varia lentamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché se il segnale varia poco, le <b>differenze</b> tra campioni consecutivi sono <b>piccole</b> —
+          numeri vicini a zero — e i numeri piccoli, avendo una distribuzione molto sbilanciata, si comprimono
+          benissimo (es. con Huffman). Si trasforma un segnale «grande» in uno «piccolo» equivalente (§27.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.4</div>
+    <p style="margin-bottom:0">Nel JPEG, quali frequenze si scartano più aggressivamente, e perché non si nota
+      troppo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Le <b>alte frequenze spaziali</b> (dettagli finissimi), che l'occhio percepisce poco (Cap. 23). In un
+          blocco \(8\times 8\) quasi tutta l'energia sta nelle frequenze basse, quindi buttare le alte riduce
+          molto i dati con impatto visivo minimo. Esagerando, però, compaiono i <b>quadratini</b> ai bordi dei
+          blocchi (§27.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-6"><span class="secnum">SEZIONE 27.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 27</div>
+    <ol style="margin-bottom:0">
+      <li><b>Comprimere = sfruttare la ridondanza.</b> <b>Senza perdita</b> (esatta, testo/dati) vs <b>con
+          perdita</b> (approssimata, media/percezione).</li>
+      <li><b>Tecniche lossless:</b> RLE (ripetizioni), Huffman (frequenze sbilanciate → codici corti ai
+          frequenti), delta (lentezza), LZW (sequenze ricorrenti). I compressori le combinano.</li>
+      <li><b>JPEG (con perdita):</b> blocchi \(8\times 8\) → DCT → quantizza scartando le alte frequenze → codifica
+          lossless. Trade qualità/dimensione.</li>
+      <li><b>La trasformata impacchetta:</b> concentra l'energia in poche frequenze, così il resto si può buttare.
+          È l'MP3 dell'audio (Cap. 22), applicato alle immagini.</li>
+      <li><b>Lezione:</b> conoscere il ricevitore (occhio, orecchio) permette di buttare l'impercettibile.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la compressione chiudiamo le grandi applicazioni. Il libro scende ora verso il «metallo»: come si
+    <em>esegue</em> davvero tutto questo. Il <strong>Capitolo 28</strong> presenta i <b>processori DSP</b> — chip
+    progettati apposta per macinare le moltiplica-e-accumula del Cap. 4: architettura Harvard, pipeline, buffer
+    circolari. Scopriremo perché un DSP fa in un ciclo ciò che a un processore normale ne costa molti, e cosa
+    rende possibile il DSP in tempo reale.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §27.2 — codici di Huffman (bit medi per simbolo)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('whf-svg');
+  if (!svg) return;
+  const out = document.getElementById('whf-out');
+  const sS = document.getElementById('whf-s'), sV = document.getElementById('whf-sv');
+  const K = 8;   // 8 simboli → 3 bit fissi
+
+  function draw() {
+    const skew = parseFloat(sS.value);
+    sV.textContent = skew.toFixed(2);
+    // distribuzione geometrica: p_i ∝ exp(-skew*i)
+    let p = []; let sum = 0;
+    for (let i = 0; i < K; i++) { const v = Math.exp(-skew * i); p.push(v); sum += v; }
+    p = p.map(v => v / sum);
+    // lunghezze codice ~ ceil(-log2 p) (approssimazione di Huffman)
+    const len = p.map(v => Math.max(1, Math.ceil(-Math.log2(v))));
+    const avg = p.reduce((a, v, i) => a + v * len[i], 0);
+    const fixed = 3;
+
+    svg.innerHTML = '';
+    const p2 = new Plot(svg, { xmin: -0.5, xmax: K, ymin: 0, ymax: 1.05 });
+    p2.axes({ numbers: false, names: true, xname: 'simboli (dal più frequente) →', yname: '' });
+    // barre di frequenza + etichetta lunghezza codice
+    for (let i = 0; i < K; i++) {
+      p2.rect(i - 0.32, 0, i + 0.32, p[i], { fill: 'color-mix(in srgb, var(--accent) 55%, transparent)', color: 'var(--accent)', width: 1 });
+      p2.text(i, p[i], len[i] + ' bit', { dy: -6, size: 10, color: 'var(--warm)', bold: true });
+    }
+    out.innerHTML = `
+      <div class="big">bit medi/simbolo: <b style="color:var(--accent)">${avg.toFixed(2)}</b> &nbsp;·&nbsp; fissi: <b>${fixed}</b> &nbsp;·&nbsp; risparmio: <b style="color:var(--green)">${((1 - avg / fixed) * 100).toFixed(0)}%</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni barra è la frequenza di un simbolo; sopra, la lunghezza del suo codice Huffman (in
+        <b style="color:var(--warm)">ambra</b>): <mark>corto per i frequenti, lungo per i rari</mark>.
+        ${skew < 0.1 ? 'Distribuzione quasi uniforme: nessun guadagno, come i 3 bit fissi.' : 'Distribuzione sbilanciata: la lunghezza media scende sotto i 3 bit fissi.'}
+      </div>`;
+  }
+  sS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §27.4 — compressione JPEG-lite (DCT a blocchi 8×8)
+   ========================================================================= */
+(function () {
+  const sOrig = document.getElementById('wjp-orig'), sOut = document.getElementById('wjp-out');
+  if (!sOrig) return;
+  const out = document.getElementById('wjp-out');
+  const qS = document.getElementById('wjp-q'), qV = document.getElementById('wjp-qv');
+  const N = 48;   // 6×6 blocchi da 8
+  // scena
+  function scene(u, v) {
+    let val = 0.28 + 0.32 * v;
+    const dx = u - 0.38, dy = v - 0.42, r = Math.sqrt(dx * dx + dy * dy);
+    if (r < 0.24) { const sh = 1 - r / 0.24; val = 0.35 + 0.6 * Math.pow(sh, 0.7); }
+    if (u > 0.62 && u < 0.86 && v > 0.6 && v < 0.85) val = 0.15;
+    val += 0.06 * Math.sin(u * 40) * Math.sin(v * 40);
+    return Math.max(0, Math.min(1, val));
+  }
+  const A = []; for (let i = 0; i < N; i++) { A.push([]); for (let j = 0; j < N; j++) A[i].push(scene((j + 0.5) / N, (i + 0.5) / N)); }
+  function grayJ(v) { const l = Math.round(Math.max(0, Math.min(1, v)) * 255); return `rgb(${l},${l},${l})`; }
+  function render(svg, M) { const NS = 'http://www.w3.org/2000/svg'; svg.innerHTML = ''; const cell = 200 / N; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const r = document.createElementNS(NS, 'rect'); r.setAttribute('x', j * cell); r.setAttribute('y', i * cell); r.setAttribute('width', Math.ceil(cell) + 0.5); r.setAttribute('height', Math.ceil(cell) + 0.5); r.setAttribute('fill', grayJ(M[i][j])); svg.appendChild(r); } }
+  render(sOrig, A);
+
+  // base DCT 8 punti
+  const C = []; for (let k = 0; k < 8; k++) { C.push([]); const s = k === 0 ? Math.sqrt(1 / 8) : Math.sqrt(2 / 8); for (let n = 0; n < 8; n++) C[k].push(s * Math.cos(Math.PI / 8 * (n + 0.5) * k)); }
+  function dct1(x) { const X = new Array(8).fill(0); for (let k = 0; k < 8; k++) for (let n = 0; n < 8; n++) X[k] += C[k][n] * x[n]; return X; }
+  function idct1(X) { const x = new Array(8).fill(0); for (let n = 0; n < 8; n++) for (let k = 0; k < 8; k++) x[n] += C[k][n] * X[k]; return x; }
+
+  function draw() {
+    const q = parseInt(qS.value, 10);
+    qV.textContent = q;
+    const step = 0.008 + (100 - q) / 100 * 0.35;   // passo di quantizzazione
+    const R = A.map(r => r.slice());
+    let kept = 0, total = 0;
+    for (let bi = 0; bi < N; bi += 8) for (let bj = 0; bj < N; bj += 8) {
+      // estrai blocco
+      let blk = []; for (let i = 0; i < 8; i++) { blk.push([]); for (let j = 0; j < 8; j++) blk[i].push(A[bi + i][bj + j]); }
+      // DCT 2D separabile
+      for (let i = 0; i < 8; i++) blk[i] = dct1(blk[i]);
+      for (let j = 0; j < 8; j++) { const col = dct1(blk.map(r => r[j])); for (let i = 0; i < 8; i++) blk[i][j] = col[i]; }
+      // quantizza (passo crescente con la frequenza)
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const s = step * (1 + (i + j)); const c = Math.round(blk[i][j] / s) * s; total++; if (c !== 0) kept++; blk[i][j] = c; }
+      // IDCT 2D
+      for (let j = 0; j < 8; j++) { const col = idct1(blk.map(r => r[j])); for (let i = 0; i < 8; i++) blk[i][j] = col[i]; }
+      for (let i = 0; i < 8; i++) blk[i] = idct1(blk[i]);
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) R[bi + i][bj + j] = Math.max(0, Math.min(1, blk[i][j]));
+    }
+    render(sOut, R);
+    const ratio = total / kept;
+    out.innerHTML = `
+      <div class="big">qualità <b>${q}</b> &nbsp;·&nbsp; coefficienti tenuti: <b>${kept}/${total}</b> &nbsp;·&nbsp; compressione ≈ <b style="color:var(--green)">${ratio.toFixed(1)}×</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${q < 20 ? 'Qualità bassa: <mark>quadratini 8×8</mark> ben visibili e dettagli persi — ma file piccolissimo.'
+          : q > 75 ? 'Qualità alta: quasi indistinguibile dall\'originale, compressione modesta.'
+            : 'Buon compromesso: la maggior parte dei coefficienti alti è azzerata senza degrado evidente.'}
+        La DCT concentra l'energia nelle basse frequenze; le alte si buttano — è il cuore del JPEG.
+      </div>`;
+  }
+  qS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
