@@ -312,7 +312,7 @@ const TOC = [
     titolo: "Metodi Monte Carlo",
     file: "cap17-monte-carlo.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Campionamento e metodi Monte Carlo" },
       { id: "s17-2", n: "17.2", t: "Importance sampling" },

@@ -50,7 +50,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 14 — Autoencoder
 - [x] 15 — Apprendimento di rappresentazioni
 - [x] 16 — Modelli probabilistici strutturati
-- [ ] 17 — Metodi Monte Carlo
+- [x] 17 — Metodi Monte Carlo
 - [ ] 18 — Affrontare la funzione di partizione
 - [ ] 19 — Inferenza approssimata
 - [ ] 20 — Modelli generativi profondi
