@@ -277,7 +277,7 @@ const TOC = [
     n: 17,
     titolo: "Temperatura e calore",
     file: "cap17-temperatura-calore.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Temperatura ed equilibrio termico" },
       { id: "s17-2", n: "17.2", t: "Le scale di temperatura" },
