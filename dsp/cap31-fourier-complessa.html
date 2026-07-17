@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>31 · La trasformata di Fourier complessa — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="31">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.31 — Capitolo 31</div>
+    <h1>La trasformata di Fourier complessa</h1>
+    <p class="standfirst">
+      Con i numeri complessi (Cap. 30) possiamo finalmente scrivere Fourier nella sua forma definitiva:
+      <b>una sola formula</b> al posto delle due (coseno e seno) del Cap. 8. È la versione che usa tutta la
+      letteratura avanzata, ed è più elegante e simmetrica. In cambio, dobbiamo accettare un'idea che all'inizio
+      spiazza: le <b>frequenze negative</b>. Vedremo che non sono affatto misteriose.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Riscriviamo la DFT del Cap. 8 con gli esponenziali complessi del Cap. 30. Non è una trasformata nuova: è la
+      <em>stessa</em>, in veste più pulita. Prepara il terreno a Laplace e alla trasformata z (Cap. 32–33), che
+      vivono interamente nel piano complesso.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni articolo, libro e software di DSP «serio» usa la forma complessa: \(X[k] = \sum x[n]\,\eu^{-\ii 2\pi
+      kn/N}\). Non riconoscerla significa non poter leggere la letteratura. E capire le frequenze negative
+      dissolve una delle confusioni più comuni di chi arriva al DSP avanzato. <strong>È il passaporto per la
+      teoria adulta.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-1"><span class="secnum">SEZIONE 31.1</span>Dai seni e coseni agli esponenziali</h2>
+
+  <p class="lead">
+    Nel Cap. 8 la DFT usava <b>due</b> famiglie di funzioni base: i coseni e i seni. La formula di Eulero
+    (Cap. 30) permette di fonderle in <b>una</b> sola: l'esponenziale complesso.
+  </p>
+
+  <p>
+    Poiché \(\eu^{\ii\theta} = \cos\theta + \ii\sin\theta\), un singolo esponenziale complesso porta con sé sia
+    il coseno sia il seno. Al posto delle onde base \(\cos(2\pi kn/N)\) e \(\sin(2\pi kn/N)\) usiamo un'unica
+    onda base complessa, \(\eu^{\ii 2\pi kn/N}\): un <b>fasore che ruota</b> a frequenza \(k\). Correlare il
+    segnale con questo singolo oggetto dà, in un colpo solo, l'informazione che prima richiedeva due correlazioni
+    separate. Meno formule, più simmetria.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-2"><span class="secnum">SEZIONE 31.2</span>La DFT complessa</h2>
+
+  <p class="lead">
+    Ed ecco la formula, in tutta la sua compattezza. Analisi e sintesi differiscono solo per il segno
+    nell'esponente e un fattore di scala.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La DFT complessa <span class="tag">una sola, elegante formula</span></div>
+    <div class="f-body">
+      \[
+        \hD{X[k]} \;=\; \sum_{n=0}^{N-1} \hB{x[n]}\; \eu^{-\ii\, \hA{2\pi k n / N}}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hD{X[k]}\)</dt><dd>il coefficiente complesso della frequenza \(k\): il suo <b>modulo</b> è
+            l'ampiezza, il suo <b>argomento</b> la fase (Cap. 30). Un numero, due informazioni.</dd>
+        <dt>\(\hB{x[n]}\)</dt><dd>il segnale nel tempo (che moltiplichiamo per l'onda base).</dd>
+        <dt>\(\eu^{-\ii\,\hA{2\pi kn/N}}\)</dt><dd>l'onda base complessa (il fasore rotante) alla frequenza \(k\),
+            coniugata (segno meno) perché la stiamo «correlando».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Confrontala con le <em>due</em> formule del Cap. 8 (una per i coseni, una per i seni): qui c'è <b>una sola
+      riga</b>, e la sintesi (DFT inversa) è identica ma col segno \(+\) nell'esponente e un \(1/N\) davanti.
+      <mark>Elegante fino alla commozione</mark> — ed è per questo che tutti la usano. È esattamente la stessa
+      informazione della DFT reale, impacchettata meglio.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-3"><span class="secnum">SEZIONE 31.3</span>Le frequenze negative</h2>
+
+  <p class="lead">
+    Il prezzo dell'eleganza è un'idea che all'inizio sembra assurda: nella forma complessa compaiono le
+    <b>frequenze negative</b>. Cosa significa una frequenza «meno cinque»?
+  </p>
+
+  <p>
+    La chiave è che un esponenziale complesso <em>ruota</em> (Cap. 30): \(\eu^{\ii\omega n}\) gira in senso
+    antiorario, \(\eu^{-\ii\omega n}\) in senso <b>orario</b>. La frequenza negativa è semplicemente <b>rotazione
+    nel verso opposto</b>. E qui c'è la bellezza: un coseno reale — l'onda «vera», senza parte immaginaria — si
+    ottiene sommando <b>due fasori controrotanti</b>, uno a frequenza \(+\omega\) e uno a \(-\omega\). Le loro
+    parti immaginarie (i seni) si cancellano, le parti reali (i coseni) si sommano: resta un coseno puro.
+    <mark>Un'onda reale è fatta di due rotazioni opposte</mark> — ecco perché servono le frequenze negative.
+  </p>
+
+  <h3>Provalo: due rotazioni opposte fanno un coseno</h3>
+
+  <p>
+    Fai girare i due fasori: uno in senso <b style="color:var(--accent)">antiorario</b> (+ω), uno in senso
+    <b style="color:var(--warm)">orario</b> (−ω). La loro <b style="color:var(--green)">somma</b> resta sempre
+    <em>sull'asse reale</em> — le parti immaginarie si annullano — e traccia un <b>coseno</b>. È la
+    dimostrazione visiva di perché le frequenze negative esistono.
+  </p>
+
+  <div class="widget" id="w-counter">
+    <div class="w-head">
+      <span>Fasori controrotanti → coseno reale</span>
+      <span class="hint">+ω e −ω si sommano in un coseno</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap">
+      <svg id="wco-circle" viewBox="0 0 240 240" style="max-width:240px" role="img" aria-label="Due fasori controrotanti e la loro somma sull'asse reale"></svg>
+      <svg id="wco-wave" viewBox="0 0 340 240" style="max-width:340px" role="img" aria-label="La somma dei due fasori traccia un coseno reale"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>angolo θ</label><input type="range" id="wco-t" min="0" max="12.57" step="0.05" value="1.5"><output id="wco-tv">1.5</output></div>
+    </div>
+    <div class="w-readout" id="wco-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-4"><span class="secnum">SEZIONE 31.4</span>Confronto con la DFT reale</h2>
+
+  <p class="lead">
+    Le due forme — reale (Cap. 8) e complessa — sono <b>matematicamente equivalenti</b>: contengono la stessa
+    informazione. La scelta è di stile e di comodità.
+  </p>
+
+  <p>
+    Lo spettro complesso di un segnale reale ha una <b>simmetria speciale</b> (già intravista nel Cap. 10.3): la
+    metà a frequenze negative è il <b>coniugato speculare</b> di quella a frequenze positive. Detto altrimenti:
+    per un segnale reale, le frequenze negative non portano informazione nuova — sono il riflesso delle positive.
+    Ecco perché la DFT reale (che tiene solo metà spettro, \(N/2+1\) frequenze) è sufficiente e più intuitiva per
+    chi inizia; la DFT complessa (che tiene tutto lo spettro, positive e negative) è più elegante e generale, ed
+    è indispensabile quando i segnali sono <em>essi stessi</em> complessi (come in certe applicazioni radio).
+  </p>
+
+  <h3>Provalo: lo spettro complesso è simmetrico</h3>
+
+  <p>
+    Lo spettro complesso di un segnale reale, mostrato per intero — frequenze <b>negative</b> a sinistra,
+    <b>positive</b> a destra. Muovi la frequenza della componente e guarda i picchi comparire <b>a coppie
+    speculari</b>: ogni frequenza positiva ha la sua gemella negativa. La metà negativa è ridondante — ed è per
+    questo che la DFT reale ne tiene solo una.
+  </p>
+
+  <div class="widget" id="w-cspec">
+    <div class="w-head">
+      <span>Spettro complesso simmetrico</span>
+      <span class="hint">ogni picco ha la sua immagine speculare</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcs-svg" viewBox="0 0 620 200" role="img" aria-label="Lo spettro complesso di un segnale reale, simmetrico attorno allo zero"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>freq.</label><input type="range" id="wcs-f" min="2" max="24" step="1" value="8"><output id="wcs-fv">8</output></div>
+    </div>
+    <div class="w-readout" id="wcs-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-5"><span class="secnum">SEZIONE 31.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.1</div>
+    <p style="margin-bottom:0">Perché la DFT complessa ha una sola formula, mentre quella reale ne ha due?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché l'esponenziale complesso \(\eu^{\ii 2\pi kn/N}\) contiene <b>sia il coseno sia il seno</b>
+          (formula di Eulero, Cap. 30): una singola onda base al posto delle due della DFT reale. Correlando con
+          essa si ottengono insieme le informazioni che prima richiedevano due correlazioni separate (§31.1).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.2</div>
+    <p style="margin-bottom:0">Cosa rappresenta, fisicamente, una «frequenza negativa»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Una <b>rotazione nel verso opposto</b>. \(\eu^{\ii\omega n}\) è un fasore che gira in senso antiorario;
+          \(\eu^{-\ii\omega n}\) gira in senso orario — «frequenza \(-\omega\)». Un coseno reale è la somma di due
+          fasori controrotanti (\(+\omega\) e \(-\omega\)), le cui parti immaginarie si annullano: per questo un
+          segnale reale «contiene» anche le frequenze negative (§31.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.3</div>
+    <p style="margin-bottom:0">Lo spettro complesso di un segnale reale è simmetrico. Che conseguenza pratica ha
+      questa simmetria?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Le frequenze negative sono il <b>coniugato speculare</b> delle positive: <b>ridondanti</b>. Quindi per
+          un segnale reale basta metà spettro (\(N/2+1\) frequenze) — ed è esattamente ciò che tiene la DFT reale
+          (§31.4) e che permette la FFT dei segnali reali a metà costo (Cap. 12).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 31.4</div>
+    <p style="margin-bottom:0">Quando è <em>indispensabile</em> la DFT complessa, e non basta quella reale?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Quando il segnale stesso è <b>complesso</b> (ha parte reale e immaginaria), come nei sistemi radio a
+          «banda base complessa» (I/Q). Lì lo spettro <em>non</em> è simmetrico e le frequenze negative portano
+          informazione propria: la DFT reale non basta. Per i segnali reali, invece, le due forme sono
+          equivalenti (§31.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s31-6"><span class="secnum">SEZIONE 31.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 31</div>
+    <ol style="margin-bottom:0">
+      <li><b>Una formula sola:</b> \(X[k] = \sum x[n]\,\eu^{-\ii 2\pi kn/N}\). L'esponenziale complesso unifica
+          coseno e seno del Cap. 8.</li>
+      <li><b>\(X[k]\) è un numero complesso:</b> modulo = ampiezza, argomento = fase. Due informazioni in un
+          oggetto.</li>
+      <li><b>Frequenze negative</b> = rotazione nel verso opposto. Un coseno reale = due fasori controrotanti
+          (\(+\omega\) e \(-\omega\)).</li>
+      <li><b>Simmetria:</b> lo spettro complesso di un segnale reale è coniugato-simmetrico → metà negativa
+          ridondante → basta la DFT reale.</li>
+      <li><b>Equivalenti</b> per segnali reali; la complessa è <b>indispensabile</b> per segnali complessi (radio
+          I/Q) ed è la lingua della teoria avanzata.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la Fourier complessa in mano, siamo pronti per l'ultimo grande strumento teorico. Il <strong>Capitolo
+    32</strong> presenta la <b>trasformata di Laplace</b>: un'estensione di Fourier al piano complesso completo
+    (il piano \(s\)) che descrive i sistemi <em>analogici</em> tramite <b>poli e zeri</b>. È lo strumento con cui
+    si analizzano stabilità e comportamento dei filtri continui — e il ponte diretto verso la trasformata z
+    (Cap. 33), che fa lo stesso per i filtri digitali ricorsivi.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §31.3 — fasori controrotanti → coseno reale
+   ========================================================================= */
+(function () {
+  const sc = document.getElementById('wco-circle'), sw = document.getElementById('wco-wave');
+  if (!sc) return;
+  const out = document.getElementById('wco-out');
+  const tS = document.getElementById('wco-t'), tV = document.getElementById('wco-tv');
+
+  function draw() {
+    const th = parseFloat(tS.value);
+    tV.textContent = th.toFixed(1);
+    const ax = Math.cos(th), ay = Math.sin(th);    // e^{iθ}
+    const bx = Math.cos(th), by = -Math.sin(th);   // e^{-iθ}
+    const sx = ax + bx, sy = ay + by;              // somma = (2cosθ, 0)
+
+    sc.innerHTML = '';
+    const pc = new Plot(sc, { xmin: -2.3, xmax: 2.3, ymin: -2.3, ymax: 2.3, iso: true });
+    pc.axes({ numbers: false, names: true, xname: 'Re', yname: 'Im' });
+    pc.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--rule)', width: 1 });
+    pc.arrow(0, 0, ax, ay, { color: 'var(--accent)', width: 2 });
+    pc.arrow(0, 0, bx, by, { color: 'var(--warm)', width: 2 });
+    pc.arrow(0, 0, sx, sy, { color: 'var(--green)', width: 2.6 });
+    pc.dot(sx, sy, { color: 'var(--green)', r: 5 });
+
+    sw.innerHTML = '';
+    const pw = new Plot(sw, { xmin: 0, xmax: 4 * Math.PI, ymin: -2.3, ymax: 2.3 });
+    pw.line(0, 0, 4 * Math.PI, 0, { color: 'var(--ink-faint)', width: 1 });
+    pw.func(t => 2 * Math.cos(t), { color: 'var(--green)', width: 2.4, to: th });
+    pw.dot(th, 2 * Math.cos(th), { color: 'var(--green)', r: 4 });
+    pw.text(4 * Math.PI - 0.2, 2.05, '2·cos θ (reale)', { color: 'var(--green)', anchor: 'end', size: 11 });
+
+    out.innerHTML = `
+      <div class="big">somma = <b style="color:var(--green)">${sx.toFixed(2)}</b> + i·<b>${sy.toFixed(2)}</b> = 2cos θ</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il fasore <b style="color:var(--accent)">+ω</b> gira in un verso, il <b style="color:var(--warm)">−ω</b>
+        nell'altro. La loro <b style="color:var(--green)">somma</b> resta sempre <mark>sull'asse reale</mark>
+        (parte immaginaria = ${sy.toFixed(2)} ≈ 0) e traccia un coseno. Ecco perché un'onda reale «contiene» le
+        frequenze negative.
+      </div>`;
+  }
+  tS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §31.4 — spettro complesso simmetrico
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcs-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcs-out');
+  const fS = document.getElementById('wcs-f'), fV = document.getElementById('wcs-fv');
+  const N = 64;
+
+  function draw() {
+    const f = parseInt(fS.value, 10);
+    fV.textContent = f;
+    const x = []; for (let n = 0; n < N; n++) x.push(Math.cos(2 * Math.PI * f * n / N) + 0.5 * Math.cos(2 * Math.PI * (f + 6) * n / N));
+    // DFT complessa, magnitudo, riordinata da -N/2 a N/2
+    const mag = new Array(N).fill(0);
+    for (let k = 0; k < N; k++) { let re = 0, im = 0; for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } mag[k] = Math.sqrt(re * re + im * im); }
+    // mappa k → frequenza con segno
+    const data = []; for (let k = 0; k < N; k++) { const kk = k <= N / 2 ? k : k - N; data.push([kk, mag[k]]); }
+    data.sort((a, b) => a[0] - b[0]);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -N / 2 - 1, xmax: N / 2 + 1, ymin: 0, ymax: Math.max(...mag) * 1.2 });
+    p.line(0, 0, 0, Math.max(...mag) * 1.2, { color: 'var(--ink-faint)', width: 1.4 });
+    p.axes({ numbers: true, names: true, xname: 'frequenza (− e +)', yname: '', stepX: 16, fmtY: () => '' });
+    data.forEach(d => p.bars([d[1]], { x0: d[0], dxs: 1, bw: 0.7, fill: d[0] < 0 ? 'color-mix(in srgb, var(--warm) 45%, transparent)' : 'color-mix(in srgb, var(--accent) 55%, transparent)', color: d[0] < 0 ? 'var(--warm)' : 'var(--accent)' }));
+    p.text(-N / 4, Math.max(...mag) * 1.1, 'negative', { color: 'var(--warm)', size: 10 });
+    p.text(N / 4, Math.max(...mag) * 1.1, 'positive', { color: 'var(--accent)', size: 10 });
+
+    out.innerHTML = `
+      <div class="big">picchi a k = ±${f} e ±${f + 6}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni componente reale appare come <mark>coppia speculare</mark>: un picco a +f (in
+        <b style="color:var(--accent)">teal</b>) e il suo gemello a −f (in <b style="color:var(--warm)">ambra</b>).
+        La metà negativa è il riflesso della positiva: nessuna informazione nuova. Ecco perché la DFT reale ne
+        tiene solo una metà.
+      </div>`;
+  }
+  fS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

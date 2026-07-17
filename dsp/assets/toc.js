@@ -458,7 +458,7 @@ const TOC = [
     n: 31,
     titolo: "La trasformata di Fourier complessa",
     file: "cap31-fourier-complessa.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s31-1", n: "31.1", t: "Dai seni e coseni agli esponenziali" },
       { id: "s31-2", n: "31.2", t: "La DFT complessa" },
