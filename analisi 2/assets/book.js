@@ -217,3 +217,147 @@ const W = {
     return v.toFixed(d);
   }
 };
+
+/* ============================================================================
+   Segnalibro — salva e riprendi la posizione di lettura (per libro).
+   Aggiunge un pulsante 🔖 nella barra in alto; memorizza in localStorage.
+   Modulo autonomo: non dipende dal resto di book.js. Sicuro se caricato una volta.
+   ========================================================================= */
+(function () {
+  if (window.__bmInit) return;
+  window.__bmInit = true;
+
+  function init() {
+    const bar = document.querySelector(".topbar");
+    if (!bar) return;
+    const brand = bar.querySelector(".brand");
+    const bookKey = "custombooks:bm:" + ((brand ? brand.textContent : document.title) || "libro").trim();
+    const curFile = location.pathname.split("/").pop() || "index.html";
+
+    function getBM() { try { return JSON.parse(localStorage.getItem(bookKey) || "null"); } catch (e) { return null; } }
+    function setBM(v) { try { localStorage.setItem(bookKey, JSON.stringify(v)); } catch (e) {} }
+    function clearBM() { try { localStorage.removeItem(bookKey); } catch (e) {} }
+
+    function currentSection() {
+      const heads = Array.from(document.querySelectorAll(".page h2[id], .page h3[id]"));
+      let chosen = null;
+      for (const h of heads) { if (h.getBoundingClientRect().top < 140) chosen = h; }
+      if (!chosen && heads.length) chosen = heads[0];
+      if (!chosen) return null;
+      const num = chosen.querySelector(".secnum");
+      const label = num ? chosen.textContent.replace(num.textContent, "").trim() : chosen.textContent.trim();
+      return { id: chosen.id, label: label };
+    }
+
+    function saveHere() {
+      const crumb = bar.querySelector(".crumb");
+      const h1 = document.querySelector(".page h1, h1");
+      const sec = currentSection();
+      setBM({
+        file: curFile,
+        chapText: crumb ? crumb.textContent.trim() : (h1 ? h1.textContent.trim() : "Copertina"),
+        sectionId: sec ? sec.id : null,
+        sectionLabel: sec ? sec.label : null,
+        scrollY: Math.round(window.scrollY || 0)
+      });
+    }
+
+    function goToBM() {
+      const bm = getBM();
+      if (!bm) return;
+      if (bm.file === curFile) {
+        if (bm.sectionId && document.getElementById(bm.sectionId)) location.hash = "#" + bm.sectionId;
+        else window.scrollTo({ top: bm.scrollY || 0, behavior: "smooth" });
+      } else {
+        location.href = bm.file + (bm.sectionId ? "#" + bm.sectionId : "");
+      }
+    }
+
+    /* pulsante nella barra, subito prima del tema */
+    const btn = document.createElement("button");
+    btn.className = "nav-btn icon ghost";
+    btn.id = "bm-btn";
+    btn.type = "button";
+    btn.textContent = "🔖";
+    const themeBtn = document.getElementById("theme-btn");
+    if (themeBtn && themeBtn.parentNode === bar) bar.insertBefore(btn, themeBtn);
+    else bar.appendChild(btn);
+
+    function refreshBtn() {
+      const bm = getBM();
+      btn.title = bm ? "Segnalibro: " + (bm.chapText || "") : "Segnalibro — salva dove sei arrivato";
+      btn.style.opacity = bm ? "1" : "0.75";
+    }
+
+    /* popover */
+    const pop = document.createElement("div");
+    pop.id = "bm-pop";
+    pop.style.cssText = "position:fixed;z-index:1200;display:none;min-width:210px;max-width:290px;" +
+      "background:var(--paper,#fff);color:var(--ink,#1c1b19);border:1px solid var(--rule,#e7e4dd);" +
+      "border-radius:12px;box-shadow:var(--shadow,0 10px 30px rgba(0,0,0,.18));padding:.4rem;font-size:.9rem;";
+    document.body.appendChild(pop);
+
+    const IB = "display:block;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;line-height:1.35";
+
+    function renderPop() {
+      const bm = getBM();
+      let html = '<button data-act="save" style="' + IB + '">📌&nbsp;&nbsp;Salva qui</button>';
+      if (bm) {
+        html += '<div style="height:1px;background:var(--rule,#e7e4dd);margin:.3rem .2rem"></div>';
+        html += '<button data-act="go" style="' + IB + '">↪&nbsp;&nbsp;Riprendi da qui' +
+          '<br><span style="color:var(--ink-soft,#6b6862);font-size:.82em">' +
+          (bm.chapText || "") + (bm.sectionLabel ? " · " + bm.sectionLabel : "") + '</span></button>';
+        html += '<button data-act="del" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">🗑&nbsp;&nbsp;Rimuovi</button>';
+      } else {
+        html += '<div style="padding:.3rem .6rem;color:var(--ink-soft,#6b6862);font-size:.82em">Nessun segnalibro ancora</div>';
+      }
+      pop.innerHTML = html;
+    }
+
+    function openPop(open) {
+      if (open) {
+        renderPop();
+        pop.style.display = "block";
+        const r = btn.getBoundingClientRect();
+        const w = pop.offsetWidth;
+        pop.style.top = (r.bottom + 8) + "px";
+        pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + "px";
+      } else {
+        pop.style.display = "none";
+      }
+    }
+
+    /* toast */
+    let toastEl = null, toastT = null;
+    function toast(msg) {
+      if (!toastEl) {
+        toastEl = document.createElement("div");
+        toastEl.style.cssText = "position:fixed;z-index:1300;left:50%;bottom:26px;transform:translateX(-50%);" +
+          "background:var(--ink,#1c1b19);color:var(--paper,#faf9f6);padding:.55rem 1.05rem;border-radius:999px;" +
+          "font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;";
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = msg;
+      toastEl.style.opacity = "1";
+      clearTimeout(toastT);
+      toastT = setTimeout(function () { toastEl.style.opacity = "0"; }, 1700);
+    }
+
+    btn.addEventListener("click", function (e) { e.stopPropagation(); openPop(pop.style.display !== "block"); });
+    document.addEventListener("click", function (e) { if (e.target !== btn && !pop.contains(e.target)) openPop(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") openPop(false); });
+    pop.addEventListener("click", function (e) {
+      const b = e.target.closest("button[data-act]");
+      if (!b) return;
+      const act = b.dataset.act;
+      if (act === "save") { saveHere(); refreshBtn(); openPop(false); toast("📌 Segnalibro salvato"); }
+      else if (act === "go") { openPop(false); goToBM(); }
+      else if (act === "del") { clearBM(); refreshBtn(); openPop(false); toast("Segnalibro rimosso"); }
+    });
+
+    refreshBtn();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
