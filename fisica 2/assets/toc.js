@@ -131,7 +131,7 @@ const TOC = [
     n: 9,
     titolo: "L'induzione elettromagnetica",
     file: "cap09-induzione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Gli esperimenti di Faraday" },
       { id: "s9-2", n: "9.2", t: "La legge di Faraday" },

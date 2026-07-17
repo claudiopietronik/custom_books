@@ -34,7 +34,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 6 — I circuiti in corrente continua
 - [x] 7 — Il campo magnetico e le forze magnetiche
 - [x] 8 — Le sorgenti del campo magnetico
-- [ ] 9 — L'induzione elettromagnetica
+- [x] 9 — L'induzione elettromagnetica
 - [ ] 10 — L'induttanza
 - [ ] 11 — Le correnti alternate
 - [ ] 12 — Le onde elettromagnetiche
