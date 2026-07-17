@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>37 · Matrice e parziale — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="37">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Matrice e parziale</h1>
+    <p class="standfirst">
+      Con molte variabili, le correlazioni a coppie si organizzano in una <b>matrice</b> — una mappa a colori che
+      si legge in un lampo. Ma nasconde un'insidia: due variabili possono sembrare legate solo perché una
+      <b>terza</b> le guida entrambe. La <b>correlazione parziale</b> è il bisturi che «depura» una relazione dalle
+      variabili confondenti.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Estende il Pearson (Cap. 36) da due a molte variabili, e affronta di petto le confondenti già incontrate.
+      La correlazione parziale è concettualmente il primo passo verso la regressione multipla (Cap. 44), che
+      «controlla per» più variabili contemporaneamente.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      La maggior parte delle «scoperte» giornalistiche («chi beve vino vive di più!») sono correlazioni non
+      depurate dalle confondenti (chi beve vino è più ricco, mangia meglio…). La correlazione parziale è lo
+      strumento che smaschera queste illusioni — e la matrice di correlazione è il primo sguardo su ogni dataset
+      multivariato.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-1"><span class="secnum">SEZIONE 37.1</span>La matrice di correlazione</h2>
+
+  <p class="lead">
+    Con \(k\) variabili ci sono tante coppie: la <b>matrice di correlazione</b> le raccoglie tutte in una tabella
+    quadrata, dove la casella \((i,j)\) è il Pearson tra la variabile \(i\) e la \(j\).
+  </p>
+
+  <p>
+    È <b>simmetrica</b> (la correlazione tra \(x\) e \(y\) è la stessa che tra \(y\) e \(x\)) e ha <b>1 sulla
+    diagonale</b> (ogni variabile è perfettamente correlata con sé stessa). Con poche variabili la leggi a occhio;
+    con molte, la si visualizza come <b>heatmap</b>: una griglia colorata dove il colore codifica il segno e
+    l'intensità della correlazione. Un colpo d'occhio rivela subito quali variabili «vanno insieme» e quali no —
+    è il primo grafico che si guarda di ogni dataset con molte colonne.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Leggere una heatmap</div>
+    <p style="margin-bottom:0">
+      Colore intenso «caldo» (o positivo) = forte correlazione positiva; intenso «freddo» (o negativo) = forte
+      negativa; neutro = nessuna relazione lineare. La diagonale è sempre al massimo (1). Cerca i <b>blocchi</b> di
+      variabili tutte correlate tra loro: spesso rivelano un fattore comune sottostante.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-2"><span class="secnum">SEZIONE 37.2</span>Leggere una heatmap</h2>
+
+  <p class="lead">
+    Una griglia di quattro variabili. Ogni cella è la loro correlazione: intensità = forza, tinta = segno.
+  </p>
+
+  <h3>Provalo: la mappa delle relazioni</h3>
+
+  <p>
+    Passa sopra le celle: la diagonale è tutta a 1; le variabili «reddito» e «istruzione» formano un blocco caldo
+    (positivamente correlate), mentre «età» e «ore social» sono anticorrelate (cella fredda). È così che si legge
+    un dataset in un istante.
+  </p>
+
+  <div class="widget" id="w-heat">
+    <div class="w-head">
+      <span>Matrice di correlazione (heatmap)</span>
+      <span class="hint">tinta = segno, intensità = forza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="whe-svg" viewBox="0 0 420 360" role="img" aria-label="Una heatmap 4x4 di correlazioni tra variabili"></svg>
+    </div>
+    <div class="w-readout" id="whe-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-3"><span class="secnum">SEZIONE 37.3</span>La correlazione parziale</h2>
+
+  <p class="lead">
+    La <b>correlazione parziale</b> tra \(x\) e \(y\) misura quanto restano associate <em>dopo aver rimosso</em>
+    l'effetto di una terza variabile \(z\). Risponde a: «\(x\) e \(y\) sono legate <em>oltre</em> a ciò che \(z\)
+    spiega di entrambe?».
+  </p>
+
+  <p>
+    L'idea: togli da \(x\) la parte prevedibile da \(z\), togli da \(y\) la parte prevedibile da \(z\), e correla
+    i due «residui». Se la correlazione grezza era tutta dovuta a \(z\), quella parziale <b>crolla verso zero</b>:
+    la relazione era un'illusione della confondente. Se invece rimane forte, c'è un legame genuino tra \(x\) e
+    \(y\) indipendente da \(z\). È il modo statistico di dire «a parità di \(z\)».
+  </p>
+
+  <h3>Provalo: smaschera la correlazione spuria</h3>
+
+  <p>
+    \(x\) e \(y\) qui sembrano fortemente correlati — ma entrambi sono guidati da una confondente \(z\) (il colore
+    dei punti). Premi «controlla per z» e guarda la correlazione <b>svanire</b>: era tutta merito di \(z\).
+  </p>
+
+  <div class="widget" id="w-part">
+    <div class="w-head">
+      <span>Correlazione parziale</span>
+      <span class="hint">l'associazione era colpa di z?</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpt-svg" viewBox="0 0 400 300" role="img" aria-label="Correlazione tra x e y che sparisce controllando per una variabile confondente z"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" id="wpt-toggle">controlla per z</button>
+    </div>
+    <div class="w-readout" id="wpt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-4"><span class="secnum">SEZIONE 37.4</span>Variabili confondenti</h2>
+
+  <p class="lead">
+    Una <b>confondente</b> è una variabile che influenza sia \(x\) sia \(y\), creando tra loro una correlazione
+    che non riflette un legame diretto. È il nemico numero uno degli studi osservazionali.
+  </p>
+
+  <p>
+    Il gelato e gli annegamenti (Cap. 36), le chiese e i crimini, il vino e la longevità: in ogni caso una terza
+    variabile (il caldo, la popolazione, il reddito) guida entrambe. La correlazione parziale permette di
+    <b>controllare</b> per una confondente nota e vedere se la relazione sopravvive. Ma attento: puoi controllare
+    solo per le confondenti che <b>conosci e hai misurato</b>. Una confondente nascosta, non nei dati, resta
+    invisibile — ed è per questo che nemmeno la correlazione parziale prova la causa: solo un
+    <b>esperimento randomizzato</b> (Cap. 36) neutralizza <em>tutte</em> le confondenti, note e ignote, in un
+    colpo solo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-5"><span class="secnum">SEZIONE 37.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 37.1</div>
+    <p style="margin-bottom:0">Perché la diagonale di una matrice di correlazione è sempre fatta di 1?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché la casella diagonale \((i,i)\) è la correlazione di una variabile con
+          <b>sé stessa</b> (§37.1): \(\Cov(x,x)/(s_x s_x) = s_x^2/s_x^2 = 1\). Ogni variabile si muove
+          perfettamente in accordo con sé stessa, quindi \(r = 1\). Per lo stesso motivo la matrice è simmetrica:
+          \(r(x,y) = r(y,x)\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 37.2</div>
+    <p style="margin-bottom:0">La correlazione grezza tra \(x\) e \(y\) è 0,7; controllando per \(z\), la parziale
+      scende a 0,05. Cosa concludi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Che la relazione tra \(x\) e \(y\) era <b>quasi interamente spuria</b>, dovuta
+          alla confondente \(z\) (§37.3): una volta rimosso l'effetto di \(z\), di \(x\)–\(y\) non resta quasi
+          nulla (0,05). \(z\) guidava entrambe, creando l'illusione di un legame diretto. «A parità di \(z\)»,
+          \(x\) e \(y\) non sono praticamente associate.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 37.3</div>
+    <p style="margin-bottom:0">Perché controllare per le confondenti note (con la parziale) non basta a dimostrare
+      la causa?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché puoi controllare solo per le confondenti che <b>conosci e hai misurato</b>
+          (§37.4). Potrebbe sempre esistere una confondente <b>nascosta</b>, non nei tuoi dati, a creare la
+          relazione. Solo un <b>esperimento randomizzato</b> (Cap. 36) neutralizza tutte le confondenti — note e
+          ignote — assegnando a caso il trattamento. Coi dati osservazionali resta sempre il dubbio di una
+          confondente non osservata.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s37-6"><span class="secnum">SEZIONE 37.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 37</div>
+    <ol style="margin-bottom:0">
+      <li><b>Matrice di correlazione:</b> tutte le coppie di Pearson in una tabella simmetrica, 1 sulla diagonale.
+        Si legge come heatmap.</li>
+      <li><b>Correlazione parziale:</b> l'associazione tra \(x\) e \(y\) dopo aver rimosso l'effetto di \(z\)
+        («a parità di \(z\)»).</li>
+      <li>Se la parziale <b>crolla</b>, la correlazione grezza era spuria (colpa della confondente).</li>
+      <li>Controlli solo le confondenti <b>note e misurate</b>: la causa vera richiede la randomizzazione.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Pearson misura relazioni lineari ed è fragile agli outlier. Quando la relazione è monotòna ma non lineare, o i
+    dati sono storti, servono correlazioni basate sui <b>ranghi</b>. Il <strong>Capitolo 38</strong> presenta il
+    \(\rho\) di Spearman e il \(\tau\) di Kendall — la robustezza (Cap. 33) applicata alla correlazione.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §37.2 — heatmap di una matrice di correlazione 4x4
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('whe-svg');
+  if (!svg) return;
+  const out = document.getElementById('whe-out');
+  const labels = ['reddito', 'istruzione', 'età', 'ore social'];
+  const M = [
+    [1.00, 0.72, 0.30, -0.25],
+    [0.72, 1.00, 0.15, -0.40],
+    [0.30, 0.15, 1.00, -0.68],
+    [-0.25, -0.40, -0.68, 1.00]
+  ];
+  function colFor(r) {
+    // positivo → accent, negativo → warm, intensità ∝ |r|
+    const base = r >= 0 ? 'var(--accent)' : 'var(--warm)';
+    return 'color-mix(in srgb, ' + base + ' ' + Math.round(Math.abs(r) * 78 + 8) + '%, var(--paper))';
+  }
+  function draw() {
+    svg.innerHTML = '';
+    const N = 4, x0 = 110, y0 = 20, cell = 62;
+    for (let i = 0; i < N; i++) {
+      // etichette righe
+      const tr = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tr.setAttribute('x', x0 - 8); tr.setAttribute('y', y0 + i * cell + cell / 2 + 4);
+      tr.setAttribute('text-anchor', 'end'); tr.setAttribute('class', 'lbl'); tr.setAttribute('font-size', 11);
+      tr.textContent = labels[i]; svg.appendChild(tr);
+      // etichette colonne
+      const tc = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tc.setAttribute('x', x0 + i * cell + cell / 2); tc.setAttribute('y', y0 - 6);
+      tc.setAttribute('text-anchor', 'middle'); tc.setAttribute('class', 'lbl'); tc.setAttribute('font-size', 10);
+      tc.textContent = labels[i]; svg.appendChild(tc);
+      for (let j = 0; j < N; j++) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', x0 + j * cell); rect.setAttribute('y', y0 + i * cell);
+        rect.setAttribute('width', cell - 3); rect.setAttribute('height', cell - 3);
+        rect.setAttribute('rx', 6); rect.setAttribute('fill', colFor(M[i][j]));
+        rect.setAttribute('stroke', 'var(--rule)'); rect.setAttribute('stroke-width', i === j ? 2 : 0.5);
+        svg.appendChild(rect);
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', x0 + j * cell + (cell - 3) / 2); t.setAttribute('y', y0 + i * cell + (cell - 3) / 2 + 4);
+        t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', 12);
+        t.setAttribute('fill', Math.abs(M[i][j]) > 0.55 ? '#fff' : 'var(--ink)'); t.setAttribute('font-weight', i === j ? 700 : 500);
+        t.textContent = M[i][j].toFixed(2); svg.appendChild(t);
+      }
+    }
+    out.innerHTML = `
+      <div style="color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Diagonale tutta a <b>1</b>. Blocco caldo <b>reddito–istruzione</b> (+0,72): vanno insieme. Cella fredda
+        <b>età–ore social</b> (−0,68): al crescere dell'età le ore sui social calano. <mark>Un colpo d'occhio e
+        conosci la struttura del dataset.</mark>
+      </div>`;
+  }
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §37.3 — correlazione parziale: spuria che sparisce controllando z
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpt-out');
+  const btn = document.getElementById('wpt-toggle');
+  let controlled = false, seed = 202;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  // z guida x e y; a parità di z, x e y indipendenti
+  const pts = [];
+  for (let i = 0; i < 70; i++) { const z = g(); const x = 50 + 13 * z + 4 * g(); const y = 50 + 13 * z + 4 * g(); pts.push({ x, y, z }); }
+
+  function pearson(arr, fx, fy) {
+    const n = arr.length, mx = arr.reduce((a, p) => a + fx(p), 0) / n, my = arr.reduce((a, p) => a + fy(p), 0) / n;
+    let sxy = 0, sxx = 0, syy = 0;
+    arr.forEach(p => { sxy += (fx(p) - mx) * (fy(p) - my); sxx += (fx(p) - mx) ** 2; syy += (fy(p) - my) ** 2; });
+    return sxy / Math.sqrt(sxx * syy);
+  }
+  // residui dopo regressione lineare su z
+  function residuals(fv) {
+    const n = pts.length, mz = pts.reduce((a, p) => a + p.z, 0) / n, mv = pts.reduce((a, p) => a + fv(p), 0) / n;
+    let szv = 0, szz = 0; pts.forEach(p => { szv += (p.z - mz) * (fv(p) - mv); szz += (p.z - mz) ** 2; });
+    const b = szv / szz;
+    return pts.map(p => fv(p) - (mv + b * (p.z - mz)));
+  }
+
+  function draw() {
+    btn.classList.toggle('on', controlled);
+    btn.textContent = controlled ? 'mostra grezza' : 'controlla per z';
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 100, iso: true });
+    p.axes({ numbers: false, names: true, xname: 'x', yname: 'y' });
+    let r;
+    if (!controlled) {
+      pts.forEach(q => { const zc = (q.z + 3) / 6; p.dot(q.x, q.y, { r: 3.2, color: 'color-mix(in srgb, var(--violet) ' + Math.round(zc * 70 + 15) + '%, var(--paper))', stroke: 'var(--paper)', sw: 0.5 }); });
+      r = pearson(pts, p => p.x, p => p.y);
+    } else {
+      const rx = residuals(p => p.x), ry = residuals(p => p.y);
+      const resPts = rx.map((v, i) => ({ x: 50 + v, y: 50 + ry[i] }));
+      resPts.forEach(q => p.dot(q.x, q.y, { r: 3.2, color: 'color-mix(in srgb, var(--green) 55%, transparent)', stroke: 'var(--paper)', sw: 0.5 }));
+      r = pearson(resPts, p => p.x, p => p.y);
+    }
+    out.innerHTML = `
+      <div class="big">${controlled ? 'correlazione parziale (residui) = ' : 'correlazione grezza x–y = '}<b style="color:${controlled ? 'var(--green)' : 'var(--violet)'}">${r.toFixed(2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${controlled
+          ? 'Rimosso l’effetto di z da entrambe, la nuvola si <mark>sparpaglia</mark>: la correlazione crolla verso 0. Era tutta merito di z — una relazione <b>spuria</b>.'
+          : 'x e y sembrano molto correlati (colore = z). Ma osserva: i punti scuri (z alto) stanno in alto a destra, i chiari in basso a sinistra… è <b>z</b> a guidare entrambi. Premi «controlla per z».'}
+      </div>`;
+  }
+  btn.addEventListener('click', () => { controlled = !controlled; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

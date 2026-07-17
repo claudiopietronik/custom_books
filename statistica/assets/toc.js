@@ -436,7 +436,7 @@ const TOC = [
   },
   {
     n: 37, parte: "IV · Statistica inferenziale",
-    titolo: "Matrice e parziale", file: "cap37-matrice-parziale.html", stato: "da-fare",
+    titolo: "Matrice e parziale", file: "cap37-matrice-parziale.html", stato: "pronto",
     sezioni: [
       { id: "s37-1", n: "37.1", t: "La matrice di correlazione" },
       { id: "s37-2", n: "37.2", t: "Leggere una heatmap" },
