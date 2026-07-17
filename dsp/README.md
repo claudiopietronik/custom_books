@@ -32,7 +32,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 3 — ADC e DAC
 - [x] 4 — Il software del DSP
 - [x] 5 — Sistemi lineari
-- [ ] 6 — La convoluzione
+- [x] 6 — La convoluzione
 - [ ] 7 — Proprietà della convoluzione
 - [ ] 8 — La trasformata di Fourier discreta (DFT)
 - [ ] 9 — Applicazioni della DFT

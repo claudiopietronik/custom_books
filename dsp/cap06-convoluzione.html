@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · La convoluzione — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.06 — Capitolo 6</div>
+    <h1>La convoluzione</h1>
+    <p class="standfirst">
+      Ecco il primo grande strumento del DSP, e per molti il più temuto. In realtà la convoluzione è un gesto
+      semplicissimo — <em>ribalta, scorri, moltiplica, somma</em> — che nasconde un'idea potente: se conosci come
+      un sistema LTI reagisce a un <b>singolo impulso</b>, la convoluzione ti dà la sua reazione a
+      <em>qualunque</em> segnale. Dentro questa operazione ci sono già tutti i filtri del libro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È il seguito diretto del Cap. 5. Là abbiamo scomposto un segnale in impulsi e invocato la sovrapposizione;
+      qui portiamo a termine il conto e ne esce la convoluzione. È il cuore del <b>dominio del tempo</b>: nei
+      Cap. 8–12 vedremo il suo gemello nel <b>dominio della frequenza</b>, e nel Cap. 7 scopriremo che i due si
+      parlano.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni filtro digitale a risposta finita (FIR) <em>è</em> una convoluzione: filtrare un segnale significa
+      convolverlo con la risposta all'impulso del filtro. Levigare, derivare, rilevare bordi, aggiungere
+      un'eco, cercare un pattern: tutte convoluzioni. Padroneggiarla qui significa capire, in un colpo solo, metà
+      degli algoritmi che verranno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">SEZIONE 6.1</span>La funzione delta e la risposta all'impulso</h2>
+
+  <p class="lead">
+    Due definizioni, e con quelle in mano tutto il resto scorre.
+  </p>
+
+  <p>
+    La <b class="termine">funzione delta</b> (o impulso unitario), scritta \(\delta[n]\), è il segnale più
+    semplice che esista: vale \(1\) al campione \(n=0\) e \(0\) ovunque altrove. Un solo pallino, un lampo
+    isolato. È il «mattone» in cui il Cap. 5 ha scomposto ogni segnale.
+  </p>
+
+  <p>
+    Se mandiamo questo lampo dentro un sistema LTI, l'uscita che ne esce si chiama <b class="termine">risposta
+    all'impulso</b> e si indica con \(h[n]\). È la «firma» del sistema: <mark>per un sistema LTI, \(h[n]\)
+    contiene tutto</mark>. Non serve altro — vedremo tra poco che, nota \(h[n]\), possiamo calcolare l'uscita per
+    ogni possibile ingresso. È la promessa fatta nel Cap. 5, ora mantenuta.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Perché h[n] basta a descrivere il sistema</div>
+    <p style="margin-bottom:0">
+      Il ragionamento in tre passi (li abbiamo già preparati nel §5.6): (1) ogni ingresso è una <b>somma di
+      impulsi</b> scalati e traslati; (2) per l'<b>invarianza nel tempo</b>, la risposta a un impulso spostato in
+      posizione \(k\) è \(h[n]\) spostata in \(k\), cioè \(h[n-k]\); (3) per la <b>linearità</b>, l'uscita totale
+      è la somma di queste risposte, ciascuna scalata dall'altezza del rispettivo campione d'ingresso. Sommando
+      tutto, ottieni la convoluzione. In una frase: <mark>l'uscita è la somma di tante copie di \(h\), una per
+      ogni campione d'ingresso, ciascuna scalata e spostata al punto giusto.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">SEZIONE 6.2</span>La convoluzione vista dall'ingresso</h2>
+
+  <p class="lead">
+    Ci sono due modi di guardare la convoluzione, e conviene vederli entrambi: raccontano la stessa operazione da
+    due punti di vista. Cominciamo da quello più intuitivo, il <b>lato ingresso</b>.
+  </p>
+
+  <p>
+    Immagina di percorrere l'ingresso campione per campione. Ogni campione \(x[k]\) è un impulso di altezza
+    \(x[k]\) in posizione \(k\); per quanto detto sopra, la sua eco nel sistema è una copia intera di \(h\),
+    scalata di \(x[k]\) e appoggiata a partire dalla posizione \(k\). L'uscita finale è la <b>somma di tutte
+    queste copie sovrapposte</b>: ogni campione d'ingresso «spara» una \(h\) nel futuro, e le \(h\) si accumulano.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'immagine dei rintocchi</div>
+    <p style="margin-bottom:0">
+      Pensa a una campana: ogni colpo (un impulso) produce sempre lo stesso rintocco che sfuma (la risposta
+      \(h\)). Se dai molti colpi di forza diversa e in momenti diversi, il suono complessivo è la
+      <em>somma</em> dei rintocchi sovrapposti — uno per colpo, ognuno partito al suo istante e con la sua
+      intensità. <mark>La convoluzione è esattamente questo:</mark> sovrapporre una copia di \(h\) per ogni
+      campione d'ingresso. Il widget del §6.5 lo mostra dal vivo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">SEZIONE 6.3</span>La convoluzione vista dall'uscita</h2>
+
+  <p class="lead">
+    Il secondo punto di vista è meno intuitivo ma più utile per <em>calcolare</em>: guarda un singolo campione
+    d'<b>uscita</b> e chiedi da dove viene.
+  </p>
+
+  <p>
+    Fissa un istante \(n\) e domanda: quanto vale \(y[n]\)? La risposta è una <b>somma pesata dei campioni
+    d'ingresso vicini</b>, dove i pesi vengono dalla risposta all'impulso <em>ribaltata</em>. Il campione
+    d'uscita di adesso «guarda indietro» ai campioni d'ingresso recenti e li mescola secondo la ricetta \(h\)
+    girata al contrario. È il punto di vista che porta direttamente alla formula e al calcolo a mano.
+  </p>
+
+  <p>
+    Perché <em>ribaltata</em>? Perché nel lato ingresso \(h\) parte da un campione e si estende <em>in avanti</em>;
+    visto dall'uscita, per raccogliere tutti i contributi che arrivano <em>allo stesso</em> istante \(n\), devi
+    leggere \(h\) all'indietro. È lo stesso conto, letto nell'altro verso — e infatti dà lo stesso risultato.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">SEZIONE 6.4</span>La formula, smontata</h2>
+
+  <p>
+    Entrambi i punti di vista si condensano in un'unica formula, con il suo simbolo dedicato, l'asterisco
+    \(\ast\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La convoluzione discreta <span class="tag">ribalta, scorri, moltiplica, somma</span></div>
+    <div class="f-body">
+      \[
+        \hD{y[n]} \;=\; \big(\sig{x} \conv \sig{h}\big)[n] \;=\; \hA{\sum_{k}} \; \hB{x[k]}\,\hC{h[n-k]}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hD{y[n]}\)</dt><dd>il campione d'uscita che stiamo calcolando, all'istante \(n\).</dd>
+        <dt>\(\hA{\sum_k}\)</dt><dd>si <b>somma su tutti i campioni</b> d'ingresso \(k\) (dove i termini sono non
+            nulli).</dd>
+        <dt>\(\hB{x[k]}\)</dt><dd>il \(k\)-esimo campione d'ingresso: il «peso» del contributo.</dd>
+        <dt>\(\hC{h[n-k]}\)</dt><dd>la risposta all'impulso <b>ribaltata e traslata</b>: l'indice \(n-k\) fa
+            proprio questo (il segno meno ribalta, \(n\) trasla).</dd>
+        <dt>\(\conv\)</dt><dd>il simbolo della convoluzione. Attenzione: <b>non</b> è una moltiplicazione (per
+            quella si usa \(\cdot\) o \(\times\)).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se l'ingresso ha \(N_x\) campioni e la risposta all'impulso ne ha \(N_h\), l'uscita ne ha
+      \(N_x + N_h - 1\): la convoluzione <em>allunga</em> il segnale (la coda di \(h\) sbava oltre la fine
+      dell'ingresso). Tienilo a mente: è la fonte del ritardo e degli «effetti di bordo» dei filtri.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">SEZIONE 6.5</span>Calcolarla a mano, passo per passo</h2>
+
+  <p class="lead">
+    La formula si trasforma in una ricetta meccanica di quattro gesti. Impararla a mano una volta vale più di
+    mille letture.
+  </p>
+
+  <ol class="passi">
+    <li><b>Ribalta</b> la risposta all'impulso \(h\) (leggila da destra a sinistra).</li>
+    <li><b>Allinea</b> la \(h\) ribaltata sotto l'ingresso, all'altezza del campione d'uscita che vuoi.</li>
+    <li><b>Moltiplica</b> ogni coppia di valori che si sovrappongono.</li>
+    <li><b>Somma</b> tutti i prodotti: quella somma è il campione d'uscita. Poi <b>scorri</b> di uno e ripeti.</li>
+  </ol>
+
+  <p>
+    Un esempio numerico completo con \(\sig{x} = [\,2,\ 3,\ 1\,]\) e \(\sig{h} = [\,1,\ 2\,]\). L'uscita avrà
+    \(3 + 2 - 1 = 4\) campioni:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Esempio svolto <span class="tag">x = [2, 3, 1] ∗ h = [1, 2]</span></div>
+    <div class="f-note" style="border-top:none">
+      <p style="margin-bottom:.5rem">Facendo scorrere \(h=[1,2]\) ribaltata (\([2,1]\)) sull'ingresso:</p>
+      <ul style="margin-bottom:.4rem">
+        <li>\(y[0] = 2\cdot 1 = \mathbf{2}\)</li>
+        <li>\(y[1] = 2\cdot 2 + 3\cdot 1 = 4+3 = \mathbf{7}\)</li>
+        <li>\(y[2] = 3\cdot 2 + 1\cdot 1 = 6+1 = \mathbf{7}\)</li>
+        <li>\(y[3] = 1\cdot 2 = \mathbf{2}\)</li>
+      </ul>
+      <p style="margin-bottom:0">Risultato: \(\sig{y} = [\,2,\ 7,\ 7,\ 2\,]\). Verifica veloce: la somma dei
+      campioni d'uscita (\(18\)) è uguale al prodotto delle somme d'ingresso (\(6 \times 3 = 18\)) — vale sempre,
+      ed è un ottimo controllo.</p>
+    </div>
+  </div>
+
+  <h3>Provalo: la convoluzione che scorre</h3>
+
+  <p>
+    Ecco l'animazione che scioglie ogni dubbio. In alto vedi l'ingresso \(x[k]\) (in
+    <b style="color:var(--accent)">teal</b>) e, sovrapposta, la risposta all'impulso <b>ribaltata e traslata</b>
+    (in <b style="color:var(--warm)">ambra</b>) nella posizione dell'uscita corrente. In basso l'uscita
+    \(y[n]\) che si costruisce campione dopo campione. Muovi il cursore e guarda \(h\) scivolare sopra \(x\):
+    dove i due si sovrappongono, i prodotti si sommano nel campione d'uscita.
+  </p>
+
+  <div class="widget" id="w-conv">
+    <div class="w-head">
+      <span>Convoluzione passo per passo</span>
+      <span class="hint">scorri l'indice di uscita n</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wc-in" viewBox="0 0 620 160" role="img" aria-label="Ingresso e risposta all'impulso ribaltata sovrapposti nella posizione dell'uscita corrente"></svg>
+      <svg id="wc-out" viewBox="0 0 620 130" role="img" aria-label="Uscita della convoluzione costruita campione per campione"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>uscita n</label><input type="range" id="wc-n" min="0" max="1" step="1" value="0"><output id="wc-nv">0</output></div>
+    </div>
+    <div class="w-readout" id="wc-out-txt"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">SEZIONE 6.6</span>Esempi: media, derivata, integrale</h2>
+
+  <p class="lead">
+    La convoluzione diventa concreta quando scegli \(h\). Cambiare la risposta all'impulso cambia
+    completamente ciò che il sistema fa. Ecco i tre kernel fondamentali.
+  </p>
+
+  <ul>
+    <li><b>Media (levigatura).</b> Con \(h = [\tfrac13, \tfrac13, \tfrac13]\) ogni uscita è la media di tre
+        campioni vicini: il rumore veloce si attenua, il segnale lento resta. È il filtro a media mobile del
+        Cap. 15, e la più semplice arma anti-rumore.</li>
+    <li><b>Differenza (derivata / bordi).</b> Con \(h = [1, -1]\) ogni uscita è la differenza tra due campioni
+        consecutivi: le zone piatte diventano zero, i <em>cambiamenti</em> risaltano. È la derivata discreta, e
+        il rilevatore di bordi più elementare.</li>
+    <li><b>Somma corrente (integrale).</b> Con una \(h\) fatta di tutti \(1\), ogni uscita accumula tutti i
+        campioni fino a quel punto: è l'integrale discreto, l'operazione inversa della differenza.</li>
+  </ul>
+
+  <h3>Provalo: cosa fa un kernel</h3>
+
+  <p>
+    Stesso ingresso (una gobba con un po' di rumore, in <b style="color:var(--ink-faint)">grigio</b>), tre
+    kernel diversi. Scegli e guarda l'uscita (in <b style="color:var(--accent)">teal</b>): la media leviga, la
+    differenza mette in risalto i fronti, la somma accumula. Un solo strumento, tre comportamenti opposti — è
+    tutto nella scelta di \(h\).
+  </p>
+
+  <div class="widget" id="w-kern">
+    <div class="w-head">
+      <span>Lo stesso segnale, tre kernel</span>
+      <span class="hint">scegli cosa deve fare la convoluzione</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wk-svg" viewBox="0 0 620 300" role="img" aria-label="Un segnale convoluto con tre kernel diversi: media, differenza, somma corrente"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wk-avg">media (leviga)</button>
+      <button class="w-btn" id="wk-diff">differenza (bordi)</button>
+      <button class="w-btn" id="wk-sum">somma (integra)</button>
+    </div>
+    <div class="w-readout" id="wk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">SEZIONE 6.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">Convolvi \(\sig{x} = [\,1,\ 2,\ 3\,]\) con \(\sig{h} = [\,1,\ 1\,]\). Quanti
+      campioni ha l'uscita? Calcolala.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Lunghezza: \(3 + 2 - 1 = 4\). Scorrendo \(h\) ribaltata:</p>
+        <p>\(y[0]=1\cdot1=1\); \(y[1]=1\cdot1+2\cdot1=3\); \(y[2]=2\cdot1+3\cdot1=5\); \(y[3]=3\cdot1=3\).</p>
+        <p>\(\sig{y} = [\,1,\ 3,\ 5,\ 3\,]\). Controllo: somma \(=12 = (1{+}2{+}3)\times(1{+}1) = 6\times2\). ✓</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">Cosa fa la convoluzione con \(\sig{h} = [\,0,\ 0,\ 1\,]\)? E con
+      \(\sig{h} = [\,1\,]\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con \(h=[1]\) (l'impulso unitario) l'uscita è identica all'ingresso: la delta è l'<b>elemento
+          neutro</b> della convoluzione (Cap. 7). Con \(h=[0,0,1]\) è un impulso <em>spostato</em> di due
+          posizioni: la convoluzione <b>ritarda</b> il segnale di 2 campioni, senza alterarne la forma.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">Un filtro ha risposta all'impulso lunga 50 campioni. Elabori un segnale di 1000
+      campioni. Quanti campioni ha l'uscita, e quante moltiplicazioni servono (circa)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Uscita: \(1000 + 50 - 1 = 1049\) campioni. Moltiplicazioni: ogni campione d'uscita richiede fino a
+          50 prodotti, quindi circa \(1000 \times 50 = 50\,000\) moltiplica-e-accumula. È il costo
+          \(\propto N_x N_h\) della convoluzione diretta, che nel Cap. 18 impareremo ad abbattere con la FFT.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">Perché convolvere con \(h=[1,-1]\) «rileva i bordi»? Cosa dà su un tratto
+      costante?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(y[n] = x[n]-x[n-1]\): la differenza tra un campione e il precedente. Su un tratto costante i due
+          sono uguali e la differenza è <b>zero</b>: le zone piatte spariscono. Dove il segnale <em>cambia</em>
+          (un gradino, un bordo) la differenza è grande: i cambiamenti risaltano. È la derivata discreta, base
+          del rilevamento dei bordi (Cap. 24).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-8"><span class="secnum">SEZIONE 6.8</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li><b>Delta \(\delta[n]\)</b> = impulso unitario. <b>Risposta all'impulso \(h[n]\)</b> = uscita del
+          sistema alla delta. Per un sistema LTI, \(h[n]\) lo descrive <em>completamente</em>.</li>
+      <li><b>Convoluzione:</b> \(y[n] = \sum_k x[k]\,h[n-k]\), scritta \(y = x \conv h\). Nota l'indice
+          \(n-k\): \(h\) va <b>ribaltata e traslata</b>.</li>
+      <li><b>Ricetta a mano:</b> ribalta, allinea, moltiplica, somma, scorri. L'uscita ha \(N_x+N_h-1\)
+          campioni.</li>
+      <li><b>È la scelta di \(h\) a decidere tutto:</b> media = leviga, \([1,-1]\) = derivata/bordi, tutti \(1\)
+          = integrale. Ogni filtro FIR è una convoluzione.</li>
+      <li><b>Costo:</b> \(\propto N_x N_h\) moltiplicazioni — caro per \(h\) lunghe; la FFT lo abbatterà
+          (Cap. 18).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo convolvere. Ma la convoluzione ha una struttura algebrica ricca — è commutativa, associativa,
+    distributiva — e ciascuna di queste proprietà, apparentemente astratta, ha una conseguenza pratica sui
+    sistemi reali (perché l'ordine dei filtri in cascata non conta, per esempio). È il tema del
+    <strong>Capitolo 7</strong>: le <b>proprietà della convoluzione</b>, e la correlazione, il suo parente
+    stretto che serve a <em>cercare</em> un pattern dentro un segnale.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* dati condivisi dai widget della convoluzione */
+const X6 = [0, 0.4, 1.1, 1.6, 1.3, 0.7, 0.25, 0.05];   // ingresso (gobba)
+const H6 = [0.25, 0.6, 0.9, 0.5, 0.15];                 // risposta all'impulso
+function conv(x, h) {
+  const y = new Array(x.length + h.length - 1).fill(0);
+  for (let k = 0; k < x.length; k++)
+    for (let j = 0; j < h.length; j++)
+      y[k + j] += x[k] * h[j];
+  return y;
+}
+
+/* ============================================================================
+   WIDGET §6.5 — convoluzione che scorre
+   ========================================================================= */
+(function () {
+  const svgIn = document.getElementById('wc-in'), svgOut = document.getElementById('wc-out');
+  if (!svgIn) return;
+  const out = document.getElementById('wc-out-txt');
+  const nS = document.getElementById('wc-n'), nV = document.getElementById('wc-nv');
+  const y = conv(X6, H6);
+  const L = y.length;
+  nS.max = L - 1;
+
+  function draw() {
+    const n = parseInt(nS.value, 10);
+    nV.textContent = n;
+
+    // --- pannello ingresso + h ribaltata ---
+    svgIn.innerHTML = '';
+    const pin = new Plot(svgIn, { xmin: -H6.length, xmax: X6.length + 1, ymin: -0.3, ymax: 1.9 });
+    pin.line(-H6.length, 0, X6.length + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    pin.stem(X6, { color: 'var(--accent)', r: 3, width: 1.6 });
+    pin.text(X6.length - 0.5, 1.7, 'x[k]', { color: 'var(--accent)', bold: true, anchor: 'start', size: 12 });
+    // h ribaltata e traslata: al campione d'uscita n, contributo in posizione (n-j) con valore h[j]
+    let contrib = 0, terms = [];
+    for (let j = 0; j < H6.length; j++) {
+      const k = n - j;
+      const yv = H6[j];
+      pin.line(k, 0, k, -0.22, { color: 'var(--warm)', width: 1.4 });
+      pin.dot(k, -0.22, { color: 'var(--warm)', r: 2.6 });
+      if (k >= 0 && k < X6.length) {
+        // sovrapposizione attiva: evidenzia
+        pin.line(k, 0, k, X6[k], { color: 'var(--warm)', width: 2.6, dash: '3 2' });
+        contrib += X6[k] * yv;
+        terms.push(`${X6[k].toFixed(2)}·${yv.toFixed(2)}`);
+      }
+    }
+    pin.text(n - H6.length + 0.5, -0.15, 'h ribaltata', { color: 'var(--warm)', anchor: 'start', size: 10.5 });
+
+    // --- pannello uscita ---
+    svgOut.innerHTML = '';
+    const pout = new Plot(svgOut, { xmin: -H6.length, xmax: X6.length + 1, ymin: -0.3, ymax: Math.max(...y) * 1.2 });
+    pout.line(-H6.length, 0, X6.length + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    const shown = y.map((v, i) => i <= n ? v : NaN);
+    pout.stem(shown.filter(v => !isNaN(v)), { x0: 0, color: 'var(--green)', r: 3, width: 1.6 });
+    pout.dot(n, y[n], { color: 'var(--warm)', r: 5 });
+    pout.text(0, Math.max(...y) * 1.05, 'y[n] = uscita', { color: 'var(--green)', bold: true, anchor: 'start', size: 12 });
+
+    out.innerHTML = `
+      <div class="big">y[${n}] = ${terms.length ? terms.join(' + ') : '0'} = <b style="color:var(--warm)">${y[n].toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--warm)">h ribaltata</b> è centrata sull'uscita n=${n}. Dove i suoi steli
+        incontrano l'<b style="color:var(--accent)">ingresso</b>, i valori si moltiplicano e si sommano: ecco
+        y[${n}]. Scorri e guarda l'<b style="color:var(--green)">uscita</b> crescere: entra ed esce dai bordi,
+        ed è più lunga dell'ingresso (${X6.length}+${H6.length}−1 = ${L} campioni).
+      </div>`;
+  }
+  nS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §6.6 — lo stesso segnale, tre kernel
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wk-svg');
+  if (!svg) return;
+  const out = document.getElementById('wk-out');
+  const btns = { avg: document.getElementById('wk-avg'), diff: document.getElementById('wk-diff'), sum: document.getElementById('wk-sum') };
+  let sel = 'avg';
+  // ingresso: gradino rumoroso (40 campioni)
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(42);
+  const N = 40, xin = [];
+  for (let n = 0; n < N; n++) { const step = n < N / 2 ? 0.3 : 1.2; xin.push(step + (rng() - 0.5) * 0.45); }
+  const KER = {
+    avg: { h: [1 / 5, 1 / 5, 1 / 5, 1 / 5, 1 / 5], name: 'media a 5 (leviga)' },
+    diff: { h: [1, -1], name: 'differenza [1,−1] (bordi)' },
+    sum: { h: null, name: 'somma corrente (integra)' }
+  };
+
+  function draw() {
+    let y;
+    if (sel === 'sum') { y = []; let acc = 0; for (const v of xin) { acc += v; y.push(acc); } }
+    else y = conv(xin, KER[sel].h);
+    svg.innerHTML = '';
+    const allY = [...xin, ...y];
+    const ymin = Math.min(0, ...allY), ymax = Math.max(...allY);
+    const pad = (ymax - ymin) * 0.15;
+    const p = new Plot(svg, { xmin: -1, xmax: N + 1, ymin: ymin - pad, ymax: ymax + pad });
+    p.line(-1, 0, N + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    p.axes({ numbers: false, names: true, xname: 'n', yname: '' });
+    // ingresso (grigio) e uscita (teal)
+    p.seq(xin, { color: 'var(--ink-faint)', width: 1.4 });
+    p.stem(xin, { color: 'var(--ink-faint)', r: 1.8, width: 0.8 });
+    p.seq(y, { color: 'var(--accent)', width: 2.4 });
+
+    out.innerHTML = `
+      <div class="big">kernel: <b>${KER[sel].name}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In <b style="color:var(--ink-faint)">grigio</b> l'ingresso (un gradino sporco di rumore); in
+        <b style="color:var(--accent)">teal</b> l'uscita della convoluzione.
+        ${sel === 'avg' ? 'La <mark>media leviga</mark>: il rumore veloce si attenua, il gradino resta (un po&rsquo; sfumato).'
+          : sel === 'diff' ? 'La <mark>differenza</mark> annulla i tratti piatti e fa saltare fuori il fronte del gradino: un bordo.'
+            : 'La <mark>somma corrente</mark> accumula: è l&rsquo;integrale discreto, e cresce a ogni campione.'}
+      </div>`;
+  }
+  function setSel(s) { sel = s; for (const k in btns) btns[k].classList.toggle('on', k === s); draw(); }
+  btns.avg.addEventListener('click', () => setSel('avg'));
+  btns.diff.addEventListener('click', () => setSel('diff'));
+  btns.sum.addEventListener('click', () => setSel('sum'));
+  draw();
+})();
+</script>
+</body>
+</html>

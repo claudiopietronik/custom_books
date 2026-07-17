@@ -94,7 +94,7 @@ const TOC = [
     n: 6,
     titolo: "La convoluzione",
     file: "cap06-convoluzione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "La funzione delta e la risposta all'impulso" },
       { id: "s6-2", n: "6.2", t: "La convoluzione vista dall'ingresso" },
