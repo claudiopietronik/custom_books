@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · La trasformata di Fourier veloce (FFT) — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.12 — Capitolo 12</div>
+    <h1>La trasformata di Fourier veloce</h1>
+    <p class="standfirst">
+      La FFT è probabilmente l'algoritmo più importante di tutto il DSP — e uno dei più importanti
+      dell'informatica in generale. Calcola <em>esattamente</em> la stessa DFT del Cap. 8, ma con un'astuzia che
+      la rende centinaia o migliaia di volte più veloce. Non è una trasformata diversa: è la <b>stessa</b>
+      trasformata, calcolata da furbi. Ed è ciò che ha trasportato Fourier dalla lavagna al mondo reale.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiudiamo la teoria di Fourier con la sua arma pratica. Finora la velocità era data per scontata; qui
+      capiamo <em>come</em> la DFT diventa eseguibile su segnali veri. Da questo capitolo in poi, «fai la DFT»
+      significa sempre, sottinteso, «usa la FFT». È anche il pezzo mancante per la convoluzione veloce del
+      Cap. 18.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Senza FFT, l'analisi spettrale di un brano musicale, un'immagine o un segnale radar richiederebbe tempi
+      assurdi. Con la FFT è istantanea. È la differenza tra un'idea teorica e una tecnologia: <strong>lo stesso
+      algoritmo gira miliardi di volte al giorno</strong>, dentro ogni telefono, router, TV e strumento medico.
+      Capirne l'idea è capire perché il DSP moderno esiste.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">SEZIONE 12.1</span>Il costo proibitivo della DFT</h2>
+
+  <p class="lead">
+    Ripartiamo dal problema. La DFT calcolata per correlazione (Cap. 8) richiede, per ogni frequenza, di
+    correlare il segnale con un'onda base: circa \(N\) moltiplicazioni. E le frequenze sono \(N\). Totale:
+    <b>circa \(N^2\) moltiplicazioni</b>.
+  </p>
+
+  <p>
+    Per segnali piccoli va bene. Ma \(N^2\) cresce in modo feroce. Con \(N = 1000\) sono un milione di
+    operazioni: gestibile. Con \(N = 1\,000\,000\) — un secondo di audio ad alta qualità — sono
+    <b>mille miliardi</b> di operazioni: minuti o ore, per una singola trasformata. Impraticabile. È il muro
+    contro cui Fourier è rimasto per un secolo e mezzo (Cap. 1): la teoria c'era, ma i conti no.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il divario di costo <span class="tag">N² contro N·log N</span></div>
+    <div class="f-body">
+      \[
+        \text{DFT diretta:}\ \hB{N^2} \qquad\qquad \text{FFT:}\ \hA{N\log_2 N}
+      \]
+    </div>
+    <div class="f-note">
+      La differenza sembra modesta ma è abissale. Con \(N = 2^{20} \approx 10^6\): la DFT diretta fa
+      \(N^2 = 10^{12}\) operazioni, la FFT ne fa \(N\log_2 N = 10^6 \times 20 = 2\times 10^7\). Un fattore
+      <b>50 000</b>. <mark>Ciò che richiedeva un'ora richiede ora un centesimo di secondo.</mark> E il vantaggio
+      cresce ancora con \(N\).
+    </div>
+  </div>
+
+  <h3>Provalo: quanto è più veloce la FFT?</h3>
+
+  <p>
+    Aumenta la dimensione \(N\) e confronta il numero di operazioni delle due strade. Il divario non cresce
+    linearmente: esplode. È il motivo per cui, oltre una certa taglia, la DFT diretta semplicemente non è
+    un'opzione.
+  </p>
+
+  <div class="widget" id="w-cost">
+    <div class="w-head">
+      <span>DFT diretta vs FFT</span>
+      <span class="hint">sposta N e guarda il divario esplodere</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcs-svg" viewBox="0 0 620 240" role="img" aria-label="Confronto tra il costo N-quadro della DFT diretta e N log N della FFT"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>N = 2^</label><input type="range" id="wcs-p" min="4" max="22" step="1" value="12"><output id="wcs-pv">12</output></div>
+    </div>
+    <div class="w-readout" id="wcs-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">SEZIONE 12.2</span>L'idea: dividi et impera</h2>
+
+  <p class="lead">
+    Come si passa da \(N^2\) a \(N\log N\)? Con l'idea più feconda dell'informatica: <b>dividi et impera</b>.
+    Spezza il problema a metà, risolvi i due pezzi, e ricomponi in modo economico.
+  </p>
+
+  <p>
+    L'osservazione geniale (di Cooley e Tukey, 1965 — ma le sue radici risalgono a Gauss) è questa: una DFT di
+    \(N\) punti si può costruire a partire da <b>due DFT di \(N/2\) punti</b> — una sui campioni di posto
+    <em>pari</em>, l'altra su quelli di posto <em>dispari</em> — combinandole con poche operazioni. E ciascuna
+    DFT da \(N/2\) si spezza a sua volta in due da \(N/4\), e così via, fino a DFT di un solo punto (che sono
+    banali: un punto è già la sua trasformata).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché dimezzare fa risparmiare così tanto</div>
+    <p style="margin-bottom:0">
+      Una DFT diretta da \(N\) costa \(N^2\). Due DFT da \(N/2\) costano \(2\times(N/2)^2 = N^2/2\): già metà!
+      Combinando le due metà si aggiunge solo un costo \(\propto N\). Ripetendo la spaccatura fino in fondo si
+      hanno \(\log_2 N\) «livelli», ciascuno di costo \(\propto N\): totale \(N\log_2 N\). <mark>Ogni volta che
+      dimezzi, butti via metà del lavoro quadratico</mark> — ed è per questo che la FFT richiede \(N\) potenza di
+      due (per poter dimezzare fino in fondo).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">SEZIONE 12.3</span>La decomposizione a bit invertiti</h2>
+
+  <p class="lead">
+    Separare i campioni pari da quelli dispari, ripetutamente, produce un riordino curioso e bellissimo: la
+    <b>permutazione a bit invertiti</b>.
+  </p>
+
+  <p>
+    Se scrivi l'indice di ogni campione in binario e ne <b>rovesci le cifre</b> (il primo bit diventa l'ultimo e
+    viceversa), ottieni la nuova posizione a cui quel campione finisce dopo tutte le spaccature pari/dispari. Per
+    esempio, con \(N=8\): l'indice \(1 = 001\) rovesciato è \(100 = 4\); l'indice \(3 = 011\) diventa
+    \(110 = 6\). È un modo elegantissimo — e velocissimo da calcolare in hardware — di preparare i dati per la
+    fase di ricombinazione.
+  </p>
+
+  <h3>Provalo: il rimescolamento a bit invertiti</h3>
+
+  <p>
+    Ecco la permutazione resa visibile. In alto le posizioni originali \(0 \ldots N-1\); in basso, dove ciascuna
+    finisce dopo il rovesciamento dei bit. Gli incroci delle linee sono lo «shuffle» che la FFT esegue prima di
+    cominciare i calcoli veri.
+  </p>
+
+  <div class="widget" id="w-bitrev">
+    <div class="w-head">
+      <span>Permutazione a bit invertiti</span>
+      <span class="hint">scegli la dimensione</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbr-svg" viewBox="0 0 620 200" role="img" aria-label="La permutazione a bit invertiti che riordina i campioni prima della FFT"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn" id="wbr-8">N = 8</button>
+      <button class="w-btn on" id="wbr-16">N = 16</button>
+      <button class="w-btn" id="wbr-32">N = 32</button>
+    </div>
+    <div class="w-readout" id="wbr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">SEZIONE 12.4</span>Le farfalle</h2>
+
+  <p class="lead">
+    Il cuore ripetitivo della FFT è un'operazione elementare che, per la forma del suo schema, si chiama
+    <b>farfalla</b> (butterfly).
+  </p>
+
+  <p>
+    Una farfalla prende <b>due</b> numeri complessi, ne combina uno con l'altro tramite una moltiplicazione per
+    un <b class="termine">fattore di rotazione</b> (in inglese <em>twiddle factor</em>, un numero complesso di
+    modulo 1 che rappresenta una rotazione), e produce due nuovi numeri: la loro somma e la loro differenza
+    «ruotata». È la mossa con cui si ricombinano le due mezze-DFT del §12.2. L'intera FFT non è che una griglia
+    di queste farfalle: \(\log_2 N\) colonne, ognuna con \(N/2\) farfalle.
+  </p>
+
+  <figure class="fig wide" id="fig-butterfly">
+    <svg viewBox="0 0 620 210" role="img" aria-label="Il diagramma di una farfalla FFT: due ingressi, un fattore di rotazione, somma e differenza in uscita"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 12.1</span> — Una <b>farfalla</b>. I due ingressi \(a\) e \(b\) si combinano: uno
+      dei due viene moltiplicato per il <b style="color:var(--warm)">fattore di rotazione</b> \(W\), poi si
+      calcolano <b>somma</b> (\(a + Wb\)) e <b>differenza</b> (\(a - Wb\)). Due ingressi, due uscite, una
+      moltiplicazione complessa. <mark>Impilando \(N/2\) farfalle per \(\log_2 N\) colonne si ha l'intera
+      FFT</mark> — ed è tutto qui il segreto del \(N\log N\).
+    </figcaption>
+  </figure>
+
+  <p>
+    Il conteggio torna: ogni colonna di farfalle tocca tutti gli \(N\) campioni (costo \(\propto N\)) e ci sono
+    \(\log_2 N\) colonne. Moltiplicando: \(N\log_2 N\). La bellezza è che le farfalle si possono calcolare
+    <em>sul posto</em> (in-place), sovrascrivendo i dati man mano — la FFT non ha quasi bisogno di memoria
+    aggiuntiva.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">SEZIONE 12.5</span>Il programma FFT</h2>
+
+  <p class="lead">
+    Messi insieme i pezzi, il programma FFT ha una struttura sorprendentemente compatta: tre passaggi, tre cicli
+    annidati.
+  </p>
+
+  <ol class="passi">
+    <li><b>Rimescola</b> i campioni in ordine a bit invertiti (§12.3). Un semplice riordino sul posto.</li>
+    <li><b>Farfalle a cascata:</b> un ciclo esterno sulle \(\log_2 N\) colonne, dentro un ciclo sulle farfalle
+        di quella colonna, dentro il calcolo della singola farfalla (§12.4). I fattori di rotazione si
+        precalcolano in una tabella (Cap. 4.6).</li>
+    <li><b>Leggi il risultato:</b> alla fine l'array contiene la DFT completa, parte reale e immaginaria.</li>
+  </ol>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Non riscrivere la FFT: usala</div>
+    <p style="margin-bottom:0">
+      La FFT è uno di quegli algoritmi che vale la pena <em>capire</em> ma non <em>riscrivere</em>: esistono
+      librerie super-ottimizzate (FFTW, e le routine dentro NumPy, MATLAB, i DSP hardware…) che sfruttano ogni
+      trucco di cache e parallelismo. Il tuo compito da praticante è sapere <b>cosa</b> fa, <b>quando</b> usarla,
+      e le sue accortezze (lunghezza potenza di due, finestre, imbottitura). L'implementazione lasciala agli
+      specialisti — è già scritta, e meglio di come la scriveresti tu.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">SEZIONE 12.6</span>FFT inversa e segnali reali</h2>
+
+  <p>
+    Due note pratiche che tornano continuamente.
+  </p>
+
+  <p>
+    La <b class="termine">FFT inversa</b> (per tornare dalla frequenza al tempo) non richiede un secondo
+    algoritmo: si riusa la stessa FFT diretta con un piccolo trucco — coniugare gli ingressi, applicare la FFT e
+    coniugare (e scalare) l'uscita. Un solo algoritmo serve entrambi i versi.
+  </p>
+
+  <p>
+    Poi i <b>segnali reali</b>. I nostri segnali sono quasi sempre reali (numeri, non complessi), e la loro
+    trasformata ha la simmetria del Cap. 10.3. Sfruttandola si può calcolare la FFT di un segnale reale con
+    <em>metà</em> del lavoro — per esempio impacchettando due segnali reali in un unico complesso, oppure usando
+    routine dedicate. È un raddoppio di efficienza gratuito, che le buone librerie fanno per te.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il trucco dell'imbottitura di zeri</div>
+    <p style="margin-bottom:0">
+      La FFT vuole \(N\) potenza di due. Se il tuo segnale ha \(1000\) campioni, che fai? Lo <b>imbottisci di
+      zeri</b> (zero-padding) fino a \(1024 = 2^{10}\). Non è un imbroglio: aggiungere zeri non altera il
+      contenuto in frequenza, anzi «interpola» lo spettro rendendolo più fitto e liscio da leggere. È una tecnica
+      onnipresente — e sarà anche il primo passo della convoluzione via FFT (Cap. 18).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">SEZIONE 12.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">Per \(N = 4096\), quante operazioni fa (circa) la DFT diretta e quante la FFT? Che
+      fattore di accelerazione?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>DFT: \(N^2 = 4096^2 \approx 1{,}7 \times 10^7\). FFT: \(N\log_2 N = 4096 \times 12 \approx 4{,}9 \times 10^4\).</p>
+        <p>Accelerazione: \(\approx N/\log_2 N = 4096/12 \approx \mathbf{340}\) volte. E cresce con \(N\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">Con \(N = 8\), a quale posizione finisce il campione di indice \(6\) dopo la
+      permutazione a bit invertiti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(6 = 110\) in binario (3 bit, perché \(N=8=2^3\)). Rovesciando: \(011 = 3\). Il campione 6 finisce in
+          posizione <b>3</b>. (Verifica inversa: \(3=011 \to 110=6\), coerente.)</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">Perché la FFT richiede che \(N\) sia una potenza di due? E se il segnale non ce
+      l'ha?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché l'algoritmo dimezza ripetutamente \(N\) (pari/dispari) fino a 1: serve che sia sempre
+          divisibile per due, cioè \(N=2^p\). Se il segnale ha una lunghezza diversa, lo si <b>imbottisce di
+          zeri</b> fino alla potenza di due successiva (§12.6). Esistono anche FFT «a radici miste» per altre
+          lunghezze, ma la potenza di due è la più semplice e comune.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">La FFT dà un risultato più <em>preciso</em> della DFT diretta, o solo più veloce?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Calcolano lo <b>stesso</b> risultato matematico: la FFT non è un'approssimazione. Anzi, in pratica la
+          FFT è spesso anche un filo <em>più</em> precisa, perché facendo molte meno operazioni accumula meno
+          rumore di arrotondamento (Cap. 4.3). Quindi: più veloce e, se mai, più precisa. Non ci sono
+          controindicazioni.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">SEZIONE 12.8</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>La FFT calcola la stessa DFT</b>, ma in \(N\log_2 N\) invece di \(N^2\): un'accelerazione enorme che
+          cresce con \(N\).</li>
+      <li><b>Idea:</b> dividi et impera — una DFT da \(N\) = due DFT da \(N/2\) (pari/dispari), ricorsivamente
+          fino a un punto.</li>
+      <li><b>Permutazione a bit invertiti:</b> rovesciando i bit dell'indice si ottiene la nuova posizione; è il
+          riordino iniziale.</li>
+      <li><b>Farfalle:</b> l'operazione base (somma e differenza con un fattore di rotazione); \(N/2\) per
+          colonna, \(\log_2 N\) colonne, in-place.</li>
+      <li><b>In pratica:</b> \(N\) potenza di due (imbotta di zeri se serve), usa una libreria, sfrutta la
+          simmetria dei segnali reali. La FFT inversa riusa la stessa routine.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la FFT la trasformata di Fourier è finalmente uno strumento pratico. Prima di tuffarci nei filtri, il
+    <strong>Capitolo 13</strong> fa una breve deviazione nel mondo <b>continuo</b>: la convoluzione e la
+    trasformata di Fourier per segnali analogici (non campionati). Serve per completare il quadro teorico e per
+    capire i sistemi analogici che spesso stanno «prima» del convertitore — filtri anti-alias in testa. Poi, dal
+    Cap. 14, comincia la lunga e bellissima storia dei <b>filtri digitali</b>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.1 — costo DFT (N²) vs FFT (N log N)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcs-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcs-out');
+  const pS = document.getElementById('wcs-p'), pV = document.getElementById('wcs-pv');
+
+  function fmt(x) {
+    if (x >= 1e9) return (x / 1e9).toFixed(1) + ' miliardi';
+    if (x >= 1e6) return (x / 1e6).toFixed(1) + ' milioni';
+    if (x >= 1e3) return (x / 1e3).toFixed(1) + ' mila';
+    return Math.round(x).toString();
+  }
+
+  function draw() {
+    const p = parseInt(pS.value, 10);
+    pV.textContent = p;
+    const N = Math.pow(2, p);
+    const dft = N * N, fft = N * p;
+    const speed = dft / fft;
+
+    svg.innerHTML = '';
+    // barre in scala logaritmica
+    const plot = new Plot(svg, { xmin: 0, xmax: 10, ymin: 0, ymax: 13 });
+    const log10 = v => Math.log(v) / Math.LN10;
+    const barDFT = log10(dft), barFFT = log10(fft);
+    plot.rect(1.2, 0, 3.6, barDFT, { fill: 'color-mix(in srgb, var(--warm) 40%, transparent)', color: 'var(--warm)', width: 2 });
+    plot.rect(5.4, 0, 7.8, barFFT, { fill: 'color-mix(in srgb, var(--accent) 40%, transparent)', color: 'var(--accent)', width: 2 });
+    plot.text(2.4, barDFT, 'DFT: N²', { color: 'var(--warm)', bold: true, dy: -8, size: 12 });
+    plot.text(6.6, barFFT, 'FFT: N·log₂N', { color: 'var(--accent)', bold: true, dy: -8, size: 12 });
+    plot.line(0, 0, 10, 0, { color: 'var(--ink-faint)', width: 1.2 });
+    plot.text(2.4, 0, fmt(dft) + ' op.', { dy: 20, size: 11, color: 'var(--ink-soft)' });
+    plot.text(6.6, 0, fmt(fft) + ' op.', { dy: 20, size: 11, color: 'var(--ink-soft)' });
+    plot.text(5, 12.4, '(altezza barre in scala logaritmica)', { size: 10, color: 'var(--ink-faint)' });
+
+    out.innerHTML = `
+      <div class="big">N = 2<sup>${p}</sup> = <b>${N.toLocaleString('it')}</b> campioni
+        &nbsp;·&nbsp; FFT più veloce di <b style="color:var(--accent)">${Math.round(speed).toLocaleString('it')}×</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Diretta: <b style="color:var(--warm)">${fmt(dft)}</b> di operazioni; FFT: <b style="color:var(--accent)">${fmt(fft)}</b>.
+        ${p >= 18 ? 'A questa taglia la DFT diretta è <mark>del tutto impraticabile</mark>: la FFT è l\'unica via.'
+          : p >= 12 ? 'Il divario è già enorme e cresce ancora salendo con N.'
+            : 'Con N piccolo la differenza c\'è ma è ancora gestibile in entrambi i modi.'}
+      </div>`;
+  }
+  pS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §12.3 — permutazione a bit invertiti
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbr-out');
+  const btns = { 8: document.getElementById('wbr-8'), 16: document.getElementById('wbr-16'), 32: document.getElementById('wbr-32') };
+  let N = 16;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+
+  function rev(i, bits) { let r = 0; for (let b = 0; b < bits; b++) { r = (r << 1) | ((i >> b) & 1); } return r; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const bits = Math.round(Math.log2(N));
+    const W = 620, L = 30, R = 590, yTop = 45, yBot = 155;
+    const x = i => L + (R - L) * i / (N - 1);
+    // nodi e linee
+    for (let i = 0; i < N; i++) {
+      const j = rev(i, bits);
+      svg.appendChild(el('line', { x1: x(i), y1: yTop, x2: x(j), y2: yBot, stroke: i === j ? 'var(--ink-faint)' : 'var(--accent)', 'stroke-width': 1.2, opacity: 0.7 }));
+    }
+    for (let i = 0; i < N; i++) {
+      svg.appendChild(el('circle', { cx: x(i), cy: yTop, r: 3.2, fill: 'var(--ink-soft)' }));
+      svg.appendChild(el('circle', { cx: x(i), cy: yBot, r: 3.2, fill: 'var(--warm)' }));
+      if (N <= 16) {
+        const t1 = el('text', { x: x(i), y: yTop - 10, 'text-anchor': 'middle', class: 'lbl', 'font-size': 10 }); t1.textContent = i; svg.appendChild(t1);
+        const t2 = el('text', { x: x(i), y: yBot + 18, 'text-anchor': 'middle', class: 'lbl', 'font-size': 10 }); t2.textContent = i; svg.appendChild(t2);
+      }
+    }
+    const a = el('text', { x: L, y: yTop - 24, class: 'lbl-b', 'font-size': 11 }); a.textContent = 'posizione originale →'; svg.appendChild(a);
+    const b = el('text', { x: L, y: yBot + 34, class: 'lbl-b', 'font-size': 11 }); b.textContent = 'dopo il rovesciamento dei bit →'; svg.appendChild(b);
+
+    // esempio testuale
+    const ex = 3 < N ? 3 : 1;
+    out.innerHTML = `
+      <div class="big">N = <b>${N}</b> &nbsp;·&nbsp; ${bits} bit per indice</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni linea porta un campione dalla sua <b style="color:var(--ink-soft)">posizione originale</b> (in alto)
+        a quella <b style="color:var(--warm)">a bit invertiti</b> (in basso). Esempio: l'indice ${ex} =
+        ${ex.toString(2).padStart(bits, '0')} rovesciato è ${rev(ex, bits).toString(2).padStart(bits, '0')} =
+        <b>${rev(ex, bits)}</b>. Gli incroci sono il rimescolamento che la FFT fa prima di iniziare i conti.
+      </div>`;
+  }
+  function setN(n) { N = n; for (const k in btns) btns[k].classList.toggle('on', +k === n); draw(); }
+  btns[8].addEventListener('click', () => setN(8));
+  btns[16].addEventListener('click', () => setN(16));
+  btns[32].addEventListener('click', () => setN(32));
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 12.1 — diagramma di una farfalla
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-butterfly svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+  const defs = el('defs', {});
+  const mk = el('marker', { id: 'arwf', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
+  mk.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--ink-faint)' }));
+  defs.appendChild(mk); svg.appendChild(defs);
+  const line = (x1, y1, x2, y2, col, arrow) => el('line', { x1, y1, x2, y2, stroke: col || 'var(--ink-faint)', 'stroke-width': 1.8, 'marker-end': arrow ? 'url(#arwf)' : null });
+
+  const xA = 90, xB = 90, yA = 55, yB = 155, xJ = 340, xO = 540;
+  // ingressi
+  svg.appendChild(el('circle', { cx: xA, cy: yA, r: 4, fill: 'var(--accent)' }));
+  svg.appendChild(el('circle', { cx: xB, cy: yB, r: 4, fill: 'var(--accent)' }));
+  svg.appendChild(txt(xA - 14, yA + 4, 'a', 'lbl-b'));
+  svg.appendChild(txt(xB - 14, yB + 4, 'b', 'lbl-b'));
+  // moltiplicazione per W su b
+  svg.appendChild(line(xB, yB, 230, yB));
+  svg.appendChild(el('rect', { x: 230, y: yB - 16, width: 34, height: 32, rx: 5, fill: 'color-mix(in srgb, var(--warm) 16%, var(--paper))', stroke: 'var(--warm)', 'stroke-width': 1.6 }));
+  svg.appendChild(txt(247, yB + 5, '×W', 'lbl-b'));
+  const wl = txt(247, yB + 34, 'fattore di rotazione', 'lbl'); wl.setAttribute('fill', 'var(--warm)'); wl.setAttribute('font-size', '10'); svg.appendChild(wl);
+  // incroci verso il nodo somma (alto) e differenza (basso)
+  svg.appendChild(line(xA, yA, xJ, yA));
+  svg.appendChild(line(264, yB, xJ, yA));       // Wb verso l'alto
+  svg.appendChild(line(xA, yA, xJ, yB));         // a verso il basso
+  svg.appendChild(line(264, yB, xJ, yB));        // Wb verso il basso
+  // nodi di combinazione
+  [[xJ, yA, '+'], [xJ, yB, '−']].forEach(([cx, cy, s]) => {
+    svg.appendChild(el('circle', { cx, cy, r: 13, fill: 'var(--paper)', stroke: 'var(--green)', 'stroke-width': 1.8 }));
+    svg.appendChild(txt(cx, cy + 5, s, 'lbl-b'));
+  });
+  // uscite
+  svg.appendChild(line(xJ + 13, yA, xO, yA, 'var(--ink-faint)', true));
+  svg.appendChild(line(xJ + 13, yB, xO, yB, 'var(--ink-faint)', true));
+  svg.appendChild(txt(xO + 18, yA + 4, 'a+Wb', 'lbl-b'));
+  svg.appendChild(txt(xO + 18, yB + 4, 'a−Wb', 'lbl-b'));
+})();
+</script>
+</body>
+</html>

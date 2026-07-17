@@ -187,7 +187,7 @@ const TOC = [
     n: 12,
     titolo: "La trasformata di Fourier veloce (FFT)",
     file: "cap12-fft.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Il costo proibitivo della DFT" },
       { id: "s12-2", n: "12.2", t: "L'idea: dividi et impera" },

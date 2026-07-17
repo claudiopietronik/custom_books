@@ -38,7 +38,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 9 — Applicazioni della DFT
 - [x] 10 — Proprietà della trasformata di Fourier
 - [x] 11 — Coppie di trasformate di Fourier
-- [ ] 12 — La trasformata di Fourier veloce (FFT)
+- [x] 12 — La trasformata di Fourier veloce (FFT)
 - [ ] 13 — Elaborazione dei segnali continui
 - [ ] 14 — Introduzione ai filtri digitali
 - [ ] 15 — Filtri a media mobile
