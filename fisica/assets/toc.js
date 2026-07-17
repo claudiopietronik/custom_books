@@ -50,7 +50,7 @@ const TOC = [
     n: 3,
     titolo: "Moto nel piano e nello spazio",
     file: "cap03-moto-piano.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Vettori posizione e velocità" },
       { id: "s3-2", n: "3.2", t: "Il vettore accelerazione" },
