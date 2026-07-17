@@ -208,7 +208,7 @@ const TOC = [
     n: 13,
     titolo: "Successioni, serie, induzione e probabilità",
     file: "cap13-successioni-probabilita.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Successioni e serie" },
       { id: "s13-2", n: "13.2", t: "Successioni e serie aritmetiche" },
