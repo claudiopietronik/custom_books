@@ -248,7 +248,7 @@ const TOC = [
   },
   {
     n: 21, parte: "III · Probabilità",
-    titolo: "Il teorema di Bayes", file: "cap21-bayes.html", stato: "da-fare",
+    titolo: "Il teorema di Bayes", file: "cap21-bayes.html", stato: "pronto",
     sezioni: [
       { id: "s21-1", n: "21.1", t: "Invertire il condizionamento" },
       { id: "s21-2", n: "21.2", t: "Prior, likelihood, posterior" },

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>21 · Il teorema di Bayes — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="21">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte III · Probabilità</div>
+    <h1>Il teorema di Bayes</h1>
+    <p class="standfirst">
+      Conosci \(\Prob(\text{positivo} \given \text{malato})\), ma vuoi \(\Prob(\text{malato} \given
+      \text{positivo})\). Invertire il condizionamento sembra ovvio e invece è un campo minato: è la fonte di
+      errori giudiziari e diagnosi fraintese. Il <b>teorema di Bayes</b> è la formula che lo fa correttamente — e
+      con essa il modo stesso in cui la scienza aggiorna le proprie convinzioni con i dati.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il vertice della Parte III. Costruito interamente sulla condizionata (Cap. 20), incarna l'interpretazione
+      soggettiva della probabilità (Cap. 13) e sta alla base di interi rami del machine learning (classificatori
+      bayesiani, inferenza probabilistica).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Un test «accurato al 99%» che risulta positivo può ancora significare che con ogni probabilità <em>stai
+      bene</em>. Questo risultato controintuitivo — che confonde persino i medici — si spiega solo con Bayes.
+      Capirlo è capire perché la <em>rarità</em> di una condizione conta quanto l'accuratezza del test.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-1"><span class="secnum">SEZIONE 21.1</span>Invertire il condizionamento</h2>
+
+  <p class="lead">
+    \(\Prob(A \given B)\) e \(\Prob(B \given A)\) sono <b>numeri diversi</b>, spesso diversissimi. Scambiarli è
+    l'errore che Bayes previene.
+  </p>
+
+  <p>
+    «La probabilità che piova, dato che ci sono nuvole» è alta; «la probabilità che ci siano nuvole, dato che
+    piove» è quasi 1: due condizionate opposte, due valori diversi. In tribunale: «la probabilità che il test del
+    DNA combaci, se l'imputato è innocente» (piccola) viene spesso confusa con «la probabilità che l'imputato sia
+    innocente, dato che il DNA combacia» — un errore, il <em>fallacia del procuratore</em>, che ha condannato
+    persone innocenti. Bayes è lo strumento che collega correttamente le due direzioni.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-2"><span class="secnum">SEZIONE 21.2</span>Prior, likelihood, posterior</h2>
+
+  <div class="formula">
+    <div class="f-head">Il teorema di Bayes <span class="tag">invertire con onestà</span></div>
+    <div class="f-body">
+      \[ \underbrace{\Prob(A \given B)}_{\text{posterior}} \;=\; \frac{\overbrace{\hC{\Prob(B \given A)}}^{\text{likelihood}}\;\overbrace{\hA{\Prob(A)}}^{\text{prior}}}{\underbrace{\hB{\Prob(B)}}_{\text{evidenza}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\Prob(A)}\) — prior</dt><dd>quanto credevi in \(A\) <b>prima</b> di vedere \(B\) (es. quanto è diffusa la malattia).</dd>
+        <dt>\(\hC{\Prob(B \given A)}\) — likelihood</dt><dd>quanto \(B\) è atteso <b>se</b> \(A\) è vero (es. quanto il test è positivo nei malati).</dd>
+        <dt>\(\hB{\Prob(B)}\) — evidenza</dt><dd>quanto è probabile \(B\) <b>in generale</b>: normalizza il risultato.</dd>
+        <dt>\(\Prob(A \given B)\) — posterior</dt><dd>quanto credi in \(A\) <b>dopo</b> aver visto \(B\): la convinzione aggiornata.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una frase: <mark>posterior ∝ likelihood × prior</mark>. Il denominatore si espande spesso come
+      \(\Prob(B) = \Prob(B\given A)\Prob(A) + \Prob(B\given \bar A)\Prob(\bar A)\) (tutti i modi in cui \(B\) può
+      accadere). Bayes è, letteralmente, la ricetta per <b>aggiornare una convinzione con nuovi dati</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-3"><span class="secnum">SEZIONE 21.3</span>Il test medico che inganna tutti</h2>
+
+  <p class="lead">
+    L'esempio classico. Una malattia rara, un test molto accurato: se risulti positivo, quanto devi
+    preoccuparti? La risposta sorprende quasi tutti — ed è tutta nella <b>rarità</b> della malattia.
+  </p>
+
+  <p>
+    Supponi: malattia presente nell'<b>1%</b> della popolazione (prior). Test con <b>sensibilità 99%</b> (positivo
+    nel 99% dei malati) e <b>specificità 95%</b> (negativo nel 95% dei sani, quindi 5% di falsi positivi). Risulti
+    positivo. Qual è la probabilità di essere davvero malato? L'istinto dice «circa 99%». Bayes dice molto meno,
+    perché i <em>tanti</em> sani generano una valanga di falsi positivi che sommergono i <em>pochi</em> veri
+    malati.
+  </p>
+
+  <h3>Provalo: il paradosso dei falsi positivi</h3>
+
+  <p>
+    Immagina 1000 persone. I quadratini <b style="color:var(--warm)">rossi</b> sono i malati, gli
+    <b style="color:var(--accent)">indaco</b> i sani; i contornati sono chi risulta <b>positivo</b>. Regola
+    prevalenza e accuratezza e guarda quanti dei positivi sono <em>davvero</em> malati: con una malattia rara,
+    pochissimi.
+  </p>
+
+  <div class="widget" id="w-bayes">
+    <div class="w-head">
+      <span>P(malato | positivo)</span>
+      <span class="hint">la rarità cambia tutto</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wba-svg" viewBox="0 0 620 250" role="img" aria-label="1000 persone: malati e sani, positivi al test, per illustrare il teorema di Bayes"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>prevalenza</label><input type="range" id="wba-prev" min="1" max="500" step="1" value="10"><output id="wba-prevv">1.0%</output></div>
+      <div class="w-ctrl"><label>sensibilità</label><input type="range" id="wba-sens" min="50" max="100" step="1" value="99"><output id="wba-sensv">99%</output></div>
+      <div class="w-ctrl"><label>specificità</label><input type="range" id="wba-spec" min="50" max="100" step="1" value="95"><output id="wba-specv">95%</output></div>
+    </div>
+    <div class="w-readout" id="wba-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-4"><span class="secnum">SEZIONE 21.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.1</div>
+    <p style="margin-bottom:0">Malattia all'1%, sensibilità 99%, specificità 95%. Su 1000 persone, calcola quanti
+      veri positivi e quanti falsi positivi, e stima \(\Prob(\text{malato} \given +)\).</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Su 1000: <b>10 malati</b>, 990 sani. Veri positivi: \(99\%\times 10 \approx \mathbf{10}\). Falsi
+          positivi: \(5\%\times 990 \approx \mathbf{50}\). Positivi totali \(\approx 60\).</p>
+        <p style="margin-bottom:0">\(\Prob(\text{malato}\given +) \approx 10/60 = \mathbf{0{,}17}\), solo il 17%!
+          Nonostante il test «al 99%», la maggioranza dei positivi è sana, perché i falsi positivi (dai tanti
+          sani) superano i veri positivi (dai pochi malati). È la <b>fallacia della frequenza di base</b>.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.2</div>
+    <p style="margin-bottom:0">Nel widget, cosa succede a \(\Prob(\text{malato}\given +)\) se aumenti molto la
+      prevalenza (es. al 30%)? Perché?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Sale parecchio (verso l'80–90%). Con una malattia comune, i veri malati sono
+          molti e i veri positivi dominano sui falsi positivi (che vengono dai sani, ora pochi). <b>Il prior conta
+          quanto il test:</b> lo stesso test dà un posterior bassissimo su malattia rara e altissimo su malattia
+          comune. È il cuore di Bayes (§21.2).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.3</div>
+    <p style="margin-bottom:0">Spiega con parole tue perché confondere \(\Prob(+\given \text{malato})\) con
+      \(\Prob(\text{malato}\given +)\) è pericoloso.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(\Prob(+\given \text{malato})\) è la sensibilità (alta per definizione, es.
+          99%): «se sei malato, il test lo vede». \(\Prob(\text{malato}\given +)\) è ciò che conta per il paziente:
+          «se sono positivo, sono malato?», e può essere bassissima su malattia rara (17% sopra). Scambiarle fa
+          credere che un positivo significhi malattia quasi certa, causando allarmi, cure inutili — e, nel
+          contesto forense, condanne ingiuste (§21.1). Solo Bayes collega correttamente le due direzioni,
+          pesandole col prior.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-5"><span class="secnum">SEZIONE 21.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 21</div>
+    <ol style="margin-bottom:0">
+      <li><b>Bayes:</b> \(\Prob(A\given B) = \dfrac{\Prob(B\given A)\,\Prob(A)}{\Prob(B)}\). Inverte il
+        condizionamento correttamente.</li>
+      <li><b>Posterior ∝ likelihood × prior:</b> aggiorni una convinzione (prior) con nuovi dati (likelihood).</li>
+      <li><b>Non confondere</b> \(\Prob(A\given B)\) con \(\Prob(B\given A)\): sono numeri diversi.</li>
+      <li><b>La rarità conta:</b> con malattia rara, un test accuratissimo dà tanti falsi positivi; \(\Prob(\text{malato}\given
+        +)\) può essere sorprendentemente bassa. È la fallacia della frequenza di base.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo chiuso il calcolo delle probabilità. Manca un ultimo ponte, quello che unisce l'empirico al teorico e
+    apre l'inferenza: perché, all'aumentare dei dati, la media osservata converge a quella vera? È la <b>Legge dei
+    Grandi Numeri</b>, che chiude la Parte III nel <strong>Capitolo 22</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §21.3 — teorema di Bayes: test medico su 1000 persone
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wba-svg');
+  if (!svg) return;
+  const out = document.getElementById('wba-out');
+  const prevS = document.getElementById('wba-prev'), prevV = document.getElementById('wba-prevv');
+  const sensS = document.getElementById('wba-sens'), sensV = document.getElementById('wba-sensv');
+  const specS = document.getElementById('wba-spec'), specV = document.getElementById('wba-specv');
+
+  function draw() {
+    const prev = parseInt(prevS.value, 10) / 1000;   // 0.001 .. 0.5
+    const sens = parseInt(sensS.value, 10) / 100;
+    const spec = parseInt(specS.value, 10) / 100;
+    prevV.textContent = (prev * 100).toFixed(1) + '%';
+    sensV.textContent = (sens * 100).toFixed(0) + '%';
+    specV.textContent = (spec * 100).toFixed(0) + '%';
+
+    const N = 1000, cols = 50, rows = 20;
+    const nSick = Math.round(N * prev);
+    // posterior esatto
+    const TP = sens * prev, FP = (1 - spec) * (1 - prev);
+    const post = TP / (TP + FP);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1, xmax: cols, ymin: -1, ymax: rows, iso: true });
+    // deterministico: primi nSick = malati
+    for (let i = 0; i < N; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      const sick = i < nSick;
+      // positivo? usa una soglia deterministica basata sull'indice per stabilità visiva
+      const frac = ((i * 2654435761) % 1000) / 1000;
+      const positive = sick ? frac < sens : frac < (1 - spec);
+      const col = sick ? 'var(--warm)' : 'color-mix(in srgb, var(--accent) 55%, transparent)';
+      p.dot(c, rows - 1 - r, { r: 4.2, color: col, stroke: positive ? 'var(--ink)' : 'var(--paper)', sw: positive ? 1.4 : 0.4 });
+    }
+    out.innerHTML = `
+      <div class="big">P(malato | positivo) = <b style="color:${post < 0.5 ? 'var(--warm)' : 'var(--green)'}">${(post * 100).toFixed(1)}%</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Su 1000: ${nSick} malati (rossi), ${N - nSick} sani (indaco). I <b>contornati</b> sono positivi al test.
+        ${post < 0.4
+          ? 'Malattia rara: i <mark>falsi positivi dei tanti sani</mark> sommergono i veri malati. Un positivo significa malattia molto meno spesso di quanto sembri.'
+          : post < 0.75 ? 'Situazione intermedia: prior e accuratezza si bilanciano.'
+          : 'Malattia comune (o test quasi perfetto): un positivo è ormai un forte indizio di malattia.'}
+      </div>`;
+  }
+  [prevS, sensS, specS].forEach(s => s.addEventListener('input', draw));
+  draw();
+})();
+</script>
+</body>
+</html>
