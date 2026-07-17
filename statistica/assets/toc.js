@@ -158,7 +158,7 @@ const TOC = [
   /* ===================== PARTE III — PROBABILITÀ ========================= */
   {
     n: 13, parte: "III · Probabilità",
-    titolo: "Cos'è la probabilità", file: "cap13-cos-e-probabilita.html", stato: "da-fare",
+    titolo: "Cos'è la probabilità", file: "cap13-cos-e-probabilita.html", stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Frequentista e soggettiva" },
       { id: "s13-2", n: "13.2", t: "Gli assiomi" },
