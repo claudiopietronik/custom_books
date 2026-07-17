@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Entropia — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte I · Statistica descrittiva</div>
+    <h1>Entropia</h1>
+    <p class="standfirst">
+      Un ultimo modo di misurare una distribuzione, diverso da tutti: non dove sta o che forma ha, ma quanta
+      <b>incertezza</b> contiene. L'<b>entropia</b> di Shannon condensa in un solo numero «quanto sei sorpreso, in
+      media, dal prossimo dato» — ed è il ponte segreto tra la statistica, la teoria dell'informazione e il
+      machine learning.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude la Parte I. Media, varianza, momenti, forma: tutti descrivono i valori. L'entropia descrive
+      l'<em>imprevedibilità</em>. La ritroverai come funzione di costo nella regressione logistica (Cap. 45,
+      «cross-entropy») e come misura di purezza negli alberi decisionali — qui ne cogli l'intuizione pura.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Quanta informazione c'è in questo messaggio?», «quanto è pura questa classe di dati?», «quanti bit servono
+      per codificare questo segnale?»: sono tutte la stessa domanda, e l'entropia la risponde. È una delle idee
+      più eleganti e trasversali di tutta la matematica applicata.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">SEZIONE 9.1</span>Sorpresa e informazione</h2>
+
+  <p class="lead">
+    Parti da una domanda quotidiana: quali eventi ti <b>sorprendono</b>? Quelli <em>improbabili</em>. Un evento
+    certo non sorprende affatto; uno rarissimo, tantissimo. L'informazione è, letteralmente, la sorpresa.
+  </p>
+
+  <p>
+    «Domani sorgerà il sole» (probabilità ≈ 1) non ti dice nulla di nuovo: zero informazione. «Domani nevicherà
+    ad agosto» (probabilità piccolissima) è una notizia enorme: tanta informazione. Vogliamo una funzione che
+    trasformi la probabilità \(p\) di un evento nella <b>sorpresa</b> che porta, e deve rispettare due desideri
+    naturali: sorpresa <em>alta</em> per \(p\) piccola, e sorpresa che si <em>somma</em> per eventi
+    indipendenti (due notizie indipendenti portano informazione pari alla somma delle due).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La sorpresa di un evento <span class="tag">informazione = −log della probabilità</span></div>
+    <div class="f-body">
+      \[ I(x) \;=\; -\log \hC{p(x)} \;=\; \log\frac{1}{\hC{p(x)}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{p(x)}\)</dt><dd>la probabilità dell'evento \(x\).</dd>
+        <dt>\(-\log(\cdot)\)</dt><dd>il logaritmo negativo: piccolo per \(p\) vicino a 1 (nessuna sorpresa), grande per \(p\) vicino a 0 (grande sorpresa).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché proprio il logaritmo? Perché è l'<b>unica</b> funzione che trasforma i <em>prodotti</em> in
+      <em>somme</em>: \(\log(p_1 p_2) = \log p_1 + \log p_2\). E la probabilità di due eventi indipendenti è il
+      prodotto — così la sorpresa si somma, come volevamo. La §9.3 torna su questo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">SEZIONE 9.2</span>La formula di Shannon</h2>
+
+  <p class="lead">
+    L'<b>entropia</b> è la sorpresa <em>media</em>: prendi la sorpresa di ogni possibile esito e mediala,
+    pesandola con la probabilità di quell'esito. È il valore atteso dell'informazione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Entropia di Shannon <span class="tag">sorpresa media</span></div>
+    <div class="f-body">
+      \[ H \;=\; -\hA{\sum_{i}} \hC{p_i}\,\log \hC{p_i} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{p_i}\)</dt><dd>la probabilità dell'\(i\)-esimo esito.</dd>
+        <dt>\(\log p_i\)</dt><dd>(a meno del segno) la sorpresa di quell'esito.</dd>
+        <dt>\(\hC{p_i}\,\log p_i\)</dt><dd>sorpresa <b>pesata</b> per quanto spesso capita.</dd>
+        <dt>\(-\hA{\sum_i}\)</dt><dd>somma su tutti gli esiti; il segno meno rende \(H\) positiva (i \(\log\) di numeri &lt;1 sono negativi).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una frase: <mark>\(H\) è quanto ti aspetti di essere sorpreso dal prossimo esito</mark>. La base del
+      logaritmo fissa l'unità di misura: base 2 → <b>bit</b>, base \(e\) → <b>nat</b>. In informatica si usa
+      quasi sempre la base 2.
+    </div>
+  </div>
+
+  <p>
+    <b>Esempio: la moneta.</b> Una moneta equa (testa e croce ciascuna con \(p = 0{,}5\)) ha entropia
+    \(H = -(0{,}5\log_2 0{,}5 + 0{,}5\log_2 0{,}5) = -\log_2 0{,}5 = \mathbf{1}\) bit: massima incertezza, serve
+    esattamente 1 bit per comunicare l'esito. Una moneta <b>truccata</b> che esce testa il 90% delle volte ha
+    \(H \approx 0{,}47\) bit: molto più prevedibile, meno informazione per lancio. E una moneta con due teste
+    (\(p=1\)) ha \(H = 0\): nessuna sorpresa, nessuna informazione.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">SEZIONE 9.3</span>Perché il logaritmo</h2>
+
+  <p class="lead">
+    Il logaritmo non è una scelta arbitraria: è imposto dalle proprietà che vogliamo. Vale la pena vederlo, perché
+    spiega perché l'entropia si misura in «bit».
+  </p>
+
+  <p>
+    Immagina di dover indovinare un numero tra 1 e 8 con domande sì/no ottimali. Ogni domanda dimezza le
+    possibilità: 8 → 4 → 2 → 1. Servono \(\log_2 8 = 3\) domande. Il logaritmo in base 2 conta esattamente
+    <b>quante volte devi dimezzare</b> — cioè quanti bit di informazione servono per identificare un esito tra
+    tanti equiprobabili. Con \(M\) esiti equiprobabili, l'entropia è \(\log_2 M\): il massimo possibile per \(M\)
+    esiti.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Additività: il cuore della scelta</div>
+    <p style="margin-bottom:0">
+      Due eventi indipendenti hanno probabilità congiunta \(p_1 p_2\) (prodotto). Vogliamo che la loro
+      informazione si <b>sommi</b>. L'unica funzione che manda prodotti in somme è il logaritmo:
+      <mark>\(\log(p_1 p_2) = \log p_1 + \log p_2\)</mark>. Ecco perché l'informazione è \(-\log p\) e non
+      qualcos'altro. Non è convenzione: è una necessità matematica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">SEZIONE 9.4</span>Entropia come dispersione</h2>
+
+  <p class="lead">
+    C'è un modo di vederla che la lega a tutta la Parte I: l'entropia è una <b>misura di dispersione</b> — ma
+    della <em>probabilità</em>, non dei valori.
+  </p>
+
+  <p>
+    La varianza misura quanto i <em>valori</em> sono sparsi attorno alla media. L'entropia misura quanto la
+    <em>probabilità</em> è sparsa tra gli esiti. È <b>massima</b> quando la distribuzione è
+    <b>uniforme</b> (probabilità spalmata equamente: massima incertezza, non sai proprio cosa aspettarti) ed è
+    <b>minima</b> (zero) quando tutta la probabilità è concentrata su un solo esito (certezza assoluta). Ha però
+    un vantaggio unico rispetto alla varianza: <b>non richiede che i dati siano numerici</b>. Puoi calcolare
+    l'entropia della distribuzione dei colori, delle lingue, dei gruppi sanguigni — dove «varianza» non avrebbe
+    senso.
+  </p>
+
+  <h3>Provalo: dove l'incertezza è massima</h3>
+
+  <p>
+    Una moneta con probabilità di testa regolabile. Guarda l'entropia salire fino al picco di <b>1 bit</b> quando
+    la moneta è equa (\(p = 0{,}5\), massima incertezza) e crollare a <b>0</b> agli estremi (moneta truccata,
+    esito quasi certo).
+  </p>
+
+  <div class="widget" id="w-ent">
+    <div class="w-head">
+      <span>L'entropia di una moneta</span>
+      <span class="hint">massima quando è imprevedibile</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wen-svg" viewBox="0 0 620 260" role="img" aria-label="La curva di entropia binaria, massima a p=0,5 e nulla agli estremi"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>P(testa)</label><input type="range" id="wen-p" min="1" max="99" step="1" value="50"><output id="wen-pv">0.50</output></div>
+    </div>
+    <div class="w-readout" id="wen-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">SEZIONE 9.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">Un dado equo a 8 facce. Quanti bit di entropia? E se il dado avesse 4 facce eque?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Esiti equiprobabili → entropia \(= \log_2 M\). Con 8 facce: \(\log_2 8 = \mathbf{3}\) bit. Con 4 facce:
+          \(\log_2 4 = \mathbf{2}\) bit.</p>
+        <p style="margin-bottom:0">Coincide con l'intuizione delle domande sì/no (§9.3): identificare un esito tra
+          8 equiprobabili richiede 3 domande di dimezzamento.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">Perché una moneta truccata (P(testa) = 0,9) ha entropia minore di una equa? Cosa
+      significa in termini di «informazione per lancio»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché è più <b>prevedibile</b>: quasi sempre esce testa, quindi in media sei poco sorpreso.
+          \(H = -(0{,}9\log_2 0{,}9 + 0{,}1\log_2 0{,}1) \approx 0{,}47\) bit, contro 1 bit della moneta equa.</p>
+        <p style="margin-bottom:0">In termini di codifica: potresti comunicare lunghe sequenze di lanci con meno
+          di 1 bit ciascuno in media (codificando le frequenti «teste» in modo compatto). L'entropia è il limite
+          teorico di compressione — meno incertezza, meno bit necessari.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">Perché l'entropia funziona su variabili categoriche (colori, lingue) mentre la
+      varianza no?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">La varianza usa gli scarti <em>numerici</em> dalla media (\(x_i-\bar{x}\)): ha
+          bisogno di valori che si possano sottrarre e mediare (§2.2). I colori non hanno una «media» né distanze
+          numeriche. L'entropia invece usa solo le <b>probabilità</b> degli esiti, non i loro valori: \(-\sum p_i
+          \log p_i\) si calcola benissimo su categorie. È la misura di «dispersione» adatta ai dati nominali.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">Una distribuzione ha tutta la probabilità su un solo esito (\(p_1 = 1\)). Quanto
+      vale l'entropia? E qual è la distribuzione di <em>massima</em> entropia su \(M\) esiti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Con \(p_1 = 1\): \(H = -1\cdot\log 1 = 0\) (gli altri termini hanno \(p_i = 0\), e \(0\log 0 \to 0\)).
+          Certezza assoluta → zero sorpresa → zero informazione.</p>
+        <p style="margin-bottom:0">La <b>massima</b> entropia si ha con la distribuzione <b>uniforme</b> (\(p_i =
+          1/M\) per tutti), che vale \(\log_2 M\): massima incertezza (§9.4). L'entropia è dunque minima sulla
+          certezza e massima sull'equiprobabilità.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">SEZIONE 9.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li><b>Informazione = sorpresa</b> \(= -\log p\): grande per eventi rari, nulla per eventi certi.</li>
+      <li><b>Entropia</b> \(H = -\sum p_i \log p_i\): la sorpresa <b>media</b>, cioè l'incertezza della
+        distribuzione.</li>
+      <li><b>Il logaritmo</b> è obbligato dall'additività (prodotti → somme). Base 2 → bit.</li>
+      <li><b>Massima</b> sull'uniforme (\(\log_2 M\)), <b>zero</b> sulla certezza. È «dispersione» della
+        probabilità, e funziona anche su dati <b>categorici</b>.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con l'entropia chiudiamo la <strong>Parte I</strong>: sappiamo descrivere onestamente qualunque insieme di
+    dati — centro, dispersione, forma, incertezza. Prima di fare il salto verso la probabilità e l'inferenza, una
+    tappa pratica indispensabile: mettere i dati in una forma trattabile. La <b>Parte II</b> comincia con la
+    <b>normalizzazione</b> — z-score e min-max — nel <strong>Capitolo 10</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.4 — entropia binaria H(p) = -p log2 p - (1-p) log2 (1-p)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wen-svg');
+  if (!svg) return;
+  const out = document.getElementById('wen-out');
+  const pS = document.getElementById('wen-p'), pV = document.getElementById('wen-pv');
+  const H = q => { if (q <= 0 || q >= 1) return 0; return -(q * Math.log2(q) + (1 - q) * Math.log2(1 - q)); };
+
+  function draw() {
+    const p = parseInt(pS.value, 10) / 100;
+    pV.textContent = p.toFixed(2);
+    const h = H(p);
+    svg.innerHTML = '';
+    const pl = new Plot(svg, { xmin: 0, xmax: 1, ymin: 0, ymax: 1.1 });
+    pl.axes({ stepX: 0.25, stepY: 0.5, names: true, xname: 'P(testa)', yname: 'H (bit)' });
+    // curva di entropia
+    pl.func(x => H(x), { color: 'var(--accent)', width: 2.6, from: 0.001, to: 0.999 });
+    // punto corrente
+    pl.line(p, 0, p, h, { color: 'var(--warm)', width: 1.6, dash: '4 3' });
+    pl.dot(p, h, { r: 6, color: 'var(--warm)' });
+    // massimo
+    pl.dot(0.5, 1, { r: 3, color: 'var(--green)' });
+    pl.text(0.5, 1.06, 'max = 1 bit', { color: 'var(--green)', size: 10.5 });
+
+    let msg;
+    if (Math.abs(p - 0.5) < 0.04) msg = 'Moneta equa: <mark>massima incertezza</mark>, 1 bit pieno. Non puoi prevedere l’esito meglio del lancio.';
+    else if (p < 0.12 || p > 0.88) msg = 'Moneta molto truccata: esito quasi <mark>certo</mark>, entropia vicina a 0. Poca sorpresa, poca informazione.';
+    else msg = 'Moneta sbilanciata: entropia sotto il massimo. Più ti allontani da 0,5, più l’esito è prevedibile.';
+    out.innerHTML = `
+      <div class="big">H = <b>${h.toFixed(3)}</b> bit &nbsp;(a P = ${p.toFixed(2)})</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${msg}</div>`;
+  }
+  pS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

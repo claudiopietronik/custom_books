@@ -106,7 +106,7 @@ const TOC = [
   },
   {
     n: 9, parte: "I · Statistica descrittiva",
-    titolo: "Entropia", file: "cap09-entropia.html", stato: "da-fare",
+    titolo: "Entropia", file: "cap09-entropia.html", stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Sorpresa e informazione" },
       { id: "s9-2", n: "9.2", t: "La formula di Shannon" },
