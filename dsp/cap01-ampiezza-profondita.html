@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · L'ampiezza e la profondità del DSP — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.01 — Capitolo 1</div>
+    <h1>L'ampiezza e la profondità del DSP</h1>
+    <p class="standfirst">
+      Prima di scrivere una sola formula, vale la pena guardare il territorio dall'alto: <em>che cosa</em>
+      è un segnale digitale, <em>da dove</em> nasce l'idea di trattarlo con la matematica, e <em>quanto</em>
+      lontano arriva — dalla telefonata che stai facendo alla TAC che ti salva la vita. Il DSP è una di quelle
+      tecnologie invisibili che tengono in piedi il mondo moderno senza chiedere il permesso.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Siamo all'inizio di tutto: questo è il capitolo-mappa. Non ci sono conti da fare, solo il panorama da
+      inquadrare. Serve a rispondere alla domanda «ma questa roba, alla fine, a che serve?» <em>prima</em> di
+      immergerci — così quando nel Cap. 6 sudi sulla convoluzione saprai già in che stanza dell'edificio ti trovi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il DSP è il ponte tra il <strong>mondo fisico</strong> — che è continuo, analogico, rumoroso — e il
+      <strong>calcolatore</strong> — che è discreto, numerico, instancabile. Ogni volta che un suono, un'immagine,
+      una vibrazione o un'onda radio entra in un chip e ne esce migliore, quel ponte l'ha attraversato il DSP.
+      Impararlo significa capire come le macchine <em>percepiscono</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">SEZIONE 1.1</span>Cos'è il DSP e perché è dappertutto</h2>
+
+  <p class="lead">
+    <strong>DSP</strong> sta per <em>Digital Signal Processing</em>: elaborazione <em>numerica</em> dei segnali.
+    Tre parole, tre idee da mettere a fuoco una alla volta.
+  </p>
+
+  <p>
+    Un <b class="termine">segnale</b> è una grandezza che porta informazione e che cambia — di solito nel
+    tempo, a volte nello spazio. La tensione ai capi di un microfono mentre parli è un segnale; la pressione
+    dell'aria che colpisce il tuo timpano è un segnale; la luminosità lungo una riga di una fotografia è un
+    segnale. In natura questi segnali sono <b class="termine">analogici</b>: esistono in ogni istante e possono
+    assumere qualunque valore, con infinite sfumature. Un calcolatore, però, non sa maneggiare l'infinito. Sa
+    fare una cosa sola, benissimo e miliardi di volte al secondo: <em>macinare numeri</em>. Per dargli un
+    segnale da elaborare dobbiamo quindi trasformarlo in una <b class="termine">lista di numeri</b> — ed è
+    proprio questo il senso della parola <em>digitale</em>.
+  </p>
+
+  <p>
+    Il passaggio avviene in due mosse, che vedremo in dettaglio nel Cap. 3. Prima si <b>campiona</b>: invece di
+    guardare il segnale in ogni istante, lo si «fotografa» a intervalli regolari — per l'audio, tipicamente
+    44 100 volte al secondo. Poi si <b>quantizza</b>: ogni fotografia, che sarebbe un numero con infinite cifre,
+    viene arrotondata al valore rappresentabile più vicino. Il risultato è una sequenza ordinata di numeri:
+    esattamente ciò che un chip sa digerire.
+  </p>
+
+  <figure class="fig wide" id="fig-analog-digital">
+    <svg viewBox="0 0 620 250" role="img" aria-label="Un segnale analogico continuo e la sua versione campionata, una sequenza di steli"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 1.1</span> — Lo stesso segnale, due mondi. <b>A sinistra</b>, la forma
+      <b style="color:var(--accent)">continua</b>: una curva liscia definita in ogni istante. <b>A destra</b>, la
+      sua versione <b style="color:var(--warm)">campionata</b>: solo i valori presi a intervalli regolari,
+      disegnati come <em>steli</em>. Il calcolatore conosce <mark>soltanto i pallini</mark> — tutto ciò che sta
+      fra un campione e l'altro, per lui, va ricostruito. Buona parte del DSP è capire quando questa perdita è
+      innocua e quando no.
+    </figcaption>
+  </figure>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La notazione dei segnali discreti</div>
+    <p style="margin-bottom:0">
+      Un segnale continuo si scrive con le parentesi tonde e una variabile reale, \(x(t)\): «il valore di \(x\)
+      all'istante \(t\)». Un segnale <b>discreto</b> si scrive con le <b>parentesi quadre</b> e un indice
+      intero, \(x[n]\): «il valore dell'\(n\)-esimo campione». L'indice \(n\) è un semplice contatore —
+      \(0, 1, 2, 3, \ldots\) — che dice <em>quale</em> campione, non <em>a che ora</em>. Se conosci la frequenza
+      di campionamento \(f_s\) (campioni al secondo), risali all'istante con \(t = n / f_s\). Le quadre sono la
+      bandierina che pianteremo su ogni segnale «da calcolatore» di questo libro.
+    </p>
+  </div>
+
+  <p>
+    Infine, <em>processing</em>: <b class="termine">elaborare</b>. Una volta che il segnale è una lista di
+    numeri, possiamo farci di tutto. Ripulirlo dal rumore, potenziarne certe frequenze e spegnerne altre,
+    comprimerlo per farlo pesare meno, cercarci dentro un'eco nascosta, riconoscere una voce o un volto. Sono
+    tutte operazioni aritmetiche — somme e moltiplicazioni — organizzate con astuzia. La bellezza del digitale è
+    che, una volta che l'informazione è un numero, elaborarla è puro calcolo: preciso, ripetibile, e migliorabile
+    solo scrivendo software diverso, non cambiando i cavi.
+  </p>
+
+  <h3>Provalo: campiona un segnale con le tue mani</h3>
+
+  <p>
+    Ecco l'operazione fondante del DSP resa interattiva. Sotto c'è un'onda continua (in
+    <b style="color:var(--accent)">teal</b>). Muovi il cursore per cambiare quanti campioni al secondo ne prendi:
+    i campioni sono gli <b style="color:var(--warm)">steli ambra</b>. Con pochi campioni la sequenza tradisce la
+    forma originale; aumentandoli, i pallini «inseguono» la curva fino a raccontarla fedelmente. Quel confine —
+    quanti campioni bastano — ha un nome ed è uno dei teoremi più importanti dell'intera disciplina (Cap. 3).
+  </p>
+
+  <div class="widget" id="w-samp">
+    <div class="w-head">
+      <span>Campionamento: da curva a numeri</span>
+      <span class="hint">muovi il cursore: cambia il numero di campioni</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsamp-svg" viewBox="0 0 620 320" role="img" aria-label="Un segnale continuo campionato con densità variabile: pochi campioni ne tradiscono la forma, tanti la ricostruiscono"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">campioni</label>
+      <input type="range" id="wsamp-n" min="4" max="60" step="1" value="10" style="flex:1">
+    </div>
+    <div class="w-readout" id="wsamp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">SEZIONE 1.2</span>Le radici: dai matematici ai microchip</h2>
+
+  <p class="lead">
+    Il DSP sembra una tecnologia recente, e in un certo senso lo è: è diventato <em>economico</em> solo negli
+    anni Ottanta. Ma le sue idee sono vecchie di secoli. È una storia in cui la matematica arriva molto prima
+    dell'hardware, e aspetta paziente.
+  </p>
+
+  <p>
+    Il capostipite è <b>Joseph Fourier</b>, che all'inizio dell'Ottocento avanzò un'affermazione che ai suoi
+    contemporanei parve assurda: <em>qualunque</em> segnale, per quanto frastagliato, può essere scomposto in una
+    somma di onde semplici — seni e coseni di frequenze diverse. È l'idea attorno a cui ruota metà di questo
+    libro (Cap. 8–13): guardare un segnale non come una sequenza di valori nel tempo, ma come una <b>ricetta di
+    frequenze</b>. Un'eco, un fischio, un ronzio di rete a 50 Hz: nel «mondo delle frequenze» diventano oggetti
+    che puoi isolare e togliere con un gesto.
+  </p>
+
+  <p>
+    Per quasi un secolo e mezzo, però, Fourier rimase materia da lavagna. Calcolare a mano la scomposizione di un
+    segnale reale richiedeva una quantità di conti spaventosa. Le altre tessere arrivarono nel Novecento:
+    <b>Harry Nyquist</b> e <b>Claude Shannon</b> stabilirono <em>quanti</em> campioni servono per non perdere
+    informazione (il teorema del campionamento); e nel <b>1965</b> James Cooley e John Tukey pubblicarono la
+    <b class="termine">FFT</b>, un algoritmo che riduce i conti di Fourier da «impraticabili» a «istantanei»
+    (Cap. 12). Fu la scintilla: con la FFT, la teoria diventava finalmente eseguibile.
+  </p>
+
+  <p>
+    Mancava solo l'hardware a buon mercato. Arrivò con i primi <b class="termine">processori DSP</b> dedicati
+    (Cap. 28): microchip progettati non per far girare fogli di calcolo, ma per fare l'unica cosa che il DSP
+    chiede di continuo — <em>moltiplicare e sommare</em> a raffica. Da lì in poi la valanga: modem, CD, telefoni
+    cellulari, fotocamere digitali, ecografi. Oggi il DSP gira anche dentro processori generici, GPU e
+    smartphone, e non lo notiamo nemmeno.
+  </p>
+
+  <figure class="fig wide" id="fig-timeline">
+    <svg viewBox="0 0 660 200" role="img" aria-label="Linea del tempo delle idee fondamentali del DSP, da Fourier ai processori dedicati"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 1.2</span> — Duecento anni in una riga. La <b>matematica</b> (teal) precede di molto
+      la <b>tecnologia</b> (ambra): le idee di Fourier aspettarono un secolo e mezzo la potenza di calcolo per
+      diventare utili. Morale che tornerà spesso: <mark>in DSP l'algoritmo giusto vale quanto l'hardware</mark> —
+      la FFT ha reso possibile ciò che nessun chip da solo poteva.
+    </figcaption>
+  </figure>
+
+  <p>
+    Il resto del capitolo è un giro turistico fra i quattro grandi continenti in cui il DSP ha messo radici:
+    telecomunicazioni, audio, eco-localizzazione e immagini. Non per imparare qualcosa di tecnico — per quello ci
+    sono gli altri trentatré capitoli — ma per farti sentire, prima di partire, quanto è vasto il paese in cui
+    stai per entrare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">SEZIONE 1.3</span>Telecomunicazioni</h2>
+
+  <p>
+    Telefonare significa mandare la tua voce dall'altra parte del mondo attraverso un canale — un cavo, una fibra,
+    l'etere — che costa. E un canale che costa lo si vuole sfruttare al massimo. Qui il DSP fa due mestieri
+    apparentemente opposti: <b>far entrare più conversazioni</b> nello stesso canale, e <b>far uscire una voce
+    più pulita</b> da un canale sporco.
+  </p>
+
+  <p>
+    Il primo mestiere si chiama <b class="termine">multiplexing</b>. Una singola fibra ottica può trasportare
+    contemporaneamente migliaia di telefonate: il DSP le impacchetta, le intreccia e le smista senza che si
+    confondano. Trasformare le voci in numeri le rende «combinabili» con una libertà che i segnali analogici non
+    hanno.
+  </p>
+
+  <p>
+    Il secondo mestiere è la lotta ai difetti del canale. Due esempi che senti ogni giorno senza saperlo. La
+    <b class="termine">cancellazione dell'eco</b>: nelle chiamate a lunga distanza un pezzo della tua voce
+    torna indietro con un ritardo fastidioso; un filtro DSP stima quell'eco e la sottrae in tempo reale (è
+    parente stretto della deconvoluzione del Cap. 17). E la <b class="termine">compressione della voce</b>: un
+    algoritmo capisce che il parlato umano è fatto in un certo modo e butta via ciò che l'orecchio non
+    coglierebbe, riducendo di molto i dati da trasmettere (Cap. 22, 27). Senza DSP, un telefono cellulare
+    semplicemente non funzionerebbe.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il filo rosso: informazione, non forma</div>
+    <p style="margin-bottom:0">
+      Nota lo schema che si ripete: al DSP non interessa conservare il segnale <em>tale e quale</em>, ma
+      preservarne l'<b>informazione utile</b> spendendo il meno possibile. Comprimere la voce, cancellare l'eco,
+      infilare mille chiamate in una fibra: sono tutte varianti della stessa domanda — <mark>cosa conta davvero
+      in questo segnale, e cosa posso permettermi di buttare?</mark> È una domanda che tornerà, identica, per la
+      musica, per le immagini, per i dati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">SEZIONE 1.4</span>Elaborazione audio</h2>
+
+  <p>
+    Il suono è forse il territorio più intuitivo del DSP, perché i risultati li <em>senti</em>. Ci sono due
+    grandi filoni: la <b>musica</b> e la <b>voce</b>.
+  </p>
+
+  <p>
+    Sul fronte musicale, ogni CD, ogni file, ogni servizio di streaming è DSP allo stato puro. La registrazione
+    viene campionata, ripulita, equalizzata — cioè filtrata per alzare o abbassare intere fasce di frequenza —
+    e infine compressa in formati come l'MP3, che sfruttano i limiti dell'udito umano per ridurre i dati senza
+    che l'orecchio se ne accorga (Cap. 22). Riverberi, cori artificiali, correzioni d'intonazione: sono tutti
+    filtri digitali travestiti da effetti.
+  </p>
+
+  <p>
+    Sul fronte della voce, il DSP fa cose che sembrano magia. La <b class="termine">sintesi vocale</b> costruisce
+    parole a partire da modelli di come la bocca e le corde vocali producono i suoni: è ciò che fa parlare un
+    navigatore o un assistente. Il <b class="termine">riconoscimento vocale</b> percorre la strada inversa,
+    dall'onda sonora al testo — un problema molto più duro, perché ogni persona pronuncia in modo diverso e
+    l'ambiente è pieno di rumore. Non a caso è uno dei ponti storici tra il DSP e le reti neurali (Cap. 26).
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché l'orecchio ci fa risparmiare</div>
+    <p style="margin-bottom:0">
+      L'udito umano non è un microfono di precisione: sente bene certe frequenze, malissimo altre, e un suono
+      forte gli «nasconde» un suono debole vicino. Sono <em>difetti</em> — ma per chi comprime sono un regalo:
+      tutto ciò che l'orecchio non coglie può sparire senza perdita percepita. È il principio dietro l'MP3.
+      Lo stesso vale per l'occhio con le immagini. <mark>Conoscere i limiti del ricevitore è metà del lavoro di
+      compressione.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">SEZIONE 1.5</span>Eco-localizzazione: radar, sonar, sismica</h2>
+
+  <p>
+    C'è un'intera famiglia di tecnologie che condividono lo stesso trucco: <b>manda un segnale, ascolta l'eco,
+    e deduci cosa c'è là fuori</b> da come l'eco è cambiata. È il principio del pipistrello — e del radar, del
+    sonar e della prospezione sismica.
+  </p>
+
+  <ul>
+    <li><b>Radar.</b> Un'antenna emette un impulso radio; se colpisce un aereo, una frazione torna indietro. Dal
+        <em>ritardo</em> dell'eco si ricava la distanza (spazio = velocità × tempo), dallo spostamento di
+        frequenza — l'effetto Doppler — la velocità. Ma l'eco è debolissima e sepolta nel rumore: tirarla fuori
+        richiede filtri sofisticati, in primis il <b class="termine">filtro adattato</b> (Cap. 17).</li>
+    <li><b>Sonar.</b> Stessa idea sott'acqua, con onde sonore al posto di quelle radio. Serve a misurare la
+        profondità, a mappare i fondali, a individuare oggetti sommersi.</li>
+    <li><b>Sismica.</b> Per cercare petrolio o studiare la struttura del sottosuolo si generano piccole onde
+        d'urto in superficie e si registrano gli echi che rimbalzano sugli strati di roccia. Ricostruire la
+        geologia da quegli echi è un problema di DSP enorme, imparentato con la tomografia medica (Cap. 25).</li>
+  </ul>
+
+  <p>
+    Il denominatore comune è brutale: il segnale che cerchi è <em>quasi sempre più debole del rumore</em> in cui
+    è immerso. L'eco di un aereo lontano può valere un milionesimo del disturbo di fondo. Estrarre un sussurro
+    da un frastuono è il pane del DSP — e il motivo per cui il prossimo capitolo, apparentemente astratto, parla
+    di statistica e rumore: senza capire il rumore, non lo si può battere.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">SEZIONE 1.6</span>Elaborazione delle immagini</h2>
+
+  <p>
+    Un'immagine è un segnale a due dimensioni: invece di un valore per ogni istante, un valore di luminosità per
+    ogni punto — il <b class="termine">pixel</b>. Tutto ciò che facciamo ai segnali unidimensionali si estende,
+    con qualche complicazione geometrica, alle immagini (Cap. 23–25). E qui il DSP tocca alcune delle sue
+    applicazioni più spettacolari.
+  </p>
+
+  <ul>
+    <li><b>Medicina.</b> La <b class="termine">TAC</b> è forse il trionfo più clamoroso del DSP: una macchina
+        misura come i raggi X vengono assorbiti da mille angolazioni diverse, e un algoritmo ricostruisce da
+        quelle misure una «fetta» dell'interno del corpo — senza aprirlo. La stessa idea di ricostruzione regge
+        la risonanza magnetica e l'ecografia. Prima del DSP, tutto questo era impensabile.</li>
+    <li><b>Spazio.</b> Le sonde interplanetarie mandano immagini debolissime attraverso milioni di chilometri.
+        Il DSP le ripulisce dal rumore, ne corregge le distorsioni, ne esalta i dettagli. Molte delle foto
+        «impossibili» di pianeti lontani sono, in buona parte, ricostruzioni.</li>
+    <li><b>Vita quotidiana.</b> La fotocamera del telefono mette a fuoco, riduce il rumore, riconosce i volti,
+        allarga la gamma dinamica: decine di operazioni DSP a ogni scatto. E ogni volta che un lettore
+        interpreta un codice a barre o un documento, sta facendo elaborazione d'immagine.</li>
+  </ul>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Una disciplina, mille mestieri</div>
+    <p style="margin-bottom:0">
+      Telecomunicazioni, musica, radar, TAC: sembrano lavori senza niente in comune. Il bello del DSP è che sotto
+      sono <b>lo stesso lavoro</b>. Gli strumenti — convoluzione, trasformata di Fourier, filtri — sono
+      identici; cambia solo il segnale su cui li punti. Impararli una volta significa poterli usare ovunque. È
+      per questo che vale la pena studiare la teoria e non le ricette: <mark>la teoria è portatile.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">SEZIONE 1.7</span>Com'è fatto questo libro</h2>
+
+  <p>
+    Una promessa e un metodo. La promessa: <strong>non salta nessun passaggio</strong>. Il DSP ha fama di essere
+    ostico, ma quasi sempre l'ostacolo non è la difficoltà — è che i libri danno per scontati dei passaggi. Qui,
+    se compare un simbolo, viene spiegato. Se una formula «viene fuori», ti mostro <em>da dove</em>.
+  </p>
+
+  <p>Il metodo è attraversare ogni argomento <strong>più volte</strong>, in quest'ordine:</p>
+
+  <ol class="passi">
+    <li><b>Prima l'intuizione.</b> Che problema stiamo risolvendo? Che immagine mentale serve? Qui si può dire
+        «immagina che…».</li>
+    <li><b>Poi la formula, smontata.</b> La scriviamo per intero e sotto elenchiamo <em>ogni simbolo</em> con il
+        suo ruolo; poi ricostruiamo il ragionamento che porta lì.</li>
+    <li><b>Infine il conto e il codice.</b> Un esempio numerico piccolo, svolto per esteso; e, dove aiuta, lo
+        pseudo-codice, perché in DSP la formula e il programma sono quasi la stessa cosa.</li>
+    <li><b>Dove possibile, il widget.</b> Una figura da toccare. I segnali si capiscono muovendoli.</li>
+  </ol>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> La legenda dei riquadri colorati</div>
+    <p style="margin-bottom:0">
+      Hanno un significato fisso in tutto il libro:
+      <span style="color:var(--accent)"><strong>teal</strong> = definizione</span>,
+      <span style="color:var(--green)"><strong>verde</strong> = intuizione</span>,
+      <span style="color:var(--warm)"><strong>ambra</strong> = trappola in cui cadono tutti</span>,
+      <span style="color:var(--violet)"><strong>indaco</strong> = formula/idea da ricordare</span>,
+      <span style="color:var(--gold)"><strong>oro</strong> = nota a margine o «dove siamo».</span>
+    </p>
+  </div>
+
+  <h3>La struttura del percorso</h3>
+
+  <p>
+    I trentaquattro capitoli non sono un elenco: sono una salita ordinata. Sapere <em>in quale tratto</em> ti
+    trovi rende tutto più leggero.
+  </p>
+
+  <figure class="fig wide" id="fig-mappa">
+    <svg viewBox="0 0 680 260" role="img" aria-label="Mappa delle grandi aree del libro sul DSP"></svg>
+    <figcaption class="cap">
+      <span class="n">Figura 1.3</span> — L'arco del libro. Prima le <b>fondamenta</b> (segnali, rumore,
+      conversione), poi i due strumenti-madre — la <b>convoluzione</b> nel dominio del tempo e la <b>trasformata
+      di Fourier</b> nel dominio della frequenza — poi i <b>filtri</b>, che di quegli strumenti sono
+      l'applicazione principe, e infine le <b>applicazioni</b> (audio, immagini, compressione) e gli
+      <b>approfondimenti</b> (numeri complessi, Laplace, trasformata z). Ogni area poggia sulle precedenti.
+    </figcaption>
+  </figure>
+
+  <p>
+    Un'avvertenza onesta: il DSP è matematico, e questo libro non lo nasconde. Ma la matematica che serve è meno
+    di quanta temi, e la costruiamo per strada — i numeri complessi, per dire, li ricostruiamo da zero nel
+    Cap. 30, quando davvero servono. Ti basta essere a tuo agio con l'algebra, un po' di trigonometria (seni e
+    coseni) e la voglia di prendere carta e penna. I widget e le figure fanno il resto.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li><b>Il DSP trasforma i segnali in numeri e li elabora col calcolo.</b> Campionamento + quantizzazione
+          fanno il ponte tra il mondo analogico e il calcolatore; da lì è tutta aritmetica.</li>
+      <li><b>Notazione:</b> \(x(t)\) con le tonde è continuo, \(x[n]\) con le quadre è discreto, e \(n\) è solo
+          un contatore di campioni.</li>
+      <li><b>Le idee vengono prima dell'hardware.</b> Fourier, Nyquist–Shannon e la FFT hanno reso <em>possibile</em>
+          ciò che i chip poi hanno reso <em>economico</em>.</li>
+      <li><b>Una teoria, infinite applicazioni.</b> Telecom, audio, radar, immagini e medicina usano gli stessi
+          pochi strumenti — convoluzione, Fourier, filtri — puntati su segnali diversi.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Nel <strong>Capitolo 2</strong> partiamo dalle fondamenta meno glamour e più importanti: <b>statistica,
+    probabilità e rumore</b>. Sembra strano cominciare da lì, ma è la scelta giusta — perché ogni segnale reale
+    è sporco, e prima di ripulire qualcosa bisogna saper misurare <em>quanto</em> è sporco. Impareremo cosa sono
+    davvero la media e la deviazione standard di un segnale, cos'è il rapporto segnale/rumore, e perché la curva
+    a campana spunta ovunque. È il metro con cui giudicheremo ogni tecnica del resto del libro.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   FIGURA 1.1 — analogico (continuo) vs digitale (campionato)
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-analog-digital svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const f = x => 1.15 * Math.sin(x * 0.9 + 0.4) + 0.5 * Math.sin(x * 2.1 + 1);
+
+  function panel(ox, kind) {
+    const holder = el('svg', { x: ox, y: 20, width: 280, height: 210, viewBox: '0 0 280 210' });
+    // cornice
+    holder.appendChild(el('rect', { x: 2, y: 2, width: 276, height: 176, rx: 7, fill: 'var(--paper)', stroke: 'var(--rule)' }));
+    const p = new Plot(holder, { xmin: 0, xmax: 12, ymin: -2, ymax: 2 });
+    // riduciamo l'area utile lasciando spazio alla didascalietta
+    p.axes({ numbers: false, names: false });
+    if (kind === 'analog') {
+      p.func(f, { color: 'var(--accent)', width: 2.6 });
+    } else {
+      const data = [];
+      for (let n = 0; n <= 12; n++) data.push(f(n));
+      p.func(f, { color: 'var(--ink-faint)', width: 1, dash: '3 4' });
+      p.stem(data, { color: 'var(--warm)', r: 3.4, width: 1.8 });
+    }
+    const cap = el('text', { x: 140, y: 200, 'text-anchor': 'middle', class: 'lbl-b' });
+    cap.setAttribute('fill', kind === 'analog' ? 'var(--accent)' : 'var(--warm)');
+    cap.textContent = kind === 'analog' ? 'ANALOGICO — continuo x(t)' : 'DIGITALE — campioni x[n]';
+    holder.appendChild(cap);
+    return holder;
+  }
+  svg.appendChild(panel(10, 'analog'));
+  svg.appendChild(panel(330, 'digital'));
+})();
+
+
+/* ============================================================================
+   WIDGET §1.1 — campionamento a densità variabile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsamp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsamp-out');
+  const slider = document.getElementById('wsamp-n');
+  const f = x => Math.sin(x) + 0.45 * Math.sin(2.7 * x + 0.6);   // ha una componente "veloce"
+  const X = 2 * Math.PI * 1.5;    // finestra temporale
+
+  function draw() {
+    const N = parseInt(slider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: X, ymin: -1.7, ymax: 1.7 });
+    p.grid(1, 1); p.axes({ numbers: false, names: false, xname: 't' });
+    // segnale continuo di riferimento
+    p.func(f, { color: 'var(--accent)', width: 2.4 });
+    // campioni
+    const data = [];
+    const dt = X / (N - 1);
+    for (let i = 0; i < N; i++) data.push(f(i * dt));
+    p.stem(data, { x0: 0, dxs: dt, color: 'var(--warm)', r: 3.2, width: 1.6 });
+    // spezzata che unisce i campioni: cosa "vede" il calcolatore
+    p.seq(data, { x0: 0, dxs: dt, color: 'var(--warm)', width: 1.2, dash: '2 3' });
+
+    const fedele = N >= 24;
+    const scarso = N < 12;
+    out.innerHTML = `
+      <div class="big"><b>${N}</b> campioni sulla finestra
+        &nbsp;·&nbsp; passo Δt = <b>${dt.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In <b style="color:var(--accent)">teal</b> il segnale vero; gli <b style="color:var(--warm)">steli</b>
+        sono ciò che il calcolatore memorizza, e la spezzata tratteggiata è la forma che ne
+        «indovina» unendo i punti.
+        ${scarso
+          ? 'Con così pochi campioni la spezzata <mark>non somiglia più all&rsquo;originale</mark>: la componente veloce è persa o, peggio, travisata. È l&rsquo;<em>aliasing</em>, il grande pericolo del Cap. 3.'
+          : fedele
+            ? 'Ora i campioni <mark>catturano bene</mark> anche l&rsquo;ondulazione veloce: da questi numeri si può ricostruire fedelmente la curva.'
+            : 'Siamo nella zona grigia: la forma d&rsquo;insieme c&rsquo;è, ma i dettagli rapidi ballano. Aumenta ancora i campioni e guardali agganciare la curva.'}
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   FIGURA 1.2 — linea del tempo delle idee del DSP
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-timeline svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+
+  const eventi = [
+    { x: 60,  anno: '≈1807', tit: 'Fourier', sot: 'ogni segnale = somma di onde', tipo: 'mat', up: true },
+    { x: 210, anno: '1928',  tit: 'Nyquist', sot: 'quanti campioni servono', tipo: 'mat', up: false },
+    { x: 345, anno: '1949',  tit: 'Shannon', sot: 'teorema del campionamento', tipo: 'mat', up: true },
+    { x: 480, anno: '1965',  tit: 'FFT', sot: 'Fourier diventa istantaneo', tipo: 'tec', up: false },
+    { x: 610, anno: '≈1980', tit: 'chip DSP', sot: 'moltiplica-e-somma a buon mercato', tipo: 'tec', up: true }
+  ];
+
+  // asse
+  svg.appendChild(el('line', { x1: 30, y1: 100, x2: 650, y2: 100, stroke: 'var(--ink-faint)', 'stroke-width': 2 }));
+
+  eventi.forEach(e => {
+    const col = e.tipo === 'mat' ? 'var(--accent)' : 'var(--warm)';
+    const yDot = 100;
+    const yBox = e.up ? 52 : 118;
+    svg.appendChild(el('circle', { cx: e.x, cy: yDot, r: 5, fill: col, stroke: 'var(--paper)', 'stroke-width': 2 }));
+    svg.appendChild(el('line', { x1: e.x, y1: yDot, x2: e.x, y2: e.up ? yBox + 22 : yBox - 4, stroke: col, 'stroke-width': 1.2, 'stroke-dasharray': '2 3' }));
+    const anno = txt(e.x, e.up ? yBox : yBox + 2, e.anno, 'lbl'); anno.setAttribute('fill', col); anno.setAttribute('font-weight', '700'); anno.setAttribute('font-size', '11');
+    svg.appendChild(anno);
+    const tit = txt(e.x, e.up ? yBox + 15 : yBox + 17, e.tit, 'lbl-b'); tit.setAttribute('font-size', '12.5');
+    svg.appendChild(tit);
+    const sot = txt(e.x, e.up ? yBox + 30 : yBox + 32, e.sot, 'lbl'); sot.setAttribute('font-size', '9.5'); sot.setAttribute('fill', 'var(--ink-faint)');
+    svg.appendChild(sot);
+  });
+
+  const leg1 = txt(30, 178, '● matematica', 'lbl', 'start'); leg1.setAttribute('fill', 'var(--accent)'); leg1.setAttribute('font-size', '11'); leg1.setAttribute('font-weight', '700');
+  svg.appendChild(leg1);
+  const leg2 = txt(150, 178, '● tecnologia', 'lbl', 'start'); leg2.setAttribute('fill', 'var(--warm)'); leg2.setAttribute('font-size', '11'); leg2.setAttribute('font-weight', '700');
+  svg.appendChild(leg2);
+})();
+
+
+/* ============================================================================
+   FIGURA 1.3 — la mappa delle grandi aree del libro
+   ========================================================================= */
+(function () {
+  const svg = document.querySelector('#fig-mappa svg');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, at) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const txt = (x, y, s, cls, anchor) => { const t = el('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'middle' }); t.textContent = s; return t; };
+
+  const aree = [
+    { x: 20,  tit: 'FONDAMENTA', cap: 'Cap. 2 – 5',   sot: ['rumore', 'ADC / DAC', 'sistemi lineari'], col: 'var(--accent)' },
+    { x: 178, tit: 'I DUE DOMINI', cap: 'Cap. 6 – 13', sot: ['convoluzione', 'Fourier / DFT', 'FFT'], col: 'var(--green)' },
+    { x: 336, tit: 'I FILTRI',    cap: 'Cap. 14 – 21', sot: ['media mobile', 'windowed-sinc', 'ricorsivi'], col: 'var(--warm)' },
+    { x: 494, tit: 'APPLICAZIONI & OLTRE', cap: 'Cap. 22 – 34', sot: ['audio, immagini', 'compressione', 'Laplace, z'], col: 'var(--violet)' }
+  ];
+
+  const defs = el('defs', {});
+  const mk = el('marker', { id: 'arwm', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
+  mk.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--ink-faint)' }));
+  defs.appendChild(mk);
+  svg.appendChild(defs);
+
+  aree.forEach((a, i) => {
+    const g = el('g', {});
+    g.appendChild(el('rect', { x: a.x, y: 60, width: 120, height: 120, rx: 9, fill: 'var(--paper-2)', stroke: a.col, 'stroke-width': 1.6 }));
+    g.appendChild(el('rect', { x: a.x, y: 60, width: 120, height: 5, rx: 2.5, fill: a.col }));
+    const n = txt(a.x + 60, 50, 'AREA ' + (i + 1), 'lbl'); n.setAttribute('fill', a.col);
+    n.setAttribute('font-weight', '700'); n.setAttribute('font-size', '10'); n.setAttribute('letter-spacing', '1.2');
+    g.appendChild(n);
+    const t = txt(a.x + 60, 88, a.tit, 'lbl-b'); t.setAttribute('font-size', '11.5');
+    g.appendChild(t);
+    const c = txt(a.x + 60, 105, a.cap, 'lbl'); c.setAttribute('font-size', '10.5'); c.setAttribute('fill', 'var(--ink-faint)');
+    g.appendChild(c);
+    a.sot.forEach((s, j) => { const u = txt(a.x + 60, 128 + j * 15, '· ' + s, 'lbl'); u.setAttribute('font-size', '10.5'); g.appendChild(u); });
+    if (i < 3) g.appendChild(el('line', { x1: a.x + 124, y1: 120, x2: a.x + 154, y2: 120, stroke: 'var(--ink-faint)', 'stroke-width': 1.5, 'marker-end': 'url(#arwm)' }));
+    svg.appendChild(g);
+  });
+
+  const base = txt(340, 218, 'ogni area usa soltanto ciò che è stato costruito in quelle precedenti', 'lbl');
+  base.setAttribute('font-style', 'italic');
+  svg.appendChild(base);
+})();
+</script>
+</body>
+</html>

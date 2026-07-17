@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSP — Processamento dei segnali digitali</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="0">
+
+<main class="cover">
+
+  <div class="hero">
+    <div class="eyebrow">DAL MICROFONO AL PIXEL, PASSANDO PER FOURIER</div>
+    <h1>Processamento dei<br>segnali digitali</h1>
+    <p>Come un calcolatore ascolta, guarda, misura e ripulisce il mondo. Ogni idea raccontata
+       per esteso — dal campionamento alla FFT, dai filtri alle immagini — con le formule smontate
+       simbolo per simbolo, figure e widget da toccare. Un libro da <em>capire</em>, non da consultare.</p>
+  </div>
+
+  <figure class="fig wide" id="hero-wave" style="margin-top:-1rem;margin-bottom:3.5rem">
+    <svg viewBox="0 0 900 150" role="img" aria-label="Un segnale continuo campionato in una sequenza di campioni discreti"></svg>
+  </figure>
+
+  <div class="box intu" style="max-width:44rem">
+    <div class="box-title"><span class="ico">🧭</span> Come leggere questo libro</div>
+    <p>I capitoli seguono l'ordine di dipendenza: ognuno usa <em>soltanto</em> ciò che è stato
+       costruito nei precedenti. Il menu <strong>Indice</strong> in alto è sempre a portata di mano
+       e ti porta a qualunque sezione; premi il tasto <span class="sym">/</span> per aprirlo e filtrare al volo.</p>
+    <p style="margin-bottom:0">I riquadri colorati hanno un significato fisso in tutto il libro:
+       <span style="color:var(--accent)"><strong>teal</strong> = definizione</span>,
+       <span style="color:var(--green)"><strong>verde</strong> = intuizione</span>,
+       <span style="color:var(--warm)"><strong>ambra</strong> = trappola in cui cadono tutti</span>,
+       <span style="color:var(--violet)"><strong>indaco</strong> = formula da ricordare</span>,
+       <span style="color:var(--gold)"><strong>oro</strong> = nota a margine</span>.</p>
+  </div>
+
+  <h2 style="max-width:var(--w-wide); margin-top:3.5rem">Indice</h2>
+  <div class="toc-grid" id="toc-grid" style="max-width:var(--w-wide)"></div>
+
+  <p style="margin-top:3rem; color:var(--ink-faint); font-size:.9rem; text-align:center; max-width:var(--w-wide)">
+    I capitoli in grigio sono ancora da scrivere: il libro cresce un capitolo alla volta.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+  document.getElementById('toc-grid').innerHTML = TOC.map(c => {
+    const todo = c.stato === 'da-fare';
+    return `
+      <a class="toc-card ${todo ? 'todo' : ''}" href="${todo ? '#' : c.file}">
+        <span class="badge">${todo ? 'in arrivo' : 'pronto'}</span>
+        <div class="cnum">Capitolo ${c.n}</div>
+        <h3>${c.titolo}</h3>
+        <ul>${c.sezioni.slice(0, 4).map(s => `<li>${s.n} · ${s.t}</li>`).join('')}
+            ${c.sezioni.length > 4 ? `<li>…e altre ${c.sezioni.length - 4} sezioni</li>` : ''}</ul>
+      </a>`;
+  }).join('');
+
+  /* hero: un segnale continuo (teal) campionato in steli (ambra) */
+  (function () {
+    const svg = document.querySelector('#hero-wave svg');
+    if (!svg) return;
+    const p = new Plot(svg, { xmin: 0, xmax: 32, ymin: -1.35, ymax: 1.35 });
+    const f = x => Math.sin(x * 0.55) * Math.exp(-x / 60) + 0.28 * Math.sin(x * 1.9);
+    p.func(f, { color: 'var(--accent)', width: 2.4 });
+    const samples = [];
+    for (let n = 0; n <= 32; n++) samples.push(f(n));
+    p.stem(samples, { color: 'var(--warm)', r: 3, width: 1.6 });
+  })();
+</script>
+</body>
+</html>
