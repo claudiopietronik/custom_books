@@ -28,7 +28,7 @@ Contenuto originale scritto ex novo: l'indice segue l'ordine classico della fisi
 - [x] 2 — Il moto rettilineo
 - [x] 3 — Moto nel piano e nello spazio
 - [x] 4 — Le leggi di Newton
-- [ ] 5 — Applicazioni delle leggi di Newton
+- [x] 5 — Applicazioni delle leggi di Newton
 - [ ] 6 — Lavoro ed energia cinetica
 - [ ] 7 — Energia potenziale e conservazione
 - [ ] 8 — Quantità di moto, impulso e urti

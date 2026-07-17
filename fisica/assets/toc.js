@@ -83,7 +83,7 @@ const TOC = [
     n: 5,
     titolo: "Applicazioni delle leggi di Newton",
     file: "cap05-applicazioni-newton.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "L'equilibrio delle particelle" },
       { id: "s5-2", n: "5.2", t: "La dinamica delle particelle" },
