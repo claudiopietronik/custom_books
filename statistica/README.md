@@ -1,73 +1,85 @@
-# Libro di Statistica — sistema di build
+# Statistica
 
-Questo bundle contiene tutti i sorgenti che compongono il file
-`Statistica.html` (un unico HTML self-contained e offline).
-Puoi modificare stile, logica e contenuti e **ricostruire** l'HTML finale.
+Un libro in HTML di statistica, in italiano — dalla descrittiva ai modelli predittivi. Stessa filosofia
+degli altri libri della libreria (concetti spiegati per esteso, formule smontate simbolo per simbolo,
+esempi svolti e widget interattivi), con un'**identità visiva propria** — palette "dati": indaco per i
+concetti, verde-acqua per l'intuizione, viola per le formule.
 
-## Struttura
+Copre l'intero percorso: statistica descrittiva, normalizzazione, probabilità, e statistica inferenziale
+(fino a regressione e machine learning). Nessun prerequisito oltre un po' di algebra delle superiori.
 
-```
-.
-├── book.json            # MANIFEST: definisce parti e capitoli (ordine, titoli nel menu, file)
-├── chapters/            # CONTENUTI: un file .md per capitolo (con immagini base64 incorporate)
-│   ├── 00_intro.md
-│   ├── 01_fondamenta.md
-│   └── ...
-├── styles.css           # STILE: tutto il CSS del libro (navbar, tabelle, riquadri, mobile...)
-├── app.js               # LOGICA: navigazione (menu, mostra/nascondi capitoli, prev/next)
-├── build_book.py        # BUILD 1: assembla manifest + capitoli + styles.css + app.js -> HTML intermedio
-├── render_math.js       # BUILD 2: converte le formule LaTeX in SVG statico (offline, niente CDN)
-├── plots/               # Script Python che generano i grafici (PNG) usati nei capitoli
-│   ├── make_plots.py
-│   └── ...
-└── img/                 # PNG generati dagli script (già incorporati come base64 nei .md)
-```
+**Apri [`index.html`](index.html) con un doppio clic.** Non serve alcun server.
 
-## Come ricostruire l'HTML finale
+## Com'è organizzato
 
-Servono **Python 3** (con i pacchetti `markdown` e `pymdownx`) e **Node.js** (con `mathjax-full`).
+| File | Cosa contiene |
+|---|---|
+| `index.html` | Copertina e indice generale, raggruppato per parte (si genera da `assets/toc.js`) |
+| `capNN-*.html` | Un file per capitolo (46 in tutto) |
+| `assets/toc.js` | **Sorgente unica dell'indice**: `BOOK` (titolo/tema), parti, capitoli, sezioni, stato |
+| `assets/book.js` | Barra di navigazione, mega-menu, indice laterale, tema chiaro/scuro |
+| `assets/plot.js` | Motore di disegno su SVG: assi, funzioni, aree, istogrammi, scatter, punti trascinabili |
+| `assets/math.js` | Configurazione MathJax e macro della notazione (`\E`, `\Var`, `\Cov`, `\normal`, …) |
+| `assets/style.css` | Grafica del libro (tema proprio "dati") |
 
-```bash
-# 1) dipendenze (una volta sola)
-pip install markdown pymdown-extensions --break-system-packages
-npm install            # installa mathjax-full da package.json
+Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stato` a `"pronto"` in
+`assets/toc.js`. Menu, indice e frecce avanti/indietro si aggiornano da soli.
 
-# 2) build in due passi
-python3 build_book.py book.json _tmp.html          # markdown -> HTML con formule "grezze"
-node render_math.js _tmp.html Statistica.html   # formule -> SVG, output finale
-rm _tmp.html
-```
+## Indice
 
-Il file `Statistica.html` è il libro completo: un unico file, immagini e
-formule incorporate, **nessuna dipendenza esterna** (funziona anche offline).
+**Parte I — Statistica descrittiva**
+- [x] 1 — Introduzione
+- [x] 2 — Fondamenta: dati e variabili
+- [x] 3 — Tendenza centrale
+- [x] 4 — Misure di dispersione
+- [x] 5 — Quantili, IQR e QQ plot
+- [x] 6 — Momenti statistici
+- [x] 7 — Istogrammi
+- [x] 8 — Violin plot e KDE
+- [x] 9 — Entropia
 
-## Come modificare
+**Parte II — Normalizzazione e outlier**
+- [x] 10 — Z-score e min-max
+- [x] 11 — Outlier
+- [x] 12 — Dati multivariati
 
-- **Cambiare lo stile** (colori, font, layout, menu): edita `styles.css`.
-  Il segnaposto `/*__MATHJAX_CSS__*/` viene riempito automaticamente da `render_math.js` — non toccarlo.
-- **Cambiare la navigazione** (comportamento menu, prev/next): edita `app.js`.
-  I segnaposto `__ORDER__` e `__FIRST__` vengono riempiti da `build_book.py`.
-- **Aggiungere/modificare un capitolo**: crea/edita un `.md` in `chapters/`, poi aggiungilo
-  a `book.json` nella parte giusta (con `id`, `nav`, `file`). Ricostruisci.
-- **Aggiungere una nuova parte**: aggiungi un oggetto in `book.json` → `parts` con
-  `available: true` e la lista `chapters`.
+**Parte III — Probabilità**
+- [x] 13 — Cos'è la probabilità
+- [x] 14 — Probabilità e proporzione
+- [x] 15 — Odds e calcolo
+- [x] 16 — PMF e PDF
+- [x] 17 — La CDF
+- [x] 18 — Campionamento e Monte Carlo
+- [x] 19 — Valore atteso
+- [x] 20 — Probabilità condizionata
+- [x] 21 — Il teorema di Bayes
+- [x] 22 — Legge dei grandi numeri
 
-### Nota sulle formule (importante)
+**Parte IV — Statistica inferenziale**
+- [x] 23 — Teorema del limite centrale
+- [x] 24 — Il test d'ipotesi
+- [x] 25 — Il p-value
+- [x] 26 — Errori di Tipo I e II
+- [x] 27 — Gradi di libertà
+- [x] 28 — Parametrico o no
+- [x] 29 — Confronti multipli
+- [x] 30 — Anatomia del t-test
+- [x] 31 — t-test a un campione
+- [x] 32 — t-test a due campioni
+- [x] 33 — Test non parametrici e permutazione
+- [x] 34 — Intervalli di confidenza
+- [x] 35 — Il bootstrap
+- [x] 36 — Covarianza e Pearson
+- [x] 37 — Matrice e correlazione parziale
+- [x] 38 — Spearman e Kendall
+- [x] 39 — Similarità del coseno
+- [x] 40 — Cos'è l'ANOVA
+- [x] 41 — Somme dei quadrati e F
+- [x] 42 — Post-hoc e ANOVA a due vie
+- [x] 43 — Regressione lineare
+- [x] 44 — Regressione multipla e polinomiale
+- [x] 45 — Regressione logistica
+- [x] 46 — Under- e overfitting
 
-Le formule usano `$...$` (inline) e `$$...$$` (display), stile LaTeX.
-Due trappole da evitare nei `.md`:
-
-1. **Dentro le tabelle** non usare la barra verticale `|` grezza in una formula
-   (romperebbe la colonna). Usa i comandi LaTeX: `\mid` per la barra di condizionamento
-   (es. `P(A \mid B)`), `\lvert x \rvert` per il valore assoluto, `\lVert v \rVert` per la norma.
-2. **Il display `$$...$$` non va messo dentro un riquadro** (blockquote `>`): mettilo come
-   blocco a sé, fuori dal `>`.
-
-## Come rigenerare i grafici
-
-```bash
-cd plots
-python3 make_plots.py     # ecc. — scrivono i PNG in ../img/
-```
-Poi le immagini vanno reincorporate come base64 nei `.md` (gli script attuali
-le salvano come PNG; l'incorporamento base64 è stato fatto a mano nei capitoli).
+Ispirato nella scaletta al corso *Master Statistics & Machine Learning* di Mike X Cohen, ma **riscritto
+da zero**: prosa, esempi, figure e widget sono originali.
