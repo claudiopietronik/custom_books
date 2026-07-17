@@ -165,7 +165,7 @@ const TOC = [
     n: 9,
     titolo: "I teoremi del calcolo differenziale",
     file: "cap09-teoremi-derivate.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Punti stazionari e teorema di Fermat" },
       { id: "s9-2", n: "9.2", t: "Il teorema di Rolle" },
