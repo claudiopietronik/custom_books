@@ -38,7 +38,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 13 — Tecniche di integrazione
 - [x] 14 — Integrali impropri
 - [x] 15 — Serie numeriche
-- [ ] 16 — La fine → verso l'Analisi 2
+- [x] 16 — La fine → verso l'Analisi 2
 
 ## Nota
 
