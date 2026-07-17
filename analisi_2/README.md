@@ -28,7 +28,7 @@ Stesso stile e stesso motore del libro di [Algebra Lineare](../algebra_lineare/)
 - [x] 5 — Lo spazio ℝⁿ e la topologia
 - [x] 6 — Funzioni di più variabili: limiti e continuità
 - [x] 7 — Calcolo differenziale in più variabili
-- [ ] 8 — Taylor e ottimizzazione libera
+- [x] 8 — Taylor e ottimizzazione libera
 - [ ] 9 — Ottimizzazione vincolata
 - [ ] 10 — Curve e integrali di linea
 - [ ] 11 — Campi vettoriali e forme differenziali

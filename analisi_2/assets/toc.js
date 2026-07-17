@@ -122,7 +122,7 @@ const TOC = [
     n: 8,
     titolo: "Taylor e ottimizzazione libera",
     file: "cap08-ottimizzazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Formula di Taylor in più variabili" },
       { id: "s8-2", n: "8.2", t: "Punti critici" },

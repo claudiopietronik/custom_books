@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Taylor e ottimizzazione libera — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>Taylor e ottimizzazione libera</h1>
+    <p class="standfirst">
+      Il problema che dà senso a tutto il calcolo differenziale: trovare i <b>massimi e i minimi</b>. In una
+      variabile bastava \(f' = 0\) e il segno di \(f''\); in più variabili si cercano i punti dove
+      \(\grad f = \vv{0}\) e si classificano con la <b>definitezza dell'Hessiana</b> — cioè con il segno dei
+      suoi <b>autovalori</b>. <mark>È l'incontro più bello tra questo libro e l'Algebra Lineare</mark>, e la
+      matematica dietro ogni ottimizzazione, dall'ingegneria all'addestramento delle reti neurali.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>formula di Taylor</b> in più variabili (§8.1), il cui termine quadratico è governato dall'Hessiana.
+      I <b>punti critici</b> \(\grad f = \vv{0}\) (§8.2), i candidati; l'<b>Hessiana</b> come «derivata seconda»
+      (§8.3); e il cuore del capitolo, il <b>test della definitezza</b> (§8.4) che li classifica con gli
+      autovalori. Il fenomeno nuovo delle <b>selle</b> (§8.5) e un <b>esempio completo</b> (§8.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: ottimizzare è (quasi) tutto</div>
+    <p style="margin-bottom:0">
+      «Trovare il meglio» è il problema applicato per eccellenza: il costo minimo, il profitto massimo, la
+      traiettoria più efficiente, i parametri che minimizzano l'errore di un modello. <mark>Addestrare una rete
+      neurale è minimizzare una funzione di milioni di variabili</mark>, e lo si fa proprio con gli strumenti di
+      questo capitolo — la discesa del gradiente per avvicinarsi al minimo, l'Hessiana per capirne la forma. In
+      due variabili possiamo <em>disegnare</em> tutto ciò che nelle applicazioni avviene in milioni di
+      dimensioni: è il laboratorio perfetto per capire davvero cosa succede.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Formula di Taylor in più variabili</h2>
+
+  <p class="lead">
+    Per capire la forma di \(f\) vicino a un punto, la sviluppiamo con Taylor (Analisi 1, Cap. 11), fermandoci
+    al secondo ordine. Compaiono il gradiente (termine lineare) e l'Hessiana (termine quadratico).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Taylor al secondo ordine <span class="tag">gradiente + Hessiana</span></div>
+    <div class="f-body">
+      \[ f(\vv{x}_0 + \vv{h}) \approx f(\vv{x}_0) + \underbrace{\grad f(\vv{x}_0)\cdot\vv{h}}_{\text{lineare}} + \underbrace{\tfrac12\,\vv{h}\T H_f(\vv{x}_0)\,\vv{h}}_{\text{quadratico}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>il termine <b>lineare</b> \(\grad f\cdot\vv{h}\)</dt>
+        <dd>la pendenza (§7.2): dà il piano tangente. <b>In un punto critico è zero</b>, e allora il termine
+            successivo decide tutto.</dd>
+        <dt>il termine <b>quadratico</b> \(\tfrac12\vv{h}\T H_f\vv{h}\)</dt>
+        <dd>una <span class="termine">forma quadratica</span> (Cap. 17 di Algebra Lineare): è la «curvatura» di
+            \(f\) attorno al punto. Il suo segno — se \(H_f\) è definita positiva, negativa o indefinita —
+            determina se il punto è una scodella, una cupola o una sella.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È l'analogo esatto del test degli ordini superiori di Analisi 1 (§11.7): in un punto critico
+      (\(\grad f = \vv{0}\)) il comportamento locale è governato dal <b>termine quadratico</b>, cioè
+      dall'Hessiana. <mark>Studiare i massimi e minimi si riduce a studiare una forma quadratica</mark> — e
+      quella la sa maneggiare l'Algebra Lineare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>Punti critici</h2>
+
+  <p class="lead">
+    Come in una variabile i massimi e minimi interni erano tra i punti a \(f' = 0\) (Fermat), qui sono tra i
+    punti dove il <b>gradiente si annulla</b>. È il primo passo di ogni ottimizzazione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Punti critici (Fermat in ℝⁿ) <span class="tag">gradiente nullo = candidato</span></div>
+    <div class="f-body">
+      \[ \grad f(\vv{x}_0) = \vv{0} \iff \pdv{f}{x}(\vv{x}_0) = 0 \ \text{ e } \ \pdv{f}{y}(\vv{x}_0) = 0 \]
+    </div>
+    <div class="f-note">
+      In un massimo o minimo interno la superficie è «piatta»: il piano tangente è orizzontale, quindi <b>tutte
+      le derivate parziali sono nulle</b>. Trovare i punti critici significa <b>risolvere il sistema</b>
+      \(\grad f = \vv{0}\) (spesso non lineare). Come in Analisi 1, è una condizione <b>necessaria non
+      sufficiente</b>: \(\grad f = \vv{0}\) individua i <mark>candidati</mark>, ma tra loro ci sono massimi,
+      minimi e il nuovo tipo — le selle (§8.5). A distinguerli sarà l'Hessiana.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>La matrice Hessiana</h2>
+
+  <p class="lead">
+    L'ingrediente per classificare: la matrice delle derivate seconde (§7.8), che misura come si <b>curva</b>
+    la superficie attorno al punto critico. È simmetrica, quindi ha autovalori reali.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Hessiana e forma quadratica <span class="tag">la curvatura in ogni direzione</span></div>
+    <div class="f-body">
+      \[ H_f = \begin{bmatrix} f_{xx} & f_{xy} \\ f_{xy} & f_{yy} \end{bmatrix}, \qquad \vv{h}\T H_f \vv{h} = \text{curvatura di } f \text{ nella direzione } \vv{h} \]
+    </div>
+    <div class="f-note">
+      La forma quadratica \(\vv{h}\T H_f\vv{h}\) dice se, muovendoti nella direzione \(\vv{h}\), la superficie
+      curva verso l'alto (positiva) o verso il basso (negativa). Se curva <b>verso l'alto in ogni direzione</b>,
+      il punto critico è un minimo; se verso il basso in ogni direzione, un massimo; se in certe direzioni su e
+      in altre giù, una sella. <mark>Il «verso ogni direzione» è esattamente la definitezza della matrice</mark>
+      (Cap. 17 di Algebra Lineare) — e la definitezza si legge dagli autovalori.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Il test dell'Hessiana (definitezza)</h2>
+
+  <p class="lead">
+    Ecco la regola che classifica ogni punto critico, ed è pura Algebra Lineare: <b>guarda il segno degli
+    autovalori dell'Hessiana</b>. È la generalizzazione del «segno di \(f''\)» di Analisi 1.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il test della definitezza <span class="tag">il segno degli autovalori decide</span></div>
+    <div class="f-body">
+      \[
+        \begin{array}{ll}
+          H_f \text{ definita positiva } (\lambda_i > 0 \ \forall i) & \Rightarrow \text{ minimo} \\
+          H_f \text{ definita negativa } (\lambda_i < 0 \ \forall i) & \Rightarrow \text{ massimo} \\
+          H_f \text{ indefinita } (\lambda \text{ di segni misti}) & \Rightarrow \text{ sella} \\
+          H_f \text{ semidefinita } (\text{qualche } \lambda = 0) & \Rightarrow \text{ inconcludente}
+        \end{array}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>autovalori tutti <b>positivi</b> → minimo</dt>
+        <dd>la superficie curva verso l'alto in ogni direzione: una scodella. È l'analogo di \(f'' > 0\)
+            (Analisi 1, §10.6).</dd>
+        <dt>autovalori tutti <b>negativi</b> → massimo</dt>
+        <dd>curva verso il basso ovunque: una cupola.</dd>
+        <dt>autovalori di <b>segno misto</b> → sella</dt>
+        <dd>su in una direzione, giù in un'altra: il nuovo fenomeno che in una variabile non esisteva (§8.5).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>Scorciatoia per le \(2\times 2\)</b> (senza calcolare gli autovalori): usa \(\det H_f\) e \(f_{xx}\).
+      Se \(\det H_f > 0\): è definita (minimo se \(f_{xx} > 0\), massimo se \(f_{xx} < 0\)). Se \(\det H_f < 0\):
+      indefinita → <b>sella</b>. Se \(\det H_f = 0\): inconcludente. (Funziona perché \(\det = \lambda_1\lambda_2\)
+      e \(\tr = \lambda_1 + \lambda_2\), §11 e §15 di LA: il determinante negativo forza segni opposti.) Il
+      widget mostra i tre casi con i loro autovalori.
+    </div>
+  </div>
+
+  <div class="widget" id="w-hess">
+    <div class="w-head">
+      <span>Classifica il punto critico con l'Hessiana</span>
+      <span class="hint">scegli il tipo di superficie</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wh-svg" viewBox="0 0 560 380" role="img" aria-label="Il segno degli autovalori dell'Hessiana classifica il punto critico in minimo, massimo o sella"></svg>
+    </div>
+    <div class="w-controls" id="wh-btns" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-readout" id="wh-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Punti di sella</h2>
+
+  <p class="lead">
+    Il fenomeno che in una variabile non poteva esistere. Una <b>sella</b> è un punto critico che è un
+    <em>minimo</em> lungo una direzione e un <em>massimo</em> lungo un'altra — come il valico di una montagna,
+    o il centro di una sella da cavallo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il passo di montagna</div>
+    <p style="margin-bottom:0">
+      Immagina il <b>valico</b> tra due montagne: camminando lungo la strada (da valle a valle) sei nel punto
+      più <em>alto</em> del percorso; ma camminando di traverso (da una cima all'altra) sei nel punto più
+      <em>basso</em>. Stesso punto, minimo in una direzione, massimo nell'altra: una <b>sella</b>. Il gradiente
+      lì è nullo (è «piatto»), ma non è né un massimo né un minimo. La firma è l'<b>Hessiana indefinita</b>:
+      autovalori di segno opposto (\(x^2 - y^2\): autovalori \(+2\) e \(-2\)). <mark>Le selle sono ovunque
+      nell'ottimizzazione ad alta dimensione</mark>, e distinguerle dai minimi è cruciale — un algoritmo ingenuo
+      può restarci «incastrato» credendo di aver finito.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Un esempio completo</h2>
+
+  <p class="lead">
+    Mettiamo tutto in fila su \(f(x, y) = x^3 + y^3 - 3xy\): troviamo i punti critici e li classifichiamo. È il
+    metodo completo, dall'inizio alla fine.
+  </p>
+
+  <ol class="passi">
+    <li>
+      <b>Gradiente e punti critici.</b> \(\grad f = (3x^2 - 3y,\ 3y^2 - 3x)\). Pongo \(= \vv{0}\):
+      \(y = x^2\) e \(x = y^2\). Sostituendo, \(x = x^4\), cioè \(x(x^3 - 1) = 0\): \(x = 0\) (allora \(y = 0\))
+      oppure \(x = 1\) (allora \(y = 1\)). <b>Due punti critici:</b> \((0, 0)\) e \((1, 1)\).
+    </li>
+    <li>
+      <b>Hessiana.</b> \(f_{xx} = 6x\), \(f_{yy} = 6y\), \(f_{xy} = -3\), quindi
+      \(H_f = \begin{bmatrix} 6x & -3 \\ -3 & 6y \end{bmatrix}\).
+    </li>
+    <li>
+      <b>Classifica \((0,0)\).</b> \(H = \begin{bmatrix} 0 & -3 \\ -3 & 0 \end{bmatrix}\),
+      \(\det H = 0 - 9 = -9 < 0\): <b>indefinita → sella</b> (§8.4). (Autovalori \(\pm 3\).)
+    </li>
+    <li>
+      <b>Classifica \((1,1)\).</b> \(H = \begin{bmatrix} 6 & -3 \\ -3 & 6 \end{bmatrix}\),
+      \(\det H = 36 - 9 = 27 > 0\) e \(f_{xx} = 6 > 0\): <b>definita positiva → minimo</b> (locale). Il valore
+      è \(f(1,1) = 1 + 1 - 3 = -1\). (Autovalori \(3\) e \(9\), entrambi positivi.)
+    </li>
+  </ol>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Locale, non globale</div>
+    <p style="margin-bottom:0">
+      Attenzione: \((1,1)\) è un minimo <b>locale</b>, non globale. Questa \(f\) non ha minimo globale: lungo
+      \(y = 0\), \(f = x^3 \to -\infty\) per \(x \to -\infty\). Il test dell'Hessiana è <mark>sempre
+      locale</mark> — dice com'è fatta la funzione <em>vicino</em> al punto critico. Per gli estremi globali su
+      un insieme, ricorda Weierstrass (§6.5): servono un <b>compatto</b> e il controllo anche del <b>bordo</b>
+      (proprio come i punti di frontiera in Analisi 1, §10.5). Il prossimo capitolo affronta esattamente
+      l'ottimizzazione <em>sul bordo</em>: con i vincoli.
+    </p>
+  </div>
+
+  <div class="widget" id="w-descent">
+    <div class="w-head">
+      <span>La discesa del gradiente: rotolare verso il minimo</span>
+      <span class="hint">trascina il punto di partenza · fai i passi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wds-svg" viewBox="0 0 560 380" role="img" aria-label="Partendo da un punto e muovendosi contro il gradiente, si raggiunge il minimo di una funzione"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">passi</label>
+      <input type="range" id="wds-n" min="0" max="40" step="1" value="0" style="flex:1">
+    </div>
+    <div class="w-readout" id="wds-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li><b>Taylor al 2° ordine</b> (§8.1): \(f \approx f_0 + \grad f\cdot\vv{h} + \frac12\vv{h}\T H\vv{h}\).
+          In un punto critico il termine lineare sparisce e <mark>l'Hessiana decide la forma</mark>.</li>
+      <li><b>Punti critici:</b> \(\grad f = \vv{0}\) (§8.2), i candidati (necessario, non sufficiente).
+          L'<b>Hessiana</b> (§8.3) è la forma quadratica della curvatura.</li>
+      <li><b>Test della definitezza</b> (§8.4): autovalori di \(H\) tutti \(> 0\) → <b>minimo</b>, tutti
+          \(< 0\) → <b>massimo</b>, segni misti → <b>sella</b>, qualche zero → inconcludente. Scorciatoia 2×2:
+          \(\det H > 0\) e \(f_{xx} > 0\) → min; \(\det H > 0\), \(f_{xx} < 0\) → max; \(\det H < 0\) → sella.</li>
+      <li><b>Le selle</b> (§8.5) sono il fenomeno nuovo (Hessiana indefinita): min in una direzione, max in
+          un'altra. Il test è sempre <b>locale</b> (§8.6); per gli estremi globali servono compattezza e
+          bordo.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo ottimizzato «in libertà», su tutto il dominio. Ma spesso il problema ha dei <b>vincoli</b>: trova
+    il massimo <em>su questa curva</em>, il minimo <em>con questo budget</em>. Nel <strong>Capitolo 9</strong>
+    affrontiamo l'<b>ottimizzazione vincolata</b> con l'idea geniale dei <b>moltiplicatori di Lagrange</b> — e
+    con i teoremi delle funzioni implicite e inversa, che dicono quando una relazione \(F(x,y) = 0\) definisce
+    davvero una funzione. È l'ottimizzazione «sul bordo», la più utile nelle applicazioni reali.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Trova e classifica i punti critici di \(f(x, y) = x^2 + xy + y^2 - 3x\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Classifica il punto critico \((0,0)\) di \(f(x, y) = x^2 - 4xy + y^2\) usando \(\det H\) e \(f_{xx}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Per \(f(x, y) = x^4 + y^4 - 4xy\): trova i punti critici (sono tre) e classificali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Un punto critico è sempre un massimo o un minimo. &nbsp;
+      (b) Se l'Hessiana è definita positiva, il punto è un minimo. &nbsp;
+      (c) Una sella ha Hessiana con autovalori di segno opposto. &nbsp;
+      (d) Il test dell'Hessiana individua i massimi globali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-8"><span class="secnum">Sezione 8.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      \(\grad f = (2x + y - 3,\ x + 2y) = \vv{0}\): dal secondo, \(x = -2y\); nel primo, \(-4y + y - 3 = 0
+      \Rightarrow y = -1\), \(x = 2\). Unico punto critico \((2, -1)\).
+      \(H = \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}\), \(\det H = 3 > 0\), \(f_{xx} = 2 > 0\):
+      <b>minimo</b> (autovalori \(1\) e \(3\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      \(H = \begin{bmatrix} 2 & -4 \\ -4 & 2 \end{bmatrix}\), \(\det H = 4 - 16 = -12 < 0\): <b>indefinita →
+      sella</b> (§8.4). (Autovalori \(2 \pm 4\), cioè \(6\) e \(-2\): segni opposti.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      \(\grad f = (4x^3 - 4y,\ 4y^3 - 4x) = \vv{0}\): \(y = x^3\) e \(x = y^3\), da cui \(x = x^9\), cioè
+      \(x = 0, 1, -1\). Punti critici: \((0,0)\), \((1,1)\), \((-1,-1)\).
+      \(H = \begin{bmatrix} 12x^2 & -4 \\ -4 & 12y^2 \end{bmatrix}\).
+      <br>In \((0,0)\): \(\begin{bmatrix} 0 & -4 \\ -4 & 0 \end{bmatrix}\), \(\det = -16 < 0\): <b>sella</b>.
+      <br>In \((1,1)\) e \((-1,-1)\): \(\begin{bmatrix} 12 & -4 \\ -4 & 12 \end{bmatrix}\), \(\det = 144 - 16 =
+      128 > 0\), \(f_{xx} = 12 > 0\): <b>minimi</b> (locali).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Può essere una <b>sella</b> (§8.5): gradiente nullo ma né max né min.
+      <br><b>(b) VERO.</b> Definita positiva (autovalori tutti \(> 0\)) ⟹ minimo (§8.4).
+      <br><b>(c) VERO.</b> Sella ⟺ Hessiana indefinita ⟺ autovalori di segno misto (§8.5).
+      <br><b>(d) FALSO.</b> Il test è <b>locale</b> (§8.6): dice com'è il punto critico nelle vicinanze. Per i
+      globali servono Weierstrass, compattezza e il bordo.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §8.4 — classifica il punto critico
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wh-svg');
+  if (!svg) return;
+  const out = document.getElementById('wh-out');
+  const btns = document.getElementById('wh-btns');
+  const CASI = [
+    { k: 'minimo', f: (x, y) => x * x + y * y, H: [[2, 0], [0, 2]], ev: [2, 2], lv: [0.3, 1, 2, 3.5, 5], verd: 'MINIMO', col: 'var(--green)', nota: 'H definita positiva (autovalori +2, +2): scodella, curva su in ogni direzione.' },
+    { k: 'massimo', f: (x, y) => -x * x - y * y, H: [[-2, 0], [0, -2]], ev: [-2, -2], lv: [-0.3, -1, -2, -3.5, -5], verd: 'MASSIMO', col: 'var(--warm)', nota: 'H definita negativa (autovalori −2, −2): cupola, curva giù in ogni direzione.' },
+    { k: 'sella', f: (x, y) => x * x - y * y, H: [[2, 0], [0, -2]], ev: [2, -2], lv: [-3, -1.5, -0.5, 0, 0.5, 1.5, 3], verd: 'SELLA', col: 'var(--violet)', nota: 'H indefinita (autovalori +2, −2): min lungo x, max lungo y. Segni opposti → sella (§8.5).' }
+  ];
+  let cur = 0;
+
+  function draw() {
+    const it = CASI[cur];
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -2.4, ymax: 2.4, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    p.contour(it.f, it.lv, { color: 'var(--ink-faint)', width: 1.3, n: 100 });
+    p.dot(0, 0, { color: it.col, r: 6 });
+    [...btns.children].forEach((b, i) => b.classList.toggle('active', i === cur));
+    const det = it.H[0][0] * it.H[1][1] - it.H[0][1] * it.H[1][0];
+    out.innerHTML = `
+      <div class="big">
+        H = [[${it.H[0][0]}, ${it.H[0][1]}], [${it.H[1][0]}, ${it.H[1][1]}]] &nbsp;·&nbsp;
+        autovalori ${it.ev[0]}, ${it.ev[1]} &nbsp;·&nbsp; det H = ${det}
+        &nbsp;→&nbsp; <b style="color:${it.col}">${it.verd}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${it.nota} <mark>Scorciatoia:</mark> det H = ${det} ${det > 0 ? '&gt; 0 → definita (segno di f_xx decide max/min)' : '&lt; 0 → indefinita → sella'}.
+      </div>`;
+  }
+  CASI.forEach((it, i) => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = it.k;
+    b.onclick = () => { cur = i; draw(); };
+    btns.appendChild(b);
+  });
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §8.6 — discesa del gradiente su una conca allungata
+   f = 0.5 x² + 5 y²  (minimo in origine); passo η fisso
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wds-svg');
+  if (!svg) return;
+  const out = document.getElementById('wds-out');
+  const slider = document.getElementById('wds-n');
+  const f = (x, y) => 0.5 * x * x + 5 * y * y;
+  const grad = (x, y) => [x, 10 * y];
+  const eta = 0.08;
+  let start = [3.2, 1.1];
+
+  function path(n) {
+    const pts = [start.slice()];
+    let p = start.slice();
+    for (let i = 0; i < n; i++) {
+      const g = grad(p[0], p[1]);
+      p = [p[0] - eta * g[0], p[1] - eta * g[1]];
+      pts.push(p);
+    }
+    return pts;
+  }
+
+  function draw() {
+    const n = parseInt(slider.value, 10);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -1, xmax: 4, ymin: -1.6, ymax: 1.6, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    p.contour(f, [0.3, 1, 2.5, 5, 8, 12], { color: 'var(--ink-faint)', width: 1.3, n: 90 });
+    const pts = path(n);
+    // percorso
+    for (let i = 1; i < pts.length; i++) p.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], { color: 'var(--warm)', width: 1.8 });
+    pts.forEach((q, i) => p.dot(q[0], q[1], { color: i === pts.length - 1 ? 'var(--accent)' : 'var(--warm)', r: i === pts.length - 1 ? 5.5 : 2.5 }));
+    p.dot(0, 0, { color: 'var(--green)', r: 5, stroke: 'var(--paper)', sw: 2 });
+    p.handle(start[0], start[1], { color: 'var(--violet)' }, (x, y) => { start = [x, y]; draw(); });
+
+    const last = pts[pts.length - 1];
+    out.innerHTML = `
+      <div class="big">
+        passo ${n}: &nbsp; posizione (${fmt(last[0])}, ${fmt(last[1])}) &nbsp;·&nbsp;
+        f = <b style="color:var(--accent)">${fmt(f(last[0], last[1]))}</b> &nbsp;(min = 0)
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        A ogni passo ci si muove <b>contro il gradiente</b>: xₖ₊₁ = xₖ − η·∇f. Il percorso
+        <mark>rotola verso il minimo</mark> (verde). Nota lo <b>zigzag</b>: la conca è allungata (autovalori
+        1 e 10 molto diversi → mal condizionata, §16 di LA), e la discesa serpeggia prima di infilare la valle.
+        È il motore dell'addestramento delle reti neurali.
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
