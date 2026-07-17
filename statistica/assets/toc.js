@@ -400,7 +400,7 @@ const TOC = [
   },
   {
     n: 34, parte: "IV · Statistica inferenziale",
-    titolo: "Intervalli di confidenza", file: "cap34-intervalli-confidenza.html", stato: "da-fare",
+    titolo: "Intervalli di confidenza", file: "cap34-intervalli-confidenza.html", stato: "pronto",
     sezioni: [
       { id: "s34-1", n: "34.1", t: "Dalla stima puntuale all'intervallo" },
       { id: "s34-2", n: "34.2", t: "La formula e il margine d'errore" },

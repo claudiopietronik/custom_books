@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>34 · Intervalli di confidenza — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="34">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Intervalli di confidenza</h1>
+    <p class="standfirst">
+      Un test dice sì/no; un <b>intervallo di confidenza</b> dice <em>quanto</em> e con che margine. Invece di una
+      stima puntuale («la media è 50»), fornisce un intervallo di valori plausibili («tra 47 e 53»). È spesso più
+      informativo di un p-value — ma il suo significato preciso è tra i più fraintesi di tutta la statistica.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il complemento naturale del test d'ipotesi (Cap. 24–25): stessa macchina (TLC ed errore standard, Cap. 23),
+      altra prospettiva. Vedremo che un IC al 95% e un test a \(\alpha = 0{,}05\) sono due facce della stessa
+      medaglia. Il Cap. 35 costruisce IC senza formule, col bootstrap.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «L'effetto è significativo» non dice se è grande o minuscolo. «L'effetto è tra +2 e +8 punti» sì. Gli
+      intervalli di confidenza comunicano <b>precisione</b> ed <b>entità</b> insieme, ed è per questo che riviste e
+      linee guida spingono a riportarli sempre, accanto (o al posto) del p-value.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-1"><span class="secnum">SEZIONE 34.1</span>Dalla stima puntuale all'intervallo</h2>
+
+  <p class="lead">
+    Una <b>stima puntuale</b> (la media campionaria) è un singolo numero — e sappiamo che «balla» da campione a
+    campione (Cap. 23). Un <b>intervallo di confidenza</b> ammette questa incertezza e riporta un <em>range</em>.
+  </p>
+
+  <p>
+    Dire «la media stimata è 50» nasconde che, con un altro campione, avresti ottenuto 48 o 52. Dire «sono
+    confidente al 95% che la vera media stia tra 47 e 53» è onesto: comunica sia la stima sia la sua precisione.
+    L'ampiezza dell'intervallo è essa stessa informazione — stretto = stima precisa, largo = molta incertezza.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-2"><span class="secnum">SEZIONE 34.2</span>La formula e il margine d'errore</h2>
+
+  <div class="formula">
+    <div class="f-head">Intervallo di confidenza per la media <span class="tag">stima ± margine</span></div>
+    <div class="f-body">
+      \[ \bar{x} \;\pm\; \underbrace{\hA{t^*} \cdot \hB{\frac{s}{\sqrt{n}}}}_{\text{margine d'errore}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\bar{x}\)</dt><dd>la stima puntuale: il centro dell'intervallo.</dd>
+        <dt>\(\hA{t^*}\)</dt><dd>il <b>valore critico</b> (dalla distribuzione t) legato al livello di confidenza: per il 95% e \(n\) grande vale ~1,96.</dd>
+        <dt>\(\hB{s/\sqrt{n}}\)</dt><dd>l'<b>errore standard</b> (Cap. 23): quanto balla la media campionaria.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il <b>margine d'errore</b> \(t^* \cdot s/\sqrt{n}\) determina l'ampiezza. Due leve lo restringono:
+      <mark>più dati (\(n\) grande) e meno confidenza richiesta</mark>. Per il 99% l'intervallo è più largo (più
+      sicurezza costa più larghezza); quadruplicare \(n\) lo dimezza (legge del \(1/\sqrt{n}\)).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-3"><span class="secnum">SEZIONE 34.3</span>Cosa significa «95%»</h2>
+
+  <p class="lead">
+    Qui l'errore è quasi universale. «95%» <b>non</b> significa «c'è il 95% di probabilità che la vera media stia
+    in <em>questo</em> intervallo». Significa qualcosa di più sottile sul <em>metodo</em>.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'interpretazione corretta</div>
+    <p style="margin-bottom:0">
+      La vera media \(\mu\) è un numero fisso: o sta nel tuo intervallo o non ci sta, non c'è «probabilità».
+      <mark>Il 95% si riferisce al procedimento:</mark> se ripetessi l'esperimento tante volte, il 95% degli
+      intervalli così costruiti conterrebbe \(\mu\). Il tuo particolare intervallo o è tra quelli fortunati o no —
+      non lo sai. La confidenza è nel <em>metodo</em>, non nel singolo intervallo.
+    </p>
+  </div>
+
+  <h3>Provalo: il bruco degli intervalli</h3>
+
+  <p>
+    Ogni riga è un intervallo di confidenza da un campione diverso, con la vera media (linea
+    <b style="color:var(--accent)">indaco</b>) fissa. La maggior parte la «cattura» (verdi); alcuni la
+    <b style="color:var(--warm)">mancano</b> (rossi). Genera tanti campioni e guarda la percentuale di catture
+    avvicinarsi al livello di confidenza scelto.
+  </p>
+
+  <div class="widget" id="w-ci">
+    <div class="w-head">
+      <span>Copertura degli intervalli</span>
+      <span class="hint">~95% catturano μ</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wci-svg" viewBox="0 0 620 260" role="img" aria-label="Molti intervalli di confidenza da campioni diversi: circa il 95% contiene la vera media"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>confidenza</label><input type="range" id="wci-c" min="80" max="99" step="1" value="95"><output id="wci-cv">95%</output></div>
+      <button class="w-btn" id="wci-go">+30 campioni</button>
+      <button class="w-btn" id="wci-reset">azzera</button>
+    </div>
+    <div class="w-readout" id="wci-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-4"><span class="secnum">SEZIONE 34.4</span>Legame con il test d'ipotesi</h2>
+
+  <p class="lead">
+    IC e test non sono due mondi: sono la stessa cosa vista da due lati. Un intervallo di confidenza è l'insieme
+    dei valori nulli che <em>non</em> verrebbero rifiutati.
+  </p>
+
+  <p>
+    La regola d'oro: <b>un IC al 95% contiene i valori di \(\mu_0\) per cui il test a \(\alpha = 0{,}05\) non
+    rifiuta \(H_0\)</b>. In pratica: se stai testando \(H_0: \mu = \mu_0\) e il valore \(\mu_0\) <em>cade fuori</em>
+    dall'intervallo di confidenza al 95%, allora rifiuti \(H_0\) a \(\alpha = 0{,}05\); se ci cade dentro, non
+    rifiuti. Per una differenza tra gruppi: <mark>se l'IC della differenza <b>non contiene lo zero</b>, la
+    differenza è significativa</mark>. L'intervallo ti dà il test <em>e</em> la dimensione dell'effetto in un
+    colpo solo — ecco perché spesso è preferibile.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-5"><span class="secnum">SEZIONE 34.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 34.1</div>
+    <p style="margin-bottom:0">Con \(\bar{x} = 100\), \(s = 20\), \(n = 100\), costruisci l'IC al 95% (usa
+      \(t^* \approx 1{,}98\)).</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Errore standard: \(s/\sqrt{n} = 20/10 = 2\). Margine: \(1{,}98 \times 2 \approx 3{,}96\).</p>
+        <p style="margin-bottom:0">IC: \(100 \pm 3{,}96\), cioè circa <b>[96,0 ; 104,0]</b>. Siamo confidenti al
+          95% (nel senso del metodo, §34.3) che la vera media stia in questo intervallo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 34.2</div>
+    <p style="margin-bottom:0">Uno studio riporta che la differenza media tra due trattamenti è \(+5\) con IC al
+      95% pari a \([-1{,}2 ; +11{,}2]\). La differenza è significativa a \(\alpha = 0{,}05\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>No.</b> L'intervallo <b>contiene lo zero</b> (§34.4): valori nulli come
+          «nessuna differenza» sono compatibili coi dati, quindi il test a \(\alpha = 0{,}05\) <b>non rifiuta</b>
+          \(H_0\). Nota però che l'intervallo è largo e include effetti fino a +11: lo studio è forse poco
+          potente, non necessariamente «nessun effetto» (Cap. 26).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 34.3</div>
+    <p style="margin-bottom:0">Vero o falso: «c'è il 95% di probabilità che la vera media stia nel mio intervallo
+      [47, 53]». Correggi se serve.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Falso</b> (nell'interpretazione frequentista). La vera media è fissa: sta o
+          non sta in [47, 53], senza probabilità (§34.3). Corretto: «il <b>metodo</b> con cui ho costruito questo
+          intervallo cattura la vera media nel 95% delle ripetizioni». Il mio intervallo specifico è tra i
+          fortunati o no, e non posso saperlo.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s34-6"><span class="secnum">SEZIONE 34.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 34</div>
+    <ol style="margin-bottom:0">
+      <li><b>IC</b> = stima ± margine d'errore \((t^* \cdot s/\sqrt{n})\): un range di valori plausibili, non un
+        singolo numero.</li>
+      <li><b>«95%» è sul metodo:</b> il 95% degli intervalli così costruiti cattura \(\mu\); non è la probabilità
+        del singolo intervallo.</li>
+      <li><b>Più stretto</b> con più dati o meno confidenza; l'ampiezza comunica la precisione.</li>
+      <li><b>Legame col test:</b> se \(\mu_0\) (o lo zero, per una differenza) è <b>fuori</b> dall'IC, il risultato
+        è significativo.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Le formule degli IC presumono la normalità (o il TLC). E quando la statistica che ti interessa è strana — una
+    mediana, un rapporto, una correlazione — e non ha una formula comoda per l'errore standard? La risposta è
+    tanto pigra quanto geniale: <b>ricampiona dai tuoi stessi dati</b>. È il <b>bootstrap</b>, nel
+    <strong>Capitolo 35</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function probit(p){const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];const pl=0.02425;let q,r;if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}if(p<=1-pl){q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+
+/* ============================================================================
+   WIDGET §34.3 — bruco degli intervalli di confidenza
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wci-svg');
+  if (!svg) return;
+  const out = document.getElementById('wci-out');
+  const cS = document.getElementById('wci-c'), cV = document.getElementById('wci-cv');
+  const go = document.getElementById('wci-go'), reset = document.getElementById('wci-reset');
+  const MU = 50, SIGMA = 15, n = 25;
+  let seed = 3, intervals = [], hit = 0, tot = 0;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+
+  function addSamples(k) {
+    const conf = parseInt(cS.value, 10) / 100;
+    const zc = probit(1 - (1 - conf) / 2);
+    for (let s = 0; s < k; s++) {
+      const data = []; for (let i = 0; i < n; i++) data.push(MU + SIGMA * g());
+      const m = data.reduce((a, b) => a + b, 0) / n;
+      const sd = Math.sqrt(data.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1));
+      const half = zc * sd / Math.sqrt(n);
+      const contains = (m - half <= MU && MU <= m + half);
+      intervals.push({ m, lo: m - half, hi: m + half, contains });
+      if (contains) hit++; tot++;
+    }
+    if (intervals.length > 30) intervals = intervals.slice(-30);
+    draw();
+  }
+
+  function draw() {
+    cV.textContent = cS.value + '%';
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 30, xmax: 70, ymin: 0, ymax: 31 });
+    p.line(MU, 0, MU, 31, { color: 'var(--accent)', width: 2, dash: '5 4' });
+    p.text(MU, 30.5, 'vera media μ = 50', { color: 'var(--accent)', size: 10.5 });
+    intervals.forEach((iv, k) => {
+      const y = k + 0.5;
+      const col = iv.contains ? 'color-mix(in srgb, var(--green) 70%, transparent)' : 'var(--warm)';
+      p.line(iv.lo, y, iv.hi, y, { color: col, width: 2 });
+      p.dot(iv.m, y, { r: 2.4, color: col, stroke: 'none', sw: 0 });
+    });
+    const cov = tot ? (hit / tot * 100) : 0;
+    out.innerHTML = `
+      <div class="big">copertura osservata: <b>${cov.toFixed(0)}%</b> &nbsp;<span style="color:var(--ink-faint)">(${hit}/${tot}) · atteso ${cS.value}%</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${tot === 0 ? 'Premi «+30 campioni»: ognuno produce un intervallo. Alcuni catturano μ (verdi), altri no (rossi).'
+          : 'Circa il ' + cS.value + '% degli intervalli contiene la vera media — è ciò che «' + cS.value + '% di confidenza» significa (§34.3). Alza la confidenza: gli intervalli si <mark>allargano</mark> e ne mancano meno, ma perdono precisione.'}
+      </div>`;
+  }
+  cS.addEventListener('input', () => { intervals = []; hit = 0; tot = 0; draw(); });
+  go.addEventListener('click', () => addSamples(30));
+  reset.addEventListener('click', () => { intervals = []; hit = 0; tot = 0; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>
