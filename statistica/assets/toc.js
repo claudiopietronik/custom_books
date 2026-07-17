@@ -34,7 +34,7 @@ const TOC = [
   },
   {
     n: 3, parte: "I · Statistica descrittiva",
-    titolo: "Tendenza centrale", file: "cap03-tendenza-centrale.html", stato: "da-fare",
+    titolo: "Tendenza centrale", file: "cap03-tendenza-centrale.html", stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Media aritmetica" },
       { id: "s3-2", n: "3.2", t: "Mediana" },
