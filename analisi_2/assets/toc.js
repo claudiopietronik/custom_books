@@ -168,7 +168,7 @@ const TOC = [
     n: 11,
     titolo: "Campi vettoriali e forme differenziali",
     file: "cap11-campi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Campi vettoriali" },
       { id: "s11-2", n: "11.2", t: "Integrale di linea di seconda specie" },
