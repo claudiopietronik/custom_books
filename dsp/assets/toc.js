@@ -500,7 +500,7 @@ const TOC = [
     n: 34,
     titolo: "Spiegare la legge di Benford",
     file: "cap34-benford.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s34-1", n: "34.1", t: "La legge delle prime cifre" },
       { id: "s34-2", n: "34.2", t: "Perché accade" },
