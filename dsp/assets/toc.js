@@ -217,7 +217,7 @@ const TOC = [
     n: 14,
     titolo: "Introduzione ai filtri digitali",
     file: "cap14-intro-filtri.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "A cosa serve un filtro: due mondi" },
       { id: "s14-2", n: "14.2", t: "Risposta all'impulso, al gradino, in frequenza" },

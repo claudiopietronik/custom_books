@@ -40,7 +40,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 11 — Coppie di trasformate di Fourier
 - [x] 12 — La trasformata di Fourier veloce (FFT)
 - [x] 13 — Elaborazione dei segnali continui
-- [ ] 14 — Introduzione ai filtri digitali
+- [x] 14 — Introduzione ai filtri digitali
 - [ ] 15 — Filtri a media mobile
 - [ ] 16 — Filtri windowed-sinc
 - [ ] 17 — Filtri su misura

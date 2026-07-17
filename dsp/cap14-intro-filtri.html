@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Introduzione ai filtri digitali — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.14 — Capitolo 14</div>
+    <h1>Introduzione ai filtri digitali</h1>
+    <p class="standfirst">
+      Comincia la parte più applicativa del libro. Un filtro è un sistema che <em>seleziona</em>: lascia passare
+      ciò che vuoi, blocca ciò che non vuoi. Tutta la teoria dei capitoli precedenti — convoluzione, Fourier —
+      converge qui, in uno strumento concreto e onnipresente. Prima di costruirne di specifici (media mobile,
+      windowed-sinc, ricorsivi…), impariamo il linguaggio comune: come si descrive, si misura e si classifica un
+      filtro.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Prima porta della sezione filtri (Cap. 14–21). Qui non costruiamo ancora nulla: mettiamo a fuoco
+      <em>criteri</em> e <em>vocabolario</em>, così che quando nei prossimi capitoli diremo «questo filtro ha una
+      transizione ripida ma una risposta al gradino con sovraelongazione», sapremo esattamente cosa significa e
+      se è un bene o un male.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Scegliere il filtro giusto è una delle decisioni più frequenti del praticante. Ma «giusto» dipende da cosa
+      ti serve: rapidità nel tempo o nitidezza in frequenza? Nessun filtro le ha entrambe al massimo. Capire i
+      <strong>parametri</strong> e i <strong>compromessi</strong> è ciò che trasforma la scelta da tentativo in
+      decisione consapevole.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">SEZIONE 14.1</span>A cosa serve un filtro: due mondi</h2>
+
+  <p class="lead">
+    I filtri servono a due scopi profondamente diversi, che conviene tenere distinti fin dall'inizio: separare
+    segnali e ripristinare segnali.
+  </p>
+
+  <ul>
+    <li><b>Separazione.</b> Il segnale che ti interessa è mescolato con qualcosa che non vuoi — rumore, un
+        ronzio, un'interferenza — e i due occupano <em>frequenze diverse</em>. Il filtro tiene le frequenze
+        buone e scarta le altre. Togliere il fruscio da una registrazione, isolare una banda radio, ripulire un
+        elettrocardiogramma dal disturbo di rete: tutta separazione. È il lavoro nel <b>dominio della
+        frequenza</b>.</li>
+    <li><b>Ripristino.</b> Il segnale è stato <em>distorto</em> da qualcosa — un microfono imperfetto, un
+        obiettivo sfocato, un canale che sbava — e vuoi tornare all'originale. Qui il filtro «annulla» la
+        distorsione: è la <b class="termine">deconvoluzione</b> (Cap. 17), l'inverso della convoluzione.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Tempo o frequenza: due mentalità</div>
+    <p style="margin-bottom:0">
+      C'è anche una divisione trasversale, per <em>dominio</em>. Alcuni filtri si giudicano meglio nel
+      <b>tempo</b>: levigare un segnale, rilevare un bordo netto, riconoscere una forma. Altri nel dominio della
+      <b>frequenza</b>: separare bande, togliere un tono. <mark>Un filtro ottimo in un dominio è spesso mediocre
+      nell'altro</mark> — lo vedremo drammaticamente col media mobile (Cap. 15), campione del tempo e disastro in
+      frequenza. Sapere quale dominio ti interessa è il primo passo per scegliere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">SEZIONE 14.2</span>Risposta all'impulso, al gradino, in frequenza</h2>
+
+  <p class="lead">
+    Un filtro si può descrivere in tre modi diversi ma <b>equivalenti</b>: sono tre «facce» dello stesso
+    oggetto, e da una si ricavano le altre.
+  </p>
+
+  <ul>
+    <li><b>Risposta all'impulso \(h[n]\).</b> L'uscita quando l'ingresso è una delta. La conosciamo dal Cap. 6:
+        descrive tutto il filtro, e filtrare = convolvere con essa.</li>
+    <li><b>Risposta al gradino.</b> L'uscita quando l'ingresso passa bruscamente da 0 a 1. Si ottiene come
+        <em>somma corrente</em> della risposta all'impulso (Cap. 7): è comodissima per giudicare come il filtro
+        tratta i <b>fronti</b> e i cambiamenti bruschi.</li>
+    <li><b>Risposta in frequenza.</b> Come il filtro tratta ciascuna frequenza (quanto la attenua o la lascia
+        passare). Si ottiene facendo la <b>DFT della risposta all'impulso</b> (teorema di convoluzione,
+        Cap. 10): è la faccia con cui si giudica la separazione delle bande.</li>
+  </ul>
+
+  <h3>Provalo: le tre facce di uno stesso filtro</h3>
+
+  <p>
+    Un filtro a media mobile, di lunghezza regolabile. Guarda le sue tre descrizioni cambiare insieme: la
+    <b style="color:var(--accent)">risposta all'impulso</b> (un blocco di steli uguali), la
+    <b style="color:var(--green)">risposta al gradino</b> (una rampa) e la <b style="color:var(--warm)">risposta
+    in frequenza</b> (i lobi). Sono tre viste dello stesso identico filtro.
+  </p>
+
+  <div class="widget" id="w-faces">
+    <div class="w-head">
+      <span>Le tre facce di un filtro</span>
+      <span class="hint">cambia la lunghezza e guarda tutte e tre</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wfc-imp" viewBox="0 0 620 110" role="img" aria-label="Risposta all'impulso di un filtro a media mobile"></svg>
+      <svg id="wfc-step" viewBox="0 0 620 110" role="img" aria-label="Risposta al gradino, somma corrente della risposta all'impulso"></svg>
+      <svg id="wfc-freq" viewBox="0 0 620 120" role="img" aria-label="Risposta in frequenza, DFT della risposta all'impulso"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>lunghezza M</label><input type="range" id="wfc-m" min="2" max="16" step="1" value="5"><output id="wfc-mv">5</output></div>
+    </div>
+    <div class="w-readout" id="wfc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">SEZIONE 14.3</span>Parametri nel dominio del tempo</h2>
+
+  <p class="lead">
+    Se ti interessa come il filtro tratta i segnali nel <b>tempo</b> — fronti, impulsi, forme — lo giudichi dalla
+    sua <b>risposta al gradino</b>, con tre parametri.
+  </p>
+
+  <ul>
+    <li><b>Velocità (tempo di salita).</b> Quanto rapidamente la risposta al gradino sale dal vecchio al nuovo
+        livello. Un filtro «lento» impasta i cambiamenti bruschi; uno «rapido» li segue. In generale, più il
+        filtro leviga (buono contro il rumore), più è lento.</li>
+    <li><b>Sovraelongazione (overshoot).</b> La risposta al gradino dovrebbe salire e fermarsi; se invece
+        «schizza» oltre e poi rientra, ha una sovraelongazione — spesso indesiderata, perché distorce i fronti
+        (è imparentata con Gibbs, Cap. 11).</li>
+    <li><b>Fase lineare (simmetria).</b> Se la risposta all'impulso è <b>simmetrica</b>, il filtro ha
+        <em>fase lineare</em>: ritarda tutte le frequenze della stessa quantità, senza deformare la forma
+        d'onda. È una proprietà preziosa (audio, immagini) e un vantaggio esclusivo dei filtri FIR (§14.5).</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il filtro «perfetto» nel tempo</div>
+    <p style="margin-bottom:0">
+      Nel tempo, l'ideale è: <b>salita rapida</b>, <b>nessuna sovraelongazione</b>, <b>fase lineare</b>. Un
+      filtro con queste tre qualità tratta i fronti in modo pulito e simmetrico. <mark>Ma queste qualità
+      confliggono con le esigenze in frequenza</mark> — non si può avere tutto, e la scelta dipende da cosa conta
+      per la tua applicazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">SEZIONE 14.4</span>Parametri nel dominio della frequenza</h2>
+
+  <p class="lead">
+    Se invece ti interessa la <b>separazione delle bande</b>, giudichi il filtro dalla sua <b>risposta in
+    frequenza</b>, con un vocabolario preciso.
+  </p>
+
+  <ul>
+    <li><b>Banda passante</b> (passband): le frequenze che il filtro <em>lascia passare</em> (uscita ≈ ingresso).</li>
+    <li><b>Banda oscura</b> (stopband): le frequenze che <em>blocca</em> (uscita ≈ 0).</li>
+    <li><b>Banda di transizione:</b> la zona intermedia dove il filtro passa dal «passa» al «blocca». Più è
+        <b>stretta</b>, più il taglio è <b>netto</b> (roll-off ripido).</li>
+    <li><b>Ondulazione</b> (ripple): quanto la banda passante non è perfettamente piatta (piccole increspature).</li>
+    <li><b>Attenuazione della banda oscura:</b> quanto in basso il filtro spinge le frequenze bloccate, misurata
+        in decibel. Più dB, più il blocco è profondo.</li>
+  </ul>
+
+  <h3>Provalo: leggi i parametri sulla risposta in frequenza</h3>
+
+  <p>
+    Sposta la frequenza di taglio e la ripidità del filtro, e guarda le regioni prendere forma: la
+    <b style="color:var(--green)">banda passante</b>, la <b style="color:var(--warm)">banda di transizione</b>,
+    la <b>banda oscura</b>. Il riquadro misura roll-off e attenuazione.
+  </p>
+
+  <div class="widget" id="w-fparams">
+    <div class="w-head">
+      <span>Parametri in frequenza</span>
+      <span class="hint">sposta taglio e ripidità</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wfp-svg" viewBox="0 0 620 260" role="img" aria-label="Una risposta in frequenza con banda passante, transizione e banda oscura evidenziate"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>taglio</label><input type="range" id="wfp-c" min="0.15" max="0.7" step="0.01" value="0.4"><output id="wfp-cv">0.40</output></div>
+      <div class="w-ctrl"><label>ripidità</label><input type="range" id="wfp-s" min="4" max="60" step="1" value="18"><output id="wfp-sv">18</output></div>
+    </div>
+    <div class="w-readout" id="wfp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">SEZIONE 14.5</span>FIR e IIR: le due famiglie</h2>
+
+  <p class="lead">
+    Tutti i filtri digitali si dividono in due grandi famiglie, secondo <em>come</em> calcolano l'uscita. La
+    scelta tra le due è la decisione architetturale più importante.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th></th><th>FIR (a risposta finita)</th><th>IIR (ricorsivi)</th></tr></thead>
+    <tbody>
+      <tr><td><b>Come</b></td><td>convoluzione: uscita = somma pesata degli <em>ingressi</em></td><td>ricorsione: uscita usa anche le <em>uscite passate</em> (retroazione)</td></tr>
+      <tr><td><b>Risposta all'impulso</b></td><td>finita (si spegne dopo \(N\) campioni)</td><td>infinita (in teoria non finisce mai)</td></tr>
+      <tr><td><b>Stabilità</b></td><td style="color:var(--green)">sempre stabile</td><td style="color:var(--warm)">può diventare instabile</td></tr>
+      <tr><td><b>Fase lineare</b></td><td style="color:var(--green)">sì (se simmetrico)</td><td style="color:var(--warm)">no</td></tr>
+      <tr><td><b>Efficienza</b></td><td style="color:var(--warm)">serve molti coefficienti per tagli netti</td><td style="color:var(--green)">pochi coefficienti, molto efficiente</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    In una frase: i <b class="termine">FIR</b> (Cap. 15–16) sono onesti e robusti — sempre stabili, fase lineare
+    — ma «cari» quando serve un taglio molto netto (tanti coefficienti). Gli <b class="termine">IIR</b>
+    (Cap. 19–20) sono economici e potenti — un taglio ripido con pochi coefficienti grazie alla retroazione — ma
+    vanno maneggiati con cura, perché la retroazione può renderli instabili e ne rovina la fase. La scelta è il
+    solito compromesso: robustezza contro efficienza.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La retroazione è potente e pericolosa</div>
+    <p style="margin-bottom:0">
+      Ciò che rende gli IIR efficienti — riusare le uscite passate — è anche ciò che li rende rischiosi: un
+      piccolo errore o una scelta sbagliata dei coefficienti può <b>amplificarsi in un ciclo</b> e far divergere
+      l'uscita all'infinito. È lo stesso fenomeno del fischio quando un microfono «sente» il proprio altoparlante.
+      Gli strumenti per garantire la stabilità (poli dentro il cerchio unitario) sono il tema della trasformata z,
+      Cap. 33. <mark>Con i FIR questo problema non esiste: senza retroazione, niente instabilità.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">SEZIONE 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">Hai la risposta all'impulso di un filtro. Come ottieni la sua risposta al gradino?
+      E la sua risposta in frequenza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Risposta al gradino = <b>somma corrente</b> (integrale discreto) della risposta all'impulso (Cap. 7).
+          Risposta in frequenza = <b>DFT</b> della risposta all'impulso (teorema di convoluzione, Cap. 10). Tre
+          facce, tutte ricavabili dalla \(h[n]\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">Devi ripulire un segnale audio da un ronzio di rete a 50 Hz, preservando la fase
+      (per non deformare la musica). FIR o IIR? Perché?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Se la <b>fase lineare</b> è importante (musica, per non deformare i transienti), si preferisce un
+          <b>FIR</b> simmetrico — è l'unico che garantisce fase lineare. Un IIR sarebbe più efficiente per il
+          notch stretto a 50 Hz, ma introdurrebbe distorsione di fase. La scelta dipende dal peso che dai alla
+          fedeltà di fase rispetto all'efficienza di calcolo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">Perché un filtro con banda di transizione più stretta richiede, a parità di tipo,
+      una risposta all'impulso più lunga?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Per la reciprocità tempo–frequenza (Cap. 10–11): «stretto» in frequenza (transizione ripida) ⇔
+          «largo» nel tempo (risposta all'impulso lunga). Un taglio netto è vicino al rettangolo ideale, la cui
+          trasformata è la sinc infinita: più ti avvicini al taglio perfetto, più lunga (e costosa) diventa la
+          \(h[n]\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">Un filtro FIR può diventare instabile (uscita che diverge)? E un IIR?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Un <b>FIR no</b>: senza retroazione, l'uscita è una somma finita di ingressi limitati, quindi resta
+          limitata — <b>sempre stabile</b>. Un <b>IIR sì</b>: la retroazione può amplificare e far divergere
+          l'uscita se i coefficienti non sono scelti bene (poli fuori dal cerchio unitario, Cap. 33). È il
+          prezzo dell'efficienza.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">SEZIONE 14.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li><b>Due usi:</b> separare segnali (in frequenza) e ripristinare segnali distorti (deconvoluzione).</li>
+      <li><b>Tre facce equivalenti:</b> risposta all'impulso, al gradino (sua somma corrente), in frequenza (sua
+          DFT).</li>
+      <li><b>Parametri nel tempo:</b> velocità di salita, sovraelongazione, fase lineare (simmetria). Ideale:
+          rapido, senza overshoot, simmetrico.</li>
+      <li><b>Parametri in frequenza:</b> banda passante, transizione (roll-off), banda oscura, ripple,
+          attenuazione in dB. Ideale: piatto, taglio netto, blocco profondo.</li>
+      <li><b>FIR vs IIR:</b> FIR sempre stabili e a fase lineare ma «cari»; IIR efficienti ma potenzialmente
+          instabili e senza fase lineare. Le qualità di tempo e frequenza confliggono: si sceglie.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con il vocabolario in mano, costruiamo il primo filtro vero. Il <strong>Capitolo 15</strong> presenta il
+    <b>filtro a media mobile</b>: il più semplice, il più veloce da calcolare, il campione assoluto nel dominio
+    del tempo per ridurre il rumore… e, come vedremo, un disastro nel dominio della frequenza. Un caso perfetto
+    per capire, sulla pelle, il compromesso tempo–frequenza che abbiamo appena enunciato.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function dftMagHalf(x, N) {
+  const half = N / 2, mag = [];
+  for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < x.length; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); }
+  return mag;
+}
+
+/* ============================================================================
+   WIDGET §14.2 — le tre facce di un filtro (media mobile)
+   ========================================================================= */
+(function () {
+  const sI = document.getElementById('wfc-imp'), sS = document.getElementById('wfc-step'), sF = document.getElementById('wfc-freq');
+  if (!sI) return;
+  const out = document.getElementById('wfc-out');
+  const mS = document.getElementById('wfc-m'), mV = document.getElementById('wfc-mv');
+
+  function draw() {
+    const M = parseInt(mS.value, 10);
+    mV.textContent = M;
+    const h = new Array(M).fill(1 / M);
+
+    // impulso
+    sI.innerHTML = '';
+    const pi = new Plot(sI, { xmin: -1, xmax: 20, ymin: -0.1, ymax: 0.65 });
+    pi.line(-1, 0, 20, 0, { color: 'var(--ink-faint)', width: 1 });
+    pi.stem(h, { color: 'var(--accent)', r: 2.6, width: 1.4 });
+    pi.text(19, 0.55, 'impulso h[n]', { color: 'var(--accent)', anchor: 'end', size: 10.5 });
+
+    // gradino (somma corrente)
+    sS.innerHTML = '';
+    const step = []; let acc = 0; for (let n = 0; n < 20; n++) { acc += (n < M ? 1 / M : 0); step.push(acc); }
+    const pst = new Plot(sS, { xmin: -1, xmax: 20, ymin: -0.1, ymax: 1.25 });
+    pst.line(-1, 0, 20, 0, { color: 'var(--ink-faint)', width: 1 });
+    pst.line(-1, 1, 20, 1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+    pst.seq(step, { color: 'var(--green)', width: 2 });
+    pst.stem(step, { color: 'var(--green)', r: 2, width: 0.8 });
+    pst.text(19, 1.12, 'gradino (somma corrente)', { color: 'var(--green)', anchor: 'end', size: 10.5 });
+
+    // frequenza
+    sF.innerHTML = '';
+    const NF = 128; const mag = dftMagHalf(h, NF);
+    const pf = new Plot(sF, { xmin: -1, xmax: NF / 2 + 1, ymin: 0, ymax: 1.15 });
+    pf.axes({ numbers: false, names: true, xname: 'frequenza →', yname: '' });
+    pf.seq(mag, { color: 'var(--warm)', width: 2 });
+    pf.text(NF / 2, 1.0, 'risposta in frequenza |H|', { color: 'var(--warm)', anchor: 'end', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big">media mobile a <b>${M}</b> punti</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le tre viste dello stesso filtro. <b style="color:var(--accent)">Impulso</b>: ${M} steli uguali di
+        altezza 1/${M}. <b style="color:var(--green)">Gradino</b>: una rampa che sale in ${M} passi (più M è
+        grande, più lento). <b style="color:var(--warm)">Frequenza</b>: attenua le alte, ma con lobi che
+        <mark>lasciano passare parecchio</mark> — pessimo taglio. È il ritratto del Cap. 15.
+      </div>`;
+  }
+  mS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §14.4 — parametri nel dominio della frequenza
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wfp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wfp-out');
+  const cS = document.getElementById('wfp-c'), sS = document.getElementById('wfp-s');
+  const cV = document.getElementById('wfp-cv'), sV = document.getElementById('wfp-sv');
+
+  function draw() {
+    const fc = parseFloat(cS.value), sh = parseFloat(sS.value);
+    cV.textContent = fc.toFixed(2); sV.textContent = sh;
+    const H = f => 0.5 * (1 - Math.tanh((f - fc) * sh));   // passa-basso liscio
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 1, ymin: -0.15, ymax: 1.25 });
+    // bande: passband H>0.95, stopband H<0.05
+    // trova i confini numericamente
+    let fp = fc, fsb = fc;
+    for (let f = 0; f <= 1; f += 0.001) { if (H(f) >= 0.95) fp = f; }
+    for (let f = 1; f >= 0; f -= 0.001) { if (H(f) <= 0.05) fsb = f; }
+    p.rect(0, 0, fp, 1.15, { fill: 'color-mix(in srgb, var(--green) 12%, transparent)', color: 'none' });
+    p.rect(fp, 0, fsb, 1.15, { fill: 'color-mix(in srgb, var(--warm) 12%, transparent)', color: 'none' });
+    p.line(0, 1, 1, 1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+    p.axes({ numbers: false, names: true, xname: 'frequenza', yname: '|H|' });
+    p.func(H, { color: 'var(--accent)', width: 2.8, samples: 500 });
+    p.text(fp / 2, 1.1, 'passante', { color: 'var(--green)', size: 11, bold: true });
+    p.text((fp + fsb) / 2, 1.1, 'transizione', { color: 'var(--warm)', size: 10.5, bold: true });
+    p.text((fsb + 1) / 2, 1.1, 'oscura', { color: 'var(--ink-soft)', size: 11, bold: true });
+
+    const trans = (fsb - fp);
+    out.innerHTML = `
+      <div class="big">taglio ≈ <b>${fc.toFixed(2)}</b> &nbsp;·&nbsp; transizione = <b style="color:var(--warm)">${trans.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <b style="color:var(--green)">banda passante</b> (|H|≈1) lascia passare; la <b>banda oscura</b>
+        (|H|≈0) blocca; in mezzo la <b style="color:var(--warm)">transizione</b>. Alza la ripidità e la
+        transizione si <mark>stringe</mark> (roll-off più ripido) — ma un taglio più netto costa, in un filtro
+        vero, una risposta all'impulso più lunga (§14.3, esercizio 14.3).
+      </div>`;
+  }
+  cS.addEventListener('input', draw); sS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
