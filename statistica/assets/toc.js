@@ -412,7 +412,7 @@ const TOC = [
   },
   {
     n: 35, parte: "IV · Statistica inferenziale",
-    titolo: "Il bootstrap", file: "cap35-bootstrap.html", stato: "da-fare",
+    titolo: "Il bootstrap", file: "cap35-bootstrap.html", stato: "pronto",
     sezioni: [
       { id: "s35-1", n: "35.1", t: "Ricampionare dai propri dati" },
       { id: "s35-2", n: "35.2", t: "L'algoritmo" },

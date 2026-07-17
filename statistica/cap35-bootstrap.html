@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>35 · Il bootstrap — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="35">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Il bootstrap</h1>
+    <p class="standfirst">
+      Un'idea tanto pigra quanto rivoluzionaria: se non conosci la distribuzione di una statistica, <b>ricampiona
+      dai tuoi stessi dati</b> migliaia di volte e guarda come varia. Il bootstrap costruisce intervalli di
+      confidenza per <em>qualunque</em> statistica — mediana, correlazione, rapporti — senza formule e senza
+      assumere la normalità. Il campione fa da surrogato della popolazione.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La versione «per forza bruta» degli intervalli di confidenza (Cap. 34), cugino del test di permutazione
+      (Cap. 33) e figlio del Monte Carlo (Cap. 18). Quando le formule analitiche non esistono o le assunzioni
+      cadono (Cap. 28), il bootstrap è la via d'uscita universale.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Per la media esiste una formula per l'errore standard; per la mediana, per un rapporto, per la correlazione,
+      le cose si complicano in fretta. Il bootstrap dà un intervallo di confidenza a <em>tutte</em> con lo stesso,
+      semplice procedimento. È lo strumento che rende l'inferenza possibile ovunque, ed è ovunque nella data
+      science moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-1"><span class="secnum">SEZIONE 35.1</span>Ricampionare dai propri dati</h2>
+
+  <p class="lead">
+    Il salto concettuale: il tuo campione è la migliore immagine che hai della popolazione. Allora <b>tratta il
+    campione come se fosse la popolazione</b> ed estrai nuovi campioni <em>da esso</em>.
+  </p>
+
+  <p>
+    Vorresti tanti campioni dalla popolazione per vedere quanto balla la tua statistica (Cap. 23) — ma ne hai uno
+    solo. Il trucco del bootstrap: estrai nuovi campioni <b>dal campione stesso</b>, <b>con reimmissione</b> (ogni
+    valore può ricomparire più volte, o mancare). Ogni «ricampione» ha la stessa dimensione dell'originale ma una
+    composizione un po' diversa — proprio come sarebbero stati campioni diversi dalla popolazione. Calcola la
+    statistica su ciascuno e osservane la variabilità.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Con reimmissione: il cuore del trucco</div>
+    <p style="margin-bottom:0">
+      L'estrazione <b>con reimmissione</b> è essenziale: senza, ogni ricampione sarebbe identico all'originale
+      (solo riordinato) e non ci sarebbe variabilità. Reimmettendo, un valore può uscire due o tre volte e un
+      altro zero — ed è questa variazione a simulare il campionamento dalla popolazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-2"><span class="secnum">SEZIONE 35.2</span>L'algoritmo</h2>
+
+  <div class="formula">
+    <div class="f-head">Il bootstrap in quattro passi <span class="tag">ricampiona · calcola · ripeti · leggi</span></div>
+    <div class="f-body">
+      \[ \{x_1,\dots,x_n\} \;\xrightarrow{\text{con reimmissione}}\; \hat\theta^{(1)}, \hat\theta^{(2)}, \dots, \hat\theta^{(B)} \]
+    </div>
+    <div class="f-note">
+      <b>1.</b> Estrai \(n\) valori dal campione, con reimmissione. &nbsp; <b>2.</b> Calcola la statistica
+      \(\hat\theta\) (media, mediana, quello che vuoi) sul ricampione. &nbsp; <b>3.</b> Ripeti \(B\) volte (es.
+      \(B = 10\,000\)). &nbsp; <b>4.</b> La distribuzione dei \(\hat\theta^{(b)}\) è la
+      <b>distribuzione bootstrap</b>: <mark>la sua dispersione stima l'errore standard, i suoi percentili danno
+      l'intervallo di confidenza</mark>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-3"><span class="secnum">SEZIONE 35.3</span>Intervalli col bootstrap</h2>
+
+  <p class="lead">
+    Il modo più semplice di ricavare un IC dal bootstrap: prendere i <b>percentili</b> della distribuzione
+    bootstrap. Nessuna formula, nessun \(t^*\).
+  </p>
+
+  <p>
+    Per un intervallo al 95%, ordina le \(B\) statistiche bootstrap e prendi il <b>2,5° e il 97,5° percentile</b>:
+    quell'intervallo contiene il 95% centrale dei valori bootstrap. È il <b>metodo percentile</b>, diretto e
+    intuitivo. E funziona per statistiche a cui la formula classica non arriva: la mediana, il coefficiente di
+    correlazione, il rapporto tra due medie. La stessa ricetta, per qualunque \(\hat\theta\).
+  </p>
+
+  <h3>Provalo: costruisci l'intervallo bootstrap</h3>
+
+  <p>
+    Un campione fisso (i pallini in alto). Ogni «ricampiona» estrae \(n\) valori con reimmissione e ne registra la
+    statistica scelta, costruendo la distribuzione bootstrap. L'<b style="color:var(--green)">intervallo</b> tra il
+    2,5° e 97,5° percentile è l'IC al 95%.
+  </p>
+
+  <div class="widget" id="w-boot">
+    <div class="w-head">
+      <span>Distribuzione e intervallo bootstrap</span>
+      <span class="hint">funziona anche per la mediana</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbo-svg" viewBox="0 0 620 250" role="img" aria-label="Distribuzione bootstrap di una statistica con intervallo percentile al 95%"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wbo-mean">media</button>
+      <button class="w-btn" id="wbo-med">mediana</button>
+      <button class="w-btn" id="wbo-go">+3000 ricampioni</button>
+      <button class="w-btn" id="wbo-reset">azzera</button>
+    </div>
+    <div class="w-readout" id="wbo-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-4"><span class="secnum">SEZIONE 35.4</span>Quando è utile</h2>
+
+  <p class="lead">
+    Il bootstrap brilla dove la statistica classica fatica — ma non è magia, e ha i suoi limiti.
+  </p>
+
+  <p>
+    È prezioso quando: la statistica <b>non ha una formula comoda</b> per l'errore standard (mediana, correlazione,
+    quantili); le <b>assunzioni</b> dei metodi classici non reggono (Cap. 28); vuoi un IC senza derivazioni
+    matematiche. È il coltellino svizzero dell'inferenza moderna. Ma poggia su un'assunzione: che il campione sia
+    <b>rappresentativo</b> della popolazione — perché è tutto ciò che il bootstrap «conosce».
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il bootstrap non crea informazione</div>
+    <p style="margin-bottom:0">
+      <mark>Se il campione è piccolo o distorto, il bootstrap eredita quei difetti.</mark> Ricampionare 10 000
+      volte da 5 dati non trasforma 5 dati in 10 000: la povertà del campione resta. Il bootstrap quantifica
+      l'incertezza <em>dato</em> il campione che hai; non aggiunge dati che non hai raccolto. E su statistiche
+      «estreme» (il massimo, il minimo) può fallire. Ottimo strumento, non bacchetta magica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-5"><span class="secnum">SEZIONE 35.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 35.1</div>
+    <p style="margin-bottom:0">Perché il ricampionamento bootstrap dev'essere <b>con</b> reimmissione e non senza?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Senza reimmissione, estrarre \(n\) valori da un campione di \(n\) darebbe
+          sempre <b>lo stesso identico campione</b> (solo in ordine diverso): zero variabilità, bootstrap inutile
+          (§35.1). Con reimmissione, alcuni valori compaiono più volte e altri mancano, generando ricampioni
+          diversi tra loro — ed è proprio questa variazione a simulare campioni diversi estratti dalla
+          popolazione.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 35.2</div>
+    <p style="margin-bottom:0">Come ottieni un intervallo di confidenza al 90% dalla distribuzione bootstrap?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Col <b>metodo percentile</b> (§35.3): ordina le statistiche bootstrap e prendi
+          il <b>5° e il 95° percentile</b> (lasciando il 5% per lato). Quell'intervallo contiene il 90% centrale
+          dei valori bootstrap. Per il 95% useresti 2,5° e 97,5°; la logica è la stessa per qualunque livello.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 35.3</div>
+    <p style="margin-bottom:0">Vuoi un IC per la <b>mediana</b> dei redditi (dati molto asimmetrici). Perché il
+      bootstrap è ideale qui?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché la mediana non ha una formula semplice per l'errore standard come la
+          media, e i dati asimmetrici violano le assunzioni dei metodi classici (Cap. 28). Il bootstrap invece
+          ricampiona e calcola la mediana su ogni ricampione, costruendone la distribuzione senza <b>alcuna</b>
+          formula o assunzione di normalità (§35.3–35.4): prendi i percentili e hai l'intervallo. È esattamente lo
+          scenario per cui il bootstrap è stato inventato.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s35-6"><span class="secnum">SEZIONE 35.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 35</div>
+    <ol style="margin-bottom:0">
+      <li><b>Bootstrap:</b> ricampiona <b>con reimmissione</b> dal tuo campione, \(B\) volte, ricalcolando la
+        statistica. Il campione fa da popolazione.</li>
+      <li>La <b>distribuzione bootstrap</b> stima la variabilità della statistica: la sua dispersione è l'errore
+        standard.</li>
+      <li><b>IC percentile:</b> i percentili 2,5° e 97,5° dei valori bootstrap danno l'intervallo al 95%. Funziona
+        per <em>qualunque</em> statistica.</li>
+      <li>Non crea informazione: eredita i difetti di un campione piccolo o distorto.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con il bootstrap chiudiamo i metodi «a un gruppo o due». Il resto della Parte IV cambia domanda: non più
+    «differiscono?», ma «<em>si muovono insieme?</em>». Cominciamo dalla misura di quanto due variabili variano in
+    coppia — la <b>covarianza</b> e la <b>correlazione di Pearson</b> — nel <strong>Capitolo 36</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §35.3 — distribuzione bootstrap e intervallo percentile
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbo-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbo-out');
+  const bMean = document.getElementById('wbo-mean'), bMed = document.getElementById('wbo-med');
+  const go = document.getElementById('wbo-go'), reset = document.getElementById('wbo-reset');
+  // campione fisso, leggermente asimmetrico
+  const sample = [12, 15, 15, 17, 18, 19, 21, 22, 24, 28, 31, 40];
+  const nS = sample.length;
+  let stat = 'mean', boots = [], seed = 71;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const calc = a => stat === 'mean' ? mean(a) : median(a);
+
+  function run(k) { for (let b = 0; b < k; b++) { const rs = []; for (let i = 0; i < nS; i++) rs.push(sample[Math.floor(u() * nS)]); boots.push(calc(rs)); } draw(); }
+
+  function draw() {
+    bMean.classList.toggle('on', stat === 'mean'); bMed.classList.toggle('on', stat === 'median');
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 8, xmax: 44, ymin: 0, ymax: 1 });
+    // campione originale in alto
+    p.line(8, 0.86, 44, 0.86, { color: 'var(--rule)', width: 1 });
+    sample.forEach(v => p.dot(v, 0.86, { r: 3.2, color: 'var(--ink-faint)', stroke: 'var(--paper)', sw: 0.6 }));
+    p.text(8, 0.96, 'il campione (fisso)', { color: 'var(--ink-soft)', anchor: 'start', size: 9.5 });
+    const obs = calc(sample);
+    p.line(obs, 0, obs, 0.8, { color: 'var(--warm)', width: 1.6, dash: '4 3' });
+
+    if (boots.length > 0) {
+      const nb = 32, w = 36 / nb, c = new Array(nb).fill(0);
+      boots.forEach(d => { let k = Math.floor((d - 8) / w); if (k < 0) k = 0; if (k >= nb) k = nb - 1; c[k]++; });
+      const maxC = Math.max(...c);
+      c.forEach((cnt, k) => p.rect(8 + k * w, 0, 8 + (k + 1) * w, cnt / maxC * 0.6, { fill: 'color-mix(in srgb, var(--accent) 40%, transparent)', color: 'var(--accent)', width: 0.4 }));
+      // percentili 2.5 / 97.5
+      const sorted = [...boots].sort((a, b) => a - b);
+      const lo = sorted[Math.floor(0.025 * sorted.length)], hi = sorted[Math.floor(0.975 * sorted.length)];
+      p.line(lo, 0.63, hi, 0.63, { color: 'var(--green)', width: 3 });
+      p.line(lo, 0.6, lo, 0.66, { color: 'var(--green)', width: 2 });
+      p.line(hi, 0.6, hi, 0.66, { color: 'var(--green)', width: 2 });
+      p.text((lo + hi) / 2, 0.72, 'IC 95%', { color: 'var(--green)', size: 10 });
+      out.innerHTML = `
+        <div class="big">${stat === 'mean' ? 'media' : 'mediana'} = <b>${obs.toFixed(1)}</b> · IC 95% bootstrap = <b style="color:var(--green)">[${lo.toFixed(1)} ; ${hi.toFixed(1)}]</b></div>
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          ${boots.length} ricampioni con reimmissione. L'intervallo verde (2,5°–97,5° percentile) è l'IC — ottenuto
+          <mark>senza formule</mark>, per la ${stat === 'mean' ? 'media' : 'mediana (che una formula comoda non ce l’ha!)'}.
+        </div>`;
+    } else {
+      out.innerHTML = `<div style="color:var(--ink-soft); font-size:.92rem">Scegli media o mediana, poi premi «+3000 ricampioni». La ${stat === 'mean' ? 'media' : 'mediana'} osservata è ${obs.toFixed(1)}.</div>`;
+    }
+  }
+  bMean.addEventListener('click', () => { stat = 'mean'; boots = []; seed = 71; draw(); });
+  bMed.addEventListener('click', () => { stat = 'median'; boots = []; seed = 71; draw(); });
+  go.addEventListener('click', () => run(3000));
+  reset.addEventListener('click', () => { boots = []; seed = 71; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>
