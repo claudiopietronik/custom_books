@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>27 · Gradi di libertà — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="27">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Gradi di libertà</h1>
+    <p class="standfirst">
+      Il numero misterioso che spunta in ogni formula di test e in ogni tabella: perché \(n-1\)? Perché la
+      distribuzione t «dipende dai gradi di libertà»? L'idea è più semplice di quanto sembri: i <b>gradi di
+      libertà</b> contano quanti valori sono <em>davvero liberi</em> di variare, una volta che hai imposto dei
+      vincoli sui dati.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiarisce il concetto tecnico più ricorrente dell'inferenza, già incontrato al Cap. 4 (il \(n-1\) di
+      Bessel). Serve subito dopo: la distribuzione t del t-test (Cap. 30) e la F dell'ANOVA (Cap. 41) sono
+      indicizzate proprio dai gradi di libertà.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni volta che leggi una tabella t o F devi sapere quali «gradi di libertà» usare, e ogni volta che stimi
+      un parametro dai dati «consumi» un grado di libertà. Capirli evita errori nei test e demistifica quel
+      \(n-1\) che tutti scrivono senza sapere perché.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-1"><span class="secnum">SEZIONE 27.1</span>Un'intuizione con esempi</h2>
+
+  <p class="lead">
+    I <b>gradi di libertà</b> sono il numero di valori che possono variare <em>liberamente</em> in un calcolo,
+    dati i vincoli che hai imposto. Ogni vincolo «blocca» un valore.
+  </p>
+
+  <p>
+    Esempio secco: scegli tre numeri, <em>a patto che</em> la loro media sia 10 (cioè la somma sia 30). I primi
+    due puoi sceglierli come vuoi — diciamo 7 e 12. Ma il terzo <b>non è più libero</b>: deve valere \(30 - 7 -
+    12 = 11\), altrimenti la media non è 10. Hai fatto <b>2 scelte libere</b> su 3 numeri: 2 gradi di libertà. Il
+    vincolo «media fissata» ne ha bloccato uno. In generale, con \(n\) numeri e la media fissata, i gradi di
+    libertà sono <b>\(n-1\)</b>.
+  </p>
+
+  <h3>Provalo: l'ultimo valore è prigioniero</h3>
+
+  <p>
+    Cinque valori con la media <b>vincolata a un target</b>. Trascina liberamente i primi quattro (verdi): il
+    quinto (<b style="color:var(--warm)">rosso</b>) si aggiusta da solo per tenere ferma la media. Quattro scelte
+    libere, un valore prigioniero: \(n - 1 = 4\) gradi di libertà.
+  </p>
+
+  <div class="widget" id="w-df">
+    <div class="w-head">
+      <span>n − 1 valori liberi</span>
+      <span class="hint">trascina i verdi, il rosso ubbidisce</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wdf-svg" viewBox="0 0 620 200" role="img" aria-label="Cinque valori con media vincolata: quattro liberi e uno determinato"></svg>
+    </div>
+    <div class="w-readout" id="wdf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-2"><span class="secnum">SEZIONE 27.2</span>Perché n−1 negli stimatori</h2>
+
+  <p class="lead">
+    Ora il \(n-1\) della varianza campionaria (Cap. 4) ha una spiegazione limpida: gli scarti dalla media
+    campionaria hanno esattamente \(n-1\) gradi di libertà.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Gradi di libertà della varianza campionaria <span class="tag">un vincolo, un grado in meno</span></div>
+    <div class="f-body">
+      \[ \text{df} = n - 1, \qquad s^2 = \frac{1}{\hA{n-1}}\sum_{i=1}^{n}(x_i - \bar{x})^2 \]
+    </div>
+    <div class="f-note">
+      Per calcolare \(s^2\) usi gli scarti \((x_i - \bar{x})\). Ma \(\bar{x}\) è calcolata <em>dai dati stessi</em>,
+      e questo impone un vincolo: gli scarti <mark>devono sommare a zero</mark> (Cap. 4). Noti \(n-1\) scarti,
+      l'ultimo è determinato. Hai «consumato» un grado di libertà stimando la media dai dati, perciò si divide per
+      \(n-1\), non per \(n\).
+    </div>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La regola generale</div>
+    <p style="margin-bottom:0">
+      <mark>Ogni parametro stimato dai dati costa un grado di libertà.</mark> Stimi la media (1 parametro) →
+      perdi 1 df → \(n-1\). Nella regressione con \(k\) predittori stimi \(k+1\) parametri (pendenze +
+      intercetta) → df \(= n - k - 1\). È sempre «numero di dati meno numero di quantità stimate da essi».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-3"><span class="secnum">SEZIONE 27.3</span>Gradi di libertà nei test</h2>
+
+  <p class="lead">
+    Perché le tabelle t e F chiedono i gradi di libertà? Perché la <b>forma</b> di quelle distribuzioni dipende
+    da quanti dati (quanta informazione) hai.
+  </p>
+
+  <p>
+    La distribuzione <b>t di Student</b> (Cap. 30) è una campana con <b>code più pesanti</b> della normale, e
+    quanto più pesanti dipende dai gradi di libertà: con pochi df (pochi dati) le code sono grasse — l'incertezza
+    extra dovuta allo stimare \(s\) dai dati; con molti df, la t si avvicina sempre più alla normale, fino a
+    coincidervi. Ecco perché lo stesso valore critico «cambia» nelle tabelle a seconda di \(n\): con pochi dati
+    serve una soglia più severa per contrastare la maggiore incertezza. I gradi di libertà sono, in fondo, una
+    misura di <b>quanta informazione</b> il campione contiene davvero.
+  </p>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> Poca informazione → code pesanti</div>
+    <p style="margin-bottom:0">
+      Con \(n=2\) (df = 1) hai stimato \(s\) da appena un paio di punti: potrebbe essere molto sbagliato, e la t
+      lo riflette con code larghissime (più valori estremi plausibili). Con \(n=1000\), \(s\) è quasi certo, e la
+      t è indistinguibile dalla normale. I gradi di libertà «raccontano» quanta fiducia riporre nella stima di
+      dispersione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-4"><span class="secnum">SEZIONE 27.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.1</div>
+    <p style="margin-bottom:0">Hai 8 dati e ne calcoli la varianza campionaria. Quanti gradi di libertà? Perché non
+      8?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(\text{df} = n - 1 = \mathbf{7}\). Non 8 perché per calcolare gli scarti usi
+          la media \(\bar{x}\), stimata dagli stessi 8 dati: questo impone che gli scarti sommino a zero (§27.2).
+          Noti 7 scarti, l'ottavo è determinato. Un parametro stimato → un grado di libertà consumato.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.2</div>
+    <p style="margin-bottom:0">Perché, a parità di livello \(\alpha\), il valore critico t con 5 gradi di libertà è
+      più grande di quello con 100?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Con 5 df hai pochi dati: \(s\) è stimato male e la distribuzione t ha
+          <b>code pesanti</b> (§27.3), quindi serve un valore più estremo per lasciare solo il 5% nelle code — il
+          critico è più grande. Con 100 df la t è quasi normale, code sottili, critico più piccolo (vicino a
+          1,96). Meno informazione → soglia più severa, per compensare l'incertezza sulla dispersione.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 27.3</div>
+    <p style="margin-bottom:0">In una regressione lineare semplice (una pendenza + un'intercetta) su 20 dati, quanti
+      gradi di libertà restano per i residui?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Stimi <b>2 parametri</b> (pendenza e intercetta), quindi \(\text{df} = n - 2 =
+          20 - 2 = \mathbf{18}\) (§27.2). La regola: df = numero di dati − numero di parametri stimati. Con \(k\)
+          predittori sarebbe \(n - k - 1\) (le \(k\) pendenze più l'intercetta).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s27-5"><span class="secnum">SEZIONE 27.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 27</div>
+    <ol style="margin-bottom:0">
+      <li><b>Gradi di libertà</b> = quanti valori sono liberi di variare dati i vincoli. Con media fissata su \(n\)
+        valori: \(n-1\).</li>
+      <li><b>Ogni parametro stimato dai dati costa 1 df.</b> Varianza: \(n-1\). Regressione con \(k\) predittori:
+        \(n-k-1\).</li>
+      <li><b>La distribuzione t</b> ha code tanto più pesanti quanti meno df; con molti df → normale.</li>
+      <li>I df misurano <b>quanta informazione</b> ha davvero il campione: pochi df → più incertezza → soglie più
+        severe.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Framework completo, gradi di libertà chiariti. Prima di costruire i test concreti, un bivio di metodo: i test
+    «classici» presumono che i dati siano fatti in un certo modo (spesso normali). Cosa fare quando non lo sono? È
+    la scelta tra approccio <b>parametrico e non parametrico</b>, nel <strong>Capitolo 28</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §27.1 — n-1 valori liberi, media vincolata
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wdf-svg');
+  if (!svg) return;
+  const out = document.getElementById('wdf-out');
+  const target = 50;                 // media vincolata
+  const free = [35, 62, 48, 55];     // i primi quattro (liberi)
+
+  function locked() { return target * 5 - free.reduce((a, b) => a + b, 0); }
+
+  function draw() {
+    const lock = locked();
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 1 });
+    p.line(0, 0.4, 100, 0.4, { color: 'var(--rule)', width: 1.2 });
+    // media target
+    p.line(target, 0.15, target, 0.75, { color: 'var(--accent)', width: 2.2, dash: '5 4' });
+    p.text(target, 0.85, 'media vincolata = 50', { color: 'var(--accent)', size: 11 });
+    // quattro liberi
+    free.forEach((v, i) => {
+      p.handle(v, 0.4, { r: 7, color: 'var(--green)', axis: 'x' }, (x) => { free[i] = Math.max(5, Math.min(95, x)); draw(); });
+      p.text(v, 0.28, 'x' + (i + 1), { color: 'var(--green)', size: 9.5 });
+    });
+    // il prigioniero
+    const lockClamped = Math.max(0, Math.min(100, lock));
+    p.dot(lockClamped, 0.4, { r: 8, color: 'var(--warm)', stroke: 'var(--paper)', sw: 2 });
+    p.text(lockClamped, 0.52, 'x5 = ' + lock.toFixed(0), { color: 'var(--warm)', size: 10 });
+
+    const inRange = lock >= 0 && lock <= 100;
+    out.innerHTML = `
+      <div class="big">4 liberi + 1 vincolato → <b>df = n − 1 = 4</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        I quattro punti verdi li muovi come vuoi; il <b style="color:var(--warm)">rosso</b> è
+        <mark>obbligato</mark> a valere ${lock.toFixed(0)} perché la media resti 50 (somma = 250).
+        ${inRange ? 'Muovi un verde e guarda il rosso reagire all’istante.' : 'Il vincolo lo spinge fuori scala: comunque il suo valore è determinato, non libero.'}
+        Un vincolo (la media) → un grado di libertà in meno.
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

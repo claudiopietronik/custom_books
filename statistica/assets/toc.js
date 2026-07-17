@@ -320,7 +320,7 @@ const TOC = [
   },
   {
     n: 27, parte: "IV · Statistica inferenziale",
-    titolo: "Gradi di libertà", file: "cap27-gradi-liberta.html", stato: "da-fare",
+    titolo: "Gradi di libertà", file: "cap27-gradi-liberta.html", stato: "pronto",
     sezioni: [
       { id: "s27-1", n: "27.1", t: "Un'intuizione con esempi" },
       { id: "s27-2", n: "27.2", t: "Perché n−1 negli stimatori" },
