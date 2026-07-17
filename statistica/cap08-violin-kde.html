@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Violin plot e KDE — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte I · Statistica descrittiva</div>
+    <h1>Violin plot e KDE</h1>
+    <p class="standfirst">
+      L'istogramma ha un difetto: i suoi gradini dipendono da dove metti i bordi dei bin. Levighiamoli in una
+      curva morbida — la <b>stima di densità kernel</b> — e otteniamo il <b>violin plot</b>, che fonde la sintesi
+      robusta del box plot con la ricchezza di forma dell'istogramma. Come per i bin, però, resta un bottone da
+      girare con giudizio: la <b>bandwidth</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È il punto d'arrivo della descrittiva visiva: uniamo il box plot (Cap. 5) e l'istogramma (Cap. 7) in un
+      unico grafico. La curva liscia di densità che costruiamo qui è, di fatto, l'anticipazione empirica delle
+      funzioni di densità di probabilità della Parte III (Cap. 16).
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Quando devi confrontare la distribuzione di una variabile tra più gruppi (i tempi di reazione in tre
+      condizioni, i prezzi in quattro città), il violin plot mostra <em>tutta</em> la forma di ciascun gruppo
+      affiancata — bimodalità comprese, che un box plot nasconderebbe del tutto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">SEZIONE 8.1</span>Dal box plot al violin</h2>
+
+  <p class="lead">
+    Il box plot è potente ma <b>cieco alla forma</b>: comprime tutto in cinque numeri e non distingue una campana
+    da una distribuzione a due gobbe. Il violin plot rimette la forma al centro.
+  </p>
+
+  <p>
+    Due dataset possono avere <em>identici</em> quartili — quindi box plot identici — ed essere completamente
+    diversi: uno concentrato in un unico picco, l'altro spaccato in due gobbe con un vuoto al centro. Il box plot
+    non lo mostrerebbe. Il <b>violin plot</b> risolve il problema disegnando, ai lati dell'asse, la
+    <b>curva di densità</b> dei dati: la sua larghezza a ogni altezza dice quanti dati ci sono lì. Largo dove i
+    dati si accumulano, sottile dove sono rari — la sagoma di un violino, da cui il nome.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Anatomia di un violin plot</div>
+    <p style="margin-bottom:0">
+      Un violin plot combina: (1) la <b>curva di densità</b> (KDE) specchiata sui due lati, che mostra la forma;
+      (2) spesso, dentro, un <b>mini box plot</b> con mediana e quartili. Ottieni forma <em>e</em> sintesi
+      robusta nello stesso disegno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">SEZIONE 8.2</span>La stima di densità kernel</h2>
+
+  <p class="lead">
+    La curva liscia del violin è una <b>KDE</b> (Kernel Density Estimate). L'idea è deliziosamente semplice:
+    sostituisci ogni singolo dato con una piccola collinetta e <b>somma tutte le collinette</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Stima di densità kernel <span class="tag">una collinetta per dato, sommate</span></div>
+    <div class="f-body">
+      \[ \hat{f}(x) \;=\; \frac{1}{n\,\hB{h}} \hA{\sum_{i=1}^{n}} K\!\left(\frac{x - \hC{x_i}}{\hB{h}}\right) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hC{x_i}\)</dt><dd>il singolo dato: il centro di una collinetta (kernel).</dd>
+        <dt>\(K(\cdot)\)</dt><dd>il <b>kernel</b>: la forma della collinetta, di solito una gaussiana. Alta al centro, che sfuma ai lati.</dd>
+        <dt>\(\hB{h}\)</dt><dd>la <b>bandwidth</b>: quanto è larga ogni collinetta. Il parametro che decide tutto.</dd>
+        <dt>\(\hA{\sum}\)</dt><dd>somma i contributi di tutte le collinette in ogni punto \(x\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Dove i dati sono fitti, le collinette si sovrappongono e la somma è alta; dove sono radi, la curva è bassa.
+      <mark>Il risultato è una versione «levigata» dell'istogramma</mark>, senza i gradini né la dipendenza dai
+      bordi dei bin.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">SEZIONE 8.3</span>La bandwidth: liscio o frastagliato</h2>
+
+  <p class="lead">
+    La bandwidth \(h\) è alla KDE ciò che il numero di bin è all'istogramma: la scelta che plasma la forma. Ed è
+    lo stesso compromesso.
+  </p>
+
+  <ul>
+    <li><b>Bandwidth piccola</b> (collinette strette): la curva è <b>frastagliata</b>, insegue ogni singolo dato,
+      mostra picchi che sono solo rumore. È il <em>sotto-lisciamento</em> (undersmoothing).</li>
+    <li><b>Bandwidth grande</b> (collinette larghe): la curva è troppo <b>liscia</b>, appiattisce e fa sparire
+      strutture reali — due gobbe diventano una. È il <em>sovra-lisciamento</em> (oversmoothing).</li>
+    <li><b>Il giusto</b> sta nel mezzo: abbastanza liscia da togliere il rumore, non così tanto da cancellare la
+      forma vera.</li>
+  </ul>
+
+  <h3>Provalo: gira la bandwidth</h3>
+
+  <p>
+    Sotto, gli stessi dati a due gobbe del capitolo precedente (in <b style="color:var(--ink-faint)">grigio</b>
+    l'istogramma) con la curva KDE (in <b style="color:var(--accent)">indaco</b>). Muovi la bandwidth: troppo
+    piccola e la curva balla su ogni dato; troppo grande e le due gobbe si fondono. Trova il punto in cui la
+    doppia gobba emerge pulita.
+  </p>
+
+  <div class="widget" id="w-kde">
+    <div class="w-head">
+      <span>KDE: il compromesso della bandwidth</span>
+      <span class="hint">liscio contro frastagliato</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wkd-svg" viewBox="0 0 620 260" role="img" aria-label="Una stima di densità kernel che passa da frastagliata a troppo liscia al variare della bandwidth"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>bandwidth h</label><input type="range" id="wkd-h" min="8" max="180" step="1" value="45"><output id="wkd-hv">4.5</output></div>
+    </div>
+    <div class="w-readout" id="wkd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">SEZIONE 8.4</span>Confrontare gruppi</h2>
+
+  <p class="lead">
+    Il momento in cui il violin plot brilla è il <b>confronto tra gruppi</b>: più violini affiancati, uno per
+    gruppo, ciascuno con la sua forma completa.
+  </p>
+
+  <p>
+    Con box plot affiancati vedresti solo mediane e quartili; con istogrammi sovrapposti la lettura diventa
+    confusa. I violini invece mettono in fila le <em>sagome</em>: colpisce subito se un gruppo è più disperso, se
+    uno è asimmetrico, se uno è bimodale mentre gli altri no. È il grafico da preferire quando la domanda è «come
+    cambia la <em>distribuzione</em> tra le condizioni?» — la domanda che, con i numeri, affronteremo con l'ANOVA
+    (Cap. 40).
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Attento ai gruppi piccoli</div>
+    <p style="margin-bottom:0">
+      Su pochi dati la KDE è instabile e può inventare gobbe o code che non esistono (specie con bandwidth
+      piccola). Con \(n\) piccolo, un violin plot può <b>illudere</b>: meglio affiancare i punti veri (uno
+      «strip plot») o restare sul box plot. La regola: <em>più liscia è la curva, più dati servono per
+      crederle</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">SEZIONE 8.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">Due dataset hanno lo stesso identico box plot. Possono avere violin plot molto
+      diversi? Fai un esempio.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Sì.</b> Il box plot vede solo i quartili. Un dataset con un'unica gobba
+          centrale e uno <b>bimodale</b> (due gobbe con un vuoto a metà) possono avere gli stessi \(Q_1, Q_2,
+          Q_3\) e quindi box plot identici, ma violin plot completamente diversi (uno «a fuso», l'altro «a
+          clessidra»). È esattamente il motivo per cui il violin plot esiste (§8.1).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">Che ruolo gioca la bandwidth \(h\) nella KDE, e a quale parametro dell'istogramma
+      corrisponde concettualmente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">La bandwidth controlla la larghezza di ogni collinetta e quindi il grado di
+          lisciamento: piccola → curva frastagliata (rumore), grande → curva troppo liscia (struttura cancellata).
+          Corrisponde al <b>numero di bin</b> dell'istogramma (Cap. 7): tanti bin ↔ bandwidth piccola, pochi bin
+          ↔ bandwidth grande. Stesso identico compromesso, forma continua invece che a gradini.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">Un violin plot su \(n = 12\) dati mostra tre gobbe nette. Ci credi? Cosa faresti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Con soli 12 dati, tre gobbe sono quasi certamente un <b>artefatto</b> della KDE
+          (§8.4), specie con bandwidth piccola: non ci sono abbastanza dati per stimare in modo affidabile una
+          struttura così fine. Meglio mostrare i <b>punti veri</b> (strip plot) o un box plot, aumentare la
+          bandwidth, e — se la domanda è importante — raccogliere più dati prima di affermare che esistono tre
+          sottogruppi.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">SEZIONE 8.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li><b>Violin plot</b> = curva di densità (specchiata) + spesso un mini box plot. Mostra la <b>forma</b>,
+        che il box plot nasconde.</li>
+      <li><b>KDE:</b> sostituisci ogni dato con una collinetta (kernel) e sommale. Versione liscia
+        dell'istogramma, senza bin.</li>
+      <li><b>Bandwidth</b> \(h\): piccola → frastagliata (rumore), grande → troppo liscia (struttura persa). È il
+        «numero di bin» della KDE.</li>
+      <li><b>Ottimo per confrontare gruppi</b>; ma su pochi dati può inventare gobbe: fidati con giudizio.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Chiudiamo la descrittiva «di forma» con un'idea che la spinge oltre. Finora abbiamo misurato dove stanno i
+    dati e che forma hanno. Ma quanta <em>informazione</em>, quanta incertezza contiene una distribuzione? La
+    risposta è un numero solo, sorprendente e potentissimo — l'<b>entropia</b> — ed è l'ultimo capitolo della
+    Parte I: il <strong>Capitolo 9</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.3 — KDE con bandwidth variabile sui dati bimodali
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wkd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wkd-out');
+  const hS = document.getElementById('wkd-h'), hV = document.getElementById('wkd-hv');
+
+  // stessi dati bimodali del Cap. 7
+  let seed = 2024;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const gauss = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const data = [];
+  for (let i = 0; i < 300; i++) data.push(i < 180 ? 35 + 8 * gauss() : 68 + 7 * gauss());
+  const lo = 5, hi = 100, n = data.length;
+
+  // istogramma di sfondo (fisso a 22 bin)
+  const NB = 22, w = (hi - lo) / NB, counts = new Array(NB).fill(0);
+  data.forEach(x => { let k = Math.floor((x - lo) / w); if (k < 0) k = 0; if (k >= NB) k = NB - 1; counts[k]++; });
+  // densità istogramma: conteggio / (n * larghezza)
+  const histDens = counts.map(c => c / (n * w));
+
+  function kde(x, h) {
+    let s = 0;
+    for (const xi of data) { const z = (x - xi) / h; s += Math.exp(-0.5 * z * z); }
+    return s / (n * h * Math.sqrt(2 * Math.PI));
+  }
+
+  function draw() {
+    const h = parseInt(hS.value, 10) / 10;   // 0.8 .. 18
+    hV.textContent = h.toFixed(1);
+    // campiona la KDE
+    const xsK = [], ysK = [];
+    for (let x = lo; x <= hi; x += 0.5) { xsK.push(x); ysK.push(kde(x, h)); }
+    const maxD = Math.max(Math.max(...histDens), Math.max(...ysK)) * 1.15;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: lo, xmax: hi, ymin: 0, ymax: maxD });
+    p.line(lo, 0, hi, 0, { color: 'var(--rule)', width: 1 });
+    // istogramma di sfondo
+    histDens.forEach((d, k) => { const x0 = lo + k * w; p.rect(x0, 0, x0 + w, d, { fill: 'color-mix(in srgb, var(--ink-faint) 16%, transparent)', color: 'var(--ink-faint)', width: 0.6 }); });
+    // curva KDE
+    p.func(x => kde(x, h), { color: 'var(--accent)', width: 2.6, from: lo, to: hi });
+
+    let msg;
+    if (h < 2) msg = 'Bandwidth piccola: la curva è <mark>frastagliata</mark>, insegue i singoli dati. Picchi spuri = rumore (undersmoothing).';
+    else if (h > 10) msg = 'Bandwidth grande: la curva è così liscia che le <mark>due gobbe si fondono</mark>. Struttura reale cancellata (oversmoothing).';
+    else msg = 'Bandwidth giusta: le <mark>due gobbe</mark> emergono pulite, il rumore è tolto. La forma vera dei dati.';
+    out.innerHTML = `
+      <div class="big">bandwidth h = <b>${h.toFixed(1)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${msg}</div>`;
+  }
+  hS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

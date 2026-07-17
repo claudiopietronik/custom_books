@@ -94,7 +94,7 @@ const TOC = [
   },
   {
     n: 8, parte: "I · Statistica descrittiva",
-    titolo: "Violin plot e KDE", file: "cap08-violin-kde.html", stato: "da-fare",
+    titolo: "Violin plot e KDE", file: "cap08-violin-kde.html", stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Dal box plot al violin" },
       { id: "s8-2", n: "8.2", t: "La stima di densità kernel" },
