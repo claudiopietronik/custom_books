@@ -67,7 +67,7 @@ const TOC = [
     n: 4,
     titolo: "Funzioni polinomiali e razionali",
     file: "cap04-polinomiali-razionali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Funzioni quadratiche e parabole" },
       { id: "s4-2", n: "4.2", t: "Introduzione alle funzioni polinomiali" },
