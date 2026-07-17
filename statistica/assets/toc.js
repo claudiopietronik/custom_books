@@ -82,7 +82,7 @@ const TOC = [
   },
   {
     n: 7, parte: "I · Statistica descrittiva",
-    titolo: "Istogrammi", file: "cap07-istogrammi.html", stato: "da-fare",
+    titolo: "Istogrammi", file: "cap07-istogrammi.html", stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Contare in intervalli" },
       { id: "s7-2", n: "7.2", t: "Il numero di bin cambia tutto" },
