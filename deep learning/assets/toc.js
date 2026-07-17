@@ -131,7 +131,7 @@ const TOC = [
     titolo: "Regolarizzazione per il deep learning",
     file: "cap07-regolarizzazione.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Penalità sulla norma dei parametri (L2, L1)" },
       { id: "s7-2", n: "7.2", t: "Le penalità come ottimizzazione vincolata" },

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Regolarizzazione — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7 · Parte II</div>
+    <h1>Regolarizzazione per il deep learning</h1>
+    <p class="standfirst">
+      Una rete profonda ha abbastanza capacità da <b>memorizzare</b> il training set — rumore compreso. La
+      <b>regolarizzazione</b> è tutto ciò che facciamo per ridurre l'errore di <em>test</em> anche a costo di
+      alzare quello di training: penalità sui pesi, dropout, early stopping, data augmentation.
+      <mark>Non è un dettaglio di rifinitura: spesso decide se una rete funziona o no.</mark> Definizione
+      operativa: qualsiasi modifica pensata per ridurre l'errore di generalizzazione, non quello di
+      addestramento.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il classico: <b>penalità sulla norma</b> L2 e L1 (§7.1, widget), viste come <b>vincoli</b> (§7.2). Poi le
+      tecniche pratiche: <b>data augmentation</b> (§7.3), <b>robustezza al rumore</b> (§7.4), <b>multi-task</b>
+      (§7.5), <b>early stopping</b> (§7.6, widget), <b>condivisione dei parametri</b> (§7.7) e
+      <b>rappresentazioni sparse</b> (§7.8). Infine i due pilastri moderni: <b>bagging/ensemble</b> (§7.9) e
+      <b>dropout</b> (§7.10), più un cenno all'<b>addestramento avversario</b> (§7.11).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Il deep learning moderno lavora quasi sempre in un regime dove il modello <em>potrebbe</em> overfittare:
+      la domanda non è «quanto è grande la rete» ma «come la regolarizzo». <mark>Weight decay, dropout e data
+      augmentation sono nel codice di quasi ogni rete addestrata seriamente.</mark> Capire cosa fanno — e perché
+      L1 rende i pesi sparsi mentre L2 li rimpicciolisce e basta — è capire come si controlla la
+      generalizzazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Penalità sulla norma dei parametri (L2, L1)</h2>
+
+  <p class="lead">
+    L'idea più antica e più usata: aggiungere alla loss un termine che <b>penalizza i pesi grandi</b>. Pesi
+    piccoli = funzione più liscia = meno overfitting.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Weight decay (L2) e penalità L1 <span class="tag">due modi di tenere piccoli i pesi</span></div>
+    <div class="f-body">
+      \[ \tilde{\Loss}(\vv{w}) = \Loss(\vv{w}) + \hA{\alpha}\,\underbrace{\tfrac{1}{2}\norm{\vv{w}}_2^2}_{\text{L2}}
+         \qquad\text{oppure}\qquad
+         \tilde{\Loss}(\vv{w}) = \Loss(\vv{w}) + \hA{\alpha}\,\underbrace{\norm{\vv{w}}_1}_{\text{L1}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\alpha}\) — la <b>forza</b> della penalità</dt>
+        <dd>un iperparametro: \(\alpha=0\) niente regolarizzazione; \(\alpha\) grande, pesi schiacciati verso
+            zero (più bias, meno varianza). Si sceglie sul validation set.</dd>
+        <dt><b>L2</b> (weight decay)</dt>
+        <dd>penalizza il quadrato dei pesi: ne <b>rimpicciolisce</b> tutti in proporzione, ma raramente li porta
+            esattamente a zero. Equivale a una prior gaussiana (§5.6).</dd>
+        <dt><b>L1</b></dt>
+        <dd>penalizza il valore assoluto: <mark>spinge molti pesi a <b>esattamente</b> zero</mark>, producendo
+            soluzioni <b>sparse</b> — una forma di selezione automatica delle feature.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché L1 azzera e L2 no? È geometria. Nel widget vedi le curve di livello della loss (ellissi centrate
+      sull'ottimo non regolarizzato) e la regione ammessa: un <b>cerchio</b> per L2, un <b>rombo</b> per L1. La
+      soluzione è dove la loss più piccola tocca la regione — e il rombo ha gli <b>spigoli sugli assi</b>, dove
+      una coordinata è zero.
+    </div>
+  </div>
+
+  <div class="widget" id="w-reg">
+    <div class="w-head">
+      <span>L1 vs L2: perché L1 rende i pesi sparsi</span>
+      <span class="hint">scegli la norma · stringi il vincolo</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wr-svg" viewBox="0 0 560 420" role="img" aria-label="Curve di livello della loss e regioni di vincolo L1 (rombo) e L2 (cerchio): L1 tocca spesso su un asse, azzerando un peso"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wr-l2">L2 (cerchio)</button>
+      <button class="w-btn" id="wr-l1">L1 (rombo)</button>
+      <div class="w-ctrl"><label>α</label><input type="range" id="wr-a" min="0" max="3" step="0.05" value="0.6"><output id="wr-a-o">0.6</output></div>
+    </div>
+    <div class="w-readout" id="wr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Le penalità come ottimizzazione vincolata</h2>
+
+  <p class="lead">
+    Aggiungere \(\alpha\norm{\vv{w}}\) alla loss (penalità «morbida») è matematicamente equivalente a
+    <b>vincolare</b> \(\norm{\vv{w}}\le r\) (vincolo «duro»). È il ponte con i moltiplicatori di Lagrange (§4.5).
+  </p>
+
+  <p>
+    Per ogni forza \(\alpha\) esiste un raggio \(r\) che dà la stessa soluzione: \(\alpha\) è il moltiplicatore
+    di Lagrange del vincolo \(\norm{\vv{w}}\le r\). Questo spiega perché le due letture del widget — «minimizza
+    dentro la regione» e «aggiungi una penalità» — coincidono. <mark>La regolarizzazione L2 è letteralmente
+    «ottimizza dentro una pallina» attorno all'origine</mark>: più la pallina è piccola (più \(\alpha\) è
+    grande), più i pesi restano vicini a zero.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Data augmentation</h2>
+
+  <p class="lead">
+    Il modo più efficace di ridurre l'overfitting è avere <b>più dati</b>. Quando non ne abbiamo, li
+    <b>inventiamo</b> creando varianti plausibili di quelli che abbiamo.
+  </p>
+
+  <p>
+    Per le immagini funziona benissimo: ruotare, traslare, riflettere, ritagliare, cambiare luminosità di una
+    foto di gatto dà ancora un gatto — ma insegna alla rete a essere <b>invariante</b> a quelle trasformazioni.
+    <mark>La data augmentation è la regolarizzazione più efficace nella visione artificiale.</mark> Va scelta con
+    criterio: riflettere orizzontalmente una cifra va bene per «8», ma trasforma un «6» in un «9» — quindi certe
+    trasformazioni vanno evitate a seconda del compito. Anche iniettare rumore nell'input è una forma di
+    augmentation (§7.4).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Robustezza al rumore</h2>
+
+  <p class="lead">
+    Aggiungere <b>rumore</b> — agli input, ai pesi, alle etichette — durante l'addestramento è una forma sottile
+    e potente di regolarizzazione.
+  </p>
+
+  <p>
+    Iniettare piccolo rumore negli <b>input</b> equivale, per una rete, a penalizzare la sensibilità dell'uscita
+    a piccole variazioni: spinge verso funzioni più lisce. Rumore sui <b>pesi</b> spinge verso minimi «piatti»,
+    più robusti. E il <b>label smoothing</b> ammorbidisce le etichette (invece di 0 e 1, per esempio 0,1 e 0,9),
+    impedendo alla rete di diventare <b>troppo sicura</b> e di spingere i logit all'infinito. <mark>Un modello
+    che non si fida ciecamente delle etichette generalizza meglio.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Apprendimento multi-task</h2>
+
+  <p class="lead">
+    Imparare più compiti insieme, condividendo parte della rete, regolarizza: le rappresentazioni condivise
+    devono servire a tutti i compiti, quindi non possono specializzarsi sul rumore di uno solo.
+  </p>
+
+  <p>
+    Se più compiti condividono cause sottostanti (riconoscere oggetti diversi usa comunque bordi e texture), una
+    rete con <b>strati bassi condivisi</b> e teste separate per ciascun compito impara feature più generali. È
+    come avere «più dati» sotto forma di più segnali di supervisione sulla stessa rappresentazione. Il cugino di
+    questa idea è il <b>transfer learning</b> (Cap. 15): riusare una rete addestrata su un compito ricco di dati
+    per uno con pochi dati.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Early stopping</h2>
+
+  <p class="lead">
+    La regolarizzazione più semplice ed economica di tutte: <b>smettere di addestrare</b> quando l'errore di
+    validation smette di scendere. Gratis, e sorprendentemente efficace.
+  </p>
+
+  <p>
+    Durante l'addestramento, l'errore di <b>training</b> scende sempre. Quello di <b>validation</b> prima scende
+    (la rete impara i pattern veri) poi <b>risale</b> (la rete inizia a memorizzare il rumore): la classica
+    curva a U. L'<span class="termine">early stopping</span> salva i pesi al punto di minimo della validation e
+    li usa come modello finale. <mark>Equivale a limitare quanto i pesi si allontanano dall'inizializzazione</mark>
+    — sorprendentemente, ha un effetto simile alla penalità L2, ma senza iperparametri da regolare a mano. Nel
+    widget: muovi l'epoca di arresto e cerca il minimo della curva di validation.
+  </p>
+
+  <div class="widget" id="w-es">
+    <div class="w-head">
+      <span>Early stopping: fermarsi al minimo di validation</span>
+      <span class="hint">muovi l'epoca di arresto</span>
+    </div>
+    <div class="w-stage">
+      <svg id="we-svg" viewBox="0 0 560 340" role="img" aria-label="Curve di errore di training (sempre in calo) e validation (a U) al variare dell'epoca; l'early stopping ferma al minimo di validation"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <div class="w-ctrl"><label>epoca</label><input type="range" id="we-ep" min="1" max="60" step="1" value="55"><output id="we-ep-o">55</output></div>
+    </div>
+    <div class="w-readout" id="we-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Condivisione dei parametri</h2>
+
+  <p class="lead">
+    Invece di penalizzare i pesi verso zero, li si può <b>forzare a essere uguali</b> tra loro. È una
+    regolarizzazione fortissima — e la base delle reti convoluzionali.
+  </p>
+
+  <p>
+    Se sappiamo a priori che parti diverse del modello dovrebbero calcolare la <b>stessa cosa</b>, le facciamo
+    <b>condividere i pesi</b>: un solo parametro usato in più posti. Riduce drasticamente il numero di parametri
+    da imparare (meno varianza) e impone un'invarianza. <mark>La convoluzione (Cap. 9) è esattamente questo</mark>:
+    lo stesso piccolo filtro applicato a ogni posizione dell'immagine, perché un bordo è un bordo ovunque
+    appaia. Anche le RNN (Cap. 10) condividono i pesi nel tempo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Rappresentazioni sparse</h2>
+
+  <p class="lead">
+    La L1 rende sparsi i <em>pesi</em>. Si può invece rendere sparse le <b>attivazioni</b>: costringere ogni
+    esempio a usare pochi neuroni.
+  </p>
+
+  <p>
+    Penalizzando la norma L1 delle <b>attivazioni</b> nascoste (non dei pesi), si ottiene una rappresentazione
+    in cui, per ogni input, solo pochi neuroni sono attivi. È una forma di rappresentazione distribuita ma
+    parsimoniosa, che spesso porta a feature più interpretabili e disaccoppiate. È l'idea del <b>sparse
+    coding</b> (Cap. 13) e di certi autoencoder (Cap. 14).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-9"><span class="secnum">Sezione 7.9</span>Bagging e metodi ensemble</h2>
+
+  <p class="lead">
+    Due teste ragionano meglio di una: addestrare <b>più modelli</b> e mediarne le previsioni riduce l'errore,
+    perché gli errori indipendenti si cancellano a vicenda.
+  </p>
+
+  <p>
+    Il <span class="termine">bagging</span> addestra \(k\) modelli su sottoinsiemi diversi dei dati e ne media le
+    uscite. Se gli errori dei modelli sono <b>indipendenti</b>, la media ha varianza \(k\) volte più piccola: è
+    puro guadagno. Gli ensemble di reti sono tra i modi più affidabili di spremere qualche punto di accuratezza
+    in più — al costo di addestrare e far girare \(k\) reti. <mark>Il dropout, che vedremo ora, è un modo furbo
+    di ottenere quasi lo stesso effetto con una rete sola.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-10"><span class="secnum">Sezione 7.10</span>Dropout</h2>
+
+  <p class="lead">
+    La regolarizzazione che ha definito un'epoca: a ogni passo, <b>spegni a caso</b> una frazione dei neuroni. È
+    come addestrare un ensemble enorme di reti che condividono i pesi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dropout <span class="tag">maschera casuale di neuroni in addestramento</span></div>
+    <div class="f-body">
+      \[ \vv{h}_{\text{drop}} = \vv{m}\odot\vv{h}, \qquad m_i \dist \text{Bernoulli}(1-p) \]
+    </div>
+    <div class="f-note">
+      A ogni passo di addestramento, ogni neurone nascosto viene <b>tenuto</b> con probabilità \(1-p\) e
+      <b>azzerato</b> con probabilità \(p\) (tipicamente \(p=0{,}5\)) — è la maschera \(\vv{m}\), moltiplicata
+      elemento per elemento. In prova, si usano tutti i neuroni (scalando le attivazioni per compensare).
+      <mark>Ogni passo addestra una sotto-rete diversa</mark>: la rete non può fare troppo affidamento su un
+      singolo neurone (potrebbe sparire), quindi distribuisce la conoscenza in modo ridondante e robusto.
+      Equivale ad addestrare e mediare esponenzialmente tante reti (un ensemble, §7.9) al costo di una sola.
+      Semplice, economico, efficacissimo.
+    </div>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 460 220" role="img" aria-label="Una rete densa e la stessa rete con alcuni neuroni spenti dal dropout">
+      <g font-family="var(--sans)">
+        <text x="115" y="20" class="lbl-b" text-anchor="middle">Rete completa</text>
+        <text x="345" y="20" class="lbl-b" text-anchor="middle">Con dropout (p=0,5)</text>
+        <!-- rete completa: 3-4-2 -->
+        <g id="net1">
+          <!-- posizioni -->
+        </g>
+      </g>
+      <!-- disegno con script inline non serve: uso cerchi statici -->
+      <g stroke="var(--rule)" stroke-width="1">
+        <!-- edges full -->
+        <line x1="55" y1="70" x2="115" y2="55"/><line x1="55" y1="70" x2="115" y2="105"/><line x1="55" y1="70" x2="115" y2="155"/><line x1="55" y1="70" x2="115" y2="55"/>
+        <line x1="55" y1="130" x2="115" y2="55"/><line x1="55" y1="130" x2="115" y2="105"/><line x1="55" y1="130" x2="115" y2="155"/>
+        <line x1="115" y1="55" x2="175" y2="85"/><line x1="115" y1="55" x2="175" y2="135"/>
+        <line x1="115" y1="105" x2="175" y2="85"/><line x1="115" y1="105" x2="175" y2="135"/>
+        <line x1="115" y1="155" x2="175" y2="85"/><line x1="115" y1="155" x2="175" y2="135"/>
+      </g>
+      <g fill="var(--accent)">
+        <circle cx="55" cy="70" r="9"/><circle cx="55" cy="130" r="9"/>
+        <circle cx="115" cy="55" r="9"/><circle cx="115" cy="105" r="9"/><circle cx="115" cy="155" r="9"/>
+        <circle cx="175" cy="85" r="9"/><circle cx="175" cy="135" r="9"/>
+      </g>
+      <!-- rete con dropout -->
+      <g stroke="var(--rule)" stroke-width="1">
+        <line x1="285" y1="70" x2="345" y2="105"/><line x1="285" y1="130" x2="345" y2="105"/><line x1="285" y1="130" x2="345" y2="155"/>
+        <line x1="345" y1="105" x2="405" y2="85"/><line x1="345" y1="155" x2="405" y2="135"/><line x1="345" y1="105" x2="405" y2="135"/>
+      </g>
+      <g>
+        <circle cx="285" cy="70" r="9" fill="var(--accent)"/><circle cx="285" cy="130" r="9" fill="var(--accent)"/>
+        <circle cx="345" cy="55" r="9" fill="none" stroke="var(--ink-faint)" stroke-dasharray="3 2"/>
+        <circle cx="345" cy="105" r="9" fill="var(--accent)"/>
+        <circle cx="345" cy="155" r="9" fill="var(--accent)"/>
+        <circle cx="405" cy="85" r="9" fill="none" stroke="var(--ink-faint)" stroke-dasharray="3 2"/>
+        <circle cx="405" cy="135" r="9" fill="var(--accent)"/>
+      </g>
+    </svg>
+    <figcaption>
+      <span class="n">Figura 7.1.</span> A ogni passo di addestramento il dropout <b>spegne</b> a caso alcuni
+      neuroni (tratteggiati): la rete deve imparare a funzionare anche senza di loro, distribuendo la conoscenza
+      invece di affidarla a pochi neuroni «star».
+    </figcaption>
+  </figure>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-11"><span class="secnum">Sezione 7.11</span>Addestramento avversario</h2>
+
+  <p class="lead">
+    Le reti hanno un tallone d'Achille: perturbazioni <b>impercettibili</b> dell'input possono ribaltarne la
+    previsione. Addestrare su questi esempi «avversari» le rende più robuste — e regolarizza.
+  </p>
+
+  <p>
+    Un <span class="termine">esempio avversario</span> è un input modificato di pochissimo (invisibile
+    all'occhio) ma progettato per ingannare la rete: un panda etichettato «gibbone» con confidenza altissima. Il
+    motivo è che le reti sono spesso <b>troppo lineari</b>, e piccole variazioni in tante dimensioni si sommano.
+    Aggiungere esempi avversari al training (<b>adversarial training</b>) costringe la rete a essere localmente
+    costante attorno agli esempi veri: <mark>una regolarizzazione che riduce l'errore sia sugli avversari sia,
+    spesso, sui dati puliti.</mark>
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li>Regolarizzare = ridurre l'errore di <b>test</b>, non di training. La <b>penalità sulla norma</b>: L2
+          rimpicciolisce i pesi, L1 li rende <b>sparsi</b> (geometria: il rombo tocca sugli assi, §7.1–7.2).</li>
+      <li><b>Data augmentation</b> (più dati finti) e <b>rumore</b>/label smoothing spingono verso funzioni
+          lisce e reti meno strasicure (§7.3–7.4).</li>
+      <li><b>Early stopping</b>: fermati al minimo di validation, gratis ed efficace (§7.6). <b>Condivisione dei
+          parametri</b>: la base delle CNN e RNN (§7.7).</li>
+      <li><b>Ensemble/bagging</b> media modelli indipendenti; il <b>dropout</b> ne è la versione economica —
+          spegne neuroni a caso e addestra un ensemble implicito (§7.9–7.10).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo costruire reti (6) e impedire loro di overfittare (7). Resta il problema più pratico: farle davvero
+    <em>convergere</em>. Il <strong>Capitolo 8</strong> entra nell'<b>ottimizzazione</b>: perché addestrare è
+    difficile, e gli algoritmi che lo rendono possibile — momentum, inizializzazioni intelligenti, <b>Adam</b>,
+    batch normalization.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-12"><span class="secnum">Sezione 7.12</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §7.1, con L1 e \(\alpha\) crescente, cosa succede alla coordinata più piccola della
+      soluzione? E con L2? Riassumi in una frase la differenza pratica tra le due penalità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Perché il dropout può essere visto come un ensemble? Quante sotto-reti diverse esistono, in linea di
+      principio, per uno strato di \(n\) neuroni con dropout?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Vuoi addestrare un classificatore di cifre scritte a mano (0–9) e pensi di usare la data augmentation.
+      Quali trasformazioni sono sicure e quali pericolose? Motiva con un esempio concreto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) La regolarizzazione L2 tipicamente porta molti pesi esattamente a zero. &nbsp;
+      (b) L'early stopping richiede un insieme di validation. &nbsp;
+      (c) Il dropout si applica anche in fase di test, spegnendo neuroni a caso. &nbsp;
+      (d) La condivisione dei parametri riduce il numero di parametri liberi del modello.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-13"><span class="secnum">Sezione 7.13</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      Con <b>L1</b>, al crescere di \(\alpha\) la coordinata più piccola viene portata a <b>esattamente zero</b>
+      (la soluzione finisce su un asse, sullo spigolo del rombo): il modello «spegne» quella feature. Con
+      <b>L2</b> tutte le coordinate si <b>rimpiccioliscono</b> in proporzione ma restano diverse da zero.
+      Differenza pratica: <mark>L1 fa selezione di feature (soluzione sparsa), L2 fa restringimento uniforme.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      Ogni maschera casuale definisce una <b>sotto-rete diversa</b> che condivide i pesi con tutte le altre;
+      addestrare con dropout è come addestrare tutte queste sotto-reti un pochino ciascuna, e in prova si media
+      il loro comportamento. Per \(n\) neuroni con dropout ci sono \(2^n\) possibili maschere, quindi
+      <b>\(2^n\)</b> sotto-reti: un ensemble esponenzialmente grande, al costo di una rete sola.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      <b>Sicure:</b> piccole traslazioni, rotazioni lievi, deformazioni elastiche, variazioni di spessore del
+      tratto — una cifra resta la stessa. <b>Pericolose:</b> la riflessione orizzontale (un «2» riflesso non è
+      più un 2 valido; una rotazione di 180° trasforma «6» in «9»). <mark>La trasformazione è ammessa solo se
+      preserva l'etichetta.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> È la L1 a produrre sparsità; la L2 rimpicciolisce senza azzerare (§7.1). <br>
+      <b>(b) VERO.</b> L'early stopping monitora l'errore di <b>validation</b> per decidere quando fermarsi (§7.6). <br>
+      <b>(c) FALSO.</b> Il dropout si usa solo in <b>addestramento</b>; in test si usano tutti i neuroni (scalando
+      le attivazioni) (§7.10). <br>
+      <b>(d) VERO.</b> Forzare pesi a essere uguali riduce i gradi di libertà: è una regolarizzazione forte, la
+      base delle CNN (§7.7).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §7.1 — L1 vs L2 e la sparsità
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wr-out');
+  const bL2 = document.getElementById('wr-l2'), bL1 = document.getElementById('wr-l1');
+  const aI = document.getElementById('wr-a'), aO = document.getElementById('wr-a-o');
+  const wStar = [2.15, 0.95];     // ottimo non regolarizzato
+  let norm = 'L2';
+
+  // proiezione euclidea sulla palla L1 di raggio r
+  function projL1(v, r) {
+    const s = Math.abs(v[0]) + Math.abs(v[1]);
+    if (s <= r) return v.slice();
+    const u = v.map(Math.abs).sort((a, b) => b - a);
+    let css = 0, theta = 0;
+    for (let i = 0; i < u.length; i++) { css += u[i]; const t = (css - r) / (i + 1); if (u[i] - t > 0) theta = t; }
+    return v.map(x => Math.sign(x) * Math.max(0, Math.abs(x) - theta));
+  }
+  function projL2(v, r) { const n = Math.hypot(...v); return n <= r ? v.slice() : v.map(x => x * r / n); }
+
+  function draw() {
+    const alpha = parseFloat(aI.value);
+    aO.textContent = fmt(alpha, 2);
+    // mappa alpha -> raggio del vincolo (alpha grande = raggio piccolo)
+    const r = 3.2 / (1 + alpha);
+    const sol = norm === 'L2' ? projL2(wStar, r) : projL1(wStar, r);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3.2, xmax: 3.2, ymin: -2.4, ymax: 2.4, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true, xname: 'w₁', yname: 'w₂' });
+    // curve di livello della loss (cerchi attorno a w*)
+    for (const rad of [0.4, 0.9, 1.5, 2.2]) p.param(t => wStar[0] + rad * Math.cos(t), t => wStar[1] + rad * Math.sin(t), 0, 2 * Math.PI, { color: 'color-mix(in srgb, var(--accent) 40%, var(--paper))', width: 1.2 });
+    // regione di vincolo
+    if (norm === 'L2') {
+      p.param(t => r * Math.cos(t), t => r * Math.sin(t), 0, 2 * Math.PI, { color: 'var(--violet)', width: 2.2 });
+    } else {
+      p.poly([[r, 0], [0, r], [-r, 0], [0, -r]], { color: 'var(--violet)', width: 2.2, close: true });
+    }
+    p.dot(wStar[0], wStar[1], { color: 'var(--ink-faint)', r: 5 });
+    p.text(wStar[0], wStar[1], 'w*', { dx: 16, dy: -6, color: 'var(--ink-soft)', bold: true });
+    p.dot(sol[0], sol[1], { color: 'var(--warm)', r: 6 });
+
+    const zero = Math.abs(sol[0]) < 0.03 || Math.abs(sol[1]) < 0.03;
+    out.innerHTML = `
+      <div class="big">
+        ${norm} &nbsp;·&nbsp; soluzione w = (<b style="color:var(--warm)">${fmt(sol[0])}, ${fmt(sol[1])}</b>)
+        ${zero ? ' &nbsp;<b style="color:var(--green)">← un peso è ≈ 0 (sparsa!)</b>' : ''}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Le curve <b style="color:var(--accent)">blu</b> sono le curve di livello della loss (minimo in w*); la
+        curva <b style="color:var(--violet)">viola</b> è la regione ammessa dalla penalità. La soluzione
+        <b style="color:var(--warm)">arancione</b> è dove la loss più piccola tocca la regione.
+        ${norm === 'L1'
+          ? '<mark>Il rombo L1 ha gli spigoli sugli assi: la soluzione ci finisce sopra spesso, azzerando un peso.</mark> Alza α (stringi il rombo) e guarda w₂ andare a zero.'
+          : 'Il cerchio L2 è liscio: la soluzione tocca in un punto generico, con <b>entrambi</b> i pesi diversi da zero. Passa a L1 per vedere la sparsità.'}
+      </div>`;
+  }
+  bL2.addEventListener('click', () => { norm = 'L2'; bL2.classList.add('on'); bL1.classList.remove('on'); draw(); });
+  bL1.addEventListener('click', () => { norm = 'L1'; bL1.classList.add('on'); bL2.classList.remove('on'); draw(); });
+  aI.addEventListener('input', draw);
+  draw();
+})();
+
+/* ============================================================================
+   WIDGET §7.6 — early stopping
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('we-svg');
+  if (!svg) return;
+  const out = document.getElementById('we-out');
+  const epI = document.getElementById('we-ep'), epO = document.getElementById('we-ep-o');
+  const train = e => 0.06 + 0.95 * Math.exp(-e / 11);
+  const val = e => 0.10 + 0.85 * Math.exp(-e / 9) + 0.0065 * e;
+  // minimo di validation (numerico)
+  let eBest = 1, vBest = 1e9;
+  for (let e = 1; e <= 60; e++) { if (val(e) < vBest) { vBest = val(e); eBest = e; } }
+
+  function draw() {
+    const ep = parseInt(epI.value, 10);
+    epO.textContent = ep;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 62, ymin: 0, ymax: 1.15 });
+    p.grid(10, 0.2); p.axes({ numbers: true, stepX: 10, stepY: 0.2, xname: 'epoca', yname: 'errore' });
+    p.func(train, { color: 'var(--warm)', width: 2.4, from: 1, to: 60 });
+    p.func(val, { color: 'var(--accent)', width: 2.4, from: 1, to: 60 });
+    // linea dell'epoca scelta
+    p.line(ep, 0, ep, 1.15, { color: 'var(--ink-faint)', width: 1.6, dash: '5 4' });
+    // minimo di validation
+    p.dot(eBest, val(eBest), { color: 'var(--green)', r: 6 });
+    p.dot(ep, val(ep), { color: 'var(--accent)', r: 4 });
+    p.dot(ep, train(ep), { color: 'var(--warm)', r: 4 });
+
+    const diff = ep - eBest;
+    out.innerHTML = `
+      <div class="big">
+        epoca ${ep} &nbsp;·&nbsp; train <b style="color:var(--warm)">${fmt(train(ep), 3)}</b> &nbsp;
+        val <b style="color:var(--accent)">${fmt(val(ep), 3)}</b>
+        &nbsp; (minimo val a epoca <b style="color:var(--green)">${eBest}</b>)
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'errore di <b style="color:var(--warm)">training</b> scende sempre; quello di
+        <b style="color:var(--accent)">validation</b> scende, tocca il minimo <b style="color:var(--green)">verde</b>,
+        poi <b>risale</b> (overfitting). ${Math.abs(diff) <= 2 ? '<mark>Ottimo: ti sei fermato vicino al minimo di validation.</mark>' : diff > 2 ? '<mark>Troppo tardi: oltre il minimo la rete sta memorizzando il rumore.</mark>' : 'Troppo presto: la validation stava ancora scendendo.'}
+        L'early stopping salva i pesi <b style="color:var(--green)">all'epoca ${eBest}</b>.
+      </div>`;
+  }
+  epI.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

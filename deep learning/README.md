@@ -40,7 +40,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 4 — Calcolo numerico
 - [x] 5 — Fondamenti di machine learning
 - [x] 6 — Reti feedforward profonde
-- [ ] 7 — Regolarizzazione per il deep learning
+- [x] 7 — Regolarizzazione per il deep learning
 - [ ] 8 — Ottimizzazione per l'addestramento
 - [ ] 9 — Reti convoluzionali
 - [ ] 10 — Modellazione di sequenze: reti ricorrenti
