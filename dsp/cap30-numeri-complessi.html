@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30 · I numeri complessi — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="30">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.30 — Capitolo 30</div>
+    <h1>I numeri complessi</h1>
+    <p class="standfirst">
+      Fin qui li abbiamo accuratamente evitati, cavandocela con seni e coseni. Ma i numeri complessi non sono una
+      complicazione: sono una <b>semplificazione</b>. Riuniscono ampiezza e fase in un solo oggetto, trasformano
+      la rotazione in una moltiplicazione, e rendono la trasformata di Fourier elegante come non potrà mai essere
+      con i numeri reali. Il DSP li adora — e in questo capitolo scopriremo perché.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Primo dei capitoli di approfondimento matematico. Costruiamo i numeri complessi da zero, poi (Cap. 31) li
+      useremo per la trasformata di Fourier «vera», quella complessa, e infine (Cap. 32–33) per Laplace e la
+      trasformata z, che spiegano i filtri ricorsivi e la loro stabilità. È lo strumento che illumina tutta la
+      teoria vista finora.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Ogni testo avanzato di DSP parla la lingua dei numeri complessi: esponenziali \(\eu^{\ii\omega n}\), poli e
+      zeri, piano \(z\). Senza di essi, resti chiuso fuori dalla metà «adulta» della disciplina. Con essi, molte
+      cose che sembravano due (coseno <em>e</em> seno, ampiezza <em>e</em> fase) diventano una sola —
+      <strong>e la matematica si semplifica invece di complicarsi.</strong>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-1"><span class="secnum">SEZIONE 30.1</span>Il problema che risolvono</h2>
+
+  <p class="lead">
+    Nascono da una domanda che sembra senza risposta: quanto vale \(\sqrt{-1}\)? Nessun numero reale, elevato al
+    quadrato, dà un risultato negativo. La mossa audace è <em>inventarne</em> uno.
+  </p>
+
+  <p>
+    Si definisce l'<b class="termine">unità immaginaria</b> — che gli ingegneri chiamano \(\ii\) (i matematici
+    usano \(i\), ma nel DSP \(i\) è spesso un indice, quindi si preferisce \(\ii\)) — come quel «numero» il cui
+    quadrato vale \(-1\): \(\ii^2 = -1\). Da qui nasce un <b class="termine">numero complesso</b>: la somma di una
+    parte <b>reale</b> e una parte <b>immaginaria</b>, \(z = a + b\,\ii\). Sembra un artificio, ma si rivela uno
+    degli strumenti più concreti della matematica: perché un numero complesso non è davvero «un numero», è una
+    coppia — e le coppie sono perfette per rappresentare tutto ciò che ha <b>due componenti</b>: un punto nel
+    piano, un vettore, e soprattutto <em>ampiezza e fase</em> di un'onda.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-2"><span class="secnum">SEZIONE 30.2</span>Il piano complesso</h2>
+
+  <p class="lead">
+    Il modo giusto di «vedere» un numero complesso è come un <b>punto nel piano</b>: la parte reale sull'asse
+    orizzontale, la parte immaginaria sul verticale.
+  </p>
+
+  <p>
+    \(z = a + b\,\ii\) è il punto di coordinate \((a, b)\), o equivalentemente il vettore che ci punta dall'origine.
+    Questo dà due modi di descriverlo, esattamente come per un vettore: in <b>coordinate cartesiane</b> (parte
+    reale \(a\), parte immaginaria \(b\)) oppure in <b>coordinate polari</b>, con un <b class="termine">modulo</b>
+    \(\abs{z} = \sqrt{a^2 + b^2}\) (la lunghezza) e un <b class="termine">argomento</b> \(\theta\) (l'angolo con
+    l'asse reale). Riconosci lo schema del Cap. 8? Reale/immaginario ↔ ampiezza/fase: <mark>è la stessa coppia di
+    rappresentazioni dello spettro di Fourier</mark> — non è un caso, e lo capiremo nel Cap. 31.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-3"><span class="secnum">SEZIONE 30.3</span>Aritmetica complessa</h2>
+
+  <p class="lead">
+    Sommare numeri complessi è banale; moltiplicarli è dove avviene la magia — perché la moltiplicazione è
+    <b>rotazione</b>.
+  </p>
+
+  <ul>
+    <li><b>Somma:</b> componente per componente, come i vettori: \((a+b\ii) + (c+d\ii) = (a+c) + (b+d)\ii\).</li>
+    <li><b>Moltiplicazione:</b> si applica la distributiva ricordando \(\ii^2 = -1\). Ma il significato geometrico
+        è splendido: moltiplicare due numeri complessi <b>somma i loro argomenti e moltiplica i loro moduli</b>.
+        Cioè: <mark>moltiplicare per un numero complesso significa ruotare (del suo angolo) e scalare (del suo
+        modulo).</mark></li>
+    <li><b>Coniugato:</b> \(\bar z = a - b\ii\), il riflesso rispetto all'asse reale. Serve per calcolare moduli
+        (\(z\bar z = \abs{z}^2\)) e comparirà nella simmetria dello spettro (Cap. 31).</li>
+  </ul>
+
+  <h3>Provalo: moltiplicare è ruotare</h3>
+
+  <p>
+    Trascina i due numeri <b style="color:var(--accent)">z</b> e <b style="color:var(--warm)">w</b> nel piano. Il
+    loro prodotto <b style="color:var(--green)">z·w</b> ha per <b>modulo</b> il prodotto dei moduli e per
+    <b>angolo</b> la somma degli angoli. Fai ruotare w attorno al cerchio e guarda z·w ruotare di conseguenza:
+    moltiplicare per \(w\) fa girare \(z\).
+  </p>
+
+  <div class="widget" id="w-mult">
+    <div class="w-head">
+      <span>Moltiplicazione = rotazione + scala</span>
+      <span class="hint">trascina z e w</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wm-svg" viewBox="0 0 360 360" style="max-width:360px; display:block; margin:0 auto" role="img" aria-label="Il piano complesso con due numeri e il loro prodotto"></svg>
+    </div>
+    <div class="w-readout" id="wm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-4"><span class="secnum">SEZIONE 30.4</span>La formula di Eulero</h2>
+
+  <p class="lead">
+    Ed eccoci alla formula più bella della matematica, e al cuore di tutto il DSP avanzato. Lega l'esponenziale,
+    la rotazione, il seno e il coseno in una sola riga.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La formula di Eulero <span class="tag">esponenziale = rotazione</span></div>
+    <div class="f-body">
+      \[
+        \eu^{\ii \hA{\theta}} \;=\; \hB{\cos\theta} \;+\; \ii\,\hC{\sin\theta}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\eu^{\ii\hA{\theta}}\)</dt><dd>l'esponenziale complesso: un punto sul <b>cerchio unitario</b>
+            all'angolo \(\theta\).</dd>
+        <dt>\(\hB{\cos\theta}\)</dt><dd>la sua parte <b>reale</b>: la proiezione sull'asse orizzontale.</dd>
+        <dt>\(\hC{\sin\theta}\)</dt><dd>la sua parte <b>immaginaria</b>: la proiezione sull'asse verticale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una riga: <mark>\(\eu^{\ii\theta}\) è il punto sul cerchio unitario ad angolo \(\theta\)</mark>. Un
+      esponenziale complesso non «esplode»: <em>ruota</em>. E fa girare insieme un coseno (parte reale) e un seno
+      (parte immaginaria) — le due onde che ci hanno accompagnato tutto il libro, riunite in un solo oggetto che
+      gira. Da qui il caso più celebre: con \(\theta = \pi\), \(\eu^{\ii\pi} = -1\), cioè
+      \(\eu^{\ii\pi} + 1 = 0\), che lega i cinque numeri più importanti della matematica.
+    </div>
+  </div>
+
+  <h3>Provalo: il fasore che genera le sinusoidi</h3>
+
+  <p>
+    Fai girare il punto \(\eu^{\ii\theta}\) attorno al cerchio (a sinistra). La sua <b style="color:var(--accent)">ombra
+    orizzontale</b> traccia un <b>coseno</b>, quella <b style="color:var(--warm)">verticale</b> un <b>seno</b>
+    (a destra). <mark>Un solo punto rotante genera entrambe le onde.</mark> È l'immagine che rende i numeri
+    complessi lo strumento naturale per i segnali.
+  </p>
+
+  <div class="widget" id="w-phasor">
+    <div class="w-head">
+      <span>Il fasore rotante</span>
+      <span class="hint">un punto che gira = coseno + seno</span>
+    </div>
+    <div class="w-stage" style="display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap">
+      <svg id="wph-circle" viewBox="0 0 240 240" style="max-width:240px" role="img" aria-label="Un fasore che ruota sul cerchio unitario"></svg>
+      <svg id="wph-wave" viewBox="0 0 340 240" style="max-width:340px" role="img" aria-label="Le sinusoidi tracciate dalle proiezioni del fasore"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>angolo θ</label><input type="range" id="wph-t" min="0" max="12.57" step="0.05" value="2"><output id="wph-tv">2.0</output></div>
+    </div>
+    <div class="w-readout" id="wph-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-5"><span class="secnum">SEZIONE 30.5</span>Perché il DSP li adora</h2>
+
+  <p class="lead">
+    Ora la ricompensa. Perché mai il DSP dovrebbe preferire i numeri complessi ai familiari seni e coseni? Per
+    tre motivi, ciascuno dei quali <em>semplifica</em>.
+  </p>
+
+  <ul>
+    <li><b>Due onde in una.</b> Un esponenziale complesso \(\eu^{\ii\omega n}\) porta con sé <em>sia</em> il coseno
+        <em>sia</em> il seno di frequenza \(\omega\). Invece di tenere il conto di due funzioni separate (come
+        nella DFT reale, Cap. 8), ne maneggi una sola. La trasformata di Fourier complessa (Cap. 31) è, per questo,
+        molto più pulita.</li>
+    <li><b>Ampiezza e fase, insieme.</b> Un singolo numero complesso codifica <em>entrambe</em> — il modulo è
+        l'ampiezza, l'argomento è la fase. Le due informazioni che nel Cap. 8 richiedevano coppie di numeri
+        diventano un oggetto solo.</li>
+    <li><b>La rotazione è una moltiplicazione.</b> Sfasare un'onda, ritardarla, farla girare: tutte operazioni che
+        nel mondo reale richiedono formule di addizione di angoli, e nel mondo complesso sono una semplice
+        moltiplicazione per \(\eu^{\ii\phi}\). Questo rende l'analisi dei filtri (poli e zeri, Cap. 32–33)
+        maneggevole.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Non più difficili: più semplici</div>
+    <p style="margin-bottom:0">
+      È il punto controintuitivo da interiorizzare: i numeri complessi sembrano una complicazione («numeri
+      immaginari!»), ma sono l'opposto. <mark>Raccolgono in un solo oggetto ciò che con i reali richiede due, e
+      trasformano la trigonometria in aritmetica.</mark> Fourier, Laplace, la trasformata z: tutte diventano
+      naturali una volta che pensi «in complesso». Il piccolo sforzo di abituarsi si ripaga dieci volte nella
+      chiarezza di tutto ciò che segue.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-6"><span class="secnum">SEZIONE 30.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.1</div>
+    <p style="margin-bottom:0">Calcola \((2 + 3\ii) + (1 - \ii)\) e \((1 + \ii)(1 + \ii)\).</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Somma: \((2+1) + (3-1)\ii = 3 + 2\ii\).</p>
+        <p>Prodotto: \((1+\ii)^2 = 1 + 2\ii + \ii^2 = 1 + 2\ii - 1 = 2\ii\). Geometricamente: \(1+\ii\) ha modulo
+          \(\sqrt2\) e angolo \(45°\); al quadrato, modulo \(2\) e angolo \(90°\) — che è esattamente \(2\ii\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.2</div>
+    <p style="margin-bottom:0">Qual è il modulo e l'argomento di \(z = 3 + 4\ii\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Modulo: \(\abs{z} = \sqrt{3^2 + 4^2} = 5\) (la solita terna pitagorica). Argomento:
+          \(\theta = \arctan(4/3) \approx 53°\). In polari: \(z = 5\,\eu^{\ii\,53°}\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.3</div>
+    <p style="margin-bottom:0">Usando la formula di Eulero, quanto valgono \(\eu^{\ii\pi/2}\) e \(\eu^{\ii\pi}\)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(\eu^{\ii\pi/2} = \cos(90°) + \ii\sin(90°) = 0 + \ii = \ii\) (il punto in cima al cerchio).</p>
+        <p>\(\eu^{\ii\pi} = \cos(180°) + \ii\sin(180°) = -1 + 0 = -1\) (il punto a sinistra). Da cui la celebre
+          \(\eu^{\ii\pi} + 1 = 0\).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 30.4</div>
+    <p style="margin-bottom:0">Perché per il DSP un esponenziale complesso \(\eu^{\ii\omega n}\) è più comodo di
+      una coppia coseno/seno?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché <b>un solo oggetto</b> \(\eu^{\ii\omega n}\) contiene <em>sia</em> il coseno (parte reale)
+          <em>sia</em> il seno (parte immaginaria) di frequenza \(\omega\), e codifica insieme ampiezza (modulo) e
+          fase (argomento). Maneggi una funzione invece di due, e le operazioni di sfasamento/rotazione diventano
+          moltiplicazioni. La trasformata di Fourier complessa (Cap. 31) ne è la beneficiaria diretta (§30.5).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s30-7"><span class="secnum">SEZIONE 30.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 30</div>
+    <ol style="margin-bottom:0">
+      <li><b>\(\ii^2 = -1\):</b> l'unità immaginaria. Un numero complesso \(z = a + b\ii\) è una <b>coppia</b> —
+          un punto nel piano.</li>
+      <li><b>Due rappresentazioni:</b> cartesiana (reale/immaginario) e polare (modulo/argomento) — la stessa
+          coppia dello spettro di Fourier.</li>
+      <li><b>Moltiplicare = ruotare + scalare:</b> somma gli argomenti, moltiplica i moduli.</li>
+      <li><b>Eulero:</b> \(\eu^{\ii\theta} = \cos\theta + \ii\sin\theta\) è il punto sul cerchio unitario ad
+          angolo \(\theta\). Un esponenziale complesso <em>ruota</em>, e genera coseno e seno insieme.</li>
+      <li><b>Il DSP li adora</b> perché <em>semplificano</em>: due onde in una, ampiezza e fase insieme, rotazione
+          = moltiplicazione.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con i numeri complessi in mano, possiamo finalmente scrivere la trasformata di Fourier nella sua forma più
+    naturale ed elegante. Il <strong>Capitolo 31</strong> presenta la <b>trasformata di Fourier complessa</b>:
+    una sola formula al posto delle due (coseno e seno) del Cap. 8, il significato delle misteriose <b>frequenze
+    negative</b>, e perché questa versione è quella usata in tutta la letteratura avanzata. Fourier, finalmente
+    nella sua veste definitiva.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §30.3 — moltiplicazione complessa = rotazione + scala
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wm-svg');
+  if (!svg) return;
+  const out = document.getElementById('wm-out');
+  let z = [1.4, 0.6], w = [0.9, 1.0];
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -3, ymax: 3, iso: true });
+    p.grid(1); p.axes({ numbers: true, names: true, xname: 'Re', yname: 'Im' });
+    p.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--rule)', width: 1 });
+    // prodotto
+    const pr = [z[0] * w[0] - z[1] * w[1], z[0] * w[1] + z[1] * w[0]];
+    p.arrow(0, 0, pr[0], pr[1], { color: 'var(--green)', width: 2.6, label: 'z·w' });
+    p.arrow(0, 0, z[0], z[1], { color: 'var(--accent)', width: 2.2, label: 'z' });
+    p.arrow(0, 0, w[0], w[1], { color: 'var(--warm)', width: 2.2, label: 'w' });
+    const hz = p.handle(z[0], z[1], { color: 'var(--accent)' }, (x, y) => { z = [x, y]; draw(); });
+    const hw = p.handle(w[0], w[1], { color: 'var(--warm)' }, (x, y) => { w = [x, y]; draw(); });
+
+    const mag = v => Math.hypot(v[0], v[1]).toFixed(2), ang = v => (Math.atan2(v[1], v[0]) * 180 / Math.PI).toFixed(0);
+    out.innerHTML = `
+      <div class="big">|z·w| = |z|·|w| = <b>${mag(z)}·${mag(w)} = ${mag(pr)}</b>
+        &nbsp;·&nbsp; arg(z·w) = <b>${ang(z)}°+${ang(w)}° = ${ang(pr)}°</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il prodotto <b style="color:var(--green)">z·w</b> ha modulo pari al prodotto dei moduli e angolo pari alla
+        somma degli angoli: <mark>moltiplicare per w fa ruotare z di arg(w) e lo scala di |w|</mark>. Trascina i
+        pallini e verifica.
+      </div>`;
+  }
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §30.4 — il fasore rotante genera coseno e seno
+   ========================================================================= */
+(function () {
+  const sc = document.getElementById('wph-circle'), sw = document.getElementById('wph-wave');
+  if (!sc) return;
+  const out = document.getElementById('wph-out');
+  const tS = document.getElementById('wph-t'), tV = document.getElementById('wph-tv');
+
+  function draw() {
+    const th = parseFloat(tS.value);
+    tV.textContent = th.toFixed(1);
+    const cx = Math.cos(th), cy = Math.sin(th);
+
+    // cerchio + fasore
+    sc.innerHTML = '';
+    const pc = new Plot(sc, { xmin: -1.3, xmax: 1.3, ymin: -1.3, ymax: 1.3, iso: true });
+    pc.axes({ numbers: false, names: false });
+    pc.param(t => Math.cos(t), t => Math.sin(t), 0, 2 * Math.PI, { color: 'var(--rule)', width: 1.5 });
+    pc.line(cx, 0, cx, cy, { color: 'var(--warm)', width: 1.6, dash: '3 3' });
+    pc.line(0, cy, cx, cy, { color: 'var(--accent)', width: 1.6, dash: '3 3' });
+    pc.arrow(0, 0, cx, cy, { color: 'var(--violet)', width: 2.4 });
+    pc.dot(cx, 0, { color: 'var(--accent)', r: 4 });
+    pc.dot(0, cy, { color: 'var(--warm)', r: 4 });
+    pc.dot(cx, cy, { color: 'var(--violet)', r: 5 });
+
+    // onde tracciate fino a θ
+    sw.innerHTML = '';
+    const pw = new Plot(sw, { xmin: 0, xmax: 4 * Math.PI, ymin: -1.3, ymax: 1.3 });
+    pw.line(0, 0, 4 * Math.PI, 0, { color: 'var(--ink-faint)', width: 1 });
+    pw.func(Math.cos, { color: 'var(--accent)', width: 2.2, to: th });
+    pw.func(Math.sin, { color: 'var(--warm)', width: 2.2, to: th, dash: '5 3' });
+    pw.dot(th, cx, { color: 'var(--accent)', r: 4 });
+    pw.dot(th, cy, { color: 'var(--warm)', r: 4 });
+    pw.text(4 * Math.PI - 0.2, 1.15, 'cos', { color: 'var(--accent)', anchor: 'end', size: 11 });
+    pw.text(4 * Math.PI - 0.2, -1.05, 'sin', { color: 'var(--warm)', anchor: 'end', size: 11 });
+
+    out.innerHTML = `
+      <div class="big">e<sup>iθ</sup> = cos θ + i·sin θ = <b style="color:var(--accent)">${cx.toFixed(2)}</b> + i·<b style="color:var(--warm)">${cy.toFixed(2)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--violet)">fasore</b> ruota sul cerchio unitario; la sua ombra
+        <b style="color:var(--accent)">orizzontale</b> traccia il coseno, quella <b style="color:var(--warm)">verticale</b>
+        il seno. <mark>Un punto che gira genera entrambe le onde.</mark> Ecco perché e<sup>iθ</sup> è lo strumento
+        naturale per i segnali.
+      </div>`;
+  }
+  tS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

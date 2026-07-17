@@ -443,7 +443,7 @@ const TOC = [
     n: 30,
     titolo: "I numeri complessi",
     file: "cap30-numeri-complessi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s30-1", n: "30.1", t: "Il problema che risolvono" },
       { id: "s30-2", n: "30.2", t: "Il piano complesso" },
