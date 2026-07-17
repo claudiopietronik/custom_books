@@ -317,7 +317,7 @@ const TOC = [
     n: 21,
     titolo: "Confronto tra filtri",
     file: "cap21-confronto-filtri.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s21-1", n: "21.1", t: "Confronto nel dominio del tempo" },
       { id: "s21-2", n: "21.2", t: "Confronto nel dominio della frequenza" },

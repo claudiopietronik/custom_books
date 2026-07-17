@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>21 · Confronto tra filtri — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="21">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.21 — Capitolo 21</div>
+    <h1>Confronto tra filtri</h1>
+    <p class="standfirst">
+      Abbiamo costruito un intero arsenale: media mobile, windowed-sinc, filtri su misura, ricorsivi, Chebyshev.
+      La domanda pratica è sempre la stessa: <em>quale scelgo?</em> Questo capitolo li mette faccia a faccia — nel
+      tempo e in frequenza — e distilla una piccola guida decisionale. È il momento in cui la conoscenza dei
+      singoli filtri diventa <b>saggezza nella scelta</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Chiude la grande sezione sui filtri (Cap. 14–21). Non introduce filtri nuovi: fa sintesi. Dal Cap. 22 il
+      libro cambia registro e passa alle <b>applicazioni</b> — audio, immagini, compressione — dove questi filtri
+      diventano strumenti al servizio di problemi concreti.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Nella pratica, il 90% del lavoro è scegliere il filtro giusto — non inventarne uno nuovo. Sbagliare la
+      scelta significa combattere il compromesso sbagliato: usare un separatore di bande dove serviva un
+      levigatore, o sacrificare la fase dove contava. Una buona <strong>bussola decisionale</strong> vale più di
+      cento formule.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-1"><span class="secnum">SEZIONE 21.1</span>Confronto nel dominio del tempo</h2>
+
+  <p class="lead">
+    Se il tuo problema vive nel <b>tempo</b> — levigare rumore, preservare fronti e forme d'onda — il filtro si
+    giudica dalla <b>risposta al gradino</b> (Cap. 14): quanto è rapida, se «schizza», se è simmetrica.
+  </p>
+
+  <ul>
+    <li><b>Media mobile:</b> risposta al gradino a rampa <b>pulita</b>, senza sovraelongazione, e simmetrica
+        (fase lineare). È il migliore per ridurre il rumore casuale conservando i fronti — semplice e onesta.</li>
+    <li><b>Windowed-sinc:</b> risposta al gradino più elaborata, con una <b>lieve sovraelongazione</b> (parente
+        di Gibbs) ma ancora <b>simmetrica</b> (fase lineare). Ottimo compromesso quando serve anche qualità in
+        frequenza.</li>
+    <li><b>Chebyshev:</b> risposta al gradino <b>rapida</b> ma con <b>overshoot marcato</b> e <b>asimmetrica</b>
+        (fase non lineare): deforma i fronti. Da evitare quando la forma d'onda conta.</li>
+  </ul>
+
+  <h3>Provalo: le tre risposte a confronto</h3>
+
+  <p>
+    Commuta tra <b>tempo</b> (risposta al gradino) e <b>frequenza</b> (risposta in dB), e confronta i tre filtri
+    sovrapposti. Nel tempo guarda chi «schizza» e chi è pulito; in frequenza chi taglia netto e chi lascia
+    passare. Ogni filtro brilla in un dominio e delude nell'altro.
+  </p>
+
+  <div class="widget" id="w-cmp">
+    <div class="w-head">
+      <span>I tre filtri, due domini</span>
+      <span class="hint">commuta tempo / frequenza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcmp-svg" viewBox="0 0 620 280" role="img" aria-label="Confronto tra media mobile, windowed-sinc e Chebyshev nel dominio del tempo e della frequenza"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wcmp-time">dominio del tempo</button>
+      <button class="w-btn" id="wcmp-freq">dominio della frequenza</button>
+    </div>
+    <div class="w-readout" id="wcmp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-2"><span class="secnum">SEZIONE 21.2</span>Confronto nel dominio della frequenza</h2>
+
+  <p class="lead">
+    Se il problema vive nella <b>frequenza</b> — separare bande, togliere un tono, isolare un segnale — il filtro
+    si giudica dalla <b>risposta in frequenza</b>: banda passante piatta, transizione ripida, blocco profondo.
+  </p>
+
+  <ul>
+    <li><b>Media mobile:</b> <b>pessima</b>. Roll-off lentissimo, lobi laterali alti: come separatore di bande è
+        quasi inutile (Cap. 15). Ottima nel tempo, disastrosa qui.</li>
+    <li><b>Windowed-sinc:</b> <b>eccellente</b>. Banda passante piattissima, taglio netto a piacere (aumentando
+        \(M\)), blocco profondo (scegliendo la finestra), fase lineare. Il campione della frequenza — al prezzo
+        della lunghezza.</li>
+    <li><b>Chebyshev:</b> <b>ottimo ed efficiente</b>. Taglio ripido con pochissimi coefficienti; paga con un
+        po' di ripple e la fase non lineare. La scelta quando conta l'efficienza.</li>
+  </ul>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La simmetria del compromesso</div>
+    <p style="margin-bottom:0">
+      Nota lo specchio perfetto: la media mobile è <b>prima nel tempo</b> e <b>ultima in frequenza</b>; il
+      windowed-sinc e il Chebyshev sono ottimi in frequenza ma imperfetti nel tempo. <mark>Non è un caso: è il
+      principio di indeterminazione (Cap. 10) reso concreto nei filtri.</mark> Un filtro compatto nel tempo è
+      largo in frequenza e viceversa. Non stai scegliendo «il filtro migliore» — stai scegliendo <em>da che
+      parte</em> del compromesso vuoi stare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-3"><span class="secnum">SEZIONE 21.3</span>Come scegliere il filtro giusto</h2>
+
+  <p class="lead">
+    La scelta si riduce a due domande in sequenza: <b>in quale dominio</b> vive il problema, e <b>quali vincoli</b>
+    hai (fase, efficienza, lunghezza). Ecco la bussola.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Se il tuo obiettivo è…</th><th>Filtro consigliato</th><th>Perché</th></tr></thead>
+    <tbody>
+      <tr><td><b>Ridurre rumore casuale</b> (dominio del tempo), preservare i fronti</td><td style="color:var(--accent)">Media mobile</td><td>ottima nel tempo, semplice, velocissima (ricorsiva)</td></tr>
+      <tr><td><b>Separare bande</b> con qualità e <b>fase lineare</b></td><td style="color:var(--green)">Windowed-sinc</td><td>banda piatta, taglio netto, fase lineare (costo: lunghezza → FFT)</td></tr>
+      <tr><td><b>Separare bande</b> con massima <b>efficienza</b></td><td style="color:var(--warm)">Chebyshev</td><td>taglio ripido con pochi coefficienti (costo: ripple, fase)</td></tr>
+      <tr><td><b>Eliminare una singola frequenza</b> (ronzio)</td><td style="color:var(--warm)">Notch ricorsivo</td><td>chirurgico con 4 coefficienti (Cap. 19)</td></tr>
+      <tr><td><b>Annullare una distorsione</b> nota</td><td style="color:var(--violet)">Su misura / deconvoluzione</td><td>progetto in frequenza o filtro inverso (Cap. 17)</td></tr>
+      <tr><td><b>Rilevare un segnale noto</b> nel rumore</td><td style="color:var(--violet)">Filtro adattato</td><td>massimizza l'SNR di rilevamento (Cap. 7, 17)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📌</span> Il riflesso da allenare</div>
+    <p style="margin-bottom:0">
+      Con il tempo la scelta diventa un riflesso: «rumore nel tempo? media mobile». «Separazione pulita con fase
+      che conta? windowed-sinc». «Taglio ripido su hardware minuscolo? Chebyshev». «Ronzio singolo? notch». Non
+      serve ricordare le formule — serve riconoscere <mark>il tipo di problema</mark> e da lì il filtro segue. È
+      la differenza tra chi conosce i filtri e chi li <em>usa</em>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-4"><span class="secnum">SEZIONE 21.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.1</div>
+    <p style="margin-bottom:0">Un sensore dà un segnale lento sporcato di rumore casuale ad alta frequenza; ti
+      interessa solo l'andamento nel tempo. Quale filtro?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Media mobile.</b> È un problema nel dominio del tempo (ridurre rumore casuale, preservare la forma):
+          la media mobile è ottima, semplice e velocissima. Riduce il rumore di \(\sqrt{M}\) senza overshoot né
+          distorsione di fase.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.2</div>
+    <p style="margin-bottom:0">Devi separare due bande musicali vicine senza deformare i transienti (fase
+      lineare). Quale filtro, e qual è il costo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Windowed-sinc.</b> Banda passante piatta, taglio netto e soprattutto <b>fase lineare</b> (non
+          deforma i transienti). Il costo è la lunghezza (molti coefficienti per un taglio ripido), che si paga
+          con la convoluzione via FFT (Cap. 18). Un Chebyshev sarebbe più efficiente ma rovinerebbe la fase.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.3</div>
+    <p style="margin-bottom:0">Perché la media mobile è insieme la migliore e la peggiore, a seconda del
+      problema?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>È la <b>migliore nel dominio del tempo</b> (riduzione del rumore casuale conservando i fronti) e la
+          <b>peggiore in frequenza</b> (roll-off pessimo, lobi alti). È il principio di indeterminazione
+          tempo–frequenza (§21.2): la sua compattezza nel tempo — che la rende ottima lì — è esattamente ciò che
+          la rende larga e disordinata in frequenza.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 21.4</div>
+    <p style="margin-bottom:0">Su un microcontrollore minuscolo devi tagliare ripido a una certa frequenza; la
+      fase non è importante. Quale filtro?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Chebyshev</b> (IIR). Ottiene un taglio ripido con pochissimi coefficienti — perfetto per hardware
+          modesto — e la fase non lineare qui non è un problema. Un windowed-sinc equivalente richiederebbe troppi
+          coefficienti per quel processore.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s21-5"><span class="secnum">SEZIONE 21.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 21</div>
+    <ol style="margin-bottom:0">
+      <li><b>Prima domanda:</b> il problema vive nel <b>tempo</b> (forme, fronti, rumore) o nella
+          <b>frequenza</b> (separare bande)?</li>
+      <li><b>Tempo:</b> media mobile (rumore casuale, fronti puliti). <b>Frequenza:</b> windowed-sinc (qualità +
+          fase lineare) o Chebyshev (efficienza).</li>
+      <li><b>Casi speciali:</b> notch (ronzio singolo), su misura/deconvoluzione (annullare distorsioni),
+          adattato (rilevare segnali noti).</li>
+      <li><b>Lo specchio del compromesso:</b> ottimo nel tempo ⇒ mediocre in frequenza, e viceversa. È
+          l'indeterminazione, non un difetto.</li>
+      <li><b>Scegliere è riconoscere</b> il tipo di problema. Da lì il filtro segue quasi da solo.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la cassetta dei filtri completa e la bussola per usarla, il libro apre la sua seconda metà, tutta
+    applicativa. Il <strong>Capitolo 22</strong> comincia dal senso più intuitivo, l'<b>udito</b>: come
+    funziona l'orecchio umano, cos'è il timbro, come si sintetizza e si riconosce il parlato, e come si comprime
+    l'audio sfruttando i limiti della percezione. Il DSP che incontri ogni giorno, dalla telefonata allo
+    streaming musicale.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §21.1 — confronto tempo/frequenza dei tre filtri
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcmp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcmp-out');
+  const btnT = document.getElementById('wcmp-time'), btnF = document.getElementById('wcmp-freq');
+  let dom = 'time';
+
+  // --- costruzione dei tre filtri (risposte all'impulso) ---
+  const N = 200;
+  // media mobile (15)
+  const M = 15, ma = new Array(M).fill(1 / M);
+  // windowed-sinc passa-basso, fc≈0.08, M=48, Hamming
+  const WM = 48, fc = 0.08; let ws = [];
+  for (let i = 0; i <= WM; i++) { const x = i - WM / 2; let s = Math.abs(x) < 1e-9 ? 2 * Math.PI * fc : Math.sin(2 * Math.PI * fc * x) / x; ws.push(s * (0.54 - 0.46 * Math.cos(2 * Math.PI * i / WM))); }
+  const wsum = ws.reduce((a, b) => a + b, 0); ws = ws.map(v => v / wsum);
+  // Chebyshev-like: due biquad passa-basso risonanti in cascata
+  function biquadLP(f0, Q, N) {
+    const w0 = 2 * Math.PI * f0, cw = Math.cos(w0), sw = Math.sin(w0), al = sw / (2 * Q);
+    const a0 = 1 + al, b0 = (1 - cw) / 2 / a0, b1 = (1 - cw) / a0, b2 = (1 - cw) / 2 / a0, a1 = -2 * cw / a0, a2 = (1 - al) / a0;
+    const h = new Array(N).fill(0); let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let n = 0; n < N; n++) { const x = n === 0 ? 1 : 0; const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; h[n] = y; x2 = x1; x1 = x; y2 = y1; y1 = y; }
+    return h;
+  }
+  // cascata: convoluzione di due biquad
+  function conv(a, b) { const y = new Array(a.length + b.length - 1).fill(0); for (let i = 0; i < a.length; i++) for (let j = 0; j < b.length; j++) y[i + j] += a[i] * b[j]; return y; }
+  const ch = conv(biquadLP(0.08, 1.4, 120), biquadLP(0.08, 2.2, 120)).slice(0, N);
+
+  function stepResp(h) { const s = []; let acc = 0; for (let n = 0; n < Math.min(h.length, 90); n++) { acc += h[n]; s.push(acc); } return s; }
+  function magDB(h) { const NF = 512, half = NF / 2, mag = []; for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < h.length; n++) { const a = 2 * Math.PI * k * n / NF; re += h[n] * Math.cos(a); im -= h[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); } const pk = mag[0]; return mag.map(m => 20 * Math.log10(Math.max(m / pk, 1e-6))); }
+
+  function draw() {
+    svg.innerHTML = '';
+    if (dom === 'time') {
+      const p = new Plot(svg, { xmin: 0, xmax: 70, ymin: -0.2, ymax: 1.45 });
+      p.grid(10, 0.5); p.axes({ numbers: false, names: true, xname: 'campioni →', yname: '' });
+      p.line(0, 1, 70, 1, { color: 'var(--rule)', width: 1, dash: '3 3' });
+      p.seq(stepResp(ma), { color: 'var(--accent)', width: 2.2 });
+      p.seq(stepResp(ws), { color: 'var(--green)', width: 2.2 });
+      p.seq(stepResp(ch), { color: 'var(--warm)', width: 2.2 });
+      p.text(68, 1.38, 'risposta al GRADINO', { color: 'var(--ink-soft)', anchor: 'end', size: 11 });
+      out.innerHTML = `
+        <div class="big">dominio del tempo — risposta al gradino</div>
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          <b style="color:var(--accent)">Media mobile</b>: rampa pulita, nessun overshoot. <b style="color:var(--green)">Windowed-sinc</b>: lieve sovraelongazione, simmetrica. <b style="color:var(--warm)">Chebyshev</b>: rapido ma con <mark>overshoot marcato</mark> e oscillazioni. Nel tempo, la media mobile vince in pulizia.
+        </div>`;
+    } else {
+      const p = new Plot(svg, { xmin: 0, xmax: 0.5, ymin: -80, ymax: 8 });
+      p.grid(0.1, 20); p.axes({ numbers: true, names: true, xname: 'frequenza', yname: 'dB', stepX: 0.1, stepY: 20 });
+      const half = 256;
+      [[ma, 'var(--accent)'], [ws, 'var(--green)'], [ch, 'var(--warm)']].forEach(([h, c]) => {
+        const db = magDB(h); p.poly(db.map((v, k) => [0.5 * k / half, v]), { color: c, width: 2, close: false });
+      });
+      p.text(0.48, 4, 'risposta in FREQUENZA', { color: 'var(--ink-soft)', anchor: 'end', size: 11 });
+      out.innerHTML = `
+        <div class="big">dominio della frequenza — |H| in dB</div>
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          <b style="color:var(--accent)">Media mobile</b>: roll-off pessimo, lobi alti. <b style="color:var(--green)">Windowed-sinc</b>: taglio netto, blocco profondo. <b style="color:var(--warm)">Chebyshev</b>: ripido ed efficiente. In frequenza, <mark>la media mobile è la peggiore</mark> — l'esatto opposto del tempo.
+        </div>`;
+    }
+  }
+  function setDom(d) { dom = d; btnT.classList.toggle('on', d === 'time'); btnF.classList.toggle('on', d === 'freq'); draw(); }
+  btnT.addEventListener('click', () => setDom('time'));
+  btnF.addEventListener('click', () => setDom('freq'));
+  draw();
+})();
+</script>
+</body>
+</html>
