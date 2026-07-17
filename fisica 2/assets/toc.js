@@ -87,7 +87,7 @@ const TOC = [
     n: 6,
     titolo: "I circuiti in corrente continua",
     file: "cap06-circuiti-dc.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Resistori in serie e in parallelo" },
       { id: "s6-2", n: "6.2", t: "Le leggi di Kirchhoff" },

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · I circuiti in corrente continua — Fisica 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚛</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>I circuiti in corrente continua</h1>
+    <p class="standfirst">
+      Ora mettiamo insieme i componenti. Un <b>circuito</b> è un percorso chiuso in cui la corrente gira, spinta da
+      un generatore, attraverso resistori (e condensatori). Impareremo a semplificare reti di resistori con le
+      regole di <b>serie e parallelo</b>, a risolvere circuiti complessi con le due <b>leggi di Kirchhoff</b>
+      (conservazione della carica e dell'energia), a misurare correnti e tensioni, e a studiare cosa succede quando
+      un condensatore si carica attraverso un resistore — il <b>circuito RC</b>, con la sua elegante curva
+      esponenziale. <mark>È la cassetta degli attrezzi di chiunque lavori con l'elettronica.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Resistori in serie e parallelo</b> (§6.1), le <b>leggi di Kirchhoff</b> per le reti (§6.2), gli
+      <b>strumenti di misura</b> (§6.3) e i <b>circuiti RC</b> con la carica esponenziale (§6.4).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: saper leggere e progettare un circuito</div>
+    <p style="margin-bottom:0">
+      Queste sono le tecniche pratiche dell'elettrotecnica: <mark>ridurre una rete complicata a una semplice,
+      calcolare correnti e tensioni in ogni ramo, dimensionare i componenti.</mark> Le leggi di Kirchhoff risolvono
+      qualunque circuito; i circuiti RC governano temporizzatori, lampeggiatori, filtri, l'antirimbalzo dei tasti,
+      persino i neuroni. Chi capisce serie/parallelo, Kirchhoff e RC può analizzare la stragrande maggioranza dei
+      circuiti reali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Resistori in serie e in parallelo</h2>
+
+  <p class="lead">
+    Due modi di collegare i resistori, con effetti opposti — e opposti a quelli dei condensatori (Cap. 4).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Resistori in serie e parallelo <span class="tag">serie si somma, parallelo no</span></div>
+    <div class="f-body">
+      \[ \text{serie: } R_{\text{eq}} = R_1 + R_2 + \dots \qquad \text{parallelo: } \frac{1}{R_{\text{eq}}} = \frac{1}{R_1} + \frac{1}{R_2} + \dots \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>serie</b>: le resistenze si <b>sommano</b></dt>
+        <dd>i resistori sono in fila, attraversati dalla <b>stessa corrente</b>; le loro tensioni si sommano. È come
+            allungare il filo resistivo: <mark>\(R_{\text{eq}}\) è maggiore</mark> di ciascuno. La corrente unica
+            «fatica» di più.</dd>
+        <dt><b>parallelo</b>: si sommano gli <b>inversi</b></dt>
+        <dd>i resistori sono affiancati, con la <b>stessa tensione</b> ai capi; le loro correnti si sommano.
+            Offrendo più «corsie», la resistenza equivalente <mark>è minore</mark> di ciascuna. Più strade =
+            passa più corrente totale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota bene: è l'<b>opposto</b> dei condensatori (Cap. 4), dove il parallelo somma e la serie riduce. Il modo
+      per non confondersi: pensa a cosa condividono. Resistori in <b>serie</b> condividono la corrente e sommano
+      l'opposizione; in <b>parallelo</b> condividono la tensione e aprono più vie. Il widget confronta i due casi.
+    </div>
+  </div>
+
+  <div class="widget" id="w-comb">
+    <div class="w-head">
+      <span>Resistori: serie o parallelo</span>
+      <span class="hint">regola le resistenze e commuta il collegamento</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcomb-svg" viewBox="0 0 560 280" role="img" aria-label="Due resistori: in serie le resistenze si sommano dando una resistenza maggiore, in parallelo la resistenza equivalente è minore di entrambe"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.7rem; justify-content:center; flex-wrap:wrap">
+      <label style="font-size:.85rem; color:var(--ink-soft)">R₁</label>
+      <input type="range" id="wcomb-r1" min="1" max="8" step="0.5" value="4" style="width:110px">
+      <label style="font-size:.85rem; color:var(--ink-soft)">R₂</label>
+      <input type="range" id="wcomb-r2" min="1" max="8" step="0.5" value="2" style="width:110px">
+      <button class="w-btn" id="wcomb-mode">serie</button>
+    </div>
+    <div class="w-readout" id="wcomb-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Le leggi di Kirchhoff</h2>
+
+  <p class="lead">
+    Non tutte le reti si riducono a serie e parallelo. Per <b>qualunque</b> circuito, due regole di Kirchhoff —
+    figlie della conservazione di carica ed energia — danno le equazioni necessarie a risolverlo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le due leggi di Kirchhoff <span class="tag">nodi e maglie</span></div>
+    <div class="f-body">
+      \[ \text{(nodi) } \sum I_{\text{entranti}} = \sum I_{\text{uscenti}}, \qquad \text{(maglie) } \sum \Delta V = 0 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>legge dei <b>nodi</b> (conservazione della carica)</dt>
+        <dd>in ogni nodo (punto di diramazione), <mark>la corrente che entra è uguale a quella che esce</mark>: la
+            carica non si accumula né sparisce. Come l'acqua in un incrocio di tubi.</dd>
+        <dt>legge delle <b>maglie</b> (conservazione dell'energia)</dt>
+        <dd>percorrendo un anello chiuso e tornando al punto di partenza, la somma di tutte le variazioni di
+            potenziale è <b>zero</b>: le fem che «alzano» il potenziale eguagliano le cadute \(IR\) che lo
+            «abbassano». <mark>Non puoi tornare al punto di partenza con un'energia diversa.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il metodo: assegna un verso (arbitrario) alle correnti nei rami, scrivi le equazioni dei nodi e delle maglie,
+      e risolvi il sistema. Se una corrente risulta negativa, semplicemente scorre nel verso opposto a quello
+      scelto. Con Kirchhoff si analizza <b>ogni</b> circuito, per quanto intricato.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Gli strumenti di misura</h2>
+
+  <p class="lead">
+    Per misurare corrente e tensione servono strumenti che <b>non alterino</b> ciò che misurano. Il trucco sta in
+    come si collegano e nella loro resistenza.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Amperometro e voltmetro</div>
+    <ul style="margin-bottom:0">
+      <li><b>Amperometro</b> (misura la corrente): si mette <b>in serie</b>, così la corrente lo attraversa. Per non
+          disturbare il circuito deve avere resistenza <b>bassissima</b> (\(\approx 0\)): altrimenti aggiungerebbe
+          resistenza e ridurrebbe proprio la corrente da misurare.</li>
+      <li><b>Voltmetro</b> (misura la tensione): si mette <b>in parallelo</b> al componente, per «leggere» la
+          differenza di potenziale ai suoi capi. Deve avere resistenza <b>altissima</b> (\(\approx \infty\)): così
+          quasi nessuna corrente lo attraversa e non «ruba» corrente al circuito.</li>
+      <li>Entrambi derivano storicamente dal <b>galvanometro</b>, uno strumento che devìa un ago in proporzione alla
+          corrente che lo attraversa (sfruttando la forza magnetica, Cap. 7). <mark>La regola d'oro: uno strumento
+          ideale non cambia il circuito che misura.</mark></li>
+    </ul>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>I circuiti RC</h2>
+
+  <p class="lead">
+    Cosa succede quando un condensatore si carica attraverso un resistore? Non istantaneamente, ma con una
+    caratteristica salita <b>esponenziale</b>, governata da un tempo tipico: la costante di tempo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Carica di un circuito RC <span class="tag">salita esponenziale, costante di tempo τ = RC</span></div>
+    <div class="f-body">
+      \[ q(t) = Q_{\max}\left(1 - e^{-t/\tau}\right), \qquad \tau = R\,C \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la salita <b>esponenziale</b></dt>
+        <dd>all'inizio la carica sale in fretta, poi sempre più lentamente man mano che il condensatore si «riempie»
+            e si oppone all'ingresso di altra carica, avvicinandosi asintoticamente al massimo \(Q_{\max} = CV\).</dd>
+        <dt>\(\tau = RC\) — la <b>costante di tempo</b></dt>
+        <dd>il tempo caratteristico del processo: <mark>dopo un tempo \(\tau\) il condensatore è carico al \(63\%\)</mark>,
+            dopo \(5\tau\) è praticamente carico (\(>99\%\)). Resistenza o capacità grandi → \(\tau\) grande →
+            carica lenta. La scarica segue una curva esponenziale calante analoga (\(q = Q\,e^{-t/\tau}\)).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La costante \(\tau = RC\) fissa i tempi di innumerevoli dispositivi: i <b>lampeggiatori</b> (un condensatore
+      che si carica e scarica ritmicamente), i <b>filtri</b> audio e radio, i <b>temporizzatori</b>, l'antirimbalzo
+      dei pulsanti, i tergicristalli intermittenti. Perfino la membrana dei <b>neuroni</b> si comporta come un
+      circuito RC. Il widget mostra la carica salire con la sua curva esponenziale.
+    </div>
+  </div>
+
+  <div class="widget" id="w-rc">
+    <div class="w-head">
+      <span>Circuito RC: la carica esponenziale del condensatore</span>
+      <span class="hint">cambia la costante di tempo τ = RC</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wrc-svg" viewBox="0 0 560 320" role="img" aria-label="La carica di un condensatore in un circuito RC sale esponenzialmente verso il massimo, raggiungendo il 63 per cento dopo un tempo pari alla costante di tempo"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center; flex-wrap:wrap">
+      <label style="font-size:.85rem; color:var(--ink-soft)">resistenza R (→ τ = RC)</label>
+      <input type="range" id="wrc-r" min="0.6" max="3" step="0.05" value="1.4" style="width:150px">
+      <button class="w-btn" id="wrc-go">ricomincia</button>
+    </div>
+    <div class="w-readout" id="wrc-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li><b>Resistori</b> (§6.1): <b>serie</b> \(R_{\text{eq}} = R_1 + R_2\) (maggiore), <b>parallelo</b>
+          \(1/R_{\text{eq}} = 1/R_1 + 1/R_2\) (minore) — <mark>l'opposto dei condensatori</mark>.</li>
+      <li><b>Kirchhoff</b> (§6.2): ai <b>nodi</b> \(\sum I_{\text{in}} = \sum I_{\text{out}}\) (carica), alle
+          <b>maglie</b> \(\sum\Delta V = 0\) (energia) — risolvono ogni rete.</li>
+      <li><b>Strumenti</b> (§6.3): <b>amperometro</b> in serie, resistenza \(\approx 0\); <b>voltmetro</b> in
+          parallelo, resistenza \(\approx\infty\). Non devono disturbare.</li>
+      <li><b>Circuito RC</b> (§6.4): carica <mark>\(q = Q_{\max}(1 - e^{-t/\tau})\)</mark>, \(\tau = RC\); \(63\%\)
+          dopo \(\tau\), quasi pieno dopo \(5\tau\). Governa i tempi dei circuiti.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo dominato le cariche in moto nei fili. Ma le cariche in movimento nascondono un'altra faccia della
+    natura, del tutto nuova: generano <b>magnetismo</b>. Il legame tra elettricità e magnetismo è tra le scoperte
+    più profonde della fisica. Nel <strong>Capitolo 7</strong> entriamo nel <b>campo magnetico</b>: scopriremo che
+    una carica in moto sente una forza magnetica (la forza di Lorentz), che i fili percorsi da corrente si
+    respingono o attraggono, e come funzionano motori e altoparlanti. <mark>Elettricità e magnetismo iniziano a
+    intrecciarsi.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Due resistori da \(6\ \Omega\) e \(3\ \Omega\). Qual è la resistenza equivalente in <b>serie</b>? E in
+      <b>parallelo</b>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      In un nodo entrano due correnti, \(3\uu{A}\) e \(2\uu{A}\), ed escono due rami, uno da \(4\uu{A}\). Quanto vale
+      la corrente nell'altro ramo uscente? (Legge dei nodi.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Un circuito RC ha \(R = 2000\ \Omega\) e \(C = 100\ \mu\mathrm{F}\). Qual è la costante di tempo? Dopo quanto
+      tempo il condensatore è carico al \(63\%\)? E praticamente carico?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) In serie le resistenze si sommano. &nbsp;
+      (b) Un amperometro si collega in parallelo. &nbsp;
+      (c) La legge delle maglie esprime la conservazione dell'energia. &nbsp;
+      (d) In un circuito RC, un τ più grande significa carica più veloce.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      Serie: \(R_{\text{eq}} = 6 + 3 = 9\ \Omega\). Parallelo: \(\frac{1}{R_{\text{eq}}} = \frac16 + \frac13 =
+      \frac{1 + 2}{6} = \frac36 = \frac12\), quindi \(R_{\text{eq}} = 2\ \Omega\) (minore di entrambi).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      Entrano \(3 + 2 = 5\uu{A}\), quindi devono uscire \(5\uu{A}\). Se un ramo porta \(4\uu{A}\), l'altro porta
+      \(5 - 4 = 1\uu{A}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      \(\tau = RC = 2000\cdot 100\times 10^{-6} = 2000\cdot 10^{-4} = 0{,}2\uu{s}\). Al \(63\%\) dopo \(\tau =
+      0{,}2\uu{s}\); praticamente carico dopo \(5\tau = 1\uu{s}\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> \(R_{\text{eq}} = R_1 + R_2\) (§6.1).
+      <br><b>(b) FALSO.</b> L'amperometro si collega in <b>serie</b> (§6.3).
+      <br><b>(c) VERO.</b> \(\sum\Delta V = 0\) attorno a una maglia (§6.2).
+      <br><b>(d) FALSO.</b> \(\tau\) grande = carica <b>lenta</b> (§6.4).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §6.1 — resistori serie / parallelo
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcomb-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcomb-out');
+  const R1S = document.getElementById('wcomb-r1'), R2S = document.getElementById('wcomb-r2');
+  const modeBtn = document.getElementById('wcomb-mode');
+  let series = true;
+  modeBtn.addEventListener('click', () => { series = !series; modeBtn.textContent = series ? 'serie' : 'parallelo'; draw(); });
+
+  function resistor(p, x, y, horiz, label, col) {
+    // zigzag
+    const n = 6, len = 1.2, amp = 0.16;
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      if (horiz) pts.push([x - len / 2 + t * len, y + (i % 2 ? amp : -amp)]);
+      else pts.push([x + (i % 2 ? amp : -amp), y - len / 2 + t * len]);
+    }
+    for (let i = 0; i < pts.length - 1; i++) p.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], { color: col, width: 3 });
+    p.text(x + (horiz ? 0 : 0.4), y + (horiz ? 0.4 : 0), label, { color: col, size: 12, anchor: 'middle' });
+  }
+
+  function draw() {
+    const r1 = parseFloat(R1S.value), r2 = parseFloat(R2S.value);
+    const Req = series ? (r1 + r2) : (r1 * r2 / (r1 + r2));
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3.2, xmax: 3.2, ymin: -2, ymax: 2, iso: true });
+    if (series) {
+      p.line(-2.8, 0, -1.6, 0, { color: 'var(--ink-soft)', width: 2 });
+      resistor(p, -1, 0, true, 'R₁=' + fmt(r1), 'var(--warm)');
+      p.line(-0.4, 0, 0.4, 0, { color: 'var(--ink-soft)', width: 2 });
+      resistor(p, 1, 0, true, 'R₂=' + fmt(r2), 'var(--accent)');
+      p.line(1.6, 0, 2.8, 0, { color: 'var(--ink-soft)', width: 2 });
+    } else {
+      p.line(-2.8, 0, -1.7, 0, { color: 'var(--ink-soft)', width: 2 });
+      p.line(-1.7, 1, -1.7, -1, { color: 'var(--ink-soft)', width: 2 });
+      p.line(1.7, 1, 1.7, -1, { color: 'var(--ink-soft)', width: 2 });
+      p.line(1.7, 0, 2.8, 0, { color: 'var(--ink-soft)', width: 2 });
+      p.line(-1.7, 1, -0.6, 1, { color: 'var(--ink-soft)', width: 2 }); p.line(0.6, 1, 1.7, 1, { color: 'var(--ink-soft)', width: 2 });
+      p.line(-1.7, -1, -0.6, -1, { color: 'var(--ink-soft)', width: 2 }); p.line(0.6, -1, 1.7, -1, { color: 'var(--ink-soft)', width: 2 });
+      resistor(p, 0, 1, true, '', 'var(--warm)'); p.text(0, 1, 'R₁=' + fmt(r1), { color: 'var(--warm)', size: 12, anchor: 'middle', dy: -14 });
+      resistor(p, 0, -1, true, '', 'var(--accent)'); p.text(0, -1, 'R₂=' + fmt(r2), { color: 'var(--accent)', size: 12, anchor: 'middle', dy: 22 });
+    }
+
+    out.innerHTML = `
+      <div class="big">
+        <b style="color:var(--violet)">${series ? 'SERIE' : 'PARALLELO'}</b> &nbsp;·&nbsp;
+        R_eq = <b style="color:var(--violet)">${fmt(Req, 2)}</b> Ω
+        <span style="color:var(--ink-soft)">${series ? '= R₁+R₂' : '= R₁R₂/(R₁+R₂)'}</span>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        In <b>serie</b> le resistenze si sommano (R_eq più grande, stessa corrente in fila); in <b>parallelo</b>
+        R_eq è <b>minore</b> di entrambe (più corsie, stessa tensione). <mark>Esattamente il contrario dei
+        condensatori</mark> (§6.1).
+      </div>`;
+  }
+  R1S.addEventListener('input', draw); R2S.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §6.4 — circuito RC: carica esponenziale q(t)=Qmax(1-e^{-t/τ})
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wrc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wrc-out');
+  const RS = document.getElementById('wrc-r'), goBtn = document.getElementById('wrc-go');
+  const C = 1;                       // capacità fissa (τ = R·C)
+  let t = 0, last = null;
+  goBtn.addEventListener('click', () => { t = 0; last = null; });
+
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt;
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function draw() {
+    const R = parseFloat(RS.value), tau = R * C;
+    const q = 1 - Math.exp(-t / tau);
+    const Tview = 7;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.4, xmax: Tview, ymin: -0.15, ymax: 1.2 });
+    p.axes({ numbers: false, xname: 'tempo t →', yname: 'carica q' });
+    // asintoto Qmax
+    p.line(0, 1, Tview, 1, { color: 'var(--ink-faint)', width: 1, dash: '4 4' });
+    p.text(0, 1, 'Q_max', { color: 'var(--ink-faint)', size: 10, anchor: 'start', dy: -4 });
+    // curva teorica
+    p.func(x => 1 - Math.exp(-x / tau), { color: 'var(--ink-faint)', width: 1.4, from: 0, to: Tview });
+    // parte già percorsa
+    p.func(x => 1 - Math.exp(-x / tau), { color: 'var(--accent)', width: 3, from: 0, to: Math.min(t, Tview) });
+    // marcatore 63% a t=τ
+    if (tau <= Tview) {
+      p.line(tau, 0, tau, 0.632, { color: 'var(--warm)', width: 1.4, dash: '3 3' });
+      p.dot(tau, 0.632, { color: 'var(--warm)', r: 4 });
+      p.text(tau, 0.632, '63% a τ', { color: 'var(--warm)', size: 10, anchor: 'start', dx: 4, dy: 4 });
+    }
+    // punto corrente
+    if (t <= Tview) p.dot(t, q, { color: 'var(--violet)', r: 5.5 });
+    // mini-condensatore che si riempie (a destra)
+    const cx = Tview - 0.7;
+    p.rect(cx - 0.3, 0.72, cx + 0.3, 1.12, { fill: 'none', color: 'var(--ink-soft)', width: 1.5 });
+    p.rect(cx - 0.28, 0.74, cx + 0.28, 0.74 + 0.36 * q, { fill: 'var(--violet)', color: 'none' });
+
+    out.innerHTML = `
+      <div class="big">
+        τ = RC = <b style="color:var(--warm)">${fmt(tau, 2)}</b> &nbsp;·&nbsp;
+        carica = <b style="color:var(--accent)">${fmt(q * 100, 0)}%</b> &nbsp;·&nbsp; t = ${fmt(Math.min(t, Tview), 1)}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il condensatore si carica <mark>in fretta all'inizio, poi sempre più piano</mark>, avvicinandosi al massimo.
+        Dopo un tempo τ è al 63%, dopo 5τ è praticamente pieno. Aumenta R (→ τ grande) e la carica <b>rallenta</b>
+        (§6.4). Premi «ricomincia» per rivedere la salita.
+      </div>`;
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
