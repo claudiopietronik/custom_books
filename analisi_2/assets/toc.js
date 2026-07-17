@@ -216,7 +216,7 @@ const TOC = [
     n: 14,
     titolo: "I teoremi del calcolo vettoriale",
     file: "cap14-teoremi-vettoriali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Divergenza e rotore" },
       { id: "s14-2", n: "14.2", t: "Il teorema di Gauss-Green" },
