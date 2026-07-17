@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>32 · t-test a due campioni — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="32">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>t-test a due campioni</h1>
+    <p class="standfirst">
+      Il confronto più comune di tutti: <b>due gruppi</b> — trattamento contro controllo, versione A contro B,
+      prima contro dopo. Ma c'è un bivio decisivo che quasi tutti trascurano: i due gruppi sono
+      <b>indipendenti</b> o <b>appaiati</b>? Sceglierne il test sbagliato butta via potenza o inventa
+      significatività dal nulla.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Completa la famiglia del t-test (Cap. 30–31). La versione appaiata è, di fatto, un t-test a un campione
+      (Cap. 31) sulle <em>differenze</em>. La controparte non parametrica (Mann–Whitney, Wilcoxon) è al Cap. 33,
+      da usare quando le assunzioni (Cap. 28) cadono.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      È il test degli esperimenti controllati e degli A/B test. E la scelta indipendente/appaiato non è un
+      tecnicismo: usare l'appaiato quando i dati lo permettono <em>aumenta enormemente la potenza</em>, perché
+      rimuove la variabilità tra individui. Saperlo distingue un'analisi forte da una debole.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-1"><span class="secnum">SEZIONE 32.1</span>Campioni indipendenti</h2>
+
+  <p class="lead">
+    Due gruppi sono <b>indipendenti</b> quando sono fatti di <em>unità diverse</em>: un gruppo prende il farmaco,
+    un altro gruppo (persone diverse) il placebo. Nessun legame uno-a-uno tra i due.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">t a due campioni indipendenti <span class="tag">differenza tra medie ÷ rumore combinato</span></div>
+    <div class="f-body">
+      \[ t \;=\; \frac{\hA{\bar{x}_1 - \bar{x}_2}}{\hB{\sqrt{\dfrac{s_1^2}{n_1} + \dfrac{s_2^2}{n_2}}}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\bar{x}_1 - \bar{x}_2}\)</dt><dd>il segnale: la differenza tra le medie dei due gruppi.</dd>
+        <dt>\(\hB{\sqrt{s_1^2/n_1 + s_2^2/n_2}}\)</dt><dd>il rumore: l'errore standard della differenza, che <b>somma</b> le variabilità dei due gruppi (Cap. 19: le varianze di variabili indipendenti si sommano).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      \(H_0: \mu_1 = \mu_2\) («le due medie sono uguali»). Il denominatore combina il rumore di <em>entrambi</em> i
+      gruppi: due sorgenti di variabilità che si sommano. <mark>Ecco perché serve un segnale più forte per
+      distinguere due gruppi indipendenti</mark> che per rilevare una differenza appaiata.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-2"><span class="secnum">SEZIONE 32.2</span>Il t-test appaiato</h2>
+
+  <p class="lead">
+    Due misure sono <b>appaiate</b> quando provengono dalle <em>stesse</em> unità: la pressione di ogni paziente
+    <b>prima e dopo</b> il trattamento. Ogni dato del gruppo 1 ha il suo gemello nel gruppo 2.
+  </p>
+
+  <p>
+    Il trucco è potentissimo: invece di confrontare due gruppi, calcoli la <b>differenza</b> per ogni coppia
+    (dopo − prima) e fai un t-test a un campione (Cap. 31) su quelle differenze, contro lo zero. Perché è così
+    vantaggioso? Perché <mark>elimina la variabilità <em>tra</em> gli individui</mark>: se un paziente parte da
+    valori alti e un altro da valori bassi, nell'indipendente questa enorme variabilità individuale è tutto rumore;
+    nell'appaiato scompare, perché ogni paziente fa da controllo di sé stesso. Resta solo la variabilità
+    dell'<em>effetto</em>, molto più piccola.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">t appaiato <span class="tag">un t-test sulle differenze</span></div>
+    <div class="f-body">
+      \[ t \;=\; \frac{\bar{d}}{s_d / \sqrt{n}}, \qquad d_i = x_{i,\text{dopo}} - x_{i,\text{prima}} \]
+    </div>
+    <div class="f-note">
+      \(\bar{d}\) è la differenza media, \(s_d\) la deviazione standard delle differenze. È letteralmente il
+      Cap. 31 applicato ai \(d_i\), con \(H_0: \mu_d = 0\).
+    </div>
+  </div>
+
+  <h3>Provalo: appaiare smaschera l'effetto</h3>
+
+  <p>
+    Sei soggetti misurati prima (verde) e dopo (rosso), con grande variabilità <em>tra</em> soggetti ma un effetto
+    coerente. Passa da <b>indipendente</b> ad <b>appaiato</b> e guarda: la stessa differenza media diventa molto
+    più significativa, perché l'appaiato rimuove il rumore individuale.
+  </p>
+
+  <div class="widget" id="w-pair">
+    <div class="w-head">
+      <span>Indipendente contro appaiato</span>
+      <span class="hint">appaiare toglie il rumore tra soggetti</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpr-svg" viewBox="0 0 620 220" role="img" aria-label="Sei soggetti misurati prima e dopo: l'analisi appaiata rivela l'effetto nascosto dalla variabilità individuale"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wpr-ind">indipendente</button>
+      <button class="w-btn" id="wpr-pair">appaiato</button>
+    </div>
+    <div class="w-readout" id="wpr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-3"><span class="secnum">SEZIONE 32.3</span>Indipendente o appaiato?</h2>
+
+  <p class="lead">
+    La domanda da porsi sempre: <b>esiste un legame uno-a-uno tra le due misure?</b> Se sì, appaiato; se no,
+    indipendente.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th></th><th>Indipendente</th><th>Appaiato</th></tr></thead>
+    <tbody>
+      <tr><td>Le unità</td><td>gruppi diversi (persone diverse)</td><td>stesse unità, due volte (o coppie naturali)</td></tr>
+      <tr><td>Esempio</td><td>farmaco vs placebo (pazienti diversi)</td><td>pressione prima/dopo, gemelli, destra/sinistra</td></tr>
+      <tr><td>Rumore tra individui</td><td>presente (nel denominatore)</td><td>eliminato</td></tr>
+      <tr><td>Potenza</td><td>minore</td><td>maggiore (se le coppie sono correlate)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Sbagliare il test è un errore reale</div>
+    <p style="margin-bottom:0">
+      Usare l'<b>indipendente su dati appaiati</b> spreca potenza: tratta le coppie come estranee e lascia dentro
+      tutto il rumore individuale, rischiando di non vedere un effetto vero. Usare l'<b>appaiato su dati
+      indipendenti</b> è peggio: <mark>abbina dati che non hanno alcun legame</mark>, violando l'assunzione del
+      test e producendo p-value privi di senso. La struttura dei dati decide il test, non la comodità.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-4"><span class="secnum">SEZIONE 32.4</span>Esempio completo</h2>
+
+  <p class="lead">
+    Un programma di allenamento: misuriamo il tempo sui 100 m di 5 atleti, prima e dopo 8 settimane.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Atleta</th><th>Prima (s)</th><th>Dopo (s)</th><th>Differenza \(d\)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>12,5</td><td>12,3</td><td>−0,2</td></tr>
+      <tr><td>2</td><td>13,8</td><td>13,5</td><td>−0,3</td></tr>
+      <tr><td>3</td><td>11,9</td><td>11,7</td><td>−0,2</td></tr>
+      <tr><td>4</td><td>14,2</td><td>13,9</td><td>−0,3</td></tr>
+      <tr><td>5</td><td>12,1</td><td>12,0</td><td>−0,1</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    Gli atleti partono da tempi molto diversi (da 11,9 a 14,2 s): una variabilità enorme che un test indipendente
+    faticherebbe a superare. Ma le <b>differenze</b> sono tutte piccole e <em>coerenti</em> (tutti migliorano):
+    \(\bar{d} = -0{,}22\) s, \(s_d \approx 0{,}084\) s. Statistica appaiata:
+    \(t = -0{,}22 / (0{,}084/\sqrt{5}) = -0{,}22/0{,}0374 \approx -5{,}9\), df = 4. Ben oltre il critico (~2,78):
+    <b>miglioramento altamente significativo</b> (\(p \approx 0{,}004\)). L'appaiamento ha reso visibile un effetto
+    che la variabilità tra atleti avrebbe nascosto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-5"><span class="secnum">SEZIONE 32.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.1</div>
+    <p style="margin-bottom:0">Per ciascuno, indipendente o appaiato? <em>(a)</em> altezza di 50 uomini vs 50
+      donne; <em>(b)</em> colesterolo degli stessi 30 pazienti prima e dopo una dieta; <em>(c)</em> resa di due
+      fertilizzanti su 40 campi diversi.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><em>(a)</em> <b>indipendente</b> (persone diverse, nessun legame). &nbsp;
+          <em>(b)</em> <b>appaiato</b> (stessi pazienti, due misure: prima/dopo). &nbsp;
+          <em>(c)</em> <b>indipendente</b> (campi diversi per i due fertilizzanti). Il test: c'è un legame
+          uno-a-uno? Solo in (b) (§32.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.2</div>
+    <p style="margin-bottom:0">Perché, con dati appaiati e forte correlazione tra le coppie, il test appaiato è più
+      potente dell'indipendente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché elimina la <b>variabilità tra individui</b> (§32.2): ogni unità fa da
+          controllo di sé stessa, quindi il rumore che nell'indipendente sta nel denominatore (le grandi
+          differenze di partenza tra soggetti) scompare. Resta solo la variabilità dell'effetto, molto più
+          piccola → denominatore piccolo → \(t\) grande → più potenza. Con coppie molto correlate, il guadagno è
+          enorme (come nell'esempio degli atleti, §32.4).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 32.3</div>
+    <p style="margin-bottom:0">Cosa c'è di sbagliato nell'applicare un t-test appaiato ai dati (a) dell'esercizio
+      32.1 (uomini vs donne)?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Non esiste alcun legame naturale tra il primo uomo e la prima donna, il secondo
+          e la seconda, ecc.: appaiarli sarebbe <b>arbitrario e privo di senso</b> (§32.3). Il t-test appaiato
+          presume coppie reali; forzarlo su gruppi indipendenti viola l'assunzione e produce un p-value che
+          dipende dall'ordine casuale con cui hai elencato i dati — cioè spazzatura. Qui va usato l'indipendente.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s32-6"><span class="secnum">SEZIONE 32.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 32</div>
+    <ol style="margin-bottom:0">
+      <li><b>Indipendente:</b> gruppi di unità diverse. \(t = (\bar{x}_1-\bar{x}_2)/\sqrt{s_1^2/n_1 + s_2^2/n_2}\),
+        rumore combinato.</li>
+      <li><b>Appaiato:</b> stesse unità due volte. Un t-test a un campione sulle <b>differenze</b> \(d_i\), contro 0.</li>
+      <li><b>Appaiare elimina il rumore tra individui</b> → molta più potenza quando le coppie sono correlate.</li>
+      <li><b>La struttura dei dati decide il test:</b> c'è un legame uno-a-uno? Sì → appaiato; no → indipendente.
+        Sbagliare falsa il risultato.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Tutti i t-test presumono dati ragionevolmente normali. Quando questa assunzione cade — dati storti, outlier,
+    scale ordinali — servono le controparti che lavorano sui ranghi. Il <strong>Capitolo 33</strong> presenta i
+    <b>test non parametrici</b> e l'elegante idea del <b>test di permutazione</b>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §32.2 — indipendente vs appaiato: l'effetto nascosto dalla variabilità
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpr-out');
+  const bInd = document.getElementById('wpr-ind'), bPair = document.getElementById('wpr-pair');
+  let paired = false;
+  // 6 soggetti: valore base molto vario, effetto coerente piccolo (dopo = prima - 5)
+  const before = [22, 48, 35, 70, 58, 30];
+  const effect = -6;
+  const after = before.map(b => b + effect + (b % 7 - 3) * 0.4);
+
+  function draw() {
+    bInd.classList.toggle('on', !paired); bPair.classList.toggle('on', paired);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: 1 });
+    // medie
+    const mB = before.reduce((a, b) => a + b, 0) / 6, mA = after.reduce((a, b) => a + b, 0) / 6;
+
+    if (!paired) {
+      p.line(0, 0.65, 100, 0.65, { color: 'var(--rule)', width: 1 });
+      p.line(0, 0.3, 100, 0.3, { color: 'var(--rule)', width: 1 });
+      before.forEach(v => p.dot(v, 0.65, { r: 5, color: 'var(--green)', stroke: 'var(--paper)', sw: 1 }));
+      after.forEach(v => p.dot(v, 0.3, { r: 5, color: 'var(--warm)', stroke: 'var(--paper)', sw: 1 }));
+      p.line(mB, 0.6, mB, 0.7, { color: 'var(--green)', width: 2.4 });
+      p.line(mA, 0.25, mA, 0.35, { color: 'var(--warm)', width: 2.4 });
+      p.text(6, 0.8, 'prima (verde) e dopo (rosso): due nuvole molto larghe', { color: 'var(--ink-soft)', anchor: 'start', size: 10 });
+      // t indipendente
+      const s2 = arr => { const m = arr.reduce((a, b) => a + b, 0) / arr.length; return arr.reduce((a, b) => a + (b - m) ** 2, 0) / (arr.length - 1); };
+      const se = Math.sqrt(s2(before) / 6 + s2(after) / 6);
+      const t = (mB - mA) / se;
+      out.innerHTML = `
+        <div class="big">indipendente: t = <b>${t.toFixed(2)}</b> ${Math.abs(t) > 2.23 ? '(significativo)' : '<b style="color:var(--warm)">(NON significativo)</b>'}</div>
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          Le due nuvole sono larghissime (i soggetti partono da valori molto diversi): la <mark>variabilità tra
+          soggetti</mark> è tutta rumore nel denominatore, e nasconde l'effetto. Passa ad «appaiato».
+        </div>`;
+    } else {
+      p.line(0, 0.7, 100, 0.7, { color: 'var(--rule)', width: 1 });
+      p.line(0, 0.35, 100, 0.35, { color: 'var(--rule)', width: 1 });
+      before.forEach((v, i) => {
+        p.dot(v, 0.7, { r: 5, color: 'var(--green)', stroke: 'var(--paper)', sw: 1 });
+        p.dot(after[i], 0.35, { r: 5, color: 'var(--warm)', stroke: 'var(--paper)', sw: 1 });
+        p.line(v, 0.7, after[i], 0.35, { color: 'var(--ink-faint)', width: 1, dash: '2 2' });   // collega le coppie
+      });
+      p.text(6, 0.86, 'coppie collegate: tutte scendono della stessa quantità', { color: 'var(--ink-soft)', anchor: 'start', size: 10 });
+      // t appaiato sulle differenze
+      const d = before.map((b, i) => after[i] - b);
+      const md = d.reduce((a, b) => a + b, 0) / 6;
+      const sd = Math.sqrt(d.reduce((a, b) => a + (b - md) ** 2, 0) / 5);
+      const t = md / (sd / Math.sqrt(6));
+      out.innerHTML = `
+        <div class="big">appaiato: t = <b style="color:var(--warm)">${t.toFixed(2)}</b> (altamente significativo)</div>
+        <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+          Guardando le <mark>differenze coppia per coppia</mark> (le linee tratteggiate, tutte simili), il rumore
+          tra soggetti sparisce: resta l'effetto coerente. La stessa differenza media è ora nettamente
+          significativa. È il potere dell'appaiamento (§32.2).
+        </div>`;
+    }
+  }
+  bInd.addEventListener('click', () => { paired = false; draw(); });
+  bPair.addEventListener('click', () => { paired = true; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

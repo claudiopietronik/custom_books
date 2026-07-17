@@ -377,7 +377,7 @@ const TOC = [
   },
   {
     n: 32, parte: "IV · Statistica inferenziale",
-    titolo: "t-test a due campioni", file: "cap32-ttest-due.html", stato: "da-fare",
+    titolo: "t-test a due campioni", file: "cap32-ttest-due.html", stato: "pronto",
     sezioni: [
       { id: "s32-1", n: "32.1", t: "Campioni indipendenti" },
       { id: "s32-2", n: "32.2", t: "Il t-test appaiato" },
