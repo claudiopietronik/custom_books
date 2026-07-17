@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>46 · Under- e overfitting — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="46">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Under- e overfitting</h1>
+    <p class="standfirst">
+      Il dilemma che chiude il libro e apre il machine learning. Un modello <b>troppo semplice</b> non coglie la
+      struttura (underfitting); uno <b>troppo complesso</b> impara a memoria i dati — rumore compreso — e fallisce
+      sul nuovo (overfitting). Nel mezzo c'è il punto d'oro. Trovarlo è il <b>compromesso bias-varianza</b>, la
+      lezione più profonda e più pratica di tutta la statistica applicata.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'epilogo. Raccoglie il filo teso da tutto il libro — la variabilità campionaria (Cap. 18, 23), la
+      flessibilità dei modelli (Cap. 44), il rischio di leggere il rumore come segnale (Cap. 29) — in un unico
+      principio che governa <em>ogni</em> modello predittivo, dalla regressione alle reti neurali.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Il mio modello è perfetto sui dati di training!» è un allarme, non un vanto. Distinguere un modello che ha
+      <em>capito</em> da uno che ha <em>memorizzato</em> è la competenza che separa chi costruisce modelli utili da
+      chi si autoinganna. È la ragione per cui esistono i dati di test — ed è ovunque nell'IA moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-1"><span class="secnum">SEZIONE 46.1</span>Il compromesso bias-varianza</h2>
+
+  <p class="lead">
+    L'errore di previsione di un modello si scompone in due nemici che tirano in direzioni opposte: il
+    <b>bias</b> (errore da modello troppo rigido) e la <b>varianza</b> (errore da modello troppo ballerino).
+  </p>
+
+  <ul>
+    <li><b>Bias alto:</b> il modello è <em>troppo semplice</em> per la realtà (es. una retta per una curva). Sbaglia
+      in modo sistematico, «manca il bersaglio» sempre dalla stessa parte. È l'<b>underfitting</b>.</li>
+    <li><b>Varianza alta:</b> il modello è <em>troppo flessibile</em>; cambia moltissimo se cambi anche di poco i
+      dati di training, perché insegue il rumore di quel campione specifico. È l'<b>overfitting</b>.</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Il compromesso</div>
+    <p style="margin-bottom:0">
+      Aumentando la complessità del modello, il <b>bias cala</b> (più flessibile → coglie più struttura) ma la
+      <b>varianza sale</b> (più flessibile → insegue più rumore). <mark>L'errore totale su dati nuovi è la loro
+      somma: scende, tocca un minimo, poi risale.</mark> Il modello migliore non è il più semplice né il più
+      complesso, ma quello al <b>fondo della valle</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-2"><span class="secnum">SEZIONE 46.2</span>Riconoscere l'overfitting</h2>
+
+  <p class="lead">
+    Il sintomo inconfondibile: il modello va <b>benissimo sui dati di training</b> e <b>male su quelli nuovi</b>.
+    Ha memorizzato invece di generalizzare.
+  </p>
+
+  <p>
+    Ecco il punto chiave che smaschera tutto: sull'insieme di <b>addestramento</b>, l'errore <em>cala sempre</em>
+    all'aumentare della complessità — un modello abbastanza flessibile può passare per <em>tutti</em> i punti,
+    errore zero. Ma questo non dice nulla di buono: sta imparando anche il rumore. Sull'insieme di <b>test</b> (dati
+    mai visti), l'errore prima scende (il modello impara la struttura vera) poi <b>risale</b> (comincia a imparare
+    il rumore, che sul test non si ripete). <mark>La forbice tra errore di training (basso) e di test (alto) è la
+    firma dell'overfitting.</mark>
+  </p>
+
+  <h3>Provalo: la valle dell'errore di test</h3>
+
+  <p>
+    Aumenta la complessità del modello e osserva le due curve: l'errore di <b style="color:var(--accent)">training</b>
+    (indaco) scende senza sosta, ma quello di <b style="color:var(--warm)">test</b> (rosso) forma una <b>U</b> —
+    scende, tocca il minimo, poi risale. Il minimo della curva rossa è il modello giusto.
+  </p>
+
+  <div class="widget" id="w-fit">
+    <div class="w-head">
+      <span>Training vs test al crescere della complessità</span>
+      <span class="hint">la U del bias-varianza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wft-scatter" viewBox="0 0 620 150" role="img" aria-label="Dati di training e test con il modello di complessità scelta"></svg>
+      <svg id="wft-curve" viewBox="0 0 620 150" role="img" aria-label="Curve dell'errore di training e di test in funzione della complessità"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>complessità (grado)</label><input type="range" id="wft-d" min="1" max="12" step="1" value="4"><output id="wft-dv">4</output></div>
+    </div>
+    <div class="w-readout" id="wft-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-3"><span class="secnum">SEZIONE 46.3</span>Validazione e regolarizzazione</h2>
+
+  <p class="lead">
+    Come si trova il punto giusto e si tiene a bada l'overfitting? Due strumenti universali: <b>validare su dati
+    nuovi</b> e <b>penalizzare la complessità</b>.
+  </p>
+
+  <p>
+    La <b>validazione</b> è il principio d'oro: giudica un modello <em>solo</em> su dati che non ha usato per
+    addestrarsi. Si divide il dataset in <b>training</b> (per adattare) e <b>test</b> (per giudicare); la
+    <b>cross-validation</b> raffina l'idea ruotando più volte quale parte fa da test, per una stima più stabile.
+    La <b>regolarizzazione</b> agisce invece durante l'addestramento: aggiunge alla funzione di costo una
+    <b>penalità</b> per coefficienti grandi (Ridge, Lasso), scoraggiando il modello dal contorcersi troppo. In
+    entrambi i casi il messaggio è lo stesso: <mark>preferisci il modello più semplice che spiega bene i dati</mark>
+    (rasoio di Occam, in versione quantitativa).
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Le difese contro l'overfitting</div>
+    <ol style="margin-bottom:0">
+      <li><b>Più dati:</b> il rimedio più potente — con tanti dati, il modello fatica a memorizzare il rumore
+        (torna la variabilità che cala come \(1/\sqrt{n}\), Cap. 23).</li>
+      <li><b>Validazione / cross-validation:</b> giudica sul non visto, mai sul training.</li>
+      <li><b>Regolarizzazione:</b> penalizza la complessità.</li>
+      <li><b>Semplicità:</b> a parità di prestazioni sul test, scegli il modello più semplice.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-4"><span class="secnum">SEZIONE 46.4</span>Dove finisce il libro</h2>
+
+  <p class="lead">
+    Siamo arrivati in fondo — ma questa fine è un inizio.
+  </p>
+
+  <p>
+    Ripercorri la strada: abbiamo imparato a <b>descrivere</b> i dati (centro, dispersione, forma), a parlare il
+    linguaggio dell'<b>incertezza</b> (probabilità, distribuzioni, Bayes), a <b>inferire</b> dal campione al mondo
+    (TLC, test, intervalli, bootstrap), e infine a costruire <b>modelli</b> che prevedono (correlazione, ANOVA,
+    regressione). Il compromesso bias-varianza di questo capitolo è la porta d'ingresso al <b>machine learning</b>:
+    alberi, foreste, reti neurali, boosting — sono tutti, in fondo, modi diversi di navigare quella stessa valle,
+    cercando il punto in cui un modello ha <em>capito</em> senza <em>memorizzare</em>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🧭</span> Il filo che tiene tutto</div>
+    <p style="margin-bottom:0">
+      Una sola idea attraversa i 46 capitoli: <b>i dati sono segnale mescolato a rumore, e la statistica è l'arte
+      di separarli con onestà</b> — sapendo sempre quanto possiamo fidarci. Media contro rumore (dispersione),
+      effetto contro caso (test), struttura contro overfitting (modelli): è sempre la stessa domanda, posta a
+      livelli diversi. Portala con te.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-5"><span class="secnum">SEZIONE 46.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 46.1</div>
+    <p style="margin-bottom:0">Un modello ha errore quasi nullo sul training ed errore alto sul test. Diagnosi? E se
+      l'errore fosse alto su <em>entrambi</em>?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Training basso, test alto → overfitting</b> (varianza alta): il modello ha
+          memorizzato il rumore del training e non generalizza (§46.2). <b>Errore alto su entrambi → underfitting</b>
+          (bias alto): il modello è troppo semplice per cogliere anche la struttura vera. La forbice train-test è la
+          firma dell'overfitting; l'errore alto ovunque è quella dell'underfitting.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 46.2</div>
+    <p style="margin-bottom:0">Perché non basta guardare l'errore sui dati di training per scegliere la complessità
+      di un modello?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché l'errore di training <b>cala sempre</b> all'aumentare della complessità
+          (un modello flessibile può passare per tutti i punti, errore zero), <em>anche</em> quando sta solo
+          memorizzando rumore (§46.2). Non distingue «capire» da «memorizzare». Serve l'errore su dati <b>nuovi</b>
+          (test/cross-validation, §46.3), che forma una U e rivela il punto giusto: il minimo della curva di test,
+          non di quella di training.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 46.3</div>
+    <p style="margin-bottom:0">Elenca tre modi per ridurre l'overfitting e spiega in una frase perché ciascuno
+      funziona.</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>1. Più dati:</b> è più difficile memorizzare il rumore di molti punti, e la
+          variabilità del modello cala (§46.3). <b>2. Regolarizzazione:</b> penalizzando i coefficienti grandi, si
+          impedisce al modello di contorcersi per inseguire il rumore. <b>3. Ridurre la complessità</b> (grado più
+          basso, meno predittori): meno flessibilità = meno capacità di memorizzare. Tutti spingono verso modelli
+          più semplici, dal lato giusto della valle bias-varianza (§46.1).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s46-6"><span class="secnum">SEZIONE 46.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 46</div>
+    <ol style="margin-bottom:0">
+      <li><b>Underfitting</b> (bias alto): modello troppo semplice, sbaglia sistematicamente.
+        <b>Overfitting</b> (varianza alta): troppo complesso, memorizza il rumore.</li>
+      <li><b>Compromesso bias-varianza:</b> l'errore su dati nuovi scende, tocca un minimo, risale. Cerca il fondo
+        della valle.</li>
+      <li><b>Firma dell'overfitting:</b> ottimo sul training, scarso sul test.</li>
+      <li><b>Difese:</b> più dati, validazione/cross-validation, regolarizzazione, semplicità. È la porta del
+        machine learning.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Qui il libro finisce, ma il tuo lavoro con i dati comincia. Hai gli strumenti per descrivere onestamente, per
+    ragionare sotto incertezza, per inferire con misura e per modellare senza illuderti. Il resto — reti neurali,
+    metodi bayesiani, serie temporali, causalità — sono capitoli che scriverai tu, sempre con la stessa bussola:
+    <strong>separare il segnale dal rumore, sapendo quanto fidarti.</strong> Buona statistica.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §46.2 — errore di training vs test al crescere del grado
+   ========================================================================= */
+(function () {
+  const sSc = document.getElementById('wft-scatter'), sCu = document.getElementById('wft-curve');
+  if (!sSc) return;
+  const out = document.getElementById('wft-out');
+  const dS = document.getElementById('wft-d'), dV = document.getElementById('wft-dv');
+  let seed = 2024;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const g = () => { const a = u() || 1e-9, b = u(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const truef = x => 0.4 + 0.42 * Math.sin(2.4 * x);
+  // training e test set (stessa funzione vera, rumore diverso)
+  const Xtr = [], Ytr = [], Xte = [], Yte = [];
+  for (let i = 0; i < 11; i++) { const x = (i + 0.5) / 11; Xtr.push(x); Ytr.push(truef(x) + 0.11 * g()); }
+  for (let i = 0; i < 40; i++) { const x = u(); Xte.push(x); Yte.push(truef(x) + 0.11 * g()); }
+
+  function fitPoly(deg, X, Y) {
+    const m = deg + 1, A = Array.from({ length: m }, () => new Array(m).fill(0)), B = new Array(m).fill(0);
+    for (let p = 0; p < X.length; p++) { const pw = []; let xp = 1; for (let k = 0; k < 2 * m; k++) { pw.push(xp); xp *= X[p]; } for (let i = 0; i < m; i++) { B[i] += pw[i] * Y[p]; for (let j = 0; j < m; j++) A[i][j] += pw[i + j]; } }
+    for (let i = 0; i < m; i++) { let pv = i; for (let r = i + 1; r < m; r++) if (Math.abs(A[r][i]) > Math.abs(A[pv][i])) pv = r; [A[i], A[pv]] = [A[pv], A[i]]; [B[i], B[pv]] = [B[pv], B[i]]; const d = A[i][i] || 1e-9; for (let j = i; j < m; j++) A[i][j] /= d; B[i] /= d; for (let r = 0; r < m; r++) if (r !== i) { const f = A[r][i]; for (let j = i; j < m; j++) A[r][j] -= f * A[i][j]; B[r] -= f * B[i]; } }
+    return B;
+  }
+  const ev = (c, x) => { let s = 0, xp = 1; for (let k = 0; k < c.length; k++) { s += c[k] * xp; xp *= x; } return s; };
+  const mse = (c, X, Y) => { let s = 0; for (let i = 0; i < X.length; i++) s += (Y[i] - ev(c, X[i])) ** 2; return s / X.length; };
+
+  // precomputa le curve di errore per ogni grado
+  const degs = []; for (let d = 1; d <= 12; d++) { const c = fitPoly(d, Xtr, Ytr); degs.push({ d, tr: mse(c, Xtr, Ytr), te: mse(c, Xte, Yte), c }); }
+  const bestD = degs.reduce((a, b) => b.te < a.te ? b : a).d;
+
+  function draw() {
+    const deg = parseInt(dS.value, 10);
+    dV.textContent = deg;
+    const c = degs[deg - 1].c;
+    // scatter + curva
+    sSc.innerHTML = '';
+    const p = new Plot(sSc, { xmin: -0.02, xmax: 1.02, ymin: -0.15, ymax: 1.05, iso: false });
+    p.line(0, truef(0), 1, truef(1), { color: 'transparent' });
+    const tvals = []; for (let t = 0; t <= 1.001; t += 0.01) tvals.push([t, truef(t)]);
+    p.poly(tvals, { color: 'var(--ink-faint)', width: 1.2, close: false, dash: '4 3' });
+    const cur = []; for (let t = 0; t <= 1.001; t += 0.006) cur.push([t, ev(c, t)]);
+    p.poly(cur, { color: 'var(--accent)', width: 2.2, close: false });
+    Xtr.forEach((x, i) => p.dot(x, Ytr[i], { r: 3, color: 'var(--accent)', stroke: 'var(--paper)', sw: 0.7 }));
+    p.text(0.5, 1.0, 'grigio tratteggiato = funzione vera · punti = training', { color: 'var(--ink-faint)', size: 9 });
+
+    // curve di errore
+    sCu.innerHTML = '';
+    const maxE = Math.min(0.15, Math.max(...degs.map(o => Math.min(0.15, o.te)))) ;
+    const q = new Plot(sCu, { xmin: 0.5, xmax: 12.5, ymin: 0, ymax: 0.12 });
+    q.axes({ numbers: false, names: true, xname: 'complessità (grado) →', yname: 'errore' });
+    q.poly(degs.map(o => [o.d, Math.min(0.12, o.tr)]), { color: 'var(--accent)', width: 2.2, close: false });
+    q.poly(degs.map(o => [o.d, Math.min(0.12, o.te)]), { color: 'var(--warm)', width: 2.2, close: false });
+    q.text(11.5, Math.min(0.11, degs[10].tr) + 0.008, 'training', { color: 'var(--accent)', anchor: 'end', size: 9 });
+    q.text(6, 0.11, 'test', { color: 'var(--warm)', size: 9 });
+    // marcatore complessità corrente + ottimo
+    q.line(deg, 0, deg, 0.12, { color: 'var(--ink)', width: 1.2, dash: '3 3' });
+    q.dot(bestD, Math.min(0.12, degs[bestD - 1].te), { r: 4, color: 'var(--green)' });
+
+    const o = degs[deg - 1];
+    let msg;
+    if (deg <= 2) msg = 'Grado basso: errore alto su <b>entrambi</b> → <mark>underfitting</mark> (bias). Troppo rigido.';
+    else if (deg >= 8) msg = 'Grado alto: training bassissimo ma test in <mark>risalita</mark> → <b>overfitting</b> (varianza). Memorizza il rumore.';
+    else msg = 'Zona buona: test vicino al minimo. Il modello ha <mark>capito</mark> la struttura senza memorizzare.';
+    out.innerHTML = `
+      <div class="big">errore training = <b style="color:var(--accent)">${o.tr.toFixed(3)}</b> · test = <b style="color:var(--warm)">${o.te.toFixed(3)}</b> &nbsp;<span style="color:var(--green)">(ottimo: grado ${bestD})</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${msg} Nota come il training scenda <em>sempre</em>, mentre il test forma una <b>U</b>.</div>`;
+  }
+  dS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -539,7 +539,7 @@ const TOC = [
   },
   {
     n: 46, parte: "IV · Statistica inferenziale",
-    titolo: "Under e overfitting", file: "cap46-overfitting.html", stato: "da-fare",
+    titolo: "Under e overfitting", file: "cap46-overfitting.html", stato: "pronto",
     sezioni: [
       { id: "s46-1", n: "46.1", t: "Il compromesso bias-varianza" },
       { id: "s46-2", n: "46.2", t: "Riconoscere l'overfitting" },
