@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Outlier — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte II · Normalizzazione e outlier</div>
+    <h1>Outlier</h1>
+    <p class="standfirst">
+      Un <b>outlier</b> è un dato che sta clamorosamente fuori dal coro. Può essere un errore di misura da
+      correggere — o l'osservazione più preziosa del dataset. Riconoscerli è metà del lavoro; l'altra metà,
+      più delicata, è decidere <b>cosa farne</b>. Qui trasformiamo i criteri z-score e IQR, già incontrati, in
+      regole operative.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Secondo capitolo della Parte II, conseguenza diretta del precedente: normalizzare (Cap. 10) è vulnerabile
+      agli outlier, quindi bisogna gestirli prima. Riusa lo z-score (Cap. 10) e la regola \(1{,}5\times\)IQR del
+      box plot (Cap. 5), portandoli da idee a procedure.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Un singolo outlier può ribaltare una media, gonfiare una deviazione standard, spezzare una regressione,
+      falsare una normalizzazione. Ma cancellarlo alla leggera è una forma di manipolazione. Saper distinguere «un
+      errore da togliere» da «un segnale da studiare» è una delle responsabilità etiche dell'analista.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">SEZIONE 11.1</span>Cos'è un outlier</h2>
+
+  <p class="lead">
+    Un <b>outlier</b> è un'osservazione molto distante dalle altre. «Molto» non è un giudizio soggettivo: si
+    quantifica rispetto alla dispersione tipica dei dati. Ma la vera domanda è sempre <em>perché</em> è lì.
+  </p>
+
+  <p>Gli outlier nascono da cause diverse, che richiedono trattamenti opposti:</p>
+  <ul>
+    <li><b>Errori</b> — di misura, di trascrizione, di unità (un'altezza di 1780 cm = 178 cm digitato male). Vanno
+      corretti o rimossi.</li>
+    <li><b>Rarità genuine</b> — eventi veri ma insoliti (uno stipendio da CEO, una transazione fraudolenta, un
+      paziente eccezionale). Non sono errori: spesso sono <em>il</em> dato interessante.</li>
+    <li><b>Popolazione mescolata</b> — non un vero outlier, ma un membro di un gruppo diverso finito nel dataset
+      (§3.3, la bimodalità).</li>
+  </ul>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Rilevare ≠ rimuovere</div>
+    <p style="margin-bottom:0">
+      I criteri che seguono ti dicono <em>quali</em> dati sono anomali, non che vadano <b>eliminati</b>.
+      <mark>Rimuovere un outlier solo perché «rovina» il risultato è manipolazione dei dati.</mark> Il rilevamento
+      è un campanello d'allarme che apre un'indagine, non una condanna automatica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">SEZIONE 11.2</span>Il criterio z-score</h2>
+
+  <p class="lead">
+    Il primo criterio usa lo z-score (Cap. 10): quante deviazioni standard dista un dato dalla media? Oltre una
+    soglia, è sospetto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Criterio z-score <span class="tag">quante σ dalla media</span></div>
+    <div class="f-body">
+      \[ \abs{z_i} = \abs{\frac{x_i - \bar{x}}{s}} \;>\; \hA{k} \quad\Longrightarrow\quad \text{outlier} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(z_i\)</dt><dd>lo z-score del dato: la sua distanza dalla media in deviazioni standard.</dd>
+        <dt>\(\hA{k}\)</dt><dd>la <b>soglia</b>, tipicamente 2, 2,5 o 3. Con \(k=3\), su dati normali, meno dello 0,3% dei dati è oltre.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Semplice e intuitivo, ma con un difetto grave: usa media e deviazione standard, che <mark>sono esse stesse
+      trascinate dall'outlier</mark>. Un valore estremo gonfia \(s\), quindi il suo stesso z-score risulta più
+      piccolo del dovuto — l'outlier può «mascherarsi». Funziona bene solo se i dati sono circa normali e gli
+      outlier pochi.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">SEZIONE 11.3</span>Il criterio IQR</h2>
+
+  <p class="lead">
+    Il secondo criterio è quello del box plot (Cap. 5), ed è <b>robusto</b>: si basa sui quartili, che gli outlier
+    non spostano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Criterio 1,5 × IQR <span class="tag">robusto agli estremi</span></div>
+    <div class="f-body">
+      \[ x_i < \hB{Q_1 - 1{,}5\,\text{IQR}} \quad\text{oppure}\quad x_i > \hA{Q_3 + 1{,}5\,\text{IQR}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hB{Q_1 - 1{,}5\,\text{IQR}}\)</dt><dd>il baffo inferiore: sotto di esso, outlier «basso».</dd>
+        <dt>\(\hA{Q_3 + 1{,}5\,\text{IQR}}\)</dt><dd>il baffo superiore: sopra di esso, outlier «alto».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il vantaggio decisivo: \(Q_1\), \(Q_3\) e IQR dipendono solo dalle <b>posizioni</b> nel 25–75% centrale,
+      <mark>indifferenti a quanto è estremo l'outlier</mark>. Non si «maschera» come nel criterio z-score. È il
+      motivo per cui il box plot usa proprio questa regola. (Il fattore 1,5 è una convenzione; 3,0 segnala outlier
+      «estremi».)
+    </div>
+  </div>
+
+  <h3>Provalo: due criteri a confronto</h3>
+
+  <p>
+    Trascina il punto <b style="color:var(--warm)">rosso</b> e osserva quando ciascun criterio lo segnala. Nota il
+    fenomeno del <b>mascheramento</b>: portando il punto molto lontano, la deviazione standard si gonfia e il
+    criterio z-score può <em>smettere</em> di segnalarlo, mentre l'IQR lo tiene marcato senza esitazioni.
+  </p>
+
+  <div class="widget" id="w-out">
+    <div class="w-head">
+      <span>z-score contro IQR</span>
+      <span class="hint">trascina il rosso lontano e guarda il mascheramento</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wou-svg" viewBox="0 0 620 210" role="img" aria-label="Rilevamento di un outlier con criterio z-score e criterio IQR"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>soglia z (k)</label><input type="range" id="wou-k" min="15" max="35" step="1" value="30"><output id="wou-kv">3.0</output></div>
+    </div>
+    <div class="w-readout" id="wou-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">SEZIONE 11.4</span>Rimuovere o no: le strategie</h2>
+
+  <p class="lead">
+    Individuato un outlier, hai varie strade — e quasi mai «cancellarlo e via» è la migliore.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Strategia</th><th>Cosa fa</th><th>Quando</th></tr></thead>
+    <tbody>
+      <tr><td><b>Indagare</b></td><td>capire perché il dato è lì</td><td>sempre, per primo</td></tr>
+      <tr><td><b>Correggere</b></td><td>sistemare l'errore (unità, refuso)</td><td>se è un errore identificabile</td></tr>
+      <tr><td><b>Rimuovere</b></td><td>escludere il dato</td><td>solo se è un errore genuino, documentandolo</td></tr>
+      <tr><td><b>Trasformare</b></td><td>es. logaritmo, per comprimere le code</td><td>dati molto asimmetrici</td></tr>
+      <tr><td><b>Usare metodi robusti</b></td><td>mediana, IQR, regressione robusta</td><td>se gli outlier sono veri e vuoi tenerli</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Il principio guida</div>
+    <p style="margin-bottom:0">
+      <mark>Prima capisci, poi decidi — e documenta sempre.</mark> Se rimuovi dei dati, dillo e spiega perché: un
+      risultato ottenuto scartando silenziosamente i valori scomodi non è riproducibile né onesto. Spesso la
+      soluzione migliore non è toccare i dati, ma usare <b>metodi robusti</b> che gli outlier non sbilanciano
+      (mediana invece di media, IQR invece di deviazione standard).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">SEZIONE 11.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">Una variabile ha \(\bar{x} = 50\), \(s = 10\). Con soglia \(k=3\), oltre quali
+      valori un dato è segnalato come outlier dal criterio z-score?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Fuori dall'intervallo \(\bar{x} \pm k\,s = 50 \pm 3\times 10 = 50 \pm 30\),
+          cioè sotto <b>20</b> o sopra <b>80</b>. Su dati normali, questo esclude circa lo 0,27% dei valori.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">Con \(Q_1 = 30\), \(Q_3 = 50\), calcola i limiti del criterio \(1{,}5\times\)IQR. Un
+      dato pari a 5 è un outlier?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>IQR \(= 50 - 30 = 20\). Limiti: inferiore \(30 - 1{,}5\times 20 = 30 - 30 = 0\); superiore
+          \(50 + 30 = 80\). Zona «regolare»: [0, 80].</p>
+        <p style="margin-bottom:0">Il dato 5 sta dentro [0, 80]: <b>non</b> è un outlier secondo questo criterio
+          (è basso, ma non abbastanza estremo).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">Perché il criterio IQR è più affidabile del criterio z-score in presenza di outlier
+      «forti»? Come si chiama il fenomeno che indebolisce lo z-score?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché IQR, \(Q_1\) e \(Q_3\) sono <b>robusti</b>: dipendono dalle posizioni centrali, non dai valori
+          estremi (§11.3). Media e deviazione standard usate dallo z-score, invece, vengono <b>gonfiate</b>
+          dall'outlier stesso.</p>
+        <p style="margin-bottom:0">Il fenomeno si chiama <b>mascheramento</b> (masking): un outlier estremo gonfia
+          \(s\) al punto che il suo z-score scende sotto la soglia, e il criterio smette di vederlo. Con più
+          outlier vicini, il problema peggiora.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">Analizzando i tempi di risposta di un server, trovi un valore 100 volte più grande
+      degli altri. Elencalo come outlier e lo cancelli. Cosa potresti aver appena buttato via?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Potenzialmente <b>il dato più importante</b>: quel picco potrebbe segnalare un
+          guasto reale, un attacco, un timeout critico — esattamente ciò che vorresti indagare. Rimuoverlo
+          «perché rovina le statistiche» nasconde il problema (§11.4). La mossa corretta: <b>indagare prima</b> la
+          causa, poi decidere; e comunque documentare qualunque rimozione. Gli outlier sono spesso segnale, non
+          rumore.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">SEZIONE 11.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><b>Outlier</b> = dato molto distante dagli altri. Può essere errore o rarità genuina: <b>indaga la
+        causa</b>.</li>
+      <li><b>Criterio z-score:</b> \(\abs{z} > k\) (di solito 3). Intuitivo ma soffre il <b>mascheramento</b>
+        (media e σ gonfiate dall'outlier).</li>
+      <li><b>Criterio 1,5×IQR:</b> oltre i baffi del box plot. <b>Robusto</b>: i quartili non si lasciano
+        spostare.</li>
+      <li><b>Rilevare ≠ rimuovere.</b> Indaga, correggi, o usa metodi robusti; documenta ogni rimozione.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Finora abbiamo trattato una variabile alla volta. Ma i dati reali sono <em>multivariati</em>, e lì gli outlier
+    si nascondono meglio: un punto può essere perfettamente normale su ogni singola variabile e clamorosamente
+    anomalo nella loro <em>combinazione</em>. Il <strong>Capitolo 12</strong> chiude la Parte II affrontando
+    outlier e scaling in più dimensioni, con la distanza di Mahalanobis.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function sortNum(a) { return [...a].sort((x, y) => x - y); }
+function quantile(sorted, p) {
+  const idx = (sorted.length - 1) * p, lo = Math.floor(idx), hi = Math.ceil(idx);
+  return lo === hi ? sorted[lo] : sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
+}
+
+/* ============================================================================
+   WIDGET §11.3 — z-score vs IQR e il mascheramento
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wou-svg');
+  if (!svg) return;
+  const out = document.getElementById('wou-out');
+  const kS = document.getElementById('wou-k'), kV = document.getElementById('wou-kv');
+  const fixed = [42, 45, 47, 48, 50, 51, 52, 53, 55, 58];
+  let drag = 70;
+
+  function draw() {
+    const k = parseInt(kS.value, 10) / 10;
+    kV.textContent = k.toFixed(1);
+    const data = [...fixed, drag];
+    const n = data.length;
+    const mean = data.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(data.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+    const z = Math.abs((drag - mean) / sd);
+    const zFlag = z > k;
+    const s = sortNum(data);
+    const q1 = quantile(s, 0.25), q3 = quantile(s, 0.75), iqr = q3 - q1;
+    const hiF = q3 + 1.5 * iqr, loF = q1 - 1.5 * iqr;
+    const iqrFlag = drag > hiF || drag < loF;
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 30, xmax: 95, ymin: 0, ymax: 1 });
+    p.line(30, 0.4, 95, 0.4, { color: 'var(--rule)', width: 1.2 });
+    // banda z: media ± k·sd
+    p.rect(mean - k * sd, 0.3, mean + k * sd, 0.5, { fill: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent)', width: 1, dash: '4 3' });
+    p.text(mean, 0.6, 'media ± ' + k.toFixed(1) + 'σ', { color: 'var(--accent)', size: 10 });
+    // limiti IQR
+    p.line(hiF, 0.32, hiF, 0.48, { color: 'var(--green)', width: 1.8 });
+    p.text(hiF, 0.24, 'Q3+1,5·IQR', { color: 'var(--green)', size: 9.5 });
+    // punti fissi
+    fixed.forEach(x => p.dot(x, 0.4, { r: 4, color: 'var(--ink-faint)', stroke: 'var(--paper)', sw: 1 }));
+    // punto trascinabile
+    p.handle(drag, 0.4, { r: 7, color: 'var(--warm)', axis: 'x' }, (x) => { drag = Math.max(31, Math.min(94, x)); draw(); });
+
+    out.innerHTML = `
+      <div class="big">z = <b>${z.toFixed(2)}</b> → ${zFlag ? '<b style="color:var(--warm)">outlier (z)</b>' : 'regolare (z)'} &nbsp;·&nbsp; IQR → ${iqrFlag ? '<b style="color:var(--warm)">outlier</b>' : 'regolare'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${(!zFlag && iqrFlag)
+          ? 'Ecco il <mark>mascheramento</mark>: il punto è così estremo da gonfiare σ, e il suo z scende sotto la soglia — lo z-score non lo vede più, ma l’IQR sì.'
+          : (zFlag && iqrFlag) ? 'Entrambi i criteri lo segnalano. Trascinalo ancora più lontano: vedrai lo z-score «perderlo» mentre l’IQR resta fermo.'
+          : 'Il punto è dentro entrambe le soglie: un dato regolare. Trascinalo verso destra per renderlo anomalo.'}
+      </div>`;
+  }
+  kS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -132,7 +132,7 @@ const TOC = [
   },
   {
     n: 11, parte: "II · Normalizzazione e outlier",
-    titolo: "Outlier", file: "cap11-outlier.html", stato: "da-fare",
+    titolo: "Outlier", file: "cap11-outlier.html", stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Cos'è un outlier" },
       { id: "s11-2", n: "11.2", t: "Il criterio z-score" },
