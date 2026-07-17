@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Calcolo differenziale in più variabili — Analisi 2</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Calcolo differenziale in più variabili</h1>
+    <p class="standfirst">
+      La derivata torna, ma si <b>sdoppia</b>. Con più variabili, la pendenza dipende dalla direzione in cui
+      guardi: ci sono le <b>derivate parziali</b> (una per asse), che si raccolgono nel <b>gradiente</b> — la
+      freccia che punta in salita, già intravista nel Capitolo 1. Scopriremo la sottile differenza tra «avere
+      le parziali» ed essere davvero <b>differenziabile</b>, e costruiremo il <b>piano tangente</b>, erede
+      della retta tangente. <mark>Qui l'analisi e l'algebra lineare si fondono per la prima volta sul serio.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>derivate parziali</b> (§7.1) e la loro sintesi vettoriale, il <b>gradiente</b> (§7.2). Le
+      <b>derivate direzionali</b> (§7.3), che il gradiente calcola tutte in un colpo. La distinzione cruciale
+      tra parziali e vera <b>differenziabilità</b> (§7.4), il <b>piano tangente</b> come approssimazione lineare
+      (§7.5), la <b>regola della catena</b> (§7.6). Infine il <b>teorema di Schwarz</b> sulle derivate miste
+      (§7.7) e la <b>matrice Hessiana</b> (§7.8), la «derivata seconda» che aprirà l'ottimizzazione.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il gradiente muove il mondo</div>
+    <p style="margin-bottom:0">
+      Il gradiente è forse l'oggetto più usato della matematica applicata contemporanea. <mark>Ogni rete
+      neurale si addestra con la «discesa del gradiente»</mark>: calcola il gradiente dell'errore rispetto a
+      milioni di parametri e fa un passettino in discesa, ripetuto miliardi di volte. In fisica, il gradiente
+      di un potenziale è una forza (\(\vv{F} = -\grad V\)); in ottimizzazione, indica la direzione di massimo
+      miglioramento; in grafica, dà le normali alle superfici. Capire cos'è il gradiente — e perché punta in
+      salita, perpendicolare alle curve di livello — è capire il motore di mezzo mondo tecnologico.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Derivate parziali</h2>
+
+  <p class="lead">
+    L'idea più semplice: per derivare rispetto a una variabile, <b>tratta le altre come costanti</b> e usa le
+    regole di Analisi 1. Geometricamente, è la pendenza di una «fetta» della superficie.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Derivata parziale <span class="tag">deriva in una variabile, congela le altre</span></div>
+    <div class="f-body">
+      \[ \pdv{f}{x}(x_0, y_0) = \lim_{h\to 0}\frac{f(x_0 + h,\, y_0) - f(x_0, y_0)}{h} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\pdv{f}{x}\) (anche \(f_x\), \(\partial_x f\))</dt>
+        <dd>la <b>derivata parziale</b> rispetto a \(x\): il tondo \(\partial\) al posto della \(\dd\) ricorda
+            che le altre variabili restano ferme. Si calcola come una derivata ordinaria (Analisi 1, Cap. 8),
+            considerando \(y\) una costante.</dd>
+        <dt>il significato geometrico</dt>
+        <dd>congelare \(y = y_0\) taglia la superficie con un piano verticale, ottenendo una <b>curva</b>
+            \(x \mapsto f(x, y_0)\); \(\pdv{f}{x}\) è la sua pendenza. <mark>È la pendenza «guardando lungo
+            l'asse \(x\)»</mark>; \(\pdv{f}{y}\) è quella lungo \(y\). Il widget mostra la fetta e la sua
+            tangente.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio: \(f(x, y) = x^2 y + \sin y\). Allora \(\pdv{f}{x} = 2xy\) (deriva \(x^2y\) in \(x\), con \(y\)
+      costante; \(\sin y\) è costante → \(0\)), e \(\pdv{f}{y} = x^2 + \cos y\) (deriva in \(y\), con \(x\)
+      costante). Meccanico come in Analisi 1, una variabile alla volta.
+    </div>
+  </div>
+
+  <div class="widget" id="w-parz">
+    <div class="w-head">
+      <span>La derivata parziale è la pendenza di una fetta</span>
+      <span class="hint">muovi il punto · cambia la variabile</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wp-svg" viewBox="0 0 560 360" role="img" aria-label="Tagliando la superficie con un piano si ottiene una curva la cui pendenza è la derivata parziale"></svg>
+    </div>
+    <div class="w-controls" id="wp-btns" style="justify-content:center; gap:.4rem"></div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; margin-top:.5rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)" id="wp-lab">posizione</label>
+      <input type="range" id="wp-t" min="-2.6" max="2.6" step="0.05" value="1" style="flex:1">
+    </div>
+    <div class="w-readout" id="wp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Il gradiente</h2>
+
+  <p class="lead">
+    Raccogli tutte le derivate parziali in un <b>vettore</b> e ottieni il gradiente: uno degli oggetti più
+    importanti dell'analisi. Non è solo notazione — ha una direzione e una lunghezza con un significato
+    profondo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il gradiente <span class="tag">il vettore delle pendenze</span></div>
+    <div class="f-body">
+      \[ \grad f = \left(\pdv{f}{x},\ \pdv{f}{y}\right) \qquad (\text{in } \R^n:\ \grad f = (\partial_1 f, \dots, \partial_n f)) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>direzione: <b>massima salita</b></dt>
+        <dd>il gradiente punta nella direzione in cui \(f\) <b>cresce più rapidamente</b>. Se sei su un pendio,
+            \(\grad f\) indica «la via più ripida verso l'alto» (e \(-\grad f\) verso il basso: la discesa del
+            gradiente).</dd>
+        <dt>lunghezza: <b>quanto è ripido</b></dt>
+        <dd>\(\norm{\grad f}\) è la pendenza in quella direzione ottimale. Dove la superficie è piatta, il
+            gradiente è nullo (un punto critico, Cap. 8).</dd>
+        <dt><b>perpendicolare</b> ai livelli</dt>
+        <dd>\(\grad f\) è sempre <b>ortogonale alle curve di livello</b> (§6.2): la salita più ripida è
+            perpendicolare alle isoipse. <mark>Lungo un livello \(f\) non cambia, quindi la pendenza «di
+            traverso» è zero</mark> — e la crescita è tutta nella direzione ad angolo retto.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Derivate direzionali</h2>
+
+  <p class="lead">
+    Le parziali danno la pendenza lungo gli <em>assi</em>. Ma io posso guardare in <b>qualunque</b> direzione:
+    la derivata direzionale misura la pendenza lungo un versore \(\vv{u}\) a scelta — e il gradiente le calcola
+    tutte con un solo prodotto scalare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Derivata direzionale <span class="tag">gradiente proiettato sulla direzione</span></div>
+    <div class="f-body">
+      \[ D_{\vv{u}} f = \grad f \cdot \vv{u} = \norm{\grad f}\cos\theta \qquad (\vv{u} \text{ versore}, \ \theta = \text{angolo tra } \grad f \text{ e } \vv{u}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(D_{\vv{u}} f = \grad f \cdot \vv{u}\)</dt>
+        <dd>la pendenza di \(f\) nella direzione \(\vv{u}\): il gradiente <b>proiettato</b> su \(\vv{u}\)
+            (prodotto scalare, §5.2). Le parziali sono i casi \(\vv{u} = \) asse \(x\) o \(y\).</dd>
+        <dt>massimo e minimo</dt>
+        <dd>poiché \(\grad f \cdot \vv{u} = \norm{\grad f}\cos\theta\): la pendenza è <b>massima</b>
+            (\(= \norm{\grad f}\)) quando \(\vv{u} \parallel \grad f\) (in salita), <b>minima</b>
+            (\(= -\norm{\grad f}\)) in direzione opposta, e <mark>zero quando \(\vv{u} \perp \grad f\)</mark>,
+            cioè lungo la curva di livello. Il widget lo mostra ruotando \(\vv{u}\).</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-grad">
+    <div class="w-head">
+      <span>Gradiente e derivata direzionale</span>
+      <span class="hint">trascina il punto · ruota la direzione u</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wg-svg" viewBox="0 0 560 400" role="img" aria-label="Il gradiente punta in salita perpendicolare ai livelli; la derivata direzionale è la sua proiezione sulla direzione scelta"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem">
+      <label style="font-size:.9rem; color:var(--ink-soft)">direzione u (angolo)</label>
+      <input type="range" id="wg-th" min="0" max="6.2832" step="0.01" value="0.5" style="flex:1">
+    </div>
+    <div class="w-readout" id="wg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Differenziabilità</h2>
+
+  <p class="lead">
+    Attenzione a una trappola profonda: <b>avere le derivate parziali non basta</b> per dire che una funzione è
+    «derivabile» in senso pieno. La vera nozione — la differenziabilità — è più forte, e coincide con
+    l'esistenza di un buon <b>piano tangente</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Differenziabilità <span class="tag">ben approssimata da una funzione lineare</span></div>
+    <div class="f-body">
+      \[ f(\vv{x}_0 + \vv{h}) = f(\vv{x}_0) + \grad f(\vv{x}_0)\cdot\vv{h} + \lo(\norm{\vv{h}}) \qquad (\vv{h}\to\vv{0}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>l'approssimazione lineare</dt>
+        <dd>\(f\) è <span class="termine">differenziabile</span> se vicino a \(\vv{x}_0\) è ben approssimata dal
+            termine lineare \(\grad f \cdot \vv{h}\), con errore <b>\(\lo(\norm{\vv{h}})\)</b> (o-piccolo, §11
+            di Analisi 1): l'errore svanisce <em>più in fretta</em> della distanza. È la «local linearity»
+            (Analisi 1, Cap. 1) in più dimensioni.</dd>
+        <dt>più forte delle parziali</dt>
+        <dd>esistono funzioni con <b>entrambe le parziali</b> in un punto che <mark>non sono differenziabili —
+            addirittura non continue!</mark> (le parziali «guardano solo lungo gli assi» e si perdono cosa
+            succede nelle altre direzioni). Avere le parziali è necessario, non sufficiente.</dd>
+        <dt>la condizione comoda (\(C^1\))</dt>
+        <dd>per fortuna c'è un criterio pratico: se le derivate parziali <b>esistono e sono continue</b> in un
+            intorno (funzione «di classe \(C^1\)»), allora \(f\) è differenziabile. Quasi tutte le funzioni che
+            incontrerai lo sono.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Il piano tangente</h2>
+
+  <p class="lead">
+    Se in una variabile la migliore approssimazione era la <b>retta</b> tangente, in due è il <b>piano</b>
+    tangente: il piano che «bacia» la superficie nel punto. È il differenziale, reso geometria.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Piano tangente <span class="tag">la retta tangente, in 3D</span></div>
+    <div class="f-body">
+      \[ z = f(x_0, y_0) + \pdv{f}{x}(x_0,y_0)(x - x_0) + \pdv{f}{y}(x_0,y_0)(y - y_0) \]
+    </div>
+    <div class="f-note">
+      È la versione a due variabili dell'equazione della tangente (Analisi 1, §8.4): parti dal valore
+      \(f(x_0, y_0)\) e aggiungi «pendenza \(\times\) spostamento» in <em>ciascuna</em> direzione. In forma
+      compatta: \(z = f(\vv{x}_0) + \grad f(\vv{x}_0)\cdot(\vv{x} - \vv{x}_0)\). Come per la tangente,
+      <mark>ingrandendo attorno al punto la superficie e il suo piano tangente diventano indistinguibili</mark>
+      — purché \(f\) sia differenziabile (§7.4). È l'approssimazione lineare che useremo per stimare, ottimizzare
+      e propagare gli errori.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>La regola della catena</h2>
+
+  <p class="lead">
+    Quando le variabili di \(f\) dipendono a loro volta da qualcos'altro, le variazioni si propagano lungo la
+    catena — sommando i contributi di ogni variabile. È la regola della catena di Analisi 1, arricchita.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regola della catena (lungo una curva) <span class="tag">somma dei contributi</span></div>
+    <div class="f-body">
+      \[ \frac{\dd}{\dd t} f\big(x(t), y(t)\big) = \pdv{f}{x}\,\frac{\dd x}{\dd t} + \pdv{f}{y}\,\frac{\dd y}{\dd t} = \grad f \cdot \vv{r}'(t) \]
+    </div>
+    <div class="f-note">
+      Se ti muovi lungo un percorso \(\vv{r}(t) = (x(t), y(t))\), la velocità con cui cambia \(f\) è la somma
+      dei contributi di ciascuna variabile: quanto \(f\) reagisce a \(x\) (\(\pdv{f}{x}\)) per quanto \(x\) sta
+      cambiando (\(x'\)), più lo stesso per \(y\). Compattamente è <mark>\(\grad f \cdot \vv{r}'\)</mark>: il
+      gradiente per la velocità — una derivata direzionale «in movimento» (§7.3). Nel caso generale \(\R^n \to
+      \R^m\) i contributi si organizzano in un prodotto di matrici (gli <b>Jacobiani</b>): la regola della
+      catena diventa moltiplicazione di matrici (Algebra Lineare, Cap. 6).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Il teorema di Schwarz</h2>
+
+  <p class="lead">
+    Si può derivare due volte, in variabili diverse: prima in \(x\), poi in \(y\), o viceversa. Sorpresa
+    rassicurante: <b>l'ordine non conta</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Teorema di Schwarz <span class="tag">le derivate miste coincidono</span></div>
+    <div class="f-body">
+      \[ \pdv{}{y}\!\left(\pdv{f}{x}\right) = \pdv{}{x}\!\left(\pdv{f}{y}\right), \qquad\text{ovvero}\qquad f_{xy} = f_{yx} \]
+    </div>
+    <div class="f-note">
+      Se le derivate seconde miste sono <b>continue</b> (di nuovo, il caso normale), allora <mark>derivare
+      «prima in \(x\) poi in \(y\)» dà lo stesso risultato di «prima in \(y\) poi in \(x\)»</mark>. Verifica su
+      \(f = x^2 y^3\): \(f_x = 2x y^3\), \(f_{xy} = 6x y^2\); e \(f_y = 3x^2 y^2\), \(f_{yx} = 6x y^2\) ✔.
+      Conseguenza fondamentale: la matrice delle derivate seconde (l'Hessiana, §7.8) è <b>simmetrica</b> — ed è
+      per questo che possiamo usarci sopra il teorema spettrale dell'Algebra Lineare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Ordini superiori e Hessiana</h2>
+
+  <p class="lead">
+    Le derivate seconde di una funzione di più variabili non sono un numero (come \(f''\) in Analisi 1), ma
+    un'intera <b>matrice</b>: l'Hessiana. È la «curvatura» della superficie, e sarà la chiave dell'ottimizzazione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La matrice Hessiana <span class="tag">la derivata seconda è una matrice</span></div>
+    <div class="f-body">
+      \[ H_f = \begin{bmatrix} \pdv{^2 f}{x^2} & \pdv{^2 f}{x\,\partial y} \\[6pt] \pdv{^2 f}{y\,\partial x} & \pdv{^2 f}{y^2} \end{bmatrix} = \begin{bmatrix} f_{xx} & f_{xy} \\ f_{yx} & f_{yy} \end{bmatrix} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>gli elementi</dt>
+        <dd>tutte le derivate seconde: \(f_{xx}\) (curvatura lungo \(x\)), \(f_{yy}\) (lungo \(y\)), e le miste
+            \(f_{xy} = f_{yx}\).</dd>
+        <dt>è <b>simmetrica</b></dt>
+        <dd>grazie a Schwarz (§7.7), \(f_{xy} = f_{yx}\): l'Hessiana è una matrice simmetrica (§5.5 di Algebra
+            Lineare). E le matrici simmetriche <mark>hanno autovalori reali e si diagonalizzano</mark> (teorema
+            spettrale, §15.8 di LA) — proprietà che nel Capitolo 8 useremo per classificare massimi, minimi e
+            selle.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'Hessiana è, letteralmente, la «derivata seconda» in più variabili: come in Analisi 1 il segno di
+      \(f''\) diceva la concavità (§8.10, §10.6), qui la <b>definitezza</b> dell'Hessiana (il segno dei suoi
+      autovalori) dirà se un punto critico è una scodella (minimo), una cupola (massimo) o una sella. È il
+      ponte diretto con l'Algebra Lineare, e il protagonista del prossimo capitolo.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>Derivate parziali</b> \(\pdv{f}{x}\): deriva in una variabile congelando le altre (§7.1) — la
+          pendenza di una fetta. Raccolte nel <b>gradiente</b> \(\grad f\) (§7.2), che punta in <mark>massima
+          salita, perpendicolare ai livelli</mark>, con lunghezza = ripidità.</li>
+      <li><b>Derivata direzionale</b> \(D_{\vv{u}} f = \grad f \cdot \vv{u}\) (§7.3): massima lungo \(\grad f\),
+          zero lungo il livello. Il gradiente calcola tutte le pendenze in un colpo.</li>
+      <li><b>Differenziabilità</b> (§7.4): ben approssimata dal termine lineare, errore \(\lo(\norm{\vv{h}})\).
+          <mark>Più forte dell'avere le parziali</mark> (che da sole non bastano); garantita se le parziali sono
+          continue (\(C^1\)). Dà il <b>piano tangente</b> (§7.5).</li>
+      <li><b>Catena:</b> \(\frac{\dd}{\dd t}f(\vv{r}(t)) = \grad f \cdot \vv{r}'\) (§7.6). <b>Schwarz:</b>
+          \(f_{xy} = f_{yx}\) (§7.7). La <b>Hessiana</b> (§7.8) è la derivata seconda — una <b>matrice
+          simmetrica</b>, ponte verso l'ottimizzazione.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo la derivata in più variabili e la sua «seconda» matriciale. Nel <strong>Capitolo 8</strong> le
+    usiamo per il problema che dà senso a tutto: l'<b>ottimizzazione</b>. Cercheremo i <b>punti critici</b>
+    (dove \(\grad f = \vv{0}\), l'analogo di \(f' = 0\)) e li classificheremo con la <b>definitezza
+    dell'Hessiana</b> — cioè con gli <b>autovalori</b> dell'Algebra Lineare. Massimo, minimo o sella: la
+    risposta è scritta nel segno degli autovalori. È l'incontro più bello tra i due libri.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-9"><span class="secnum">Sezione 7.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Calcola \(\pdv{f}{x}\) e \(\pdv{f}{y}\), poi il gradiente:
+      (a) \(f = x^2 y + 3y^2\) &nbsp;·&nbsp;
+      (b) \(f = \eu^{xy}\) &nbsp;·&nbsp;
+      (c) \(f = \ln(x^2 + y^2)\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Per \(f(x, y) = x^2 + 2y^2\) nel punto \((1, 1)\): calcola il gradiente, la derivata direzionale nella
+      direzione \(\vv{u} = \frac{1}{\sqrt2}(1, 1)\), e la direzione di massima crescita.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Scrivi il piano tangente al grafico di \(f(x, y) = x^2 + y^2\) nel punto \((1, 2)\) (dove \(f = 5\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Calcola l'Hessiana di \(f(x, y) = x^3 - 3xy + y^2\) e verifica il teorema di Schwarz (\(f_{xy} = f_{yx}\)).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.5</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) Il gradiente è perpendicolare alle curve di livello. &nbsp;
+      (b) Se esistono \(f_x\) e \(f_y\), allora \(f\) è differenziabile. &nbsp;
+      (c) La derivata direzionale è massima lungo il gradiente. &nbsp;
+      (d) L'Hessiana è sempre simmetrica (per funzioni \(C^2\)).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-10"><span class="secnum">Sezione 7.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      <b>(a)</b> \(f_x = 2xy\), \(f_y = x^2 + 6y\); \(\grad f = (2xy,\ x^2 + 6y)\).
+      <br><b>(b)</b> \(f_x = y\eu^{xy}\), \(f_y = x\eu^{xy}\); \(\grad f = \eu^{xy}(y, x)\).
+      <br><b>(c)</b> \(f_x = \frac{2x}{x^2+y^2}\), \(f_y = \frac{2y}{x^2+y^2}\);
+      \(\grad f = \frac{2}{x^2+y^2}(x, y)\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      \(\grad f = (2x, 4y)\), in \((1,1)\) vale \((2, 4)\). Derivata direzionale:
+      \(D_{\vv{u}} f = (2,4)\cdot\frac{1}{\sqrt2}(1,1) = \frac{2 + 4}{\sqrt2} = \frac{6}{\sqrt2} = 3\sqrt2
+      \approx 4{,}24\). La <b>direzione di massima crescita</b> è quella del gradiente, \((2,4)\), cioè il
+      versore \(\frac{1}{\sqrt{20}}(2,4) = \frac{1}{\sqrt5}(1,2)\), con pendenza massima
+      \(\norm{\grad f} = \sqrt{20} = 2\sqrt5\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      \(\grad f = (2x, 2y)\), in \((1,2)\) vale \((2, 4)\). Piano tangente:
+      \(z = 5 + 2(x - 1) + 4(y - 2) = 2x + 4y - 5\).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      \(f_x = 3x^2 - 3y\), \(f_y = -3x + 2y\). Seconde: \(f_{xx} = 6x\), \(f_{yy} = 2\),
+      \(f_{xy} = -3\), \(f_{yx} = -3\). Schwarz ✔ (\(f_{xy} = f_{yx} = -3\)).
+      \[ H_f = \begin{bmatrix} 6x & -3 \\ -3 & 2 \end{bmatrix}. \]
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.5</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> Il gradiente è ortogonale ai livelli (§7.2): lungo il livello \(f\) non cambia, la
+      crescita è tutta perpendicolare.
+      <br><b>(b) FALSO.</b> L'esistenza delle parziali <em>non</em> garantisce la differenziabilità (§7.4): le
+      parziali «guardano solo lungo gli assi». Serve, ad esempio, che siano continue (\(C^1\)).
+      <br><b>(c) VERO.</b> \(D_{\vv{u}} f = \norm{\grad f}\cos\theta\) è massima per \(\theta = 0\), cioè
+      \(\vv{u} \parallel \grad f\) (§7.3).
+      <br><b>(d) VERO.</b> Per Schwarz \(f_{xy} = f_{yx}\), quindi l'Hessiana è simmetrica (§7.7–7.8).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §7.1 — derivata parziale = pendenza della fetta
+   f(x,y) = 0.4x² − 0.3y² + 0.5
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wp-svg');
+  if (!svg) return;
+  const out = document.getElementById('wp-out');
+  const btns = document.getElementById('wp-btns');
+  const lab = document.getElementById('wp-lab');
+  const f = (x, y) => 0.4 * x * x - 0.3 * y * y + 0.5;
+  let mode = 'x';            // fetta lungo x (y fisso) o lungo y (x fisso)
+  const fixed = 0.9;         // valore dell'altra variabile
+
+  function draw() {
+    const t = parseFloat(document.getElementById('wp-t').value);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3, xmax: 3, ymin: -0.5, ymax: 3.5 });
+    p.grid(1, 1); p.axes({ numbers: true, xname: mode });
+    // curva-fetta g e la sua tangente
+    let g, dg, val;
+    if (mode === 'x') { g = x => f(x, fixed); dg = 0.8 * t; val = g(t); }
+    else { g = y => f(fixed, y); dg = -0.6 * t; val = g(t); }
+    p.func(g, { color: 'var(--accent)', width: 2.8 });
+    p.line(t - 1.3, val - 1.3 * dg, t + 1.3, val + 1.3 * dg, { color: 'var(--warm)', width: 2.4 });
+    p.dot(t, val, { color: 'var(--violet)', r: 5 });
+    [...btns.children].forEach(b => b.classList.toggle('active', b.dataset.m === mode));
+    lab.textContent = mode + '₀';
+
+    out.innerHTML = `
+      <div class="big">
+        fetta a ${mode === 'x' ? 'y' : 'x'} = ${fixed} &nbsp;·&nbsp;
+        ∂f/∂${mode} in ${mode}=${fmt(t)} = <b style="color:var(--warm)">${fmt(dg)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Congelando ${mode === 'x' ? 'y' : 'x'} = ${fixed}, la superficie diventa la <b style="color:var(--accent)">curva</b>
+        ${mode === 'x' ? 'f(x, ' + fixed + ')' : 'f(' + fixed + ', y)'}. La <b style="color:var(--warm)">pendenza</b>
+        della sua tangente è <mark>la derivata parziale ∂f/∂${mode}</mark> = ${mode === 'x' ? '0.8·x' : '−0.6·y'} =
+        ${fmt(dg)}. Cambia variabile col pulsante: è lo stesso gesto, sull'altro asse.
+      </div>`;
+  }
+  [['x', '∂f/∂x (fetta lungo x)'], ['y', '∂f/∂y (fetta lungo y)']].forEach(([m, t]) => {
+    const b = document.createElement('button');
+    b.className = 'w-btn'; b.textContent = t; b.dataset.m = m;
+    b.onclick = () => { mode = m; draw(); };
+    btns.appendChild(b);
+  });
+  document.getElementById('wp-t').addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §7.2/7.3 — gradiente e derivata direzionale
+   f(x,y) = 3 exp(−(x²+y²)/5)  (una collina)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wg-svg');
+  if (!svg) return;
+  const out = document.getElementById('wg-out');
+  const slider = document.getElementById('wg-th');
+  const f = (x, y) => 3 * Math.exp(-(x * x + y * y) / 5);
+  const grad = (x, y) => [(f(x + 1e-3, y) - f(x - 1e-3, y)) / 2e-3, (f(x, y + 1e-3) - f(x, y - 1e-3)) / 2e-3];
+  let P = [1.4, -0.8];
+
+  function draw() {
+    const th = parseFloat(slider.value);
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -4, xmax: 4, ymin: -2.8, ymax: 2.8, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    p.contour(f, [0.3, 0.7, 1.2, 1.8, 2.4, 2.8], { color: 'var(--ink-faint)', width: 1.3, n: 90 });
+    const g = grad(P[0], P[1]), gm = Math.hypot(g[0], g[1]) || 1e-9;
+    // gradiente
+    p.arrow(P[0], P[1], P[0] + g[0] * 1.1 / gm * 1.4, P[1] + g[1] * 1.1 / gm * 1.4, { color: 'var(--warm)', width: 3, label: '∇f' });
+    // direzione u
+    const u = [Math.cos(th), Math.sin(th)];
+    p.arrow(P[0], P[1], P[0] + u[0] * 1.4, P[1] + u[1] * 1.4, { color: 'var(--violet)', width: 2.6, label: 'u' });
+    p.dot(P[0], P[1], { color: 'var(--accent)', r: 6 });
+    p.handle(P[0], P[1], { color: 'var(--accent)' }, (x, y) => { P = [x, y]; draw(); });
+
+    const Du = g[0] * u[0] + g[1] * u[1];
+    const ang = Math.abs(Math.atan2(g[0] * u[1] - g[1] * u[0], g[0] * u[0] + g[1] * u[1])) * 180 / Math.PI;
+    out.innerHTML = `
+      <div class="big">
+        Dᵤf = ∇f · u = <b style="color:var(--violet)">${fmt(Du)}</b>
+        &nbsp;·&nbsp; ‖∇f‖ = <b style="color:var(--warm)">${fmt(gm)}</b> (pendenza max)
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il <b style="color:var(--warm)">gradiente</b> punta in salita, <b>perpendicolare</b> ai livelli. La
+        <b style="color:var(--violet)">derivata direzionale</b> lungo u è la proiezione ∇f·u.
+        ${ang < 12 ? '<mark>u ≈ parallela a ∇f: pendenza MASSIMA (salita più ripida).</mark>'
+          : ang > 168 ? '<mark>u ≈ opposta a ∇f: pendenza MINIMA (discesa più ripida).</mark>'
+            : Math.abs(ang - 90) < 12 ? '<mark>u ⊥ ∇f: pendenza ZERO — ti muovi lungo il livello.</mark>'
+              : 'Ruota u verso ∇f per aumentare la pendenza, di traverso per annullarla.'}
+      </div>`;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

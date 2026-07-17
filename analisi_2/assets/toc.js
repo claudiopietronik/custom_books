@@ -104,7 +104,7 @@ const TOC = [
     n: 7,
     titolo: "Calcolo differenziale in più variabili",
     file: "cap07-derivate-parziali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Derivate parziali" },
       { id: "s7-2", n: "7.2", t: "Il gradiente" },
