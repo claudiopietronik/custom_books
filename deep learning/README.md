@@ -46,7 +46,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 10 — Modellazione di sequenze: reti ricorrenti
 - [x] 11 — Metodologia pratica
 - [x] 12 — Applicazioni
-- [ ] 13 — Modelli a fattori lineari
+- [x] 13 — Modelli a fattori lineari
 - [ ] 14 — Autoencoder
 - [ ] 15 — Apprendimento di rappresentazioni
 - [ ] 16 — Modelli probabilistici strutturati

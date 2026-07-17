@@ -242,7 +242,7 @@ const TOC = [
     titolo: "Modelli a fattori lineari",
     file: "cap13-fattori-lineari.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "PCA probabilistica e analisi fattoriale" },
       { id: "s13-2", n: "13.2", t: "L'analisi delle componenti indipendenti (ICA)" },

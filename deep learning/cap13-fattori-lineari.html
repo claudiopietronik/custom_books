@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Modelli a fattori lineari — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13 · Parte III</div>
+    <h1>Modelli a fattori lineari</h1>
+    <p class="standfirst">
+      Inizia la Parte III, la frontiera: modelli in gran parte <b>non supervisionati e generativi</b>. Il punto
+      di partenza è semplice e profondo: e se i dati che osserviamo fossero generati da pochi <b>fattori
+      nascosti</b>, combinati linearmente più un po' di rumore? Questa idea — il <b>modello a fattori lineari</b>
+      — è il mattone concettuale di PCA, ICA, sparse coding e, un livello più su, di autoencoder e modelli
+      generativi. <mark>È la versione più semplice della domanda «da quali cause nascono i dati?»</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Lo schema comune: <b>PCA probabilistica e analisi fattoriale</b> (§13.1). Poi le varianti secondo cosa
+      chiediamo ai fattori: <b>indipendenti</b> — l'ICA (§13.2, widget), <b>lenti</b> — slow feature analysis
+      (§13.3), <b>sparsi</b> — sparse coding (§13.4). E la lettura geometrica che unisce tutto: la PCA come
+      <b>varietà</b> (§13.5).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Tutti questi modelli condividono la stessa struttura generativa: <b>fattore latente → osservazione</b>. È
+      esattamente lo schema di un <b>decoder</b> (Cap. 14) e di un modello generativo (Cap. 20), ma con una mappa
+      <em>lineare</em>. <mark>Capirli qui, dove la matematica è trasparente, rende leggibili i modelli non
+      lineari che verranno.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>PCA probabilistica e analisi fattoriale</h2>
+
+  <p class="lead">
+    L'idea generativa: ogni dato osservato \(\vv{x}\) nasce da pochi fattori nascosti \(\vv{h}\), mescolati da una
+    matrice e sporcati da rumore.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modello a fattori lineari <span class="tag">fattori nascosti → osservazione</span></div>
+    <div class="f-body">
+      \[ \vv{x} = \hA{\mm{W}}\,\hB{\vv{h}} + \vv{b} + \vv{\text{rumore}}, \qquad \hB{\vv{h}} \dist p(\vv{h}) \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hB{\vv{h}}\) — i <b>fattori nascosti</b></dt>
+        <dd>poche variabili latenti che «spiegano» il dato, estratte da una distribuzione a priori \(p(\vv{h})\)
+            (di solito gaussiana). Sono le cause non osservate.</dd>
+        <dt>\(\hA{\mm{W}}\) — la <b>matrice di mescolamento</b></dt>
+        <dd>combina linearmente i fattori per produrre l'osservazione. Le sue colonne sono i «pattern base» da
+            cui i dati sono costruiti.</dd>
+        <dt>il <b>rumore</b></dt>
+        <dd>ciò che i fattori non spiegano. Se è gaussiano isotropo si ha la <b>PCA probabilistica</b>; se ha
+            varianza diversa per ogni dimensione, l'<b>analisi fattoriale</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Cambiando la distribuzione \(p(\vv{h})\) richiesta ai fattori si ottengono modelli diversi: gaussiana →
+      PCA; <b>non gaussiana e indipendente</b> → ICA (§13.2); <b>sparsa</b> → sparse coding (§13.4).
+      <mark>Un unico schema, tante specializzazioni, a seconda di cosa vogliamo che i fattori siano.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>L'analisi delle componenti indipendenti (ICA)</h2>
+
+  <p class="lead">
+    La PCA trova direzioni <b>scorrelate</b> (ortogonali). Ma scorrelato non vuol dire <b>indipendente</b>.
+    L'ICA cerca fattori davvero indipendenti — e risolve il «problema del cocktail party».
+  </p>
+
+  <p>
+    Immagina due voci registrate da due microfoni: ogni microfono capta un <b>mix</b> delle due voci. L'ICA
+    <b>separa</b> le sorgenti originali sfruttando l'ipotesi che siano <b>statisticamente indipendenti</b> e
+    <b>non gaussiane</b>. La differenza con la PCA è cruciale: <mark>la PCA cerca le direzioni di massima varianza
+    (ortogonali tra loro), l'ICA cerca le direzioni lungo cui i dati si <em>fattorizzano</em></mark> (che in
+    generale <b>non</b> sono ortogonali). Il widget mostra un dato che è il mix lineare di due sorgenti
+    indipendenti uniformi (un quadrato «stirato»): la PCA punta sulla diagonale (max varianza), ma le vere
+    direzioni indipendenti sono i <em>bordi</em> del parallelogramma — quelle che l'ICA recupera.
+  </p>
+
+  <div class="widget" id="w-ica">
+    <div class="w-head">
+      <span>PCA vs ICA: scorrelato ≠ indipendente</span>
+      <span class="hint">confronta gli assi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wica-svg" viewBox="0 0 560 420" role="img" aria-label="Un dato mix di due sorgenti indipendenti: la PCA trova assi ortogonali di max varianza, l'ICA i bordi del parallelogramma"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wica-pca">Assi PCA (ortogonali)</button>
+      <button class="w-btn" id="wica-ica">Assi ICA (indipendenti)</button>
+    </div>
+    <div class="w-readout" id="wica-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Slow feature analysis</h2>
+
+  <p class="lead">
+    Un principio diverso per scegliere i fattori: cerca le feature che cambiano <b>lentamente</b> nel tempo.
+    L'idea che le cause importanti siano stabili.
+  </p>
+
+  <p>
+    In un video, i singoli pixel cambiano velocissimi (un oggetto che si muove fa lampeggiare i pixel), ma le
+    proprietà <b>di alto livello</b> — <em>chi</em> è l'oggetto, <em>dove</em> sta andando — cambiano
+    lentamente. La <span class="termine">slow feature analysis</span> cerca le trasformazioni dei dati che
+    <b>variano il più lentamente possibile</b> nel tempo, sotto il vincolo di non essere costanti. <mark>È
+    l'ipotesi che le cause interessanti del mondo siano <em>lente</em></mark>: l'identità di un oggetto persiste
+    anche mentre la sua immagine sulla retina cambia in fretta.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>Sparse coding</h2>
+
+  <p class="lead">
+    Chiedi ai fattori di essere <b>sparsi</b>: ogni dato usa solo pochi «pattern base» tra i tanti disponibili.
+    È la strategia del cervello visivo — e un ottimo regolarizzatore.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Sparse coding <span class="tag">ricostruire con pochi elementi attivi</span></div>
+    <div class="f-body">
+      \[ \min_{\vv{h}}\ \underbrace{\norm{\vv{x} - \mm{W}\vv{h}}_2^2}_{\text{ricostruzione}}
+         + \lambda\,\underbrace{\norm{\vv{h}}_1}_{\text{sparsità}} \]
+    </div>
+    <div class="f-note">
+      Si rappresenta \(\vv{x}\) come combinazione di poche colonne di \(\mm{W}\) (un <b>dizionario</b>
+      sovracompleto), imponendo la sparsità con la <b>penalità L1</b> (§7.1) sui coefficienti \(\vv{h}\). Il
+      risultato, applicato a patch di immagini naturali, produce un dizionario di <b>rilevatori di bordi</b>
+      orientati — sorprendentemente simili ai campi recettivi della corteccia visiva (§9.8). <mark>Ogni immagine
+      è spiegata da pochi bordi attivi.</mark> Lo sparse coding è l'antenato di certi autoencoder (Cap. 14).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>L'interpretazione a varietà della PCA</h2>
+
+  <p class="lead">
+    Un ultimo modo di vedere questi modelli: come <b>varietà</b> (manifold). I dati vivono su una superficie di
+    dimensione bassa immersa nello spazio ad alta dimensione — e i fattori sono le coordinate su quella
+    superficie.
+  </p>
+
+  <p>
+    La PCA trova la <b>varietà lineare</b> (un sottospazio, un piano) che meglio approssima i dati: proiettarci
+    sopra è la compressione, e le coordinate su di essa sono i fattori. <mark>Ma i dati reali stanno su varietà
+    <em>curve</em></mark>, non piatte — le facce, le cifre scritte a mano formano superfici curve immerse in
+    spazi di migliaia di dimensioni. I modelli lineari di questo capitolo sono l'approssimazione piatta; il salto
+    ai modelli <b>non lineari</b> (autoencoder, Cap. 14) serve proprio a catturare varietà curve. È il ponte
+    concettuale verso il resto della Parte III.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li>Schema comune: \(\vv{x} = \mm{W}\vv{h} + \text{rumore}\), <b>fattori nascosti → osservazione</b>. La
+          scelta della distribuzione dei fattori dà i vari modelli (§13.1).</li>
+      <li><b>PCA</b>: fattori gaussiani, direzioni ortogonali di max varianza. <b>ICA</b>: fattori indipendenti e
+          non gaussiani, direzioni <em>non</em> ortogonali — <b>scorrelato ≠ indipendente</b> (§13.2, widget).</li>
+      <li><b>Slow features</b>: fattori che cambiano lentamente (§13.3). <b>Sparse coding</b>: pochi fattori
+          attivi per dato, via penalità L1 (§13.4).</li>
+      <li>Sono tutti approssimazioni <b>lineari</b> di una varietà; i dati veri stanno su varietà <b>curve</b>,
+          che servono modelli non lineari (§13.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sostituendo la mappa lineare \(\mm{W}\) con una <b>rete neurale</b>, il modello a fattori diventa capace di
+    varietà curve. Il <strong>Capitolo 14</strong> fa esattamente questo: gli <b>autoencoder</b>, reti che
+    imparano a comprimere e ricostruire i dati, scoprendo rappresentazioni non lineari — e aprendo la strada ai
+    modelli generativi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §13.2, perché gli assi della PCA non coincidono con i bordi del parallelogramma? Cosa
+      massimizza la PCA, e cosa cerca invece l'ICA?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Perché l'ICA richiede che le sorgenti siano <b>non gaussiane</b>? <em>Suggerimento:</em> pensa a cosa
+      succede alla rotazione di due gaussiane indipendenti standard.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Che ruolo ha la penalità L1 nel sparse coding? Cosa succederebbe con \(\lambda=0\)? E con \(\lambda\)
+      molto grande?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) La PCA trova direzioni ortogonali; l'ICA in generale no. &nbsp;
+      (b) Due variabili scorrelate sono sempre indipendenti. &nbsp;
+      (c) Lo sparse coding usa la penalità L2 per la sparsità. &nbsp;
+      (d) I modelli a fattori lineari catturano varietà curve.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      La PCA massimizza la <b>varianza</b> e impone assi <b>ortogonali</b>: la prima componente punta dove la
+      nuvola è più «lunga», cioè lungo la <em>diagonale</em> del parallelogramma. Ma le vere sorgenti indipendenti
+      sono i <b>bordi</b> del parallelogramma, che non sono ortogonali. L'ICA cerca proprio quelle direzioni —
+      lungo cui i dati si <b>fattorizzano</b> in componenti indipendenti — ignorando l'ortogonalità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Perché due gaussiane indipendenti standard, ruotate, restano due gaussiane indipendenti standard: la
+      distribuzione è <b>invariante per rotazione</b>. Quindi non c'è modo di distinguere le direzioni «vere» da
+      quelle ruotate: l'ICA sarebbe indeterminata. <mark>Serve la non gaussianità per rompere questa simmetria</mark>
+      e individuare le direzioni indipendenti giuste.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      La <b>L1</b> spinge i coefficienti \(\vv{h}\) verso zero, lasciandone attivi solo pochi (§7.1): la
+      rappresentazione è <b>sparsa</b>. Con \(\lambda=0\) non c'è sparsità: il modello usa tutti i pattern base
+      e minimizza solo la ricostruzione (rischio di soluzioni banali con dizionario sovracompleto). Con
+      \(\lambda\) grande, quasi tutti i coefficienti vanno a zero: la ricostruzione peggiora perché il modello
+      può usare troppo pochi elementi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> PCA ortogonale (max varianza), ICA in generale obliqua (indipendenza) (§13.2). <br>
+      <b>(b) FALSO.</b> Scorrelato = nessuna relazione <em>lineare</em>; possono esserci dipendenze non lineari
+      (§13.2, §3.5). <br>
+      <b>(c) FALSO.</b> La sparsità si ottiene con la <b>L1</b>, non la L2 (§13.4). <br>
+      <b>(d) FALSO.</b> Sono <b>lineari</b>: catturano solo varietà piatte; per quelle curve servono modelli non
+      lineari (§13.5, Cap. 14).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §13.2 — PCA vs ICA su un mix di sorgenti indipendenti
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wica-svg');
+  if (!svg) return;
+  const out = document.getElementById('wica-out');
+  const bP = document.getElementById('wica-pca'), bI = document.getElementById('wica-ica');
+  // sorgenti indipendenti uniformi su un reticolo; mescolate da A (bordi non ortogonali)
+  const A = [[1.0, 0.75], [0.25, 1.0]];
+  const pts = [];
+  for (let i = 0; i <= 12; i++) for (let j = 0; j <= 12; j++) {
+    const s1 = -1 + 2 * i / 12, s2 = -1 + 2 * j / 12;
+    pts.push([A[0][0] * s1 + A[0][1] * s2, A[1][0] * s1 + A[1][1] * s2]);
+  }
+  // covarianza per PCA
+  let sxx = 0, syy = 0, sxy = 0; for (const p of pts) { sxx += p[0] * p[0]; syy += p[1] * p[1]; sxy += p[0] * p[1]; }
+  const M = pts.length; sxx /= M; syy /= M; sxy /= M;
+  const tr = sxx + syy, disc = Math.sqrt(Math.max(0, tr * tr / 4 - (sxx * syy - sxy * sxy)));
+  const l1 = tr / 2 + disc, l2 = tr / 2 - disc;
+  const evec = l => { let vx = sxy, vy = l - sxx; if (Math.hypot(vx, vy) < 1e-9) { vx = l - syy; vy = sxy; } const n = Math.hypot(vx, vy) || 1; return [vx / n, vy / n]; };
+  const pc1 = evec(l1), pc2 = evec(l2);
+  // assi ICA = colonne di A normalizzate (le direzioni delle sorgenti)
+  const ica1 = (() => { const n = Math.hypot(A[0][0], A[1][0]); return [A[0][0] / n, A[1][0] / n]; })();
+  const ica2 = (() => { const n = Math.hypot(A[0][1], A[1][1]); return [A[0][1] / n, A[1][1] / n]; })();
+  let mode = 'pca';
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -2.4, xmax: 2.4, ymin: -1.9, ymax: 1.9, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false });
+    for (const q of pts) p.dot(q[0], q[1], { color: 'color-mix(in srgb, var(--accent) 55%, transparent)', r: 2.6 });
+    if (mode === 'pca') {
+      const s1 = 1.9 * Math.sqrt(l1), s2 = 1.9 * Math.sqrt(l2);
+      p.arrow(0, 0, pc1[0] * s1, pc1[1] * s1, { color: 'var(--violet)', width: 3.2, label: 'PC1' });
+      p.arrow(0, 0, pc2[0] * s2, pc2[1] * s2, { color: 'var(--violet)', width: 3.2, label: 'PC2' });
+    } else {
+      p.arrow(0, 0, ica1[0] * 1.7, ica1[1] * 1.7, { color: 'var(--green)', width: 3.2, label: 's₁' });
+      p.arrow(0, 0, ica2[0] * 1.7, ica2[1] * 1.7, { color: 'var(--green)', width: 3.2, label: 's₂' });
+    }
+    const dotPCA = Math.abs(pc1[0] * pc2[0] + pc1[1] * pc2[1]);
+    const dotICA = ica1[0] * ica2[0] + ica1[1] * ica2[1];
+    out.innerHTML = `
+      <div class="big">${mode === 'pca'
+        ? '<b style="color:var(--violet)">Assi PCA</b> — ortogonali (prodotto scalare ≈ ' + fmt(dotPCA, 2) + ')'
+        : '<b style="color:var(--green)">Assi ICA</b> — indipendenti, non ortogonali (prodotto scalare = ' + fmt(dotICA, 2) + ')'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${mode === 'pca'
+          ? 'La PCA trova le direzioni di <b>massima varianza</b>, ad angolo retto tra loro: la PC1 punta sulla <b>diagonale</b> del parallelogramma, dove la nuvola è più lunga. <mark>Ma quella non è la struttura vera dei dati.</mark>'
+          : 'L\'ICA recupera i <b>bordi</b> del parallelogramma: le direzioni delle due sorgenti indipendenti che, mescolate, hanno generato i dati. <mark>Non sono ortogonali</mark> — ed è ciò che la PCA non può vedere.'}
+        Passa da una all\'altra per confrontare.
+      </div>`;
+  }
+  bP.addEventListener('click', () => { mode = 'pca'; bP.classList.add('on'); bI.classList.remove('on'); draw(); });
+  bI.addEventListener('click', () => { mode = 'ica'; bI.classList.add('on'); bP.classList.remove('on'); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>
