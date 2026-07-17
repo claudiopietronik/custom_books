@@ -249,7 +249,7 @@ const TOC = [
     n: 16,
     titolo: "La fine",
     file: "cap16-la-fine.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Cosa hai costruito" },
       { id: "s16-2", n: "16.2", t: "Dove si va da qui" },
