@@ -120,7 +120,7 @@ const TOC = [
   /* ===================== PARTE II — NORMALIZZAZIONE E OUTLIER ============= */
   {
     n: 10, parte: "II · Normalizzazione e outlier",
-    titolo: "Z-score e min-max", file: "cap10-scaling.html", stato: "da-fare",
+    titolo: "Z-score e min-max", file: "cap10-scaling.html", stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Perché scalare i dati" },
       { id: "s10-2", n: "10.2", t: "Lo z-score (standardizzazione)" },

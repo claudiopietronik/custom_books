@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Z-score e min-max — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte II · Normalizzazione e outlier</div>
+    <h1>Z-score e min-max</h1>
+    <p class="standfirst">
+      Prima di dare i dati a un modello — o di confrontare variabili misurate in unità diverse — spesso bisogna
+      metterli sulla <b>stessa scala</b>. Due ricette dominano: lo <b>z-score</b> (media 0, deviazione 1) e il
+      <b>min-max</b> (schiacciato in [0, 1]). La regola d'oro da tenere stretta: normalizzare cambia la
+      <em>scala</em>, mai la <em>forma</em>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Apre la Parte II, il ponte pratico tra descrittiva e inferenza. Usa direttamente media e deviazione
+      standard (Cap. 4) e min/max (Cap. 5). Lo z-score che costruiamo qui è lo stesso «z» che ritroverai nel QQ
+      plot (Cap. 5), nel TLC (Cap. 23) e nella distribuzione normale standard.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Un algoritmo che misura distanze (k-NN, k-means, reti neurali, regressione regolarizzata) viene dominato
+      dalle variabili con numeri più grandi: se «reddito» va a decine di migliaia e «età» a decine, il reddito
+      schiaccia tutto. Normalizzare rimette le variabili sullo stesso piano — è un passo quasi obbligato nel
+      machine learning.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">SEZIONE 10.1</span>Perché scalare i dati</h2>
+
+  <p class="lead">
+    Il problema nasce quando variabili con <b>unità e ampiezze diverse</b> finiscono nello stesso calcolo. Chi ha
+    i numeri più grandi vince, a prescindere dalla sua reale importanza.
+  </p>
+
+  <p>
+    Immagina di raggruppare persone per «somiglianza» usando età (anni: 20–70) e reddito (euro: 15 000–120 000).
+    Qualsiasi misura di distanza sommerà differenze di reddito nell'ordine delle migliaia a differenze di età
+    nell'ordine delle decine: l'età diventa <b>invisibile</b>, non perché conti poco, ma perché è misurata in
+    numeri piccoli. Portando entrambe sulla stessa scala, ogni variabile contribuisce in proporzione alla sua
+    <em>variabilità</em>, non alla sua unità di misura.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> La regola d'oro</div>
+    <p style="margin-bottom:0">
+      <mark>La normalizzazione cambia la scala, non la forma.</mark> La distribuzione resta identica — stessa
+      asimmetria, stesse gobbe, stessi outlier relativi — si sposta e si stira soltanto l'asse. Non stai alterando
+      l'informazione, solo l'unità di misura. Un istogramma prima e dopo ha la <em>stessa</em> sagoma.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">SEZIONE 10.2</span>Lo z-score (standardizzazione)</h2>
+
+  <p class="lead">
+    Lo <b>z-score</b> ricentra i dati sullo zero e li riscala perché abbiano deviazione standard 1. Il nuovo
+    valore dice «quante deviazioni standard sopra o sotto la media» sta il dato.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Standardizzazione z-score <span class="tag">media 0, deviazione 1</span></div>
+    <div class="f-body">
+      \[ z_i \;=\; \frac{x_i - \hA{\bar{x}}}{\hB{s}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(x_i - \hA{\bar{x}}\)</dt><dd><b>centra</b> i dati: sottraendo la media, il nuovo centro diventa 0.</dd>
+        <dt>\(\div\,\hB{s}\)</dt><dd><b>riscala</b>: dividendo per la deviazione standard, la nuova deviazione diventa 1.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Risultato: <mark>media 0, deviazione standard 1</mark>. Un \(z_i = +2\) significa «due deviazioni standard
+      sopra la media», ovunque e per qualunque variabile. È lo stesso \(z\) del QQ plot (Cap. 5) e sarà la valuta
+      universale del confronto tra distribuzioni. Preferito quando i dati sono circa <b>normali</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">SEZIONE 10.3</span>Il min-max scaling</h2>
+
+  <p class="lead">
+    Il <b>min-max</b> schiaccia i dati in un intervallo fisso, di solito [0, 1]: il minimo diventa 0, il massimo
+    diventa 1, tutto il resto in mezzo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Min-max scaling <span class="tag">tutto dentro [0, 1]</span></div>
+    <div class="f-body">
+      \[ x'_i \;=\; \frac{x_i - \hA{\min(x)}}{\hB{\max(x) - \min(x)}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(x_i - \hA{\min(x)}\)</dt><dd>porta il minimo a 0: sposta tutto in giù del valore più piccolo.</dd>
+        <dt>\(\div\,\hB{(\max-\min)}\)</dt><dd>divide per il <b>range</b> (l'ampiezza totale) → porta il massimo a 1.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Risultato: dati in <b>[0, 1]</b>. Utile quando serve un intervallo fisso e limitato — input di reti neurali,
+      valori di pixel (0–255 → 0–1), barre di progresso. Non presume nulla sulla forma della distribuzione.
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il min-max è fragile agli outlier</div>
+    <p style="margin-bottom:0">
+      Poiché dipende solo da <b>minimo e massimo</b>, un unico valore enorme allarga il range e
+      <mark>schiaccia tutti gli altri dati vicino a 0</mark>. Un solo outlier a 1 000 000 tra valori intorno a 50
+      rende insignificante ogni differenza tra i dati «normali». Lo z-score è più robusto (usa media e deviazione,
+      non solo gli estremi), ma anch'esso risente degli outlier. Ecco perché il prossimo capitolo affronta
+      proprio gli outlier.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">SEZIONE 10.4</span>Quale usare e quando</h2>
+
+  <p class="lead">
+    Non c'è un vincitore assoluto: la scelta dipende dai dati e dall'algoritmo a valle.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th></th><th>Z-score</th><th>Min-max</th></tr></thead>
+    <tbody>
+      <tr><td>Risultato</td><td>media 0, deviazione 1</td><td>tutto in [0, 1]</td></tr>
+      <tr><td>Range</td><td>illimitato (può uscire da ±3)</td><td>fisso e limitato</td></tr>
+      <tr><td>Sensibilità agli outlier</td><td>moderata</td><td>alta</td></tr>
+      <tr><td>Ideale quando…</td><td>dati ~normali; serve confrontare «quante σ»</td><td>serve un range fisso (reti, pixel)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📎</span> Il tranello del train/test</div>
+    <p style="margin-bottom:0">
+      Nel machine learning, i parametri della normalizzazione (\(\bar{x}, s\) oppure min e max) vanno calcolati
+      <b>solo sui dati di addestramento</b> e poi <em>applicati</em> ai dati di test. Ricalcolarli sul test è una
+      forma di <b>data leakage</b> che gonfia le prestazioni. È l'errore silenzioso numero uno dei principianti.
+    </p>
+  </div>
+
+  <h3>Provalo: cambia scala, non forma</h3>
+
+  <p>
+    Gli stessi dati, tre scale. Passa da grezzi a z-score a min-max e osserva: l'istogramma mantiene
+    <b>esattamente la stessa sagoma</b>; cambiano solo i numeri sull'asse e il punto in cui cade lo zero. La forma
+    è invariante — la regola d'oro, visibile.
+  </p>
+
+  <div class="widget" id="w-scale">
+    <div class="w-head">
+      <span>La forma non cambia</span>
+      <span class="hint">grezzi · z-score · min-max</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsc-svg" viewBox="0 0 620 240" role="img" aria-label="Lo stesso istogramma sotto tre normalizzazioni: la forma resta identica"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wsc-raw">grezzi</button>
+      <button class="w-btn" id="wsc-z">z-score</button>
+      <button class="w-btn" id="wsc-mm">min-max</button>
+    </div>
+    <div class="w-readout" id="wsc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">SEZIONE 10.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">Un dato vale \(x = 82\); la variabile ha media \(\bar{x} = 70\) e deviazione
+      standard \(s = 8\). Qual è il suo z-score? Come lo interpreti?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(z = (82 - 70)/8 = 12/8 = \mathbf{1{,}5}\). Il dato sta <b>1,5 deviazioni standard sopra la media</b>.</p>
+        <p style="margin-bottom:0">Su una distribuzione normale, un \(z\) di 1,5 è abbastanza alto ma non
+          eccezionale (circa il 93° percentile). Lo stesso \(z\) è confrontabile tra variabili diverse: è il
+          vantaggio dello z-score.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">Dati \([10, 20, 30, 40, 50]\). Applica il min-max scaling. Dove finisce il 30?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>\(\min = 10\), \(\max = 50\), range \(= 40\). Trasformazione \(x' = (x-10)/40\):
+          \([0,\ 0{,}25,\ 0{,}5,\ 0{,}75,\ 1]\).</p>
+        <p style="margin-bottom:0">Il 30 (che era al centro) finisce a \((30-10)/40 = \mathbf{0{,}5}\): il centro
+          dell'intervallo [0, 1]. Coerente col fatto che i dati erano simmetrici — la forma non è cambiata.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">Aggiungi ai dati precedenti un outlier: \([10, 20, 30, 40, 50, 500]\). Cosa succede
+      al min-max degli altri cinque valori? Quale normalizzazione avrebbe sofferto meno?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Ora \(\max = 500\), range \(= 490\). I cinque valori originali diventano
+          \((0,\ 0{,}02,\ 0{,}04,\ 0{,}06,\ 0{,}08)\): tutti <b>schiacciati vicino a 0</b>, le loro differenze
+          quasi svaniscono (§10.3).</p>
+        <p style="margin-bottom:0">Lo <b>z-score</b> avrebbe sofferto meno: media e deviazione standard risentono
+          dell'outlier ma non collassano come min e max. Meglio ancora: individuare e trattare l'outlier
+          <em>prima</em> di normalizzare (Cap. 11).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">Perché è sbagliato normalizzare l'intero dataset (train + test insieme) prima di
+      addestrare un modello?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Perché così i parametri di normalizzazione (\(\bar{x}, s\) o min/max)
+          «vedono» anche i dati di test: è <b>data leakage</b> (§10.4). Il modello ottiene informazione sul test
+          in fase di training, e le prestazioni stimate risultano ottimisticamente gonfiate. Corretto: calcola i
+          parametri <b>solo sul train</b> e applicali (con quegli stessi valori) al test.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">SEZIONE 10.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li><b>Normalizzare = cambiare scala, non forma.</b> L'istogramma resta identico.</li>
+      <li><b>Z-score</b> \(z=(x-\bar{x})/s\): media 0, deviazione 1. «Quante σ dalla media». Ideale su dati
+        ~normali.</li>
+      <li><b>Min-max</b> \(x'=(x-\min)/(\max-\min)\): tutto in [0, 1]. Ideale quando serve un range fisso, ma
+        <b>fragile agli outlier</b>.</li>
+      <li><b>Calcola i parametri solo sul train</b> e applicali al test, per non creare data leakage.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Entrambe le normalizzazioni hanno lo stesso tallone d'Achille — gli outlier — e non è un caso che il min-max
+    ne esca a pezzi. Prima di scalare seriamente qualunque dataset bisogna sapere <em>trovare</em> e
+    <em>trattare</em> i valori anomali. È il <strong>Capitolo 11</strong>, che porta a compimento i criteri
+    z-score e IQR visti finora e li trasforma in regole operative.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.4 — stessi dati sotto tre normalizzazioni (forma invariante)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsc-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsc-out');
+  const bRaw = document.getElementById('wsc-raw'), bZ = document.getElementById('wsc-z'), bMM = document.getElementById('wsc-mm');
+  let mode = 'raw';
+
+  // dati fissi asimmetrici (coda a destra), riproducibili
+  let seed = 99;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const raw = [];
+  for (let i = 0; i < 250; i++) { const g = -Math.log(u() || 1e-9); raw.push(40 + 18 * g); }   // esponenziale-like
+  const n = raw.length;
+  const mean = raw.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(raw.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  const mn = Math.min(...raw), mx = Math.max(...raw);
+
+  function transform() {
+    if (mode === 'z') return { data: raw.map(x => (x - mean) / sd), lo: -3, hi: 6, label: 'z-score (media 0, dev 1)', zero: 0 };
+    if (mode === 'mm') return { data: raw.map(x => (x - mn) / (mx - mn)), lo: -0.05, hi: 1.05, label: 'min-max [0, 1]', zero: 0 };
+    return { data: raw, lo: mn - 5, hi: mx + 5, label: 'grezzi (unità originali)', zero: null };
+  }
+
+  function draw() {
+    [bRaw, bZ, bMM].forEach(b => b.classList.remove('on'));
+    ({ raw: bRaw, z: bZ, mm: bMM })[mode].classList.add('on');
+    const { data, lo, hi, label, zero } = transform();
+    const NB = 26, w = (hi - lo) / NB, counts = new Array(NB).fill(0);
+    data.forEach(x => { let k = Math.floor((x - lo) / w); if (k < 0) k = 0; if (k >= NB) k = NB - 1; counts[k]++; });
+    const maxC = Math.max(...counts);
+
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: lo, xmax: hi, ymin: 0, ymax: maxC * 1.15 });
+    p.axes({ numbers: true, names: false, stepX: mode === 'mm' ? 0.25 : (mode === 'z' ? 1 : 20), ticks: true, stepY: 9999 });
+    p.line(lo, 0, hi, 0, { color: 'var(--rule)', width: 1 });
+    counts.forEach((c, k) => { const x0 = lo + k * w; p.rect(x0, 0, x0 + w, c, { fill: 'color-mix(in srgb, var(--accent) 45%, transparent)', color: 'var(--accent)', width: 0.8 }); });
+    if (zero !== null) { p.line(zero, 0, zero, maxC * 1.1, { color: 'var(--warm)', width: 1.6, dash: '4 3' }); p.text(zero, maxC * 1.16, '0', { color: 'var(--warm)', size: 11 }); }
+
+    out.innerHTML = `
+      <div class="big">${label}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        La <mark>sagoma è identica</mark> nei tre casi (coda a destra): cambiano solo i numeri sull'asse e dove
+        cade lo zero. Normalizzare sposta e stira l'asse, non tocca la forma.
+      </div>`;
+  }
+  bRaw.addEventListener('click', () => { mode = 'raw'; draw(); });
+  bZ.addEventListener('click', () => { mode = 'z'; draw(); });
+  bMM.addEventListener('click', () => { mode = 'mm'; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>
