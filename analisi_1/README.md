@@ -35,7 +35,7 @@ Aggiungere un capitolo significa: creare il suo file HTML e portare il suo `stat
 - [x] 10 — Studio di funzione
 - [x] 11 — Formula di Taylor
 - [x] 12 — L'integrale di Riemann
-- [ ] 13 — Tecniche di integrazione
+- [x] 13 — Tecniche di integrazione
 - [ ] 14 — Integrali impropri
 - [ ] 15 — Serie numeriche
 - [ ] 16 — La fine → verso l'Analisi 2

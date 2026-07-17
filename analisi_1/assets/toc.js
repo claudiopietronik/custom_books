@@ -234,7 +234,7 @@ const TOC = [
     n: 13,
     titolo: "Tecniche di integrazione",
     file: "cap13-tecniche-integrazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Integrali immediati" },
       { id: "s13-2", n: "13.2", t: "Integrazione per scomposizione" },
