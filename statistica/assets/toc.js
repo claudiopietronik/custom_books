@@ -331,7 +331,7 @@ const TOC = [
   },
   {
     n: 28, parte: "IV · Statistica inferenziale",
-    titolo: "Parametrico o no", file: "cap28-parametrico.html", stato: "da-fare",
+    titolo: "Parametrico o no", file: "cap28-parametrico.html", stato: "pronto",
     sezioni: [
       { id: "s28-1", n: "28.1", t: "Le assunzioni dei test parametrici" },
       { id: "s28-2", n: "28.2", t: "Quando cadono" },

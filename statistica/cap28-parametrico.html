@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>28 · Parametrico o no — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="28">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Parametrico o no</h1>
+    <p class="standfirst">
+      I test «classici» — t-test, ANOVA, regressione — sono <b>parametrici</b>: presumono che i dati abbiano una
+      certa forma, di solito normale. Sono potenti quando le assunzioni reggono, ma possono ingannare quando
+      cadono. La statistica <b>non parametrica</b> è il piano B: meno assunzioni, più robustezza, al prezzo di un
+      po' di potenza.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un bivio di metodo prima di costruire i test concreti. Le assunzioni di cui parliamo qui (normalità,
+      varianze uguali) sono quelle del t-test (Cap. 30–32) e dell'ANOVA (Cap. 40); le alternative non parametriche
+      sono il Cap. 33. Diagnostichi la normalità col QQ plot del Cap. 5.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Applicare un t-test a dati fortemente storti o pieni di outlier può produrre p-value fuorvianti — conclusioni
+      «significative» che sono artefatti delle assunzioni violate. Sapere <em>quando</em> un test parametrico è
+      lecito, e cosa usare al suo posto, è ciò che rende un'analisi difendibile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-1"><span class="secnum">SEZIONE 28.1</span>Le assunzioni dei test parametrici</h2>
+
+  <p class="lead">
+    «Parametrico» significa che il test assume una <b>famiglia di distribuzioni</b> (di solito la normale) e ne
+    stima i <b>parametri</b> (\(\mu, \sigma\)). Su queste assunzioni costruisce le sue probabilità.
+  </p>
+
+  <p>I test parametrici tipici poggiano su alcune ipotesi ricorrenti:</p>
+  <ul>
+    <li><b>Normalità:</b> i dati (o le medie campionarie, grazie al TLC) seguono una campana.</li>
+    <li><b>Omogeneità delle varianze</b> (omoschedasticità): i gruppi confrontati hanno dispersione simile.</li>
+    <li><b>Indipendenza</b> delle osservazioni: un dato non influenza l'altro.</li>
+    <li><b>Scala numerica</b> (intervallo/rapporto): ha senso fare medie e differenze.</li>
+  </ul>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">◆</span> Il patto parametrico</div>
+    <p style="margin-bottom:0">
+      Se le assunzioni reggono, i test parametrici sono i <b>più potenti</b>: estraggono il massimo
+      dell'informazione dai dati (usano i valori veri, non solo l'ordine). Il patto è: «ti do più potenza, tu mi
+      garantisci la forma». Quando la forma non c'è, il patto salta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-2"><span class="secnum">SEZIONE 28.2</span>Quando cadono</h2>
+
+  <p class="lead">
+    Le assunzioni si rompono più spesso di quanto si creda: dati storti, outlier, piccoli campioni, scale
+    ordinali. Ecco i segnali d'allarme.
+  </p>
+
+  <p>
+    Una <b>forte asimmetria</b> o code pesanti fanno sì che media e deviazione standard — su cui i test
+    parametrici si reggono — non descrivano bene i dati (Cap. 3, 4). Gli <b>outlier</b> gonfiano \(s\) e
+    distorcono le medie. Con <b>campioni molto piccoli</b> non puoi neppure verificare la normalità né confidare
+    nel TLC. E su <b>scale ordinali</b> (giudizi 1–5) fare medie è già discutibile (Cap. 2). In tutti questi casi
+    il p-value parametrico può essere <em>sbagliato</em>: troppo ottimista o troppo pessimista.
+  </p>
+
+  <h3>Provalo: quando scatta il piano B</h3>
+
+  <p>
+    Deforma la distribuzione con asimmetria e outlier e osserva il <b>semaforo</b>: verde quando le assunzioni
+    parametriche reggono (usa pure il t-test), rosso quando cadono (passa al non parametrico). L'indicatore si basa
+    su asimmetria e code, gli stessi momenti del Cap. 6.
+  </p>
+
+  <div class="widget" id="w-par">
+    <div class="w-head">
+      <span>Semaforo delle assunzioni</span>
+      <span class="hint">forma → parametrico o no</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wpa-svg" viewBox="0 0 620 220" role="img" aria-label="Una distribuzione deformabile con un indicatore che segnala se i test parametrici sono adeguati"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>asimmetria</label><input type="range" id="wpa-sk" min="0" max="100" step="1" value="0"><output id="wpa-skv">0</output></div>
+      <div class="w-ctrl"><label>outlier</label><input type="range" id="wpa-ou" min="0" max="100" step="1" value="0"><output id="wpa-ouv">0</output></div>
+    </div>
+    <div class="w-readout" id="wpa-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-3"><span class="secnum">SEZIONE 28.3</span>L'alternativa non parametrica</h2>
+
+  <p class="lead">
+    I test <b>non parametrici</b> non assumono una forma per i dati. Il loro trucco più comune: lavorare sui
+    <b>ranghi</b> (le posizioni ordinate) invece che sui valori.
+  </p>
+
+  <p>
+    Sostituendo ogni valore col suo <b>rango</b> (1° più piccolo, 2°, …), un outlier gigantesco diventa
+    semplicemente «l'ultimo», e la sua magnitudine spropositata non fa più danni: la stessa robustezza della
+    mediana e dell'IQR (Cap. 5). Ogni test parametrico ha la sua controparte non parametrica, che vedremo al
+    Cap. 33.
+  </p>
+
+  <div class="tbl-wrap">
+  <table class="tbl">
+    <thead><tr><th>Test parametrico</th><th>Controparte non parametrica</th><th>Domanda</th></tr></thead>
+    <tbody>
+      <tr><td>t-test a due campioni</td><td>Mann–Whitney U</td><td>due gruppi indipendenti differiscono?</td></tr>
+      <tr><td>t-test appaiato</td><td>Wilcoxon signed-rank</td><td>differenza tra coppie?</td></tr>
+      <tr><td>ANOVA a una via</td><td>Kruskal–Wallis</td><td>più gruppi differiscono?</td></tr>
+      <tr><td>correlazione di Pearson</td><td>Spearman / Kendall</td><td>due variabili si muovono insieme?</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il prezzo della robustezza</div>
+    <p style="margin-bottom:0">
+      I test non parametrici sono più robusti ma, <em>quando le assunzioni parametriche reggerebbero</em>, sono un
+      po' <b>meno potenti</b>: lavorando sui ranghi buttano via un po' d'informazione (la magnitudine esatta). La
+      regola: <mark>usa il parametrico se le assunzioni tengono, il non parametrico se non tengono</mark>. Non è
+      «sempre meglio l'uno o l'altro» — dipende dai dati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-4"><span class="secnum">SEZIONE 28.4</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.1</div>
+    <p style="margin-bottom:0">Devi confrontare i redditi di due città. I dati sono fortemente asimmetrici a destra
+      con qualche miliardario. Test parametrico o non parametrico? Perché?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>Non parametrico</b> (es. Mann–Whitney). I redditi violano la normalità
+          (forte asimmetria) e hanno outlier estremi che gonfierebbero media e \(s\) del t-test (§28.2). Il test
+          sui ranghi è robusto a entrambi (§28.3). In alternativa si potrebbe trasformare (log) e poi usare il
+          parametrico — ma il non parametrico è la scelta diretta.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.2</div>
+    <p style="margin-bottom:0">Hai 5000 dati approssimativamente normali, senza outlier. Ti conviene comunque usare
+      il non parametrico «per sicurezza»?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0"><b>No.</b> Se le assunzioni reggono, il test parametrico è più <b>potente</b>
+          (§28.1): sfrutta la magnitudine dei dati, non solo l'ordine, e rileva effetti più piccoli. Usare il non
+          parametrico «per sicurezza» butta via potenza senza motivo. La robustezza si paga; comprala solo quando
+          serve (§28.3).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 28.3</div>
+    <p style="margin-bottom:0">I dati sono giudizi su scala 1–5 (ordinale). Perché la media e il t-test sono
+      problematici qui?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Su una scala <b>ordinale</b> le distanze tra i gradini non sono davvero uguali
+          (Cap. 2): «4 − 3» non è necessariamente uguale a «2 − 1». Media e t-test presumono una scala numerica
+          con differenze significative, quindi qui sono discutibili. Meglio metodi basati sui <b>ranghi</b>
+          (§28.3), che usano solo l'ordine — l'unica informazione davvero affidabile nei dati ordinali.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s28-5"><span class="secnum">SEZIONE 28.5</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 28</div>
+    <ol style="margin-bottom:0">
+      <li><b>Parametrico:</b> assume una forma (normalità), stima parametri. Più potente <em>se</em> le assunzioni
+        reggono.</li>
+      <li><b>Assunzioni chiave:</b> normalità, varianze uguali, indipendenza, scala numerica.</li>
+      <li><b>Cadono con:</b> forte asimmetria, outlier, campioni minuscoli, scale ordinali.</li>
+      <li><b>Non parametrico</b> (sui ranghi): robusto, meno assunzioni, un po' meno potente. Usalo quando le
+        assunzioni non tengono.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    C'è un'altra insidia dell'inferenza, indipendente dalla forma dei dati: cosa succede quando fai <em>tanti</em>
+    test insieme? Anche con tutto perfetto, testare venti ipotesi quasi garantisce un falso positivo. È il
+    problema dei <b>confronti multipli</b>, nel <strong>Capitolo 29</strong>.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §28.2 — semaforo delle assunzioni parametriche
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wpa-svg');
+  if (!svg) return;
+  const out = document.getElementById('wpa-out');
+  const skS = document.getElementById('wpa-sk'), skV = document.getElementById('wpa-skv');
+  const ouS = document.getElementById('wpa-ou'), ouV = document.getElementById('wpa-ouv');
+
+  function draw() {
+    const sk = parseInt(skS.value, 10) / 100;
+    const ou = parseInt(ouS.value, 10) / 100;
+    skV.textContent = skS.value; ouV.textContent = ouS.value;
+    // densità: gaussiana deformata da asimmetria + bump di outlier a destra
+    const dens = x => {
+      const t = (x - 40) / 12;
+      const g = Math.exp(-0.5 * t * t);
+      const warp = 1 + sk * 1.5 * Math.max(0, (x - 40) / 40);
+      const out2 = ou * 0.25 * Math.exp(-((x - 90) ** 2) / 40);
+      return Math.max(0, g / warp + out2);
+    };
+    // indice di "non-normalità" combinato
+    const score = sk * 0.7 + ou * 0.8;   // 0 buono, alto cattivo
+    const ok = score < 0.35, warn = score < 0.65;
+
+    svg.innerHTML = '';
+    let peak = 0; for (let x = 0; x <= 100; x += 0.5) peak = Math.max(peak, dens(x));
+    const p = new Plot(svg, { xmin: 0, xmax: 100, ymin: 0, ymax: peak * 1.2 });
+    p.line(0, 0, 100, 0, { color: 'var(--rule)', width: 1 });
+    const col = ok ? 'var(--green)' : warn ? 'var(--gold)' : 'var(--warm)';
+    p.area(dens, 0, 100, { fill: 'color-mix(in srgb, ' + col + ' 20%, transparent)' });
+    p.func(dens, { color: col, width: 2.4, from: 0, to: 100 });
+    // semaforo
+    p.dot(92, peak * 1.08, { r: 9, color: col, stroke: 'var(--paper)', sw: 2 });
+
+    out.innerHTML = `
+      <div class="big" style="color:${col}">${ok ? '● Verde — usa il test parametrico' : warn ? '● Giallo — cautela, valuta il non parametrico' : '● Rosso — passa al non parametrico'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${ok ? 'Distribuzione vicina alla campana, senza outlier vistosi: le assunzioni del t-test/ANOVA reggono, sfrutta la loro maggiore potenza.'
+             : warn ? 'La forma comincia a deviare dalla normale: verifica con un QQ plot (Cap. 5); un test sui ranghi sarebbe più sicuro.'
+             : 'Forte asimmetria e/o outlier: media e σ sono <mark>inaffidabili</mark>, il p-value parametrico può ingannare. Usa un test non parametrico (Cap. 33).'}
+      </div>`;
+  }
+  skS.addEventListener('input', draw); ouS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
