@@ -275,7 +275,7 @@ const TOC = [
     n: 18,
     titolo: "Convoluzione tramite FFT",
     file: "cap18-convoluzione-fft.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Convoluzione a blocchi: overlap-add" },
       { id: "s18-2", n: "18.2", t: "Perché la FFT accelera tutto" },

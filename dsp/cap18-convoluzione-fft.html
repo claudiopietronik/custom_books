@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Convoluzione tramite FFT — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.18 — Capitolo 18</div>
+    <h1>Convoluzione tramite FFT</h1>
+    <p class="standfirst">
+      I filtri di alta qualità (Cap. 16–17) sono lunghi, e convolverli direttamente è costoso. Questo capitolo
+      mette insieme due idee che abbiamo già in tasca — il <b>teorema di convoluzione</b> (Cap. 10) e la
+      <b>FFT</b> (Cap. 12) — per filtrare segnali lunghissimi a una frazione del costo. La tecnica si chiama
+      <b>overlap-add</b>, ed è ciò che rende pratici tutti i filtri visti finora.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      È il capitolo che «paga i debiti»: da quando abbiamo scoperto il teorema di convoluzione (Cap. 10)
+      promettevamo una convoluzione veloce, e la FFT (Cap. 12) ci ha dato lo strumento. Qui li uniamo. Chiude
+      idealmente la parte sui FIR; dal Cap. 19 passiamo all'altra grande famiglia, gli IIR.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Senza questa tecnica, filtrare un'ora di audio con un ottimo windowed-sinc richiederebbe tempi improponibili.
+      Con l'overlap-add è istantaneo. È il ponte tra la <em>qualità</em> dei filtri lunghi e la
+      <em>praticità</em> del tempo reale — e la ragione per cui, nella pratica, «filtro FIR lungo» e «FFT» vanno
+      quasi sempre insieme.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">SEZIONE 18.1</span>Convoluzione a blocchi: overlap-add</h2>
+
+  <p class="lead">
+    Due problemi con la convoluzione diretta di un segnale lungo. Il primo: costa \(\propto N \cdot M\), pesante
+    per \(M\) grandi. Il secondo, più sottile: richiede di avere <em>tutto</em> il segnale, mentre spesso i
+    campioni arrivano a flusso (tempo reale) e non puoi aspettare la fine.
+  </p>
+
+  <p>
+    La soluzione a entrambi è spezzare il segnale in <b>blocchi</b> corti, filtrare ogni blocco separatamente, e
+    <b>ricomporre</b> le uscite. Ma c'è un dettaglio cruciale: convolvere un blocco di \(L\) campioni con un
+    kernel di \(M\) campioni produce un'uscita più lunga, di \(L + M - 1\) campioni (Cap. 6). Quella coda in più
+    <b>sborda</b> oltre il confine del blocco e va a <b>sommarsi</b> all'inizio dell'uscita del blocco
+    successivo. Da qui il nome: <b class="termine">overlap-add</b>, «sovrapponi e somma».
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché le code si devono sommare</div>
+    <p style="margin-bottom:0">
+      La convoluzione è lineare (Cap. 5): l'uscita del segnale intero è la <em>somma</em> delle uscite dei suoi
+      pezzi (decomposizione, §5.6). Ogni blocco, filtrato, lascia una coda che «invade» il territorio del blocco
+      dopo — perché il filtro «spalma» ogni campione su \(M\) posizioni. Sommando fedelmente queste code
+      sovrapposte si ricostruisce <mark>esattamente</mark> la convoluzione del segnale intero: overlap-add non è
+      un'approssimazione, è la convoluzione completa, calcolata a pezzi.
+    </p>
+  </div>
+
+  <h3>Provalo: sovrapponi e somma</h3>
+
+  <p>
+    Il segnale è diviso in blocchi. Aggiungi un blocco alla volta e guarda: ogni blocco filtrato (colorato)
+    produce una <b>coda</b> che sborda nel blocco successivo; le code si <b>sommano</b> e costruiscono l'uscita
+    completa (in <b style="color:var(--green)">verde</b>), identica alla convoluzione diretta.
+  </p>
+
+  <div class="widget" id="w-ola">
+    <div class="w-head">
+      <span>Overlap-add passo per passo</span>
+      <span class="hint">aggiungi blocchi e guarda le code sommarsi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wola-blk" viewBox="0 0 620 150" role="img" aria-label="I blocchi filtrati con le loro code che si sovrappongono"></svg>
+      <svg id="wola-sum" viewBox="0 0 620 120" role="img" aria-label="L'uscita completa ottenuta sommando le code sovrapposte"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>blocchi</label><input type="range" id="wola-b" min="1" max="4" step="1" value="2"><output id="wola-bv">2</output></div>
+    </div>
+    <div class="w-readout" id="wola-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">SEZIONE 18.2</span>Perché la FFT accelera tutto</h2>
+
+  <p class="lead">
+    L'overlap-add spezza il lavoro in blocchi, ma non lo rende ancora veloce: convolvere ogni blocco
+    <em>direttamente</em> costa comunque. Il salto di velocità arriva convolvendo ogni blocco <b>tramite la
+    FFT</b>.
+  </p>
+
+  <p>
+    Ricorda il teorema di convoluzione (Cap. 10): convolvere nel tempo = <b>moltiplicare</b> in frequenza. Quindi
+    per convolvere un blocco con il kernel: (1) FFT del blocco, (2) moltiplica per la FFT del kernel — calcolata
+    <em>una sola volta</em> all'inizio, (3) FFT inversa. La moltiplicazione bin-per-bin è economica, e la FFT
+    costa \(\propto L\log L\) invece dei \(\propto L\cdot M\) della convoluzione diretta. Per kernel lunghi, il
+    risparmio è enorme.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Convoluzione veloce, il nocciolo <span class="tag">moltiplica in frequenza</span></div>
+    <div class="f-body">
+      \[
+        \sig{y} \;=\; \text{FFT}^{-1}\!\Big(\, \hA{\text{FFT}(\text{blocco})} \cdot \hB{\text{FFT}(\text{kernel})} \,\Big)
+      \]
+    </div>
+    <div class="f-note">
+      La <b style="color:var(--warm)">FFT del kernel</b> si calcola una volta e si riusa per ogni blocco.
+      <mark>Ogni blocco richiede solo due FFT (andata e ritorno) e una moltiplicazione</mark>: un costo che, per
+      \(M\) grande, è una frazione minuscola della convoluzione diretta.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">SEZIONE 18.3</span>Il metodo passo per passo</h2>
+
+  <p>
+    Mettendo insieme overlap-add e FFT, la ricetta completa è questa:
+  </p>
+
+  <ol class="passi">
+    <li><b>Prepara il kernel:</b> imbottiscilo di zeri fino alla lunghezza del blocco FFT (una potenza di due) e
+        calcolane la FFT, una volta sola.</li>
+    <li><b>Per ogni blocco d'ingresso:</b> imbottiscilo di zeri alla stessa lunghezza (lasciando spazio alla coda
+        di \(M-1\) campioni), fanne la FFT.</li>
+    <li><b>Moltiplica</b> le due FFT bin per bin, poi <b>FFT inversa</b>: ottieni l'uscita del blocco, coda
+        compresa.</li>
+    <li><b>Overlap-add:</b> somma la coda (gli ultimi \(M-1\) campioni) all'inizio dell'uscita del blocco
+        successivo. Emetti i campioni ormai completi.</li>
+  </ol>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'imbottitura di zeri è obbligatoria</div>
+    <p style="margin-bottom:0">
+      Se moltiplichi le FFT <em>senza</em> lasciare spazio alla coda, ottieni la <b>convoluzione circolare</b>
+      (Cap. 9): la coda «si avvolge» e contamina l'inizio del blocco, sbagliando il risultato. L'imbottitura di
+      zeri di almeno \(M-1\) campioni dà alla coda dove distendersi senza avvolgersi, trasformando la
+      convoluzione circolare (quella che la FFT fa naturalmente) nella convoluzione <b>lineare</b> che vogliamo.
+      <mark>Zero-padding = la differenza tra risultato giusto e sbagliato.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">SEZIONE 18.4</span>Quando conviene davvero</h2>
+
+  <p class="lead">
+    La convoluzione via FFT non è <em>sempre</em> più veloce. C'è una soglia, e conoscerla evita di
+    complicarsi la vita quando non serve.
+  </p>
+
+  <p>
+    Per kernel <b>corti</b> (poche decine di campioni), la convoluzione diretta vince: è semplice e le FFT hanno
+    un costo fisso di «preparazione» che non ripaga. Il punto di pareggio è tipicamente attorno a \(M \approx 40\)–\(60\)
+    coefficienti: sotto, conviene diretta; sopra, conviene FFT — e più \(M\) cresce, più il vantaggio della FFT
+    diventa schiacciante. La regola pratica: <b>filtro corto → diretta; filtro lungo → FFT.</b>
+  </p>
+
+  <h3>Provalo: dove sta la soglia</h3>
+
+  <p>
+    Aumenta la lunghezza \(M\) del kernel e confronta il costo della convoluzione <b style="color:var(--warm)">diretta</b>
+    (cresce con \(M\)) con quello della <b style="color:var(--accent)">FFT</b> (cresce pianissimo). Trova il
+    punto in cui la seconda sorpassa la prima.
+  </p>
+
+  <div class="widget" id="w-cross">
+    <div class="w-head">
+      <span>Diretta vs FFT: la soglia</span>
+      <span class="hint">quando il kernel è lungo, vince la FFT</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcr-svg" viewBox="0 0 620 240" role="img" aria-label="Il costo della convoluzione diretta contro quello via FFT al variare della lunghezza del kernel"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>lunghezza M</label><input type="range" id="wcr-m" min="4" max="1024" step="4" value="64"><output id="wcr-mv">64</output></div>
+    </div>
+    <div class="w-readout" id="wcr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">SEZIONE 18.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.1</div>
+    <p style="margin-bottom:0">Convolvi un blocco di 256 campioni con un kernel di 100. Quanti campioni ha
+      l'uscita del blocco? Quanti «sbordano» oltre i 256?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Uscita: \(256 + 100 - 1 = 355\) campioni. Sbordano \(355 - 256 = 99\) campioni (cioè \(M-1\)): sono la
+          <b>coda</b> che, nell'overlap-add, va sommata all'inizio del blocco successivo.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.2</div>
+    <p style="margin-bottom:0">Perché, prima di moltiplicare le FFT, bisogna imbottire blocco e kernel di zeri?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Perché moltiplicare le FFT dà la convoluzione <b>circolare</b>, che avvolge la coda contaminando
+          l'inizio (Cap. 9). Imbottendo di almeno \(M-1\) zeri si dà spazio alla coda per distendersi senza
+          avvolgersi, ottenendo la convoluzione <b>lineare</b> corretta.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.3</div>
+    <p style="margin-bottom:0">Devi filtrare con un kernel di soli 8 campioni. Meglio convoluzione diretta o via
+      FFT? E con un kernel di 2000?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>Kernel di 8: <b>diretta</b>, senza dubbio — è cortissimo, sotto la soglia (~40–60). Kernel di 2000:
+          <b>via FFT</b>, nettamente — a quella lunghezza la diretta è enormemente più costosa. La regola: corto
+          → diretta, lungo → FFT (§18.4).</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-6"><span class="secnum">SEZIONE 18.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li><b>Overlap-add:</b> spezza il segnale in blocchi, filtra ciascuno, e <b>somma le code</b> che sbordano
+          (\(M-1\) campioni) nel blocco successivo. Esatto, non approssimato.</li>
+      <li><b>La FFT accelera:</b> convolvi ogni blocco come FFT(blocco)·FFT(kernel) → FFT inversa. La FFT del
+          kernel si calcola una volta.</li>
+      <li><b>Zero-padding obbligatorio:</b> trasforma la convoluzione circolare (naturale della FFT) in quella
+          lineare (voluta). Senza, la coda si avvolge e sbaglia.</li>
+      <li><b>Conviene per kernel lunghi:</b> soglia ~40–60 coefficienti. Corto → diretta; lungo → FFT.</li>
+      <li>È la combinazione standard <b>windowed-sinc lungo + FFT</b> per il filtraggio di alta qualità in tempo
+          reale.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con questo chiudiamo i filtri FIR: potenti, stabili, a fase lineare, e ora anche veloci. Ma c'è un'intera
+    famiglia alternativa che ottiene tagli ripidi con <em>pochissimi</em> coefficienti, grazie a un'idea diversa:
+    la <b>retroazione</b>. Il <strong>Capitolo 19</strong> presenta i <b>filtri ricorsivi</b> (IIR): come
+    funzionano, il filtro a polo singolo, e i primi passa-banda ed elimina-banda economici. Efficienza contro
+    robustezza: la vecchia sfida, in una veste nuova.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+function convFull18(x, h) { const y = new Array(x.length + h.length - 1).fill(0); for (let i = 0; i < x.length; i++) for (let j = 0; j < h.length; j++) y[i + j] += x[i] * h[j]; return y; }
+
+/* ============================================================================
+   WIDGET §18.1 — overlap-add
+   ========================================================================= */
+(function () {
+  const sBlk = document.getElementById('wola-blk'), sSum = document.getElementById('wola-sum');
+  if (!sBlk) return;
+  const out = document.getElementById('wola-out');
+  const bS = document.getElementById('wola-b'), bV = document.getElementById('wola-bv');
+  const L = 16, KL = 7, NB = 4, N = L * NB;
+  // segnale
+  const rng = (s => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; })(21);
+  const x = []; for (let n = 0; n < N; n++) x.push(0.5 + 0.5 * Math.sin(n * 0.4) + (rng() - 0.5) * 0.4);
+  const h = new Array(KL).fill(1 / KL);   // media a 7
+  const cols = ['var(--accent)', 'var(--warm)', 'var(--violet)', 'var(--green)'];
+
+  function draw() {
+    const nb = parseInt(bS.value, 10);
+    bV.textContent = nb;
+    // uscite dei blocchi
+    const blkOut = [];
+    for (let b = 0; b < nb; b++) {
+      const blk = x.slice(b * L, (b + 1) * L);
+      const y = convFull18(blk, h);      // lunghezza L+KL-1
+      blkOut.push({ start: b * L, y });
+    }
+
+    sBlk.innerHTML = '';
+    const pb = new Plot(sBlk, { xmin: -1, xmax: N + KL, ymin: -0.2, ymax: 1.5 });
+    pb.line(-1, 0, N + KL, 0, { color: 'var(--ink-faint)', width: 1 });
+    // confini dei blocchi
+    for (let b = 0; b <= NB; b++) pb.line(b * L, -0.2, b * L, 1.5, { color: 'var(--rule)', width: 1, dash: '2 3' });
+    blkOut.forEach((bo, i) => { pb.seq(bo.y, { x0: bo.start, color: cols[i], width: 1.8 }); });
+    pb.text(0, 1.4, 'ogni blocco filtrato ha una coda che sborda →', { color: 'var(--ink-soft)', anchor: 'start', size: 10 });
+
+    // somma (uscita completa fino a dove i blocchi coprono)
+    const full = new Array(N + KL).fill(0);
+    blkOut.forEach(bo => { for (let i = 0; i < bo.y.length; i++) full[bo.start + i] += bo.y[i]; });
+    const shownLen = nb < NB ? nb * L : N + KL - 1;
+
+    sSum.innerHTML = '';
+    const ps = new Plot(sSum, { xmin: -1, xmax: N + KL, ymin: -0.2, ymax: 1.5 });
+    ps.line(-1, 0, N + KL, 0, { color: 'var(--ink-faint)', width: 1 });
+    ps.seq(full.slice(0, shownLen + 1), { color: 'var(--green)', width: 2.4 });
+    ps.text(0, 1.4, 'uscita = somma delle code sovrapposte', { color: 'var(--green)', anchor: 'start', size: 10.5 });
+
+    out.innerHTML = `
+      <div class="big"><b>${nb}</b> di ${NB} blocchi processati</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Ogni blocco (colore diverso) è convoluto col kernel e produce ${L}+${KL}−1 = ${L + KL - 1} campioni: gli
+        ultimi ${KL - 1} <mark>sbordano</mark> nel blocco dopo. Nell'uscita <b style="color:var(--green)">verde</b>
+        le code si <b>sommano</b>, ricostruendo esattamente la convoluzione dell'intero segnale.
+      </div>`;
+  }
+  bS.addEventListener('input', draw);
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §18.4 — soglia diretta vs FFT
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcr-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcr-out');
+  const mS = document.getElementById('wcr-m'), mV = document.getElementById('wcr-mv');
+
+  // costo per campione: diretta ≈ M ; FFT ≈ c·log2(blocksize), blocksize ~ 4M potenza di due
+  function costs(M) {
+    const direct = M;
+    let bs = 1; while (bs < 4 * M) bs *= 2;
+    const fft = 4 * Math.log2(bs);   // costante ~ per andata+ritorno+moltiplicazione, per campione
+    return { direct, fft, bs };
+  }
+
+  function draw() {
+    const M = parseInt(mS.value, 10);
+    mV.textContent = M;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 1024, ymin: 0, ymax: 260 });
+    p.grid(256, 60); p.axes({ numbers: true, names: true, xname: 'lunghezza kernel M', yname: 'costo/campione', stepX: 256, stepY: 60 });
+    // curve
+    const dpts = [], fpts = [];
+    for (let m = 4; m <= 1024; m += 8) { const c = costs(m); dpts.push([m, Math.min(260, c.direct)]); fpts.push([m, c.fft]); }
+    p.poly(dpts, { color: 'var(--warm)', width: 2.4, close: false });
+    p.poly(fpts, { color: 'var(--accent)', width: 2.4, close: false });
+    const c = costs(M);
+    p.line(M, 0, M, 260, { color: 'var(--ink-faint)', width: 1, dash: '4 3' });
+    p.dot(M, Math.min(260, c.direct), { color: 'var(--warm)', r: 4 });
+    p.dot(M, c.fft, { color: 'var(--accent)', r: 4 });
+    p.text(900, 240, 'diretta ∝ M', { color: 'var(--warm)', size: 11, bold: true });
+    p.text(900, 60, 'FFT ∝ log M', { color: 'var(--accent)', size: 11, bold: true });
+
+    const winner = c.direct < c.fft ? 'diretta' : 'FFT';
+    out.innerHTML = `
+      <div class="big">M = <b>${M}</b> &nbsp;·&nbsp; conviene la <b style="color:${winner === 'FFT' ? 'var(--accent)' : 'var(--warm)'}">${winner}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Costo per campione — <b style="color:var(--warm)">diretta</b> ≈ ${c.direct}, <b style="color:var(--accent)">FFT</b> ≈ ${c.fft.toFixed(0)}
+        (blocco da ${c.bs}). ${winner === 'FFT'
+          ? 'Con questo kernel <mark>la FFT è più economica</mark>, e il vantaggio cresce ancora con M.'
+          : 'Con questo kernel corto <mark>la diretta è più semplice ed economica</mark>: la FFT non ripaga.'}
+        La soglia è dove le due curve si incrociano (~40–60 coefficienti).
+      </div>`;
+  }
+  mS.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
