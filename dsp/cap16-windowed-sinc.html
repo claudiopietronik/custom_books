@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Filtri windowed-sinc — DSP</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>∿</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">CH.16 — Capitolo 16</div>
+    <h1>Filtri windowed-sinc</h1>
+    <p class="standfirst">
+      Se la media mobile era il campione del tempo, il windowed-sinc è il campione della <b>frequenza</b>: il
+      filtro da usare quando devi separare bande con un taglio netto e un blocco profondo. Nasce da un'idea
+      bellissima — partire dal filtro ideale (impossibile) e renderlo realizzabile «finestrandolo». È qui che la
+      coppia rettangolo–sinc del Cap. 11 dà finalmente i suoi frutti.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il rovescio esatto del Cap. 15. Media mobile e windowed-sinc sono i due estremi dei filtri FIR: l'uno
+      ottimo nel tempo, l'altro in frequenza. Con questi due in mano hai già coperto la maggior parte dei bisogni
+      pratici. Il Cap. 17 mostrerà come costruire filtri <em>su misura</em> quando nessuno dei due basta.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Quando devi isolare una banda — togliere un ronzio, separare due segnali, ripulire una radio — il
+      windowed-sinc è spesso la risposta giusta: taglio netto, banda passante piatta, blocco profondo, e per di
+      più <strong>fase lineare</strong>. Progettarlo è sorprendentemente semplice: bastano due manopole, e le
+      capirai entrambe in questo capitolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">SEZIONE 16.1</span>Il passa-basso ideale: la sinc</h2>
+
+  <p class="lead">
+    Partiamo dal sogno: il filtro passa-basso <b>perfetto</b>. In frequenza è un <b>rettangolo</b> — guadagno 1
+    fino alla frequenza di taglio, guadagno 0 subito dopo, con un muro verticale in mezzo. Che aspetto ha nel
+    tempo?
+  </p>
+
+  <p>
+    La risposta la conosciamo dal Cap. 11: la trasformata inversa di un rettangolo è una <b>sinc</b>. Quindi la
+    risposta all'impulso del filtro passa-basso ideale è una sinc — un lobo centrale con una scia di lobi che si
+    smorzano da entrambi i lati, <em>all'infinito</em>. E qui il sogno si infrange: una sinc è infinitamente
+    lunga (servirebbero infiniti coefficienti) e <b>simmetrica</b> attorno allo zero, cioè avrebbe valori anche
+    per tempi negativi — «risponderebbe prima» dello stimolo. Irrealizzabile (Cap. 13).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La risposta all'impulso ideale <span class="tag">una sinc infinita</span></div>
+    <div class="f-body">
+      \[
+        h[i] \;=\; \frac{\sin\!\big(2\pi \hA{f_c}\, i\big)}{\pi\, i}
+      \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{f_c}\)</dt><dd>la <b>frequenza di taglio</b> (in cicli per campione, tra 0 e 0,5): dove cade il
+            muro del rettangolo.</dd>
+        <dt>\(i\)</dt><dd>l'indice, centrato sullo zero. Al centro (\(i=0\)) la sinc vale \(2f_c\).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È il cuore del filtro. Cambiare \(f_c\) sposta il muro in frequenza e «stringe/allarga» la sinc nel tempo
+      (reciprocità). Ma così com'è, infinita e simmetrica, non è usabile: va <b>troncata</b> e <b>ammorbidita</b>.
+      È il passo successivo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">SEZIONE 16.2</span>Troncare e finestrare</h2>
+
+  <p class="lead">
+    Rendere realizzabile la sinc richiede due mosse, ed è tutto il segreto del windowed-sinc.
+  </p>
+
+  <ol class="passi">
+    <li><b>Tronca</b> la sinc a un numero finito di campioni, \(M+1\) (tenendo il lobo centrale e alcuni lobi
+        laterali per lato), e <b>traslala</b> in avanti così che parta da zero: ora è finita e causale.</li>
+    <li><b>Finestra:</b> moltiplica la sinc troncata per una <em>finestra</em> dolce (Hamming o Blackman,
+        Cap. 9) che va a zero ai bordi. Serve a spegnere il fenomeno di Gibbs (Cap. 11): senza finestra, il
+        troncamento brusco causerebbe increspature nella banda passante e lobi laterali alti nella oscura.</li>
+  </ol>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Perché troncare da solo non basta</div>
+    <p style="margin-bottom:0">
+      Troncare la sinc equivale a moltiplicarla per un rettangolo. E moltiplicare nel tempo = convolvere in
+      frequenza (Cap. 10): il bel muro verticale viene «spalmato» dalla sinc del rettangolo, comparendo
+      increspature (Gibbs) attorno al taglio. <mark>La finestra sostituisce quel rettangolo brusco con una curva
+      morbida</mark>, il cui spettro è molto più «pulito»: increspature quasi assenti e lobi laterali bassissimi.
+      È la stessa medicina delle finestre del Cap. 9, applicata al progetto del filtro invece che all'analisi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">SEZIONE 16.3</span>Progettare: transizione e attenuazione</h2>
+
+  <p class="lead">
+    Il bello del windowed-sinc è che si progetta con <b>due manopole indipendenti</b>, ciascuna con un effetto
+    chiaro.
+  </p>
+
+  <ul>
+    <li><b>Lunghezza \(M\) → larghezza della transizione.</b> Più coefficienti tieni, più stretta è la banda di
+        transizione (taglio più netto). La regola pratica: la larghezza della transizione è circa \(4/M\) (in
+        frazione della frequenza di campionamento) per una finestra di Hamming. Vuoi un taglio due volte più
+        netto? Raddoppia \(M\).</li>
+    <li><b>Tipo di finestra → attenuazione della banda oscura.</b> La finestra decide quanto profondo è il
+        blocco. Hamming arriva a circa \(-53\) dB; Blackman, più «dolce», a circa \(-74\) dB (più blocco, ma
+        transizione un filo più larga). Scegli la finestra secondo l'attenuazione che ti serve.</li>
+  </ul>
+
+  <p>
+    E naturalmente <b>\(f_c\)</b>, la frequenza di taglio, decide <em>dove</em> tagliare. Tre parametri, tre
+    effetti separati: dove tagliare (\(f_c\)), quanto netto (\(M\)), quanto profondo (la finestra). Raramente il
+    progetto di un filtro è così trasparente.
+  </p>
+
+  <h3>Provalo: progetta il tuo passa-basso</h3>
+
+  <p>
+    Muovi le tre manopole e guarda insieme la <b style="color:var(--accent)">risposta all'impulso</b> (la sinc
+    finestrata) e la <b style="color:var(--warm)">risposta in frequenza</b> in decibel. Nota gli effetti
+    separati: \(f_c\) sposta il taglio, \(M\) ne cambia la ripidità, la finestra la profondità del blocco.
+  </p>
+
+  <div class="widget" id="w-design">
+    <div class="w-head">
+      <span>Progettista di windowed-sinc</span>
+      <span class="hint">tre manopole, tre effetti</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wd-imp" viewBox="0 0 620 130" role="img" aria-label="La risposta all'impulso: una sinc finestrata"></svg>
+      <svg id="wd-freq" viewBox="0 0 620 150" role="img" aria-label="La risposta in frequenza in decibel del filtro progettato"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>taglio f<sub>c</sub></label><input type="range" id="wd-fc" min="0.05" max="0.45" step="0.01" value="0.2"><output id="wd-fcv">0.20</output></div>
+      <div class="w-ctrl"><label>lunghezza M</label><input type="range" id="wd-m" min="10" max="120" step="2" value="40"><output id="wd-mv">40</output></div>
+      <button class="w-btn" id="wd-rect">rettang.</button>
+      <button class="w-btn on" id="wd-ham">Hamming</button>
+      <button class="w-btn" id="wd-black">Blackman</button>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">SEZIONE 16.4</span>Esempi e usi</h2>
+
+  <p>
+    Il windowed-sinc è il cavallo di battaglia della separazione di frequenze. Alcuni usi tipici: rimuovere il
+    rumore ad alta frequenza da un segnale lento (passa-basso); isolare una banda radio o una singola voce
+    (passa-banda); togliere una deriva lenta o una componente continua (passa-alto). Ovunque serva un taglio
+    pulito e la fase conti, è la prima scelta.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il prezzo del taglio netto: la lunghezza</div>
+    <p style="margin-bottom:0">
+      C'è un costo, ed è la lunghezza. Un taglio molto netto richiede una \(M\) grande — centinaia, a volte
+      migliaia di coefficienti — e quindi una convoluzione costosa. Con \(h\) così lunghe, la convoluzione
+      diretta (\(\propto N M\)) diventa pesante: è esattamente il caso in cui conviene la
+      <b>convoluzione tramite FFT</b> del Cap. 18, che filtra a una frazione del costo. <mark>Windowed-sinc lungo
+      + FFT è la combinazione standard per il filtraggio di alta qualità.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">SEZIONE 16.5</span>Passa-alto, passa-banda, elimina-banda</h2>
+
+  <p class="lead">
+    Finora un passa-basso. Ma da esso si ricavano <b>tutti</b> gli altri tipi con due trucchi semplicissimi:
+    l'<b>inversione spettrale</b> e la <b>combinazione</b>.
+  </p>
+
+  <ul>
+    <li><b>Passa-alto per inversione spettrale.</b> Prendi il kernel passa-basso, <b>cambia segno a tutti i
+        coefficienti</b> e <b>aggiungi 1 al centro</b>. In frequenza questo «rovescia» la risposta: ciò che
+        passava ora è bloccato e viceversa. Intuizione: «tutto» meno «le basse» = «le alte».</li>
+    <li><b>Passa-banda per combinazione.</b> Un passa-banda lascia passare una fascia centrale. Lo ottieni
+        combinando due passa-basso (uno con taglio alto, uno con taglio basso): la loro <b>differenza</b> tiene
+        solo la fascia in mezzo.</li>
+    <li><b>Elimina-banda</b> (notch): l'opposto del passa-banda. Si ottiene per inversione spettrale del
+        passa-banda — «tutto» meno «la fascia» = «tutto tranne la fascia».</li>
+  </ul>
+
+  <h3>Provalo: dallo stesso kernel, tutti i tipi</h3>
+
+  <p>
+    Un unico progetto di base, quattro filtri diversi ottenuti con inversione e combinazione. Scegli il tipo e
+    guarda la risposta in frequenza cambiare: passa-basso, passa-alto, passa-banda, elimina-banda — tutti
+    parenti dello stesso windowed-sinc.
+  </p>
+
+  <div class="widget" id="w-types">
+    <div class="w-head">
+      <span>I quattro tipi da un kernel</span>
+      <span class="hint">inversione e combinazione</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wt-svg" viewBox="0 0 620 200" role="img" aria-label="Le risposte in frequenza dei quattro tipi di filtro ottenuti dallo stesso kernel"></svg>
+    </div>
+    <div class="w-controls">
+      <button class="w-btn on" id="wt-lp">passa-basso</button>
+      <button class="w-btn" id="wt-hp">passa-alto</button>
+      <button class="w-btn" id="wt-bp">passa-banda</button>
+      <button class="w-btn" id="wt-bs">elimina-banda</button>
+    </div>
+    <div class="w-readout" id="wt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">SEZIONE 16.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">Perché il filtro passa-basso ideale (rettangolo in frequenza) non si può
+      realizzare esattamente?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La sua risposta all'impulso è una <b>sinc</b>, infinitamente lunga e simmetrica (Cap. 11). Infinita =
+          infiniti coefficienti; simmetrica = valori per tempi negativi, cioè risponderebbe prima dello stimolo
+          (non causale). Va <b>troncata</b> (finita), <b>traslata</b> (causale) e <b>finestrata</b> (senza
+          Gibbs) → windowed-sinc.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">Hai un windowed-sinc con \(M=100\) e transizione troppo larga. Come la dimezzi?
+      Cosa succede al costo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p>La transizione è \(\approx 4/M\): per dimezzarla, <b>raddoppia \(M\)</b> a 200. Il costo per campione
+          raddoppia (il doppio dei coefficienti). Per \(M\) grandi conviene passare alla convoluzione via FFT
+          (Cap. 18).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">Ti serve un blocco molto profondo (attenuazione elevata). Scegli Hamming o
+      Blackman? Cosa sacrifichi?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Blackman</b> (~−74 dB contro i ~−53 dB di Hamming): blocco più profondo. Il sacrificio è una banda
+          di <b>transizione un po' più larga</b> a parità di \(M\) (per riaverla stretta, aumenti \(M\)). La
+          finestra controlla l'attenuazione, \(M\) la transizione: sono manopole quasi indipendenti.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">Hai progettato un passa-basso. Come ne ricavi un passa-alto con la stessa
+      frequenza di taglio?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p><b>Inversione spettrale:</b> cambia segno a tutti i coefficienti del kernel e aggiungi 1 a quello
+          centrale. In frequenza la risposta si rovescia: ciò che passava viene bloccato e viceversa. Intuizione:
+          «tutto» (una delta) meno «le basse» (il passa-basso) = «le alte».</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">SEZIONE 16.7</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li><b>Passa-basso ideale = rettangolo in frequenza ⇒ sinc nel tempo</b>, infinita e non causale:
+          irrealizzabile.</li>
+      <li><b>Windowed-sinc:</b> tronca la sinc, traslala (causale), moltiplicala per una finestra dolce (contro
+          Gibbs).</li>
+      <li><b>Tre manopole indipendenti:</b> \(f_c\) = dove tagliare; \(M\) = quanto netto (transizione
+          \(\approx 4/M\)); finestra = quanto profondo (Hamming ~−53 dB, Blackman ~−74 dB).</li>
+      <li><b>È il campione della frequenza:</b> taglio netto, banda piatta, blocco profondo, fase lineare. Costo:
+          lunghezza (→ FFT, Cap. 18).</li>
+      <li><b>Tutti i tipi da un kernel:</b> passa-alto per inversione spettrale, passa-banda per combinazione,
+          elimina-banda per inversione del passa-banda.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo i due FIR fondamentali. Ma cosa fare quando serve un filtro che nessun progetto standard offre — per
+    <em>annullare</em> una distorsione specifica, o per estrarre in modo ottimo un segnale noto dal rumore? Il
+    <strong>Capitolo 17</strong> affronta i <b>filtri su misura</b>: progetto diretto dal dominio della frequenza,
+    <b>deconvoluzione</b> e i filtri <b>ottimali</b> (adattato e di Wiener). È il DSP che smette di scegliere dal
+    catalogo e comincia a costruire su misura.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* costruzione di un kernel windowed-sinc passa-basso, lunghezza M+1 */
+function windowFn(i, M, type) {
+  if (type === 'ham') return 0.54 - 0.46 * Math.cos(2 * Math.PI * i / M);
+  if (type === 'black') return 0.42 - 0.5 * Math.cos(2 * Math.PI * i / M) + 0.08 * Math.cos(4 * Math.PI * i / M);
+  return 1;
+}
+function lowpassKernel(fc, M, type) {
+  const h = [];
+  for (let i = 0; i <= M; i++) {
+    const x = i - M / 2;
+    let s = (Math.abs(x) < 1e-9) ? 2 * Math.PI * fc : Math.sin(2 * Math.PI * fc * x) / x;
+    h.push(s * windowFn(i, M, type));
+  }
+  const sum = h.reduce((a, b) => a + b, 0);
+  return h.map(v => v / sum);   // guadagno unitario in continua
+}
+function specInvert(h) { const M = h.length - 1; const g = h.map(v => -v); g[M / 2 | 0] += 1; return g; }
+function freqDB(h, NF) {
+  const half = NF / 2, mag = [];
+  for (let k = 0; k <= half; k++) { let re = 0, im = 0; for (let n = 0; n < h.length; n++) { const a = 2 * Math.PI * k * n / NF; re += h[n] * Math.cos(a); im -= h[n] * Math.sin(a); } mag.push(Math.sqrt(re * re + im * im)); }
+  const peak = Math.max(...mag);
+  return mag.map(m => 20 * Math.log10(Math.max(m / peak, 1e-6)));
+}
+
+/* ============================================================================
+   WIDGET §16.3 — progettista di windowed-sinc
+   ========================================================================= */
+(function () {
+  const sI = document.getElementById('wd-imp'), sF = document.getElementById('wd-freq');
+  if (!sI) return;
+  const out = document.getElementById('wd-out');
+  const fcS = document.getElementById('wd-fc'), mS = document.getElementById('wd-m');
+  const fcV = document.getElementById('wd-fcv'), mV = document.getElementById('wd-mv');
+  const btns = { rect: document.getElementById('wd-rect'), ham: document.getElementById('wd-ham'), black: document.getElementById('wd-black') };
+  let win = 'ham';
+
+  function draw() {
+    const fc = parseFloat(fcS.value), M = parseInt(mS.value, 10);
+    fcV.textContent = fc.toFixed(2); mV.textContent = M;
+    const h = lowpassKernel(fc, M, win);
+
+    sI.innerHTML = '';
+    const peak = Math.max(...h.map(Math.abs));
+    const pi = new Plot(sI, { xmin: -1, xmax: M + 1, ymin: -peak * 0.5, ymax: peak * 1.15 });
+    pi.line(-1, 0, M + 1, 0, { color: 'var(--ink-faint)', width: 1 });
+    pi.seq(h, { color: 'var(--accent)', width: 1.8 });
+    pi.text(M, peak, 'sinc finestrata h[n]', { color: 'var(--accent)', anchor: 'end', size: 10.5 });
+
+    sF.innerHTML = '';
+    const NF = 512, db = freqDB(h, NF), half = NF / 2;
+    const pf = new Plot(sF, { xmin: 0, xmax: 0.5, ymin: -90, ymax: 8 });
+    pf.grid(0.1, 20); pf.axes({ numbers: true, names: true, xname: 'frequenza', yname: 'dB', stepX: 0.1, stepY: 20 });
+    const pts = db.map((v, k) => [0.5 * k / half, v]);
+    pf.poly(pts, { color: 'var(--warm)', width: 2, close: false });
+    pf.line(fc, -90, fc, 8, { color: 'var(--ink-faint)', width: 1, dash: '4 3' });
+
+    // attenuazione media della banda oscura (oltre fc + transizione)
+    const trans = 4 / M;
+    let att = 0, c = 0; for (let k = 0; k <= half; k++) { const f = 0.5 * k / half; if (f > fc + trans + 0.03) { att += Math.pow(10, db[k] / 10); c++; } }
+    const attDB = c ? 10 * Math.log10(att / c) : -99;
+    out.innerHTML = `
+      <div class="big">f<sub>c</sub>=<b>${fc.toFixed(2)}</b> · M=<b>${M}</b> · finestra <b>${win === 'rect' ? 'rettang.' : win === 'ham' ? 'Hamming' : 'Blackman'}</b>
+        &nbsp;·&nbsp; transizione ≈ <b>${trans.toFixed(3)}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Attenuazione media della banda oscura ≈ <b>${attDB.toFixed(0)} dB</b>.
+        ${win === 'rect' ? 'Senza finestra vedi le <mark>increspature di Gibbs</mark> e lobi alti: blocco scarso.'
+          : win === 'black' ? 'Blackman: blocco <mark>profondissimo</mark>, transizione un filo più larga.'
+            : 'Hamming: buon compromesso tra transizione e blocco.'}
+        Aumenta M per stringere la transizione; cambia finestra per il blocco.
+      </div>`;
+  }
+  fcS.addEventListener('input', draw); mS.addEventListener('input', draw);
+  function setWin(w) { win = w; for (const k in btns) btns[k].classList.toggle('on', k === w); draw(); }
+  btns.rect.addEventListener('click', () => setWin('rect'));
+  btns.ham.addEventListener('click', () => setWin('ham'));
+  btns.black.addEventListener('click', () => setWin('black'));
+  draw();
+})();
+
+
+/* ============================================================================
+   WIDGET §16.5 — i quattro tipi da un kernel
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wt-out');
+  const btns = { lp: document.getElementById('wt-lp'), hp: document.getElementById('wt-hp'), bp: document.getElementById('wt-bp'), bs: document.getElementById('wt-bs') };
+  let type = 'lp';
+  const M = 80;
+
+  function kernel() {
+    if (type === 'lp') return lowpassKernel(0.2, M, 'black');
+    if (type === 'hp') return specInvert(lowpassKernel(0.2, M, 'black'));
+    // passa-banda = lowpass(fc alto) - lowpass(fc basso)
+    const lo = lowpassKernel(0.15, M, 'black'), hi = lowpassKernel(0.3, M, 'black');
+    const bp = hi.map((v, i) => v - lo[i]);
+    if (type === 'bp') return bp;
+    return specInvert(bp);   // elimina-banda
+  }
+  const NAME = { lp: 'passa-basso', hp: 'passa-alto', bp: 'passa-banda', bs: 'elimina-banda' };
+
+  function draw() {
+    const h = kernel();
+    const NF = 512, db = freqDB(h, NF), half = NF / 2;
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 0.5, ymin: -80, ymax: 8 });
+    p.grid(0.1, 20); p.axes({ numbers: true, names: true, xname: 'frequenza', yname: 'dB', stepX: 0.1, stepY: 20 });
+    const pts = db.map((v, k) => [0.5 * k / half, v]);
+    p.poly(pts, { color: 'var(--accent)', width: 2.2, close: false });
+
+    out.innerHTML = `
+      <div class="big">tipo: <b>${NAME[type]}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${type === 'lp' ? 'Il kernel base: passano le <b>basse</b> frequenze.'
+          : type === 'hp' ? 'Ottenuto per <mark>inversione spettrale</mark>: passano le <b>alte</b>.'
+            : type === 'bp' ? 'Differenza di due passa-basso: passa solo la <b>fascia centrale</b>.'
+              : 'Inversione del passa-banda: passa <b>tutto tranne</b> la fascia (notch).'}
+        Tutti e quattro nascono dallo stesso windowed-sinc, con inversione e combinazione.
+      </div>`;
+  }
+  function setType(t) { type = t; for (const k in btns) btns[k].classList.toggle('on', k === t); draw(); }
+  btns.lp.addEventListener('click', () => setType('lp'));
+  btns.hp.addEventListener('click', () => setType('hp'));
+  btns.bp.addEventListener('click', () => setType('bp'));
+  btns.bs.addEventListener('click', () => setType('bs'));
+  draw();
+})();
+</script>
+</body>
+</html>

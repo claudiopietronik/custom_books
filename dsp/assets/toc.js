@@ -246,7 +246,7 @@ const TOC = [
     n: 16,
     titolo: "Filtri windowed-sinc",
     file: "cap16-windowed-sinc.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Il passa-basso ideale: la sinc" },
       { id: "s16-2", n: "16.2", t: "Troncare e finestrare" },
