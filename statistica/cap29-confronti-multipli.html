@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>29 · Confronti multipli — Statistica</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>σ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="29">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Parte IV · Statistica inferenziale</div>
+    <h1>Confronti multipli</h1>
+    <p class="standfirst">
+      Un test singolo con \(\alpha = 0{,}05\) sbaglia il 5% delle volte. Ma se ne fai <b>venti</b>, anche quando
+      non c'è nessun effetto reale, ti aspetti <em>un</em> falso positivo — praticamente garantito. È il problema
+      dei <b>confronti multipli</b>: più domande poni al caso, più «scoperte» fasulle otterrai. Ignorarlo è la
+      fabbrica silenziosa dei risultati irriproducibili.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📍</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un'insidia trasversale che nasce direttamente dalla definizione di \(\alpha\) (Cap. 25). Diventa cruciale
+      appena si confrontano <em>più</em> gruppi: è il motivo per cui dopo un'ANOVA (Cap. 40) servono i test
+      post-hoc corretti (Cap. 42), non tanti t-test nudi.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      «Abbiamo testato 50 varianti del sito e questa converte di più (\(p<0{,}05\))!»: con 50 test, un falso
+      positivo è quasi certo anche se nessuna variante è migliore. La correzione per confronti multipli è ciò che
+      separa una vera scoperta da un artefatto statistico — e sta dietro a molte crisi di riproducibilità.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-1"><span class="secnum">SEZIONE 29.1</span>Il problema del test ripetuto</h2>
+
+  <p class="lead">
+    Ogni test ha una probabilità \(\alpha\) di dare un falso positivo. Ripetendo test indipendenti, queste
+    probabilità si <b>accumulano</b>: la possibilità di sbagliare <em>almeno una volta</em> cresce rapidamente.
+  </p>
+
+  <p>
+    Con un test, \(\Prob(\text{falso positivo}) = 0{,}05\). Con due test indipendenti, la probabilità di
+    <em>non</em> sbagliare mai è \(0{,}95 \times 0{,}95 = 0{,}9025\), quindi quella di sbagliare almeno una volta
+    è già \(0{,}0975\). Con venti test sale a circa \(0{,}64\): <mark>è più probabile ottenere un falso positivo
+    che non ottenerlo</mark>. Il caso, interrogato tante volte, prima o poi «confessa» qualcosa che non c'è.
+  </p>
+
+  <h3>Provalo: il caso confessa</h3>
+
+  <p>
+    Ogni quadratino è un test in cui <b>non c'è nessun effetto reale</b>. Aumenta il numero di test e guarda
+    comparire i <b style="color:var(--warm)">falsi positivi</b> (\(p<0{,}05\) per puro caso). La curva mostra la
+    probabilità di ottenerne <em>almeno uno</em>: schizza verso 1.
+  </p>
+
+  <div class="widget" id="w-mult">
+    <div class="w-head">
+      <span>Falsi positivi da test ripetuti</span>
+      <span class="hint">nessun effetto vero, eppure…</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wmu-svg" viewBox="0 0 620 250" role="img" aria-label="Molti test senza effetto reale che producono falsi positivi per caso"></svg>
+    </div>
+    <div class="w-controls">
+      <div class="w-ctrl"><label>numero di test</label><input type="range" id="wmu-m" min="1" max="100" step="1" value="20"><output id="wmu-mv">20</output></div>
+      <button class="w-btn" id="wmu-go">rilancia</button>
+      <button class="w-btn" id="wmu-bonf">Bonferroni</button>
+    </div>
+    <div class="w-readout" id="wmu-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-2"><span class="secnum">SEZIONE 29.2</span>L'errore familywise</h2>
+
+  <p class="lead">
+    Il <b>tasso di errore familywise</b> (FWER) è la probabilità di fare <em>almeno un</em> falso positivo
+    nell'intera «famiglia» di test. È lui a esplodere.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">FWER per m test indipendenti <span class="tag">cresce con m</span></div>
+    <div class="f-body">
+      \[ \text{FWER} \;=\; 1 - (1 - \hA{\alpha})^{\hB{m}} \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(\hA{\alpha}\)</dt><dd>il livello del singolo test (es. 0,05).</dd>
+        <dt>\(\hB{m}\)</dt><dd>il numero di test eseguiti.</dd>
+        <dt>\((1-\alpha)^m\)</dt><dd>probabilità di <b>non</b> sbagliare in <em>nessuno</em> degli \(m\) test.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Con \(\alpha=0{,}05\): \(m=1 \to 0{,}05\); \(m=10 \to 0{,}40\); \(m=20 \to 0{,}64\); \(m=100 \to 0{,}99\).
+      <mark>Il rischio complessivo di un falso allarme cresce fino alla quasi-certezza.</mark> Il livello che
+      controlli sul singolo test non è più il livello che conta per l'intero studio.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-3"><span class="secnum">SEZIONE 29.3</span>Bonferroni e alternative</h2>
+
+  <p class="lead">
+    La correzione più semplice è quella di <b>Bonferroni</b>: rendi ogni singolo test più severo, dividendo la
+    soglia per il numero di test.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Correzione di Bonferroni <span class="tag">soglia più severa per test</span></div>
+    <div class="f-body">
+      \[ \alpha_{\text{corretto}} \;=\; \frac{\hA{\alpha}}{\hB{m}} \]
+    </div>
+    <div class="f-note">
+      Con 20 test e \(\alpha = 0{,}05\), ogni test deve superare \(0{,}05/20 = 0{,}0025\) per contare. Così il
+      rischio complessivo torna sotto il 5%. <mark>Semplice e sicura, ma conservativa</mark>: con tantissimi test
+      la soglia diventa severissima e si rischiano molti falsi negativi (poca potenza). Esistono alternative meno
+      drastiche: Holm (Bonferroni «a gradini», più potente e sempre valido), Tukey (per i confronti a coppie dopo
+      l'ANOVA, Cap. 42).
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il p-hacking e il «giardino dei sentieri che si biforcano»</div>
+    <p style="margin-bottom:0">
+      I confronti multipli non nascono solo da test dichiarati: anche <b>provare tante analisi</b> e riportare solo
+      quella significativa è un confronto multiplo nascosto (p-hacking). <mark>Ogni scelta esplorata è un test in
+      più</mark>, anche se non lo scrivi. La difesa migliore è dichiarare le ipotesi <em>prima</em>
+      (pre-registrazione) e correggere per tutte le analisi tentate.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-4"><span class="secnum">SEZIONE 29.4</span>Il false discovery rate</h2>
+
+  <p class="lead">
+    Controllare il FWER è prudente ma costoso. Quando i test sono migliaia (genomica, neuroimaging), si preferisce
+    controllare il <b>false discovery rate</b> (FDR): non «zero falsi positivi», ma «pochi falsi positivi
+    <em>tra le scoperte</em>».
+  </p>
+
+  <p>
+    L'idea (procedura di Benjamini–Hochberg) cambia obiettivo: invece di garantire quasi nessun falso allarme in
+    assoluto, garantisce che, <em>tra i risultati dichiarati significativi</em>, la frazione di falsi sia sotto
+    una soglia (es. il 10%). È molto più <b>potente</b> di Bonferroni quando i test sono tantissimi e alcuni
+    effetti sono reali: accetti qualche falsa scoperta in cambio di trovarne molte vere. La scelta tra FWER e FDR
+    dipende dal costo di un falso positivo: se è altissimo (un farmaco pericoloso) controlli il FWER; se stai
+    esplorando migliaia di geni per poi verificarli, controlli l'FDR.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-5"><span class="secnum">SEZIONE 29.5</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.1</div>
+    <p style="margin-bottom:0">Esegui 10 test indipendenti, tutti con \(H_0\) vera, a \(\alpha = 0{,}05\). Qual è la
+      probabilità di almeno un falso positivo?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(\text{FWER} = 1 - (1-0{,}05)^{10} = 1 - 0{,}95^{10} = 1 - 0{,}599 \approx
+          \mathbf{0{,}40}\) (§29.2). Il 40%: quasi una volta su due otterresti una «scoperta» inesistente. Con
+          l'aumentare dei test il rischio corre verso 1.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.2</div>
+    <p style="margin-bottom:0">Con 25 test e \(\alpha = 0{,}05\), quale soglia usa la correzione di Bonferroni per
+      ciascun test?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">\(\alpha_{\text{corretto}} = 0{,}05/25 = \mathbf{0{,}002}\) (§29.3). Un singolo
+          test conta come significativo solo se \(p \le 0{,}002\). Così il rischio complessivo di almeno un falso
+          positivo resta sotto il 5%, al prezzo di una minore potenza sui singoli test.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 29.3</div>
+    <p style="margin-bottom:0">Uno studio di genomica confronta 20 000 geni. Perché Bonferroni è problematico qui, e
+      cosa si usa al suo posto?</p>
+    <details class="sol"><summary>Soluzione</summary>
+      <div class="sol-body">
+        <p style="margin-bottom:0">Bonferroni chiederebbe \(p \le 0{,}05/20000 = 2{,}5\times 10^{-6}\): una soglia
+          così severa che quasi nessun gene, nemmeno quelli davvero rilevanti, la supererebbe — potenza
+          bassissima, tantissimi falsi negativi (§29.3). Si usa il <b>false discovery rate</b> (Benjamini–Hochberg,
+          §29.4): si accetta una piccola frazione di falsi tra le scoperte in cambio di molta più potenza, ideale
+          quando i test sono migliaia.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s29-6"><span class="secnum">SEZIONE 29.6</span>Soluzioni</h2>
+
+  <p>Le soluzioni sono ripiegate sotto ciascun esercizio qui sopra.</p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 29</div>
+    <ol style="margin-bottom:0">
+      <li><b>Più test → più falsi positivi.</b> FWER \(= 1-(1-\alpha)^m\) cresce verso 1.</li>
+      <li><b>Bonferroni:</b> \(\alpha/m\) per test. Semplice e sicura, ma conservativa (poca potenza con molti
+        test). Holm è una versione migliore.</li>
+      <li><b>FDR</b> (Benjamini–Hochberg): controlla la frazione di falsi <em>tra le scoperte</em>; molto più
+        potente con migliaia di test.</li>
+      <li><b>Anche le analisi non riportate contano:</b> il p-hacking è un confronto multiplo nascosto.
+        Pre-registra.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Framework, assunzioni, insidie: tutto pronto. È ora di costruire il primo test concreto, il più usato in
+    assoluto. Il <strong>Capitolo 30</strong> apre la «anatomia del t-test»: smontiamo la statistica \(t\) come un
+    rapporto segnale/rumore e capiamo da dove nasce la sua distribuzione.
+  </p>
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §29.1 — falsi positivi da test ripetuti + Bonferroni
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wmu-svg');
+  if (!svg) return;
+  const out = document.getElementById('wmu-out');
+  const mS = document.getElementById('wmu-m'), mV = document.getElementById('wmu-mv');
+  const go = document.getElementById('wmu-go'), bonfBtn = document.getElementById('wmu-bonf');
+  let seed = 9, bonf = false;
+  const u = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  function draw() {
+    const m = parseInt(mS.value, 10);
+    mV.textContent = m;
+    bonfBtn.classList.toggle('on', bonf);
+    const alpha = bonf ? 0.05 / m : 0.05;
+    // genera m p-value uniformi (H0 vera): P(falso positivo)=alpha
+    const pv = []; for (let i = 0; i < m; i++) pv.push(u());
+    const fp = pv.filter(p => p < alpha).length;
+    const fwer = 1 - Math.pow(1 - 0.05, m);   // rischio a α non corretto
+
+    svg.innerHTML = '';
+    const cols = 20;
+    const rows = Math.ceil(m / cols);
+    const p = new Plot(svg, { xmin: -1, xmax: cols, ymin: -1, ymax: Math.max(6, rows + 1), iso: false });
+    // griglia dei test
+    for (let i = 0; i < m; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      const isFP = pv[i] < alpha;
+      p.dot(c, rows - 1 - r, { r: 5, color: isFP ? 'var(--warm)' : 'color-mix(in srgb, var(--green) 45%, transparent)', stroke: 'var(--paper)', sw: 1 });
+    }
+    out.innerHTML = `
+      <div class="big">${m} test · falsi positivi: <b style="color:${fp ? 'var(--warm)' : 'var(--green)'}">${fp}</b> ${bonf ? '(soglia Bonferroni ' + alpha.toFixed(4) + ')' : '(soglia 0,05)'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Nessuno di questi test ha un effetto reale. ${bonf
+          ? 'Con <mark>Bonferroni</mark> (α/m) i falsi positivi quasi spariscono: il rischio complessivo torna sotto il 5%.'
+          : 'Senza correzione, la probabilità di almeno un falso positivo è <mark>' + (fwer * 100).toFixed(0) + '%</mark>. Attiva «Bonferroni» per domarla.'}
+        «rilancia» per nuovi dati.
+      </div>`;
+  }
+  mS.addEventListener('input', draw);
+  go.addEventListener('click', () => { seed = (seed * 48271 + 7) & 0x7fffffff; draw(); });
+  bonfBtn.addEventListener('click', () => { bonf = !bonf; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

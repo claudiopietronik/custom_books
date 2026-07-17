@@ -342,7 +342,7 @@ const TOC = [
   },
   {
     n: 29, parte: "IV · Statistica inferenziale",
-    titolo: "Confronti multipli", file: "cap29-confronti-multipli.html", stato: "da-fare",
+    titolo: "Confronti multipli", file: "cap29-confronti-multipli.html", stato: "pronto",
     sezioni: [
       { id: "s29-1", n: "29.1", t: "Il problema del test ripetuto" },
       { id: "s29-2", n: "29.2", t: "L'errore familywise" },
