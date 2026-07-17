@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Applicazioni — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12 · Parte II</div>
+    <h1>Applicazioni</h1>
+    <p class="standfirst">
+      Dove tutta la teoria diventa i sistemi che usiamo ogni giorno. Chiudiamo la Parte II con il deep learning
+      <em>al lavoro</em>: come si addestra su <b>scala enorme</b> (GPU, parallelismo), la <b>visione
+      artificiale</b>, il <b>riconoscimento vocale</b> e l'<b>elaborazione del linguaggio naturale</b>.
+      <mark>Vedrai anche il ponte verso oggi</mark>: gli embedding di parole e l'attenzione, i semi da cui
+      nasceranno i grandi modelli linguistici.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'infrastruttura: il deep learning <b>su larga scala</b> (§12.1). I tre grandi domini applicativi:
+      <b>visione</b> (§12.2), <b>parlato</b> (§12.3) e <b>linguaggio</b> (§12.4, con il widget degli embedding).
+      Uno sguardo alle <b>altre applicazioni</b> (§12.5).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      È il capitolo in cui i mattoni dei capitoli 6–11 si assemblano in prodotti veri: il riconoscimento di
+      immagini del telefono, gli assistenti vocali, la traduzione automatica. <mark>Capire come sono fatti dentro
+      demistifica l'IA</mark> — e mostra che dietro la «magia» ci sono convoluzioni, ricorrenze, embedding e
+      tanto calcolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Deep learning su larga scala</h2>
+
+  <p class="lead">
+    Le reti moderne sono grandi e affamate: il loro successo dipende tanto dall'<b>infrastruttura di calcolo</b>
+    quanto dalle idee. Senza le GPU, il deep learning sarebbe rimasto una curiosità.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">⚙</span> Come si scala</div>
+    <p style="margin-bottom:0">
+      • <b>GPU</b>: migliaia di core che fanno moltiplicazioni matriciali in parallelo — esattamente
+        l'operazione di reti e convoluzioni (§9.7). Un addestramento che su CPU richiederebbe mesi si riduce a
+        giorni.<br>
+      • <b>Parallelismo sui dati</b>: dividere il mini-batch su più GPU, che calcolano gradienti in parallelo e
+        li mediano.<br>
+      • <b>Parallelismo sul modello</b>: spezzare una rete troppo grande per una sola GPU su più dispositivi.<br>
+      • <b>Precisione ridotta</b> e compressione (quantizzazione, distillazione) per far girare le reti su
+        telefoni e dispositivi.<br>
+      <mark>La legge empirica del campo: più dati + più calcolo + reti più grandi = prestazioni migliori</mark>,
+      spesso in modo prevedibile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>La visione artificiale</h2>
+
+  <p class="lead">
+    Il dominio in cui il deep learning ha vinto per primo e in modo più netto. Nel 2012 una CNN
+    (<b>AlexNet</b>) dimezzò l'errore sulla sfida ImageNet, e cambiò tutto.
+  </p>
+
+  <p>
+    La ricetta base: <b>CNN</b> (Cap. 9) che estraggono feature gerarchiche, addestrate su enormi dataset
+    etichettati, con pesante <b>data augmentation</b> (Cap. 7). I compiti vanno oltre la classificazione:
+    <b>rilevamento</b> (dove sono gli oggetti), <b>segmentazione</b> (a quale oggetto appartiene ogni pixel),
+    <b>stima della posa</b>, generazione di immagini. Un dettaglio pratico decisivo è il <b>transfer learning</b>
+    (Cap. 15): una CNN addestrata su ImageNet si riusa come punto di partenza per compiti con pochi dati,
+    riaddestrando solo gli ultimi strati. <mark>Le feature imparate su milioni di immagini sono così generali da
+    servire quasi ovunque.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Il riconoscimento vocale</h2>
+
+  <p class="lead">
+    Trasformare un'onda sonora in testo. Il deep learning ha sostituito decenni di ingegneria acustica con reti
+    addestrate end-to-end.
+  </p>
+
+  <p>
+    L'audio si rappresenta come uno <b>spettrogramma</b> (frequenze nel tempo — una «immagine» del suono), su
+    cui lavorano CNN e RNN/LSTM (Cap. 10) per gestire la dimensione temporale. Prima del deep learning servivano
+    modelli acustici, dizionari fonetici e modelli di linguaggio separati, cuciti a mano; oggi una singola rete
+    <b>end-to-end</b> mappa direttamente l'audio in testo, riducendo drasticamente il tasso di errore.
+    <mark>È la tecnologia dietro ogni assistente vocale.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>L'elaborazione del linguaggio naturale</h2>
+
+  <p class="lead">
+    Far capire e generare linguaggio alle macchine. Il primo passo, geniale: rappresentare ogni parola come un
+    <b>vettore</b> — un <span class="termine">word embedding</span> — in cui la geometria cattura il
+    significato.
+  </p>
+
+  <p>
+    Invece di trattare le parole come simboli isolati, si impara per ciascuna un vettore denso (poche centinaia
+    di numeri) tale che <b>parole simili siano vicine</b> nello spazio. Sorprendentemente, in questo spazio le
+    <b>relazioni</b> diventano <b>direzioni</b>: la differenza tra «re» e «uomo» è quasi lo stesso vettore della
+    differenza tra «regina» e «donna» — la «direzione del genere». Ne segue la famosa aritmetica:
+    <mark>«re» − «uomo» + «donna» ≈ «regina».</mark> Il widget lo mostra dal vivo.
+  </p>
+
+  <div class="widget" id="w-emb">
+    <div class="w-head">
+      <span>Word embedding: le analogie come aritmetica di vettori</span>
+      <span class="hint">scegli un'analogia</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wemb-svg" viewBox="0 0 560 420" role="img" aria-label="Parole come punti in 2D: re meno uomo più donna cade vicino a regina"></svg>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="w-btn on" id="wemb-1">re − uomo + donna</button>
+      <button class="w-btn" id="wemb-2">re − uomo + bambino</button>
+    </div>
+    <div class="w-readout" id="wemb-out"></div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🔭</span> Dal libro a oggi: l'attenzione e i transformer</div>
+    <p style="margin-bottom:0">
+      Al tempo di questo testo (2016), il linguaggio era dominato da RNN/LSTM (Cap. 10) con
+      <b>encoder-decoder</b> e <b>attenzione</b>. Poco dopo, l'idea «solo attenzione, niente ricorrenza» ha
+      prodotto i <span class="termine">transformer</span>: ogni parola guarda direttamente tutte le altre della
+      frase, in parallelo, pesando quanto ciascuna è rilevante. È l'architettura dietro i grandi modelli
+      linguistici moderni. <mark>Ma il seme — embedding + attenzione — è tutto qui</mark>: i transformer sono la
+      naturale prosecuzione delle idee di questo capitolo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Altre applicazioni</h2>
+
+  <p class="lead">
+    Oltre ai tre grandi domini, il deep learning è entrato ovunque ci siano dati e pattern da scoprire.
+  </p>
+
+  <p>
+    Qualche esempio: i <b>sistemi di raccomandazione</b> (cosa guardare, cosa comprare) imparano embedding di
+    utenti e oggetti come per le parole; la <b>bioinformatica e la chimica</b> (ripiegamento delle proteine,
+    scoperta di farmaci); il <b>reinforcement learning</b> per giochi e robotica, dove una rete impara una
+    <b>policy</b> per massimizzare una ricompensa; la <b>generazione</b> di immagini, audio e testo (la Parte
+    III). <mark>Il filo comune: trasformare dati grezzi in rappresentazioni utili, imparate e non progettate</mark>
+    — il messaggio del Capitolo 1, applicato a un dominio dopo l'altro.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li>Il deep learning su <b>larga scala</b> vive sulle GPU e sul parallelismo: più dati + più calcolo +
+          reti più grandi = meglio (§12.1).</li>
+      <li><b>Visione</b>: CNN + data augmentation + <b>transfer learning</b>; oltre la classificazione, anche
+          rilevamento e segmentazione (§12.2).</li>
+      <li><b>Parlato</b>: spettrogramma + reti end-to-end sostituiscono l'ingegneria acustica a mano (§12.3).</li>
+      <li><b>Linguaggio</b>: le parole diventano <b>vettori</b> in cui le analogie sono aritmetica (§12.4). Da
+          embedding + attenzione nascono i <b>transformer</b> e i modelli linguistici moderni.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Qui finisce la Parte II: le tecnologie «consolidate». La <strong>Parte III</strong> ci porta sulla frontiera
+    della ricerca, quasi tutta <b>non supervisionata e generativa</b>. Il <strong>Capitolo 13</strong> riparte
+    dalle basi con i <b>modelli a fattori lineari</b> — PCA probabilistica, ICA, sparse coding — i mattoni
+    concettuali di autoencoder e modelli generativi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Perché le GPU sono così adatte al deep learning? Quale operazione, comune a reti dense e convoluzionali,
+      sanno fare in modo massicciamente parallelo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Hai poche migliaia di immagini etichettate per un compito di visione specialistico. Perché il <b>transfer
+      learning</b> da una rete addestrata su ImageNet è quasi sempre la mossa giusta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Nel widget di §12.4, perché «re − uomo + donna» cade vicino a «regina»? Cosa rappresenta, geometricamente,
+      il vettore «re − uomo»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Un word embedding rappresenta ogni parola come un simbolo isolato. &nbsp;
+      (b) Lo spettrogramma trasforma l'audio in una rappresentazione simile a un'immagine. &nbsp;
+      (c) I transformer si basano sulla ricorrenza come le RNN. &nbsp;
+      (d) Nel transfer learning si riusano le feature imparate su un altro compito.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Perché sanno fare in parallelo la <b>moltiplicazione matriciale</b> (e la convoluzione, che vi si riduce,
+      §9.7): migliaia di core che calcolano tante moltiplicazioni-e-somme insieme. Reti dense e convoluzionali
+      sono <em>fatte</em> di queste operazioni, quindi le GPU le accelerano di ordini di grandezza rispetto alle
+      CPU.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      Perché le feature dei primi strati di una CNN (bordi, texture, forme) sono <b>generali</b>: valgono per
+      quasi tutte le immagini. Partendo da una rete già addestrata su milioni di immagini e riaddestrando solo
+      gli ultimi strati sul tuo compito, sfrutti quelle feature senza bisogno di grandi quantità di dati — eviti
+      l'overfitting che avresti addestrando da zero con poche migliaia di esempi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      Perché nello spazio degli embedding la relazione «maschile → femminile» è codificata come una
+      <b>direzione</b> costante: «re − uomo» è (circa) il vettore «togli il genere maschile, tieni la
+      regalità». Aggiungendo «donna» (che porta il genere femminile) si ottiene la «regalità al femminile», cioè
+      <b>regina</b>. <mark>Le relazioni semantiche diventano vettori-differenza costanti nello spazio.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Un embedding è un <b>vettore denso</b> in cui parole simili sono vicine — il contrario di
+      un simbolo isolato (§12.4). <br>
+      <b>(b) VERO.</b> Lo spettrogramma è frequenze × tempo: un'«immagine» del suono, su cui lavorano CNN/RNN
+      (§12.3). <br>
+      <b>(c) FALSO.</b> I transformer <b>eliminano</b> la ricorrenza, basandosi solo sull'attenzione (§12.4). <br>
+      <b>(d) VERO.</b> Il transfer learning riusa feature imparate su un compito (di solito ricco di dati) per un
+      altro (§12.2).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §12.4 — word embedding e aritmetica delle analogie
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wemb-svg');
+  if (!svg) return;
+  const out = document.getElementById('wemb-out');
+  const b1 = document.getElementById('wemb-1'), b2 = document.getElementById('wemb-2');
+  // embedding 2D fittizi ma coerenti: asse x = "regalità/età", asse y = "genere"
+  const W = {
+    uomo: [1, 1], donna: [1, 3],
+    re: [4, 1], regina: [4, 3],
+    bambino: [1, 0.2], principe: [4, 0.2]
+  };
+  const IT = { uomo: 'uomo', donna: 'donna', re: 're', regina: 'regina', bambino: 'bambino', principe: 'principe' };
+  let mode = 1;
+
+  function nearest(pt, exclude) {
+    let best = null, bd = 1e9;
+    for (const k in W) { if (exclude.includes(k)) continue; const d = Math.hypot(W[k][0] - pt[0], W[k][1] - pt[1]); if (d < bd) { bd = d; best = k; } }
+    return best;
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -0.5, xmax: 6, ymin: -1, ymax: 4.2, iso: true });
+    p.grid(1, 1); p.axes({ numbers: false, xname: 'regalità →', yname: 'genere →' });
+    // parole
+    for (const k in W) {
+      const isPrince = (k === 'principe' || k === 'bambino');
+      p.dot(W[k][0], W[k][1], { color: 'var(--accent)', r: 5 });
+      p.text(W[k][0], W[k][1], IT[k], { dx: 10, dy: -8, color: 'var(--ink)', bold: true, anchor: 'start' });
+    }
+    // analogia: re - uomo + (donna|bambino)
+    const add = mode === 1 ? 'donna' : 'bambino';
+    const res = [W.re[0] - W.uomo[0] + W[add][0], W.re[1] - W.uomo[1] + W[add][1]];
+    // frecce del parallelogramma: uomo->re  e  donna->res
+    p.arrow(W.uomo[0], W.uomo[1], W.re[0], W.re[1], { color: 'var(--warm)', width: 2.6, label: 're−uomo' });
+    p.arrow(W[add][0], W[add][1], res[0], res[1], { color: 'var(--green)', width: 2.6 });
+    p.dot(res[0], res[1], { color: 'var(--violet)', r: 6 });
+    p.text(res[0], res[1], '= risultato', { dx: 10, dy: 16, color: 'var(--violet)', bold: true, anchor: 'start' });
+
+    const near = nearest(res, ['re', 'uomo', add]);
+    out.innerHTML = `
+      <div class="big">
+        re − uomo + ${add} = (<b>${fmt(res[0], 1)}, ${fmt(res[1], 1)}</b>) ≈ <b style="color:var(--violet)">${IT[near]}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Il vettore <b style="color:var(--warm)">re − uomo</b> è la «direzione della regalità» (togli l'uomo
+        comune, tieni la corona). Sommandola a <b>${add}</b> (freccia <b style="color:var(--green)">verde</b>,
+        stessa direzione) si arriva vicino a <b style="color:var(--violet)">${IT[near]}</b>.
+        <mark>Le analogie diventano somme e sottrazioni di vettori.</mark> Il parallelogramma delle due frecce
+        mostra che la relazione è la stessa in entrambe le coppie.
+      </div>`;
+  }
+  b1.addEventListener('click', () => { mode = 1; b1.classList.add('on'); b2.classList.remove('on'); draw(); });
+  b2.addEventListener('click', () => { mode = 2; b2.classList.add('on'); b1.classList.remove('on'); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -45,7 +45,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 9 — Reti convoluzionali
 - [x] 10 — Modellazione di sequenze: reti ricorrenti
 - [x] 11 — Metodologia pratica
-- [ ] 12 — Applicazioni
+- [x] 12 — Applicazioni
 - [ ] 13 — Modelli a fattori lineari
 - [ ] 14 — Autoencoder
 - [ ] 15 — Apprendimento di rappresentazioni

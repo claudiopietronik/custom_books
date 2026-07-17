@@ -226,7 +226,7 @@ const TOC = [
     titolo: "Applicazioni",
     file: "cap12-applicazioni.html",
     parte: P2,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Deep learning su larga scala" },
       { id: "s12-2", n: "12.2", t: "La visione artificiale" },
