@@ -47,7 +47,7 @@ tutti nuovi, pensati per il web e per l'autodidatta.
 - [x] 11 — Metodologia pratica
 - [x] 12 — Applicazioni
 - [x] 13 — Modelli a fattori lineari
-- [ ] 14 — Autoencoder
+- [x] 14 — Autoencoder
 - [ ] 15 — Apprendimento di rappresentazioni
 - [ ] 16 — Modelli probabilistici strutturati
 - [ ] 17 — Metodi Monte Carlo

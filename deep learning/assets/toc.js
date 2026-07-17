@@ -258,7 +258,7 @@ const TOC = [
     titolo: "Autoencoder",
     file: "cap14-autoencoder.html",
     parte: P3,
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Autoencoder sottocompleti" },
       { id: "s14-2", n: "14.2", t: "Autoencoder regolarizzati" },

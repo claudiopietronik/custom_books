@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Autoencoder — Deep Learning</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>∇</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14 · Parte III</div>
+    <h1>Autoencoder</h1>
+    <p class="standfirst">
+      Un <b>autoencoder</b> è una rete addestrata a copiare l'input sull'output — un compito apparentemente
+      inutile. Il trucco è costringerla a passare per un <b>collo di bottiglia</b>: una rappresentazione più
+      piccola da cui ricostruire il dato. Per farcela, la rete deve scoprire la <b>struttura</b> nascosta dei
+      dati. <mark>È il modello a fattori (Cap. 13) reso non lineare</mark>: encoder e decoder sono reti, e la
+      varietà che imparano può finalmente essere <em>curva</em>. Sono il ponte verso i modelli generativi.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La forma base: l'autoencoder <b>sottocompleto</b>, col collo di bottiglia (§14.1, widget). Come evitare
+      che «bari»: <b>regolarizzarlo</b> (§14.2) e cosa gli dà potere — <b>dimensione e profondità</b> (§14.3).
+      Le varianti: <b>stocastici</b> (§14.4), di <b>denoising</b> (§14.5), <b>contrattivi</b> (§14.7). Il filo
+      geometrico: <b>imparare varietà</b> (§14.6). E a cosa servono (§14.8).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca</div>
+    <p style="margin-bottom:0">
+      Gli autoencoder sono l'esempio archetipico di <b>apprendimento di rappresentazioni</b> non supervisionato
+      (Cap. 1): imparano feature utili senza etichette, solo comprimendo e ricostruendo. <mark>La loro versione
+      probabilistica — il VAE (Cap. 20) — è uno dei grandi modelli generativi.</mark> E l'idea encoder→codice→
+      decoder è ovunque, dalla compressione al denoising.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Autoencoder sottocompleti</h2>
+
+  <p class="lead">
+    La forma più semplice: un <b>encoder</b> comprime l'input in un codice più piccolo, un <b>decoder</b> lo
+    ricostruisce. Il codice ristretto è il <b>collo di bottiglia</b> che forza l'apprendimento.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'autoencoder <span class="tag">comprimi e ricostruisci</span></div>
+    <div class="f-body">
+      \[ \hB{\vv{h}} = f(\vv{x}) \quad(\text{encoder}), \qquad
+         \hat{\vv{x}} = g(\hB{\vv{h}}) \quad(\text{decoder}), \qquad
+         \min\ \norm{\vv{x} - \hat{\vv{x}}}_2^2 \]
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>\(f\) — l'<b>encoder</b></dt>
+        <dd>una rete che mappa l'input \(\vv{x}\) nel <b>codice</b> \(\vv{h}\), di dimensione <b>minore</b>
+            («sottocompleto»).</dd>
+        <dt>\(\hB{\vv{h}}\) — il <b>codice</b> (rappresentazione latente)</dt>
+        <dd>il collo di bottiglia: pochi numeri che devono contenere abbastanza informazione da ricostruire il
+            dato.</dd>
+        <dt>\(g\) — il <b>decoder</b></dt>
+        <dd>una rete che dal codice ricostruisce \(\hat{\vv{x}}\). Si addestra tutto insieme minimizzando
+            l'errore di <b>ricostruzione</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se encoder e decoder fossero <b>lineari</b> e la loss quadratica, l'autoencoder imparerebbe lo stesso
+      sottospazio della <b>PCA</b> (§2.11). <mark>Rendendoli reti non lineari, impara una varietà <em>curva</em></mark>
+      — molto più espressiva. Nel widget: la varietà appresa è la curva; trascina un punto e guardalo proiettare
+      sulla curva (encode → decode = ricostruzione).
+    </div>
+  </div>
+
+  <div class="widget" id="w-ae">
+    <div class="w-head">
+      <span>L'autoencoder come proiezione sulla varietà</span>
+      <span class="hint">trascina il punto x</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wae-svg" viewBox="0 0 560 420" role="img" aria-label="Un punto viene proiettato sulla varietà 1D curva appresa dall'autoencoder: encode nel codice, decode nella ricostruzione"></svg>
+    </div>
+    <div class="w-readout" id="wae-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Autoencoder regolarizzati</h2>
+
+  <p class="lead">
+    E se il codice fosse grande quanto l'input? La rete potrebbe «copiare» senza imparare nulla. I <b>vincoli</b>
+    — non solo la dimensione — la costringono comunque a essere utile.
+  </p>
+
+  <p>
+    Un autoencoder <b>sovracompleto</b> (codice grande) rischia di imparare la funzione identità, inutile. La
+    soluzione è <b>regolarizzare</b> il codice invece che restringerlo: imporre che sia <b>sparso</b> (pochi
+    neuroni attivi, come nel sparse coding, §13.4), <b>robusto</b> al rumore (§14.5), o <b>poco sensibile</b>
+    a piccole variazioni dell'input (§14.7). <mark>Il vincolo, non la dimensione, è ciò che forza
+    l'apprendimento di feature utili</mark> — la stessa lezione del Capitolo 7.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Potere rappresentativo, dimensione e profondità</h2>
+
+  <p class="lead">
+    Come per le reti feedforward, la <b>profondità</b> paga: encoder e decoder profondi imparano varietà più
+    complesse con meno neuroni.
+  </p>
+
+  <p>
+    Un autoencoder con encoder e decoder a <b>un solo strato</b> è limitato; renderli <b>profondi</b> permette di
+    approssimare qualsiasi mappa (teorema di approssimazione universale, §6.4) e di catturare varietà molto
+    contorte in modo efficiente. <mark>Un autoencoder profondo può comprimere immagini in codici di poche decine
+    di numeri</mark> mantenendo abbastanza informazione per una ricostruzione riconoscibile — impossibile per un
+    modello lineare della stessa dimensione di codice.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Encoder e decoder stocastici</h2>
+
+  <p class="lead">
+    Finora encoder e decoder erano funzioni deterministiche. Renderli <b>probabilistici</b> — distribuzioni
+    invece di punti — apre la porta ai modelli generativi.
+  </p>
+
+  <p>
+    Invece di produrre <em>un</em> codice, un encoder stocastico produce una <b>distribuzione</b>
+    \(p(\vv{h}\given\vv{x})\); il decoder produce \(p(\vv{x}\given\vv{h})\). Questa prospettiva probabilistica
+    trasforma l'autoencoder in un vero <b>modello generativo</b>: campionando un codice dalla distribuzione a
+    priori e passandolo al decoder, si <b>generano</b> nuovi dati. <mark>È l'idea alla base del VAE</mark>
+    (autoencoder variazionale, Cap. 20), che addestra il tutto in modo coerente con l'inferenza variazionale
+    (Cap. 19).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Autoencoder di denoising</h2>
+
+  <p class="lead">
+    Un'idea elegante: invece di ricostruire l'input dall'input, ricostruisci l'input <b>pulito</b> da una sua
+    versione <b>rumorosa</b>. Per farlo, la rete deve capire com'è fatto un dato «vero».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Denoising autoencoder <span class="tag">da input corrotto a input pulito</span></div>
+    <div class="f-body">
+      \[ \tilde{\vv{x}} = \vv{x} + \text{rumore}, \qquad \min\ \norm{\vv{x} - g(f(\tilde{\vv{x}}))}_2^2 \]
+    </div>
+    <div class="f-note">
+      Si corrompe l'input con del rumore, e si chiede alla rete di <b>ricostruire l'originale pulito</b>. Non
+      potendo copiare (l'input è sporcato), la rete deve imparare la struttura dei dati: <mark>impara a
+      «riportare» un punto rumoroso sulla varietà dei dati veri.</mark> Geometricamente, apprende un campo
+      vettoriale che punta verso la varietà — un'informazione preziosa, legata al gradiente della densità dei
+      dati e allo score matching (Cap. 18).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Imparare le varietà con gli autoencoder</h2>
+
+  <p class="lead">
+    Il filo geometrico che unisce tutto il capitolo: gli autoencoder imparano la <b>varietà</b> su cui vivono i
+    dati, e il codice ne è la <b>coordinata</b>.
+  </p>
+
+  <p>
+    I dati reali non riempiono lo spazio: si concentrano su una <b>varietà</b> di dimensione bassa (§13.5). Le
+    immagini di volti «plausibili» sono una superficie minuscola nell'oceano di tutte le immagini possibili. Un
+    autoencoder di successo <b>impara questa varietà</b>: l'encoder dà le coordinate (il codice), il decoder
+    ricostruisce il punto sulla superficie. <mark>Muoversi con continuità nello spazio del codice corrisponde a
+    muoversi sulla varietà dei dati</mark> — per un autoencoder di volti, interpolare tra due codici genera una
+    transizione fluida tra due volti. È il widget di §14.1: il codice è la coordinata lungo la curva.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Autoencoder contrattivi</h2>
+
+  <p class="lead">
+    Un altro modo di regolarizzare: penalizzare quanto il codice <b>cambia</b> al variare dell'input. Il codice
+    deve essere «contratto», insensibile alle variazioni irrilevanti.
+  </p>
+
+  <p>
+    L'autoencoder <span class="termine">contrattivo</span> aggiunge alla loss una penalità sulla <b>Jacobiana</b>
+    dell'encoder (§4.4): scoraggia il codice dal cambiare troppo quando l'input si muove di poco. <mark>Il
+    risultato: il codice resta stabile lungo le direzioni «irrilevanti» (fuori dalla varietà) e cambia solo lungo
+    quelle che <em>seguono</em> la varietà dei dati.</mark> È un modo esplicito di dire alla rete «ignora le
+    variazioni che non contano», e produce rappresentazioni robuste.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-8"><span class="secnum">Sezione 14.8</span>Applicazioni degli autoencoder</h2>
+
+  <p class="lead">
+    A cosa servono davvero, oltre alla bellezza dell'idea.
+  </p>
+
+  <p>
+    Tre usi principali: <b>riduzione di dimensionalità</b> (una PCA non lineare, per visualizzazione o
+    compressione); <b>pretraining</b> non supervisionato di feature poi riusate per un compito supervisionato
+    (Cap. 15); e <b>denoising</b> / rimozione di artefatti. La loro versione probabilistica (VAE) genera dati
+    nuovi. <mark>Il valore comune: imparano una rappresentazione compatta e utile senza bisogno di etichette</mark>
+    — sfruttando gli oceani di dati non etichettati che abbiamo.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li>Un autoencoder impara a copiare l'input passando per un <b>collo di bottiglia</b> (encoder → codice →
+          decoder): il vincolo lo forza a scoprire la struttura dei dati (§14.1).</li>
+      <li>Lineare = PCA; <b>non lineare e profondo</b> = varietà curve, molto più espressive (§14.1, §14.3). Il
+          codice è la <b>coordinata sulla varietà</b> (§14.6, widget).</li>
+      <li>Non solo la dimensione: la <b>regolarizzazione</b> (sparsità, denoising, contrattività) forza feature
+          utili anche con codici grandi (§14.2, §14.5, §14.7).</li>
+      <li>La versione <b>stocastica</b> trasforma l'autoencoder in un modello <b>generativo</b> — il VAE (§14.4,
+          Cap. 20).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Gli autoencoder imparano <em>una</em> rappresentazione. Ma cosa rende una rappresentazione <b>buona</b>? E
+    perché la profondità aiuta, e come si trasferisce una rappresentazione da un compito all'altro? Il
+    <strong>Capitolo 15</strong> affronta di petto l'<b>apprendimento di rappresentazioni</b> — il tema che
+    percorre tutto il libro, dal Capitolo 1.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-9"><span class="secnum">Sezione 14.9</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Nel widget di §14.1, cosa rappresenta il «codice» di un punto? Perché l'errore di ricostruzione è la
+      distanza dalla curva? Quando è (quasi) zero?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Un autoencoder <b>sovracompleto</b> (codice più grande dell'input) senza regolarizzazione può imparare a
+      copiare perfettamente l'input. Perché questo è inutile? Come si rimedia?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Perché un autoencoder di <b>denoising</b> è costretto a imparare la struttura dei dati, mentre uno che
+      copia l'input pulito potrebbe non farlo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso:
+      (a) Un autoencoder lineare con loss quadratica impara lo stesso sottospazio della PCA. &nbsp;
+      (b) Il collo di bottiglia deve sempre essere più piccolo dell'input per imparare qualcosa di utile. &nbsp;
+      (c) Il VAE è la versione probabilistica/generativa dell'autoencoder. &nbsp;
+      (d) Gli autoencoder richiedono dati etichettati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-10"><span class="secnum">Sezione 14.10</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Il <b>codice</b> è la <b>coordinata</b> lungo la varietà (la curva): un solo numero che indica «dove» sulla
+      curva sta la ricostruzione. L'errore di ricostruzione è la distanza dalla curva perché il decoder può
+      produrre <em>solo</em> punti sulla varietà: la migliore ricostruzione di \(\vv{x}\) è il punto della curva
+      più vicino. È <b>≈ zero</b> quando \(\vv{x}\) sta già (quasi) sulla varietà — cioè è un dato «plausibile».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Se impara la funzione <b>identità</b> (copia e basta), non ha estratto alcuna struttura: il codice non è
+      una rappresentazione utile, solo una copia. Si rimedia <b>regolarizzando</b>: imporre sparsità sul codice,
+      usare il denoising (input corrotto), o penalizzare la sensibilità (contrattivo). Il vincolo costringe la
+      rete a imparare <em>cosa</em> tenere (§14.2).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      Perché l'input è <b>corrotto</b>: la rete non può limitarsi a copiarlo (copierebbe il rumore). Per
+      ricostruire l'originale <b>pulito</b> deve sapere com'è fatto un dato «vero» e riportare il punto rumoroso
+      sulla varietà dei dati. <mark>Impara a rimuovere ciò che non appartiene alla varietà</mark> — cioè la
+      struttura dei dati stessa.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) VERO.</b> Autoencoder lineare + MSE = sottospazio PCA (§14.1). <br>
+      <b>(b) FALSO.</b> Anche un codice grande va bene se <b>regolarizzato</b> (sparso, denoising, contrattivo):
+      è il vincolo che conta (§14.2). <br>
+      <b>(c) VERO.</b> Il VAE è l'autoencoder reso probabilistico e generativo (§14.4, Cap. 20). <br>
+      <b>(d) FALSO.</b> Sono <b>non supervisionati</b>: imparano da dati senza etichette (§14.8).
+    </p>
+  </div>
+
+
+</main>
+
+<script src="assets/book.js"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §14.1 — autoencoder come proiezione sulla varietà 1D
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wae-svg');
+  if (!svg) return;
+  const out = document.getElementById('wae-out');
+  // varietà appresa: curva "S" parametrica in z
+  const zmin = -2.7, zmax = 2.7;
+  const dec = z => [z, 1.25 * Math.sin(1.05 * z)];       // decoder: z -> punto sulla curva
+  let X = [1.4, -1.5];
+
+  // encoder: trova z che minimizza |x - dec(z)| (scansione fine)
+  function encode(x) {
+    let bz = 0, bd = 1e9;
+    for (let i = 0; i <= 400; i++) { const z = zmin + (zmax - zmin) * i / 400; const d = dec(z); const dist = (d[0] - x[0]) ** 2 + (d[1] - x[1]) ** 2; if (dist < bd) { bd = dist; bz = z; } }
+    return bz;
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -3.2, xmax: 3.2, ymin: -2.4, ymax: 2.4, iso: true });
+    p.grid(1, 1); p.axes({ numbers: true });
+    // nuvola di dati attorno alla varietà (deterministica)
+    for (let i = 0; i < 70; i++) {
+      const z = zmin + (zmax - zmin) * i / 69;
+      const d = dec(z);
+      const nrm = [Math.cos(1.05 * z) * 1.25, -1]; const nn = Math.hypot(...nrm);
+      const off = 0.32 * Math.sin(i * 2.7);
+      p.dot(d[0] + off * nrm[0] / nn, d[1] + off * nrm[1] / nn, { color: 'color-mix(in srgb, var(--accent) 32%, transparent)', r: 2.4 });
+    }
+    // varietà appresa (curva)
+    p.param(z => dec(z)[0], z => dec(z)[1], zmin, zmax, { color: 'var(--green)', width: 2.8 });
+    // punto x e ricostruzione
+    const z = encode(X);
+    const xhat = dec(z);
+    p.line(X[0], X[1], xhat[0], xhat[1], { color: 'var(--ink-faint)', width: 1.4, dash: '4 3' });
+    p.dot(xhat[0], xhat[1], { color: 'var(--warm)', r: 6 });
+    p.text(xhat[0], xhat[1], 'x̂', { dx: 12, dy: 4, color: 'var(--warm)', bold: true });
+    p.handle(X[0], X[1], { color: 'var(--accent)' }, (x, y) => { X = [x, y]; draw(); });
+    p.text(X[0], X[1], 'x', { dx: 12, dy: -6, color: 'var(--accent)', bold: true });
+
+    const err = Math.hypot(X[0] - xhat[0], X[1] - xhat[1]);
+    out.innerHTML = `
+      <div class="big">
+        codice z = <b style="color:var(--green)">${fmt(z, 2)}</b> &nbsp;·&nbsp;
+        errore di ricostruzione = <b style="color:${err < 0.35 ? 'var(--green)' : 'var(--warm)'}">${fmt(err, 2)}</b>
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        L'<b>encoder</b> mappa il punto <b style="color:var(--accent)">x</b> nel codice <b style="color:var(--green)">z</b>
+        (la sua coordinata sulla varietà); il <b>decoder</b> ricostruisce <b style="color:var(--warm)">x̂</b> = punto
+        della curva più vicino. L'errore è la distanza dalla varietà.
+        ${err < 0.35 ? '<mark>x è vicino alla varietà: dato «plausibile», ricostruito bene.</mark>' : '<mark>x è lontano dalla varietà: dato «improbabile», l\'autoencoder lo riporta sulla curva perdendo la parte fuori.</mark>'}
+        Trascina x dentro e fuori dalla nuvola.
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
