@@ -59,7 +59,7 @@ window.MathJax = {
     },
     tags: "none"
   },
-  loader: { load: ["[tex]/html", "[tex]/color", "[tex]/cancel"] },
+  loader: { load: ["[tex]/html", "[tex]/color", "[tex]/cancel", "[tex]/boldsymbol"] },
   chtml: { scale: 1.02, matchFontHeight: false },
   options: {
     skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
