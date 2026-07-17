@@ -70,7 +70,7 @@ const TOC = [
   },
   {
     n: 6, parte: "I · Statistica descrittiva",
-    titolo: "Momenti statistici", file: "cap06-momenti.html", stato: "da-fare",
+    titolo: "Momenti statistici", file: "cap06-momenti.html", stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "L'idea di momento" },
       { id: "s6-2", n: "6.2", t: "Media e varianza come momenti" },
