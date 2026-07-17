@@ -250,7 +250,7 @@ const TOC = [
     n: 14,
     titolo: "Integrali impropri",
     file: "cap14-integrali-impropri.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Quando l'area è infinita... o no" },
       { id: "s14-2", n: "14.2", t: "Integrali su intervalli illimitati" },
