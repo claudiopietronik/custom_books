@@ -98,7 +98,7 @@ const TOC = [
     n: 6,
     titolo: "Lavoro ed energia cinetica",
     file: "cap06-lavoro-energia.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Il lavoro di una forza" },
       { id: "s6-2", n: "6.2", t: "L'energia cinetica" },
