@@ -39,7 +39,7 @@ Contenuto originale scritto ex novo.
 - [x] 13 — Il web veloce
 - [x] 14 — Email e altri protocolli
 - [x] 15 — La sicurezza in rete
-- [ ] 16 — Il viaggio completo di un click
+- [x] 16 — Il viaggio completo di un click
 
 ## La collana di informatica (piano)
 

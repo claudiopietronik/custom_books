@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Il viaggio completo di un click — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Il gran finale</div>
+    <h1>Il viaggio completo di un click</h1>
+    <p class="standfirst">
+      Siamo tornati al punto di partenza, ma con occhi nuovi. Nel Capitolo 1 abbiamo abbozzato «il viaggio di un
+      click»; da allora abbiamo smontato, uno per uno, tutti i suoi ingranaggi. Ora rimettiamoli insieme e
+      guardiamo l'intero meccanismo girare. <mark>Digiti <code>wikipedia.org</code>, premi Invio, e in meno di
+      mezzo secondo compare una pagina</mark>: dietro quel gesto banale si nasconde una coreografia di una bellezza
+      vertiginosa — nomi che diventano numeri, strette di mano crittografiche, pacchetti che rimbalzano tra i
+      continenti, e un server che risponde. Seguiamola tutta, tappa per tappa, con ogni concetto del libro al suo
+      posto giusto. È il momento in cui tutto torna.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La domanda da un milione (§16.1), le tre grandi fasi del viaggio — <b>dal browser al primo pacchetto</b>
+      (§16.2), <b>attraverso internet</b> (§16.3), <b>la risposta e la nascita della pagina</b> (§16.4) — la
+      <b>cronologia in millisecondi</b> con tutto insieme (§16.5), e infine <b>dove andare da qui</b> (§16.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: vedere l'insieme</div>
+    <p style="margin-bottom:0">
+      Ogni capitolo ti ha dato un pezzo; questo ti dà <b>il quadro</b>. <mark>Capire come i pezzi si incastrano è
+      ciò che trasforma nozioni sparse in vera comprensione</mark>: da qui in poi, davanti a qualsiasi problema di
+      rete, saprai <em>in quale fase</em> guardare. Ed è la base pronta per i libri che seguono: quando costruirai
+      e metterai online un tuo sito, sarai tu a stare «dall'altra parte» di questo viaggio — il server che riceve
+      la richiesta e risponde.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>Cosa succede quando premi Invio?</h2>
+
+  <p class="lead">
+    È la domanda-classico dei colloqui di lavoro tecnici, perché tocca <b>tutto</b>. Ora hai gli strumenti per
+    rispondere per esteso. Il segreto è pensare a <b>fasi</b>: prima capire con chi parlare, poi aprire un canale
+    sicuro, poi chiedere, poi ricevere e disegnare.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Le quattro fasi, in una frase ciascuna</div>
+    <ol style="margin-bottom:0">
+      <li><b>Trovare</b>: il nome diventa un indirizzo (DNS).</li>
+      <li><b>Connettersi</b>: si apre un canale affidabile (TCP) e sicuro (TLS).</li>
+      <li><b>Chiedere</b>: parte la richiesta HTTP e i pacchetti attraversano il mondo (IP, routing).</li>
+      <li><b>Ricevere e disegnare</b>: il server risponde, il browser costruisce la pagina.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Dal browser al primo pacchetto</h2>
+
+  <p class="lead">
+    Tutto comincia dentro il tuo computer, prima ancora che un bit esca di casa. Il browser deve capire <b>a chi</b>
+    parlare e preparare il terreno.
+  </p>
+
+  <div class="passi">
+    <ol>
+      <li><b>Il browser scompone l'URL.</b> <code>https://it.wikipedia.org/wiki/Gatto</code> → protocollo
+          <code>https</code> (quindi porta 443, cifrato), host <code>it.wikipedia.org</code>, percorso
+          <code>/wiki/Gatto</code>.</li>
+      <li><b>DNS: il nome diventa un numero.</b> Il browser controlla la sua <b>cache</b>; se non c'è, chiede al
+          resolver, che interroga la gerarchia root → TLD <code>.org</code> → autoritativo, e torna con
+          <code>185.15.59.224</code> <em>(Cap. 6, 10)</em>.</li>
+      <li><b>ARP e gateway: il primo salto.</b> L'indirizzo è «fuori casa», quindi il pacchetto va mandato al
+          <b>router</b> (gateway). Il PC usa <b>ARP</b> per trovare il MAC del router e imbustare il primo frame
+          <em>(Cap. 4, 7)</em>.</li>
+      <li><b>Handshake TCP.</b> Con il server (porta 443) si scambia <b>SYN · SYN-ACK · ACK</b>: canale affidabile
+          aperto <em>(Cap. 9)</em>.</li>
+      <li><b>Handshake TLS.</b> Il server manda il <b>certificato</b> (verificato con la CA), si concorda una chiave
+          segreta, il canale diventa <b>cifrato</b> <em>(Cap. 12)</em>.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Attraverso internet</h2>
+
+  <p class="lead">
+    Ora il canale è pronto. La richiesta parte e affronta il viaggio fisico attraverso il mondo — la parte che, nel
+    Capitolo 1, era solo una freccia su una mappa.
+  </p>
+
+  <div class="passi">
+    <ol>
+      <li><b>La richiesta HTTP.</b> Il browser scrive <code>GET /wiki/Gatto HTTP/2</code> con i suoi header (Host,
+          cookie…), il tutto <b>cifrato</b> da TLS <em>(Cap. 11)</em>.</li>
+      <li><b>Incapsulamento.</b> Scendendo la pila, la richiesta viene avvolta: dati → segmento <b>TCP</b> →
+          pacchetto <b>IP</b> → frame <b>Ethernet/WiFi</b>, e diventa bit sul mezzo fisico <em>(Cap. 2, 3)</em>.</li>
+      <li><b>Salto dopo salto.</b> Dal WiFi al router di casa, che con il <b>NAT</b> riscrive l'indirizzo e spinge
+          fuori il pacchetto; poi rete dell'operatore, dorsali in fibra, forse un cavo sottomarino: a ogni
+          <b>router</b> una decisione locale verso la destinazione, l'<b>IP fisso e i MAC che cambiano</b>
+          <em>(Cap. 5, 7, 8)</em>.</li>
+      <li><b>Arrivo al datacenter.</b> Il pacchetto raggiunge la rete di Wikipedia; magari lo accoglie una <b>CDN</b>
+          vicina a te, non il server d'origine lontano <em>(Cap. 13)</em>.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Il server risponde, la pagina nasce</h2>
+
+  <p class="lead">
+    Il server riceve la richiesta, la elabora e rispedisce indietro la risposta — che rifà il viaggio a ritroso e
+    prende vita nel tuo browser.
+  </p>
+
+  <div class="passi">
+    <ol>
+      <li><b>Il server elabora.</b> De-incapsula la richiesta, la capisce, prepara la pagina (magari eseguendo
+          codice e interrogando un database — è ciò che programmerai con FastAPI!), e risponde
+          <b>HTTP/2 200 OK</b> con l'HTML <em>(Cap. 11)</em>.</li>
+      <li><b>La risposta torna.</b> In pacchetti, per la stessa via o un'altra; il <b>NAT</b> del tuo router,
+          consultando la sua tabella, la riconsegna al dispositivo giusto <em>(Cap. 8)</em>. <b>TCP</b> rimette in
+          ordine i pezzi e richiede gli eventuali persi <em>(Cap. 9)</em>.</li>
+      <li><b>Il browser costruisce la pagina.</b> Legge l'HTML, e scopre di aver bisogno di altre risorse (CSS,
+          immagini, script): <mark>parte una raffica di nuove richieste</mark>, spesso in parallelo su HTTP/2, molte
+          servite dalla <b>cache</b> o da una <b>CDN</b> <em>(Cap. 13)</em>.</li>
+      <li><b>Rendering.</b> Con tutti i pezzi, il browser <b>disegna</b> la pagina e te la mostra. Il viaggio è
+          finito — ed è durato una frazione di secondo.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Tutto insieme: la cronologia dei millisecondi</h2>
+
+  <p class="lead">
+    Vediamolo scorrere sul cronometro. Ogni fase costa tempo; sommandole, ecco perché una pagina «pronta da zero»
+    impiega qualche centinaio di millisecondi — e dove, esattamente, se ne va.
+  </p>
+
+  <div class="widget" id="w-timeline">
+    <div class="w-head">
+      <span>La cronologia di un click, in millisecondi</span>
+      <span class="hint">avvia e guarda le fasi accumularsi</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wtl-svg" viewBox="0 0 560 320" role="img" aria-label="La linea del tempo di un caricamento pagina: DNS, handshake TCP, handshake TLS, attesa della risposta, download e rendering si sommano fino al totale"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wtl-go">▶ carica la pagina</button>
+      <button class="w-btn" id="wtl-cache">▶ ricarica (con cache)</button>
+    </div>
+    <div class="w-readout" id="wtl-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La morale dei numeri</div>
+    <p style="margin-bottom:0">
+      Guarda cosa domina: <b>gli handshake e i round-trip</b> (DNS, TCP, TLS, attesa della risposta), non il
+      download in sé. <mark>È la latenza, non la banda, la vera regina del tempo di caricamento</mark> — proprio la
+      lezione del Capitolo 3, ora visibile in azione. Ed è per questo che le grandi armi del web veloce (cache, CDN,
+      HTTP/3) puntano tutte a <b>tagliare o accorciare i viaggi</b>. Alla seconda visita (con cache), gran parte di
+      queste fasi <b>sparisce</b>: ecco perché vola.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai costruito una mappa mentale completa di come funziona internet — dal bit sul filo al pixel sullo schermo.
+    È una base solida e trasferibile. Ecco dove porta, nella collana.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧭</span> Il cammino che continua</div>
+    <ul style="margin-bottom:0">
+      <li><b>Ora sai «come» viaggiano i dati.</b> Il passo naturale è imparare a <b>creare</b> ciò che quei dati
+          trasportano: un linguaggio di programmazione (<b>Python</b>) e la parte visibile del web (<b>HTML, DOM,
+          JavaScript</b>).</li>
+      <li><b>Poi, stare «dall'altra parte».</b> Con <b>FastAPI</b> scriverai il server che riceve le richieste HTTP
+          di questo viaggio e risponde — userai <em>tutto</em> ciò che hai imparato qui (metodi, status code,
+          porte, TLS).</li>
+      <li><b>Infine, portarlo nel mondo.</b> Con i libri su <b>Linux, server, Docker e cloud</b> affitterai una
+          macchina (via SSH!), configurerai un firewall e nginx, otterrai un certificato TLS, punterai un dominio
+          (DNS!) e metterai online il tuo servizio. <mark>Sarai tu la destinazione del prossimo «click» di
+          qualcuno.</mark></li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro da tutto il libro</div>
+    <ol style="margin-bottom:0">
+      <li>Internet è una <b>pila a livelli</b>: fisico → collegamento (Ethernet/WiFi, MAC) → rete (IP, routing) →
+          trasporto (TCP/UDP, porte) → applicazione (DNS, HTTP, TLS). Ogni livello ha un compito e parla col suo
+          pari.</li>
+      <li>I dati viaggiano <b>a pacchetti</b>, con <b>decisioni locali</b> (routing) e senza garanzie, su cui TCP
+          costruisce l'<b>affidabilità</b>. I <b>nomi</b> (DNS) e la <b>sicurezza</b> (TLS) rendono il tutto usabile
+          e fidato.</li>
+      <li>La velocità è dominata dalla <b>latenza</b> (i viaggi), non dalla banda: cache e CDN vincono
+          <b>evitando</b> i viaggi.</li>
+      <li>Ovunque, la parola chiave è <b>fiducia</b>: cifra, autentica, limita. E dietro ogni gesto banale — un
+          click — c'è <mark>una coreografia planetaria che ora sai leggere</mark>.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Complimenti: hai finito <b>Reti e Internet</b>. La prossima volta che una pagina compare in un batter d'occhio,
+    saprai esattamente quante cose sono appena successe — e quanta ingegneria elegante si nasconde dietro
+    l'apparente magia. Da qui, la collana ti porta a <b>costruire</b>: prima il codice, poi i server che lo
+    ospitano. <mark>Hai la mappa; ora imparerai a disegnarci sopra.</mark> Buon viaggio nel prossimo libro.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      «Cosa succede quando digiti <code>wikipedia.org</code> e premi Invio?» Rispondi in <b>8-10 passi</b>, citando
+      per ognuno il concetto/capitolo coinvolto. È la domanda classica: allenati a raccontarla tutta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Nel viaggio, quali informazioni restano <b>fisse</b> da un capo all'altro e quali <b>cambiano</b> a ogni
+      salto? (Pensa a IP, MAC, porte.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      Guardando la cronologia in millisecondi, quali fasi dominano il tempo totale? Perché la seconda visita alla
+      stessa pagina è molto più rapida?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      (Sfida finale) Una pagina «non si apre». Descrivi, fase per fase, come useresti i comandi imparati
+      (<code>ping</code>, <code>nslookup</code>, <code>tracert</code>, <code>curl -v</code>) per capire <b>dove</b>
+      si rompe il viaggio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      (1) il browser scompone l'URL; (2) <b>DNS</b> risolve il nome in IP (Cap. 10); (3) <b>ARP</b> trova il router,
+      primo salto (Cap. 4); (4) <b>handshake TCP</b> col server (Cap. 9); (5) <b>handshake TLS</b>, certificato e
+      cifratura (Cap. 12); (6) parte la <b>richiesta HTTP</b> GET (Cap. 11); (7) i pacchetti attraversano internet
+      <b>router dopo router</b>, con NAT e routing (Cap. 7-8); (8) il server risponde <b>200 OK</b> con l'HTML; (9)
+      <b>TCP</b> riordina, il browser scarica le risorse (cache/CDN, Cap. 13); (10) <b>rendering</b> della pagina.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Restano <b>fissi</b> gli <b>IP</b> sorgente e destinazione (i due capi) e, di solito, le <b>porte</b> della
+      connessione. Cambiano a <b>ogni salto</b> gli <b>indirizzi MAC</b> (consegna locale da un router al
+      successivo) e cala il <b>TTL</b>. In più, il <b>NAT</b> del tuo router modifica IP e porta sorgente
+      all'uscita da casa (Cap. 8).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Dominano gli <b>handshake e i round-trip</b>: DNS, TCP, TLS e l'attesa della risposta (il «tempo al primo
+      byte»). Sono tutta <b>latenza</b>. La seconda visita è più rapida perché DNS, connessioni e molte risorse sono
+      in <b>cache</b> (e il browser riusa la connessione): gran parte di quelle fasi sparisce (Cap. 13).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <p style="margin-bottom:0">
+      Fase per fase: <code>nslookup sito</code> — <b>il nome si risolve?</b> (se no, è il DNS). <code>ping IP</code>
+      — <b>il server è raggiungibile?</b> (se il nome risolve ma non pinga, problema di rete/percorso).
+      <code>tracert IP</code> — <b>dove si ferma</b> il viaggio? (vicino = tuo/operatore; lontano = a monte).
+      <code>curl -v https://sito</code> — <b>la connessione e il TLS vanno?</b> che <b>status code</b> torna? (un
+      5xx è colpa del server, un 4xx della richiesta). Così isoli la fase esatta in cui il viaggio si rompe.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16.5 — la cronologia di un click in millisecondi (fasi cumulative)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wtl-svg');
+  if (!svg) return;
+  const out = document.getElementById('wtl-out');
+  const bGo = document.getElementById('wtl-go');
+  const bCache = document.getElementById('wtl-cache');
+
+  const phasesFull = [
+    { name: 'DNS', ms: 25, col: 'var(--warm)', desc: 'trova l\'IP del nome (Cap. 10)' },
+    { name: 'TCP', ms: 40, col: 'var(--accent)', desc: 'handshake a tre vie (Cap. 9)' },
+    { name: 'TLS', ms: 55, col: 'var(--violet)', desc: 'stretta di mano cifrata (Cap. 12)' },
+    { name: 'attesa (TTFB)', ms: 70, col: 'var(--ink-soft)', desc: 'il server elabora e risponde (Cap. 11)' },
+    { name: 'download', ms: 45, col: 'var(--green)', desc: 'arrivano HTML, CSS, immagini (Cap. 13)' },
+    { name: 'rendering', ms: 35, col: 'var(--gold)', desc: 'il browser disegna la pagina' }
+  ];
+  const phasesCache = [
+    { name: 'DNS (cache)', ms: 1, col: 'var(--warm)', desc: 'già in cache: istantaneo' },
+    { name: 'connessione riusata', ms: 2, col: 'var(--accent)', desc: 'niente nuovo handshake' },
+    { name: 'attesa (TTFB)', ms: 40, col: 'var(--ink-soft)', desc: 'il server risponde' },
+    { name: 'da cache/CDN', ms: 10, col: 'var(--green)', desc: 'risorse già salvate' },
+    { name: 'rendering', ms: 20, col: 'var(--gold)', desc: 'ridisegno rapido' }
+  ];
+
+  let phases = phasesFull, elapsed = 0, running = false, last = null, curTotal = 0;
+  const total = arr => arr.reduce((s, p) => s + p.ms, 0);
+
+  bGo.addEventListener('click', () => start(phasesFull));
+  bCache.addEventListener('click', () => start(phasesCache));
+  function start(ph) { phases = ph; curTotal = total(ph); elapsed = 0; running = true; last = null; requestAnimationFrame(frame); }
+
+  function frame(now) {
+    if (!running) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    elapsed += dt * curTotal * 0.8;         // "ms simulati" al secondo
+    if (elapsed >= curTotal) { elapsed = curTotal; running = false; }
+    draw();
+    if (running) requestAnimationFrame(frame);
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 10, ymin: -1, ymax: 1.4 });
+    const T = curTotal, X0 = 0.3, X1 = 9.7, W = X1 - X0;
+    // barra di fondo
+    p.rect(X0, -0.35, X1, 0.35, { fill: 'color-mix(in srgb,var(--ink) 6%,transparent)', color: 'var(--rule)', width: 1 });
+    // segmenti fase
+    let acc = 0, activeName = '', activeDesc = '';
+    for (const ph of phases) {
+      const x0 = X0 + W * (acc / T);
+      const shown = Math.max(0, Math.min(ph.ms, elapsed - acc));
+      const x1 = X0 + W * ((acc + shown) / T);
+      if (x1 > x0 + 0.001) p.rect(x0, -0.35, x1, 0.35, { fill: ph.col, color: 'none' });
+      // etichetta se il segmento ha spazio
+      if (ph.ms / T > 0.06) p.text((X0 + W * (acc / T) + X0 + W * ((acc + ph.ms) / T)) / 2, 0.35, ph.name, { size: 9, anchor: 'middle', dy: -6, color: 'var(--ink-soft)' });
+      if (elapsed >= acc && elapsed < acc + ph.ms) { activeName = ph.name; activeDesc = ph.desc; }
+      acc += ph.ms;
+    }
+    // cursore tempo
+    const cx = X0 + W * (elapsed / T);
+    p.line(cx, -0.55, cx, 0.55, { color: 'var(--ink)', width: 2 });
+    p.text(cx, -0.55, Math.round(elapsed) + ' ms', { size: 11, anchor: 'middle', dy: 16, color: 'var(--ink)', bold: true });
+
+    const done = elapsed >= T;
+    out.innerHTML = `
+      <div class="big">${done
+        ? '✅ Pagina pronta in <b>' + T + ' ms</b>' + (phases === phasesCache ? ' <span style="color:var(--green)">(molto meno: cache!)</span>' : '')
+        : 'Fase: <b style="color:var(--ink)">' + (activeName || '…') + '</b>'}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${done
+          ? 'Somma di tutte le fasi. <mark>Dominano gli handshake e le attese (round-trip), non il download</mark>: è la <b>latenza</b> a comandare (§16.5). Prova «ricarica con cache» e guarda crollare il totale.'
+          : (activeDesc || 'Premi «carica la pagina» per vedere le fasi accumularsi.')}
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

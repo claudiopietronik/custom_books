@@ -248,7 +248,7 @@ const TOC = [
     n: 16,
     titolo: "Il viaggio completo di un click",
     file: "cap16-viaggio-completo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Cosa succede quando premi Invio?" },
       { id: "s16-2", n: "16.2", t: "Dal browser al primo pacchetto" },
