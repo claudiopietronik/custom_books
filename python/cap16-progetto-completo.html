@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Un progetto completo — Python</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Il gran finale</div>
+    <h1>Un progetto completo</h1>
+    <p class="standfirst">
+      Hai imparato tutti i mattoni — variabili, collezioni, decisioni, cicli, funzioni, file, classi, gestione
+      errori, stile. È il momento di <b>costruire qualcosa di vero</b> con le tue mani: un piccolo programma
+      completo, dall'idea al codice funzionante. Costruiremo insieme un <b>gestore di attività</b> (una to-do list
+      da terminale) che <em>ricorda</em> tra un avvio e l'altro. Non è un esempio isolato: è un'applicazione con una
+      sua struttura, dove ogni pezzo che hai imparato trova il suo posto. <mark>È qui che «saper programmare»
+      smette di essere una collezione di nozioni e diventa una capacità tua</mark> — la soddisfazione di
+      immaginare qualcosa e vederlo prendere vita.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dall'idea al <b>piano</b> (§16.1), come <b>strutturare</b> il progetto (§16.2), <b>scrivere il codice</b>
+      pezzo per pezzo (§16.3), <b>provare e correggere</b> (§16.4), <b>migliorare e rifinire</b> (§16.5), e infine
+      <b>dove andare</b> da qui (§16.6). Prima, prova la versione finita nel widget!
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il metodo, non solo il codice</div>
+    <p style="margin-bottom:0">
+      Questo capitolo non insegna nuove funzioni: insegna il <b>metodo</b> con cui si affronta un progetto reale —
+      scomporre, pianificare, costruire un pezzo alla volta, provare, migliorare. <mark>È la competenza che
+      trasforma un principiante in un programmatore</mark>: non «conoscere la sintassi», ma saper portare un'idea
+      dal nulla a un programma funzionante. È lo stesso metodo che userai per qualsiasi cosa costruirai — nei
+      prossimi libri e oltre.
+    </p>
+  </div>
+
+  <div class="widget" id="w-app">
+    <div class="w-head">
+      <span>Il progetto finito: gestore di attività</span>
+      <span class="hint">provalo — è ciò che costruirai</span>
+    </div>
+    <div class="w-stage" style="min-height:230px">
+      <div id="wap-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <input id="wap-in" type="text" placeholder="nuova attività…" style="padding:.4rem .6rem; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); font:inherit; font-size:.9rem">
+      <button class="w-btn" id="wap-add">aggiungi</button>
+      <button class="w-btn" id="wap-reset">↺ reset</button>
+    </div>
+    <div class="w-readout" id="wap-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>Dall'idea al piano</h2>
+
+  <p class="lead">
+    Ogni progetto parte da un'<b>idea</b> e da qualche domanda. Prima di scrivere una riga, chiarisci <b>cosa deve
+    fare</b>: è metà del lavoro.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'idea: un gestore di attività</div>
+    <p style="margin-bottom:0">
+      Vogliamo un programma che permetta di: <b>vedere</b> le attività, <b>aggiungerne</b>, <b>segnarne come
+      fatte</b>, <b>rimuoverle</b>, e — cruciale — <b>ricordarle</b> tra un avvio e l'altro. Domande da porsi
+      subito: come rappresento un'attività? (un dizionario con testo e stato «fatto»). Dove salvo i dati? (un file
+      JSON, Cap. 12). Come interagisce l'utente? (un menu che si ripete, Cap. 8). <mark>Rispondere a queste domande
+      <em>prima</em> di programmare evita di riscrivere tutto a metà strada</mark>. Un piano anche approssimativo
+      vale più di mille righe scritte a caso.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Strutturare il progetto</h2>
+
+  <p class="lead">
+    Con il piano in mano, decidiamo la <b>struttura</b>: quali funzioni servono, come sono organizzate. Pensare per
+    <b>funzioni piccole</b>, ognuna con un compito, rende tutto più semplice.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Scomporre in funzioni</div>
+    <p style="margin-bottom:0">
+      Il segreto è <b>scomporre</b> il problema grande in pezzi piccoli, uno per compito:
+    </p>
+    <ul style="margin:.5rem 0 0">
+      <li><code>carica()</code> — legge le attività dal file JSON (o lista vuota se non c'è);</li>
+      <li><code>salva(attivita)</code> — scrive le attività nel file;</li>
+      <li><code>mostra(attivita)</code> — stampa l'elenco numerato;</li>
+      <li><code>aggiungi(attivita, testo)</code> — aggiunge una nuova attività;</li>
+      <li><code>completa(attivita, n)</code> — segna la n-esima come fatta;</li>
+      <li>un <b>ciclo menu</b> che chiama queste funzioni in base alla scelta dell'utente.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>Ogni funzione fa una cosa sola e bene</mark> (Cap. 9). Così puoi scriverle e
+      provarle <b>una alla volta</b>, e se qualcosa non va sai subito dove guardare. È il «dividi e conquista» in
+      pratica: un programma grande è solo tante funzioncine che collaborano.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Scrivere il codice, pezzo per pezzo</h2>
+
+  <p class="lead">
+    Ora costruiamo, una funzione alla volta. Ecco il programma completo — leggilo notando come <b>ogni concetto del
+    libro</b> trova il suo posto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il progetto <code>attivita.py</code> <span class="tag">tutto il libro, in un file</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">attivita.py</div>
+      <pre><span class="kw">import</span> <span class="nm">json</span>
+<span class="kw">from</span> <span class="nm">pathlib</span> <span class="kw">import</span> <span class="nm">Path</span>
+
+<span class="nm">FILE</span> <span class="op">=</span> <span class="fn">Path</span>(<span class="st">"attivita.json"</span>)
+
+<span class="kw">def</span> <span class="fn">carica</span>():
+    <span class="st">"""Legge le attività dal file, o lista vuota se non esiste."""</span>
+    <span class="kw">if</span> <span class="nm">FILE</span><span class="op">.</span><span class="fn">exists</span>():
+        <span class="kw">return</span> <span class="nm">json</span><span class="op">.</span><span class="fn">loads</span>(<span class="nm">FILE</span><span class="op">.</span><span class="fn">read_text</span>())
+    <span class="kw">return</span> []
+
+<span class="kw">def</span> <span class="fn">salva</span>(<span class="nm">attivita</span>):
+    <span class="nm">FILE</span><span class="op">.</span><span class="fn">write_text</span>(<span class="nm">json</span><span class="op">.</span><span class="fn">dumps</span>(<span class="nm">attivita</span>, <span class="nm">indent</span><span class="op">=</span><span class="nm">2</span>))
+
+<span class="kw">def</span> <span class="fn">mostra</span>(<span class="nm">attivita</span>):
+    <span class="kw">if</span> <span class="kw">not</span> <span class="nm">attivita</span>:                     <span class="cm"># lista vuota è "falsy" (Cap. 7)</span>
+        <span class="bi">print</span>(<span class="st">"  (nessuna attività)"</span>)
+    <span class="kw">for</span> <span class="nm">i</span>, <span class="nm">a</span> <span class="kw">in</span> <span class="bi">enumerate</span>(<span class="nm">attivita</span>, <span class="nm">1</span>):   <span class="cm"># enumerate (Cap. 14)</span>
+        <span class="nm">segno</span> <span class="op">=</span> <span class="st">"✓"</span> <span class="kw">if</span> <span class="nm">a</span>[<span class="st">"fatto"</span>] <span class="kw">else</span> <span class="st">" "</span>
+        <span class="bi">print</span>(<span class="st">f"  </span><span class="op">{</span><span class="nm">i</span><span class="op">}</span><span class="st">. [</span><span class="op">{</span><span class="nm">segno</span><span class="op">}</span><span class="st">] </span><span class="op">{</span><span class="nm">a</span><span class="op">[</span><span class="st">'testo'</span><span class="op">]</span><span class="op">}</span><span class="st">"</span>)
+
+<span class="kw">def</span> <span class="fn">menu</span>():
+    <span class="nm">attivita</span> <span class="op">=</span> <span class="fn">carica</span>()               <span class="cm"># carica all'avvio</span>
+    <span class="kw">while</span> <span class="nm">True</span>:                         <span class="cm"># ciclo menu (Cap. 8)</span>
+        <span class="bi">print</span>(<span class="st">"\n--- LE MIE ATTIVITÀ ---"</span>)
+        <span class="fn">mostra</span>(<span class="nm">attivita</span>)
+        <span class="nm">scelta</span> <span class="op">=</span> <span class="bi">input</span>(<span class="st">"[a]ggiungi [f]atto [q]esci: "</span>)<span class="op">.</span><span class="fn">strip</span>()<span class="op">.</span><span class="fn">lower</span>()
+
+        <span class="kw">if</span> <span class="nm">scelta</span> <span class="op">==</span> <span class="st">"a"</span>:
+            <span class="nm">testo</span> <span class="op">=</span> <span class="bi">input</span>(<span class="st">"Cosa? "</span>)<span class="op">.</span><span class="fn">strip</span>()
+            <span class="kw">if</span> <span class="nm">testo</span>:
+                <span class="nm">attivita</span><span class="op">.</span><span class="fn">append</span>({<span class="st">"testo"</span>: <span class="nm">testo</span>, <span class="st">"fatto"</span>: <span class="nm">False</span>})
+                <span class="fn">salva</span>(<span class="nm">attivita</span>)          <span class="cm"># salva dopo ogni modifica</span>
+        <span class="kw">elif</span> <span class="nm">scelta</span> <span class="op">==</span> <span class="st">"f"</span>:
+            <span class="kw">try</span>:                          <span class="cm"># gestione errori (Cap. 11)</span>
+                <span class="nm">n</span> <span class="op">=</span> <span class="bi">int</span>(<span class="bi">input</span>(<span class="st">"Numero: "</span>)) <span class="op">-</span> <span class="nm">1</span>
+                <span class="nm">attivita</span>[<span class="nm">n</span>][<span class="st">"fatto"</span>] <span class="op">=</span> <span class="nm">True</span>
+                <span class="fn">salva</span>(<span class="nm">attivita</span>)
+            <span class="kw">except</span> (<span class="nm">ValueError</span>, <span class="nm">IndexError</span>):
+                <span class="bi">print</span>(<span class="st">"  Numero non valido."</span>)
+        <span class="kw">elif</span> <span class="nm">scelta</span> <span class="op">==</span> <span class="st">"q"</span>:
+            <span class="bi">print</span>(<span class="st">"Ciao!"</span>)
+            <span class="kw">break</span>
+
+<span class="fn">menu</span>()   <span class="cm"># avvia il programma</span></pre>
+    </div>
+    <div class="f-note">
+      Fai il conto di quanti concetti sono al lavoro: <b>funzioni</b> (Cap. 9), <b>liste di dizionari</b> (Cap. 5-6),
+      <b>file JSON</b> (Cap. 12), <b>ciclo while</b> e <b>break</b> (Cap. 8), <b>if/elif</b> (Cap. 7), <b>try/except</b>
+      (Cap. 11), <b>enumerate</b> e valori <b>falsy</b> (Cap. 14, 7), <b>f-string</b> (Cap. 4). <mark>Nessuno di
+      questi pezzi, da solo, è difficile — ma insieme formano un'applicazione vera</mark>. È così che si costruisce
+      il software: componendo tante idee semplici.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Provare e correggere</h2>
+
+  <p class="lead">
+    Il codice scritto non è codice finito: va <b>provato</b>. E provare non significa solo «vedere se funziona coi
+    dati giusti», ma soprattutto <b>cosa succede quando le cose vanno storte</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> I casi da provare (specie quelli «cattivi»)</div>
+    <ul style="margin-bottom:0">
+      <li>Il caso <b>normale</b>: aggiungi un'attività, segnala fatta, esci e riapri — <b>c'è ancora?</b> (la
+          persistenza funziona).</li>
+      <li>I casi <b>limite</b>: la lista <b>vuota</b> all'inizio; aggiungere testo <b>vuoto</b>; segnare fatto un
+          <b>numero inesistente</b> (5 quando ci sono 3 attività) o <b>non-numerico</b> («abc»).</li>
+      <li><mark>Sono proprio i casi «cattivi» a rivelare i bug</mark>: il nostro <code>try/except</code> gestisce
+          numeri sbagliati, e l'<code>if testo:</code> evita attività vuote. Se non li avessimo previsti, il
+          programma sarebbe crollato al primo errore dell'utente.</li>
+    </ul>
+    <p style="margin:.6rem 0 0">Quando trovi un bug, torna amico del <b>traceback</b> (Cap. 11): ti dice la riga
+      esatta. <mark>Provare pensando «come potrebbe rompersi?» è ciò che distingue il codice fragile da quello
+      robusto</mark>.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Migliorare e rifinire</h2>
+
+  <p class="lead">
+    Un programma che funziona è l'inizio, non la fine. Un occhio critico trova sempre modi per renderlo più utile,
+    più chiaro, più robusto. È la fase — piacevolissima — del <b>miglioramento</b>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Idee per far crescere il progetto</div>
+    <ul style="margin-bottom:0">
+      <li><b>Funzionalità</b>: aggiungere la <b>rimozione</b> di un'attività; una <b>data di scadenza</b> (con
+          <code>datetime</code>, Cap. 15); <b>priorità</b>; il conteggio di quante sono fatte / da fare.</li>
+      <li><b>Qualità del codice</b>: trasformare l'attività da dizionario a una <b>classe</b> <code>Attivita</code>
+          (Cap. 13), con metodi <code>completa()</code> e <code>__str__()</code>; spostare le funzioni in un
+          <b>modulo separato</b> (Cap. 10).</li>
+      <li><b>Robustezza</b>: gestire il caso di un file JSON <b>corrotto</b>; confermare prima di uscire.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>Il codice migliore nasce dalla riscrittura</mark>: la prima versione fa
+      funzionare le cose, le successive le fanno funzionare <em>bene</em>. Non aver paura di rimettere mano a ciò
+      che hai scritto — è lì che si impara di più, e dove un progetto diventa davvero tuo.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai finito il libro — e hai imparato a programmare. Non è un traguardo da poco: è l'inizio di tutto ciò che puoi
+    costruire. Ecco alcune direzioni, dentro e fuori questa collana.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧭</span> Il cammino continua</div>
+    <ul style="margin-bottom:0">
+      <li><b>Costruisci</b>. La cosa più importante: <mark>fai progetti tuoi</mark>. Automatizza una noia,
+          organizza dei file, crea un giochino, analizza dei dati. Programmare si impara programmando: le idee di
+          questo libro diventano tue solo usandole.</li>
+      <li><b>Verso il web</b>. Con Python conosci un linguaggio; per fare siti serve conoscerne la parte visibile:
+          il prossimo libro della collana, <b>Il Web (HTML, CSS, JavaScript)</b>, ti mostra come nascono le pagine.</li>
+      <li><b>Verso il backend</b>. Poi il libro di <b>Backend Development</b> ti porterà a costruire veri
+          <b>server</b> con <b>FastAPI</b> (in Python!), a salvare dati in <b>database</b>, e a metterli online —
+          userai <em>tutto</em> ciò che hai imparato qui, stavolta «dall'altra parte».</li>
+      <li><b>Un altro linguaggio</b>. Se vuoi capire il computer più a fondo, <b>C++</b> (in arrivo) ti mostra il
+          basso livello — memoria, puntatori, prestazioni. Ma ora hai le <b>fondamenta</b>: cambiare linguaggio è
+          questione di dialetto.</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro da tutto il libro</div>
+    <ol style="margin-bottom:0">
+      <li>Sai <b>dare istruzioni</b> a un computer: variabili e tipi, numeri, testo, collezioni (liste, dizionari,
+          insiemi).</li>
+      <li>Sai <b>controllare il flusso</b>: decisioni (if/elif/else) e cicli (for/while), il cuore della logica.</li>
+      <li>Sai <b>organizzare</b>: funzioni, moduli, classi; e <b>gestire gli imprevisti</b> (try/except) e i <b>dati
+          persistenti</b> (file, JSON).</li>
+      <li>Sai scrivere Python con <b>stile</b> (comprehension, idiomi pythonici) e <b>riusare</b> l'ecosistema
+          (libreria standard, pip). E soprattutto: <mark>sai portare un'idea dal nulla a un programma
+          funzionante</mark>. Il resto è pratica.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Complimenti: hai imparato a programmare. Ricorda com'eri all'inizio del Capitolo 1 — davanti a un
+    <code>print("Ciao, mondo!")</code> — e guardati ora, capace di costruire un'applicazione completa che ricorda i
+    tuoi dati. <mark>Questa capacità non ti lascerà più</mark>: è uno strumento di creatività e di autonomia che
+    userai per il resto della vita, in mille modi che oggi non immagini nemmeno. La collana continua — col Web, col
+    backend, con nuovi linguaggi — ma il salto più grande l'hai già fatto: da utente a <b>creatore</b>. Ora vai, e
+    costruisci qualcosa di tuo. Buon codice! 🐍
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Prima di scrivere codice, quali domande ti poni per pianificare un progetto? Applicale a un'idea tua (es. un
+      diario, un contatore di spese).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Nel gestore di attività, quali concetti del libro riconosci nella funzione <code>menu()</code>? Elencane almeno
+      cinque, indicando il capitolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      (Pratico) Aggiungi al progetto una scelta «[r]imuovi» che, dato un numero, elimina quell'attività dalla lista
+      (ricorda <code>.pop()</code> e il <code>try/except</code> per numeri sbagliati).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      (Sfida) Riscrivi l'attività come una <b>classe</b> <code>Attivita</code> con attributi <code>testo</code> e
+      <code>fatto</code>, un metodo <code>completa()</code> e un <code>__str__()</code> che la mostri con la casella
+      ✓/☐. (Suggerimento: per salvarla in JSON dovrai convertirla in dizionario.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Le domande chiave: <b>cosa deve fare</b> (le funzionalità)? <b>Come rappresento i dati</b> (variabili,
+      liste, dizionari, classi)? <b>Dove li salvo</b> (file? JSON?)? <b>Come interagisce l'utente</b> (menu, input)?
+      <b>Quali casi limite</b> devo gestire? Rispondere prima di programmare rende il codice molto più diretto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Per esempio: <b>ciclo while + break</b> (Cap. 8), <b>if/elif</b> (Cap. 7), <b>input</b> con
+      <code>.strip().lower()</code> (Cap. 2, 4), <b>try/except</b> (Cap. 11), <b>liste di dizionari</b> con
+      <code>.append()</code> (Cap. 5-6), chiamate a <b>funzioni</b> (Cap. 9). Tutto il libro converge qui.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">nel menu, aggiungi un ramo elif</div>
+      <pre>        <span class="kw">elif</span> <span class="nm">scelta</span> <span class="op">==</span> <span class="st">"r"</span>:
+            <span class="kw">try</span>:
+                <span class="nm">n</span> <span class="op">=</span> <span class="bi">int</span>(<span class="bi">input</span>(<span class="st">"Numero da rimuovere: "</span>)) <span class="op">-</span> <span class="nm">1</span>
+                <span class="nm">attivita</span><span class="op">.</span><span class="fn">pop</span>(<span class="nm">n</span>)        <span class="cm"># toglie l'elemento n</span>
+                <span class="fn">salva</span>(<span class="nm">attivita</span>)
+            <span class="kw">except</span> (<span class="nm">ValueError</span>, <span class="nm">IndexError</span>):
+                <span class="bi">print</span>(<span class="st">"  Numero non valido."</span>)</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">attivita_classe.py</div>
+      <pre><span class="kw">class</span> <span class="fn">Attivita</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="nm">self</span>, <span class="nm">testo</span>, <span class="nm">fatto</span><span class="op">=</span><span class="nm">False</span>):
+        <span class="nm">self</span><span class="op">.</span><span class="nm">testo</span> <span class="op">=</span> <span class="nm">testo</span>
+        <span class="nm">self</span><span class="op">.</span><span class="nm">fatto</span> <span class="op">=</span> <span class="nm">fatto</span>
+    <span class="kw">def</span> <span class="fn">completa</span>(<span class="nm">self</span>):
+        <span class="nm">self</span><span class="op">.</span><span class="nm">fatto</span> <span class="op">=</span> <span class="nm">True</span>
+    <span class="kw">def</span> <span class="fn">__str__</span>(<span class="nm">self</span>):
+        <span class="kw">return</span> <span class="st">f"[</span><span class="op">{</span><span class="st">'✓'</span> <span class="kw">if</span> <span class="nm">self</span><span class="op">.</span><span class="nm">fatto</span> <span class="kw">else</span> <span class="st">'☐'</span><span class="op">}</span><span class="st">] </span><span class="op">{</span><span class="nm">self</span><span class="op">.</span><span class="nm">testo</span><span class="op">}</span><span class="st">"</span>
+    <span class="kw">def</span> <span class="fn">to_dict</span>(<span class="nm">self</span>):
+        <span class="kw">return</span> {<span class="st">"testo"</span>: <span class="nm">self</span><span class="op">.</span><span class="nm">testo</span>, <span class="st">"fatto"</span>: <span class="nm">self</span><span class="op">.</span><span class="nm">fatto</span>}   <span class="cm"># per il JSON</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Con la classe, <code>print(attivita)</code> mostra direttamente «[✓] Comprare
+      pane», e per salvare converti ogni oggetto con <code>.to_dict()</code>. È il progetto «cresciuto» in stile OOP.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16 — demo interattiva del progetto finito (gestore attività)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wap-view');
+  if (!view) return;
+  const out = document.getElementById('wap-out');
+  const inp = document.getElementById('wap-in');
+  const start = () => [{ t: 'Finire il libro di Python', f: true }, { t: 'Iniziare un progetto mio', f: false }];
+  let items = start();
+
+  function add() {
+    const v = inp.value.trim();
+    if (!v) { flash('Testo vuoto: ignorato (come <code>if testo:</code> nel codice).'); return; }
+    items.push({ t: v, f: false }); inp.value = '';
+    flash('Aggiunta e <b>salvata</b> (in un file JSON, nel programma vero).'); draw();
+  }
+  document.getElementById('wap-add').addEventListener('click', add);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+  document.getElementById('wap-reset').addEventListener('click', () => { items = start(); flash('Riavviato: nel programma reale, le attività verrebbero <b>ricaricate dal file</b>.'); draw(); });
+
+  let msg = 'Prova: scrivi un\'attività e premi «aggiungi». Clicca una riga per segnarla fatta. È il programma che costruirai in questo capitolo.';
+  function flash(m) { msg = m; }
+
+  function draw() {
+    const rows = items.map((a, i) =>
+      `<div data-i="${i}" style="cursor:pointer; display:flex; align-items:center; gap:.6rem; padding:.4rem .7rem; margin:.25rem auto; max-width:360px; border:1px solid var(--rule); border-radius:9px; background:${a.f ? 'color-mix(in srgb,var(--green) 10%,transparent)' : 'var(--paper)'}">
+        <span style="font-family:var(--mono); color:var(--ink-faint)">${i + 1}.</span>
+        <span style="width:22px; height:22px; border:2px solid ${a.f ? 'var(--green)' : 'var(--ink-faint)'}; border-radius:5px; display:grid; place-items:center; color:var(--green); font-weight:700">${a.f ? '✓' : ''}</span>
+        <span style="${a.f ? 'text-decoration:line-through; color:var(--ink-faint)' : ''}">${a.t.replace(/</g, '&lt;')}</span>
+      </div>`).join('') || '<div style="color:var(--ink-faint); text-align:center">(nessuna attività)</div>';
+    view.innerHTML = `<div style="font-family:var(--mono); color:var(--ink-soft); text-align:center; margin-bottom:.5rem">--- LE MIE ATTIVITÀ ---</div>${rows}
+      <div style="text-align:center; margin-top:.6rem; font-size:.82rem; color:var(--ink-faint)">${items.filter(a => a.f).length}/${items.length} completate</div>`;
+    view.querySelectorAll('[data-i]').forEach(el => el.addEventListener('click', () => {
+      const i = +el.dataset.i; items[i].f = !items[i].f;
+      flash('Stato cambiato e salvato — come <code>a["fatto"] = True</code> nel codice.'); draw();
+    }));
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

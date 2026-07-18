@@ -253,7 +253,7 @@ const TOC = [
     n: 16,
     titolo: "Un progetto completo",
     file: "cap16-progetto-completo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "Dall'idea al piano" },
       { id: "s16-2", n: "16.2", t: "Strutturare il progetto" },
