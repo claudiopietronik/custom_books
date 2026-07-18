@@ -1,0 +1,34 @@
+# C++ — il linguaggio vicino alla macchina
+
+Libro della collana di **programmazione**, in italiano: imparare il C++ da zero, con spiegazioni
+discorsive, ogni riga di codice smontata pezzo per pezzo, e **laboratori guidati** (compila ed
+esegui sul tuo computer). Stesso stile e stesso motore degli altri libri della libreria. Consigliato
+dopo il libro [Python](../python/), ma seguibile anche da solo.
+
+Contenuto originale scritto ex novo.
+
+**Apri [`index.html`](index.html) con un doppio clic.** Non serve alcun server.
+
+## Stato
+
+- [x] 1 — Il primo programma
+- [ ] 2 — Variabili e tipi
+- [ ] 3 — Operatori ed espressioni
+- [ ] 4 — Prendere decisioni
+- [ ] 5 — I cicli
+- [ ] 6 — Le funzioni
+- [ ] 7 — Puntatori e riferimenti
+- [ ] 8 — Array e vector
+- [ ] 9 — Le stringhe
+- [ ] 10 — Struct e classi
+- [ ] 11 — Ereditarietà e polimorfismo
+- [ ] 12 — La memoria: stack, heap, RAII
+- [ ] 13 — Template e la STL
+- [ ] 14 — Gestione degli errori
+- [ ] 15 — File e I/O
+- [ ] 16 — Un progetto completo
+
+## La collana
+
+**Programmazione**: [Python](../python/) · C++ (questo) · Il Web · …
+**Informatica**: [Reti e Internet](../reti/) · Backend Development · …
