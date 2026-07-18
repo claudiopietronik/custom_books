@@ -61,7 +61,7 @@ const TOC = [
     n: 4,
     titolo: "Le stringhe",
     file: "cap04-stringhe.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Testo tra virgolette" },
       { id: "s4-2", n: "4.2", t: "Concatenare e ripetere" },
