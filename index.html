@@ -5,16 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Custom Books — la libreria</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+<script>
+  /* applica il tema salvato prima del render (niente flash) */
+  try { var t = localStorage.getItem("custombooks:theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
 <style>
   :root{
     --bg:#faf9f6; --fg:#1c1b19; --muted:#6b6862;
-    --card:#ffffff; --border:#e7e4dd; --accent:#7a5cff;
+    --card:#ffffff; --border:#e7e4dd; --accent:#7a5cff; --accent-soft:#efeaff;
     --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
   }
+  :root[data-theme="dark"]{
+    --bg:#14130f; --fg:#efece4; --muted:#a29d92;
+    --card:#1e1c17; --border:#2e2b24; --accent:#a892ff; --accent-soft:#251f3a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.4);
+  }
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#14130f; --fg:#efece4; --muted:#a29d92;
-      --card:#1e1c17; --border:#2e2b24; --accent:#a892ff;
+      --card:#1e1c17; --border:#2e2b24; --accent:#a892ff; --accent-soft:#251f3a;
       --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.4);
     }
   }
@@ -24,92 +34,199 @@
     font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:760px; margin:0 auto; padding:clamp(2rem,6vw,4.5rem) 1.25rem 4rem}
-  header{margin-bottom:2.5rem}
-  h1{font-size:clamp(1.9rem,5vw,2.6rem); margin:0 0 .4rem; letter-spacing:-.02em}
-  .sub{color:var(--muted); font-size:1.05rem; margin:0}
-  .grid{display:grid; gap:1rem}
+  .wrap{max-width:960px; margin:0 auto; padding:clamp(1.6rem,5vw,3.5rem) 1.15rem 4rem}
+  header{display:flex; align-items:flex-start; gap:1rem; margin-bottom:1.6rem}
+  .head-txt{flex:1; min-width:0}
+  h1{font-size:clamp(1.8rem,5vw,2.5rem); margin:0 0 .35rem; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:1.02rem; margin:0}
+  .icon-btn{
+    flex:none; width:42px; height:42px; border-radius:11px; border:1px solid var(--border);
+    background:var(--card); color:var(--fg); cursor:pointer; font-size:1.15rem; line-height:1;
+    display:grid; place-items:center; box-shadow:var(--shadow); transition:border-color .12s;
+  }
+  .icon-btn:hover{border-color:var(--accent)}
+
+  .search{position:relative; margin:0 0 1.8rem}
+  .search input{
+    width:100%; padding:.8rem 1rem .8rem 2.6rem; font:inherit; color:inherit;
+    background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);
+  }
+  .search input:focus{outline:none; border-color:var(--accent)}
+  .search .mag{position:absolute; left:.9rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:1.05rem}
+  .search .hint{position:absolute; right:.8rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.78rem;
+    border:1px solid var(--border); border-radius:6px; padding:.05rem .4rem}
+
+  .section-title{font-size:.82rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--muted); margin:2rem 0 .9rem; display:flex; align-items:center; gap:.6rem}
+  .section-title::after{content:""; flex:1; height:1px; background:var(--border)}
+  #resume .section-title{color:var(--accent)}
+
+  .grid{display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(255px,1fr))}
   a.book{
-    display:block; text-decoration:none; color:inherit;
+    display:flex; gap:.85rem; align-items:flex-start; text-decoration:none; color:inherit;
     background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:1.15rem 1.3rem; box-shadow:var(--shadow);
+    padding:1rem 1.1rem; box-shadow:var(--shadow);
     transition:transform .12s ease, border-color .12s ease;
   }
   a.book:hover{transform:translateY(-2px); border-color:var(--accent)}
-  .book h2{margin:0 0 .25rem; font-size:1.2rem; letter-spacing:-.01em}
-  .book p{margin:0; color:var(--muted); font-size:.95rem}
-  .book .go{display:inline-block; margin-top:.7rem; color:var(--accent); font-weight:600; font-size:.9rem}
-  footer{margin-top:3rem; color:var(--muted); font-size:.85rem}
+  .badge{flex:none; width:46px; height:46px; border-radius:12px; display:grid; place-items:center;
+    font-size:1.55rem; background:color-mix(in srgb, var(--accent) 14%, var(--card)); color:var(--accent)}
+  .book .txt{min-width:0}
+  .book h3{margin:0 0 .2rem; font-size:1.08rem; letter-spacing:-.01em}
+  .book p{margin:0; color:var(--muted); font-size:.9rem}
+  .book .resume-hint{margin-top:.45rem; font-size:.8rem; color:var(--accent); font-weight:600}
+
+  /* card "riprendi" */
+  #resume .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  a.resume{border-color:color-mix(in srgb, var(--accent) 35%, var(--border)); background:color-mix(in srgb, var(--accent) 5%, var(--card))}
+  a.resume .rlabel{font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  a.resume h3{margin:.1rem 0 .15rem}
+  a.resume .where{color:var(--muted); font-size:.86rem}
+
+  #empty{display:none; color:var(--muted); text-align:center; padding:2rem 0}
+  footer{margin-top:3rem; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); padding-top:1.2rem}
   footer code{background:var(--card); border:1px solid var(--border); border-radius:6px; padding:.1rem .4rem}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Custom Books</h1>
-    <p class="sub">Libri di matematica in italiano — concetti per esteso, formule smontate simbolo per simbolo, figure e widget interattivi.</p>
+    <div class="head-txt">
+      <h1>Custom Books</h1>
+      <p class="sub">Matematica, fisica, dati e machine learning — spiegati per esteso, con formule smontate simbolo per simbolo e widget interattivi.</p>
+    </div>
+    <button class="icon-btn" id="theme-btn" title="Tema chiaro/scuro" aria-label="Cambia tema">☾</button>
   </header>
 
-  <main class="grid">
-    <a class="book" href="algebra%20lineare/index.html">
-      <h2>Algebra lineare</h2>
-      <p>Vettori, matrici, spazi, autovalori, SVD. Un capitolo per pagina.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
+  <div class="search">
+    <span class="mag">🔍</span>
+    <input id="q" type="search" placeholder="Cerca un libro o un argomento…  (premi /)" autocomplete="off" aria-label="Cerca">
+    <span class="hint">/</span>
+  </div>
 
-    <a class="book" href="analisi%201/index.html">
-      <h2>Analisi 1</h2>
-      <p>Limiti, derivate, integrali a una variabile. Stesso motore visuale.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
+  <section id="resume" hidden>
+    <div class="section-title">Riprendi la lettura</div>
+    <div class="grid" id="resume-grid"></div>
+  </section>
 
-    <a class="book" href="analisi%202/index.html">
-      <h2>Analisi 2</h2>
-      <p>Più variabili, campi, integrali multipli, curve e superfici, equazioni differenziali. Il seguito di Analisi 1.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
+  <main id="library"></main>
 
-    <a class="book" href="algebra e trigonometria/index.html">
-      <h2>Algebra e Trigonometria</h2>
-      <p>Equazioni, funzioni, trigonometria, coniche, probabilità. Il ponte verso l'analisi.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-    <a class="book" href="dsp/index.html">
-      <h2>DSP — Segnali digitali</h2>
-      <p>Campionamento, Fourier, filtri, immagini. Estetica "laboratorio", tutta sua.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-    <a class="book" href="statistica/index.html">
-      <h2>Statistica</h2>
-      <p>Dalla descrittiva ai modelli predittivi: 46 capitoli, formule smontate e widget interattivi.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-    <a class="book" href="fisica%201/index.html">
-      <h2>Fisica 1</h2>
-      <p>Meccanica, oscillazioni e onde, acustica, termodinamica. Formule guidate e widget interattivi.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-    <a class="book" href="fisica%202/index.html">
-      <h2>Fisica 2</h2>
-      <p>Elettromagnetismo, ottica e fisica moderna. Il seguito di Fisica 1, stesso motore visuale.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-    <a class="book" href="deep learning/index.html">
-      <h2>Deep Learning</h2>
-      <p>Il testo di Goodfellow–Bengio–Courville in italiano: dalla matematica alle reti profonde e ai modelli generativi. Tema "tensore", tutto suo.</p>
-      <span class="go">Apri il libro →</span>
-    </a>
-
-  </main>
+  <p id="empty">Nessun libro corrisponde alla ricerca.</p>
 
   <footer>
-    Aggiornato a ogni <code>git push</code>. Altri libri in arrivo.
+    9 libri · aggiornati a ogni <code>git push</code>. Il segnalibro 🔖 dentro ogni libro salva dove sei arrivato.
   </footer>
 </div>
+
+<script>
+  const BOOKS = [
+    { cat:"Matematica", folder:"algebra e trigonometria", glyph:"△", title:"Algebra e Trigonometria", key:"△ Algebra e Trigonometria", desc:"Equazioni, funzioni, trigonometria, coniche, probabilità. Il ponte verso l'analisi." },
+    { cat:"Matematica", folder:"algebra lineare", glyph:"λ", title:"Algebra lineare", key:"λ Algebra Lineare", desc:"Vettori, matrici, spazi, autovalori, SVD, PCA." },
+    { cat:"Matematica", folder:"analisi 1", glyph:"∫", title:"Analisi 1", key:"∫ Analisi 1", desc:"Limiti, derivate, integrali a una variabile." },
+    { cat:"Matematica", folder:"analisi 2", glyph:"∇", title:"Analisi 2", key:"∇ Analisi 2", desc:"Più variabili, campi, integrali multipli, curve e superfici, equazioni differenziali." },
+    { cat:"Fisica", folder:"fisica 1", glyph:"⚛", title:"Fisica 1", key:"⚛ Fisica 1", desc:"Meccanica, oscillazioni e onde, acustica, termodinamica." },
+    { cat:"Fisica", folder:"fisica 2", glyph:"⚛", title:"Fisica 2", key:"⚛ Fisica 2", desc:"Elettromagnetismo, ottica e fisica moderna." },
+    { cat:"Dati, segnali & Machine Learning", folder:"statistica", glyph:"σ", title:"Statistica", key:"σ Statistica", desc:"Dalla descrittiva ai modelli predittivi: 46 capitoli." },
+    { cat:"Dati, segnali & Machine Learning", folder:"dsp", glyph:"∿", title:"DSP — Segnali digitali", key:"∿ DSP", desc:"Campionamento, Fourier, filtri, immagini." },
+    { cat:"Dati, segnali & Machine Learning", folder:"deep learning", glyph:"∇", title:"Deep Learning", key:"∇ Deep Learning", desc:"Dalla matematica alle reti profonde e ai modelli generativi." }
+  ];
+  const CATS = ["Matematica", "Fisica", "Dati, segnali & Machine Learning"];
+  const enc = (f) => f.replace(/ /g, "%20");
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+
+  /* ---------- libreria (griglia per materia) ---------- */
+  function renderLibrary() {
+    const lib = document.getElementById("library");
+    lib.innerHTML = CATS.map((cat) => {
+      const cards = BOOKS.filter((b) => b.cat === cat).map((b) => `
+        <a class="book" href="${enc(b.folder)}/index.html" data-search="${esc((b.title + " " + b.desc + " " + b.cat).toLowerCase())}" data-key="${esc(b.key)}">
+          <span class="badge">${b.glyph}</span>
+          <span class="txt">
+            <h3>${esc(b.title)}</h3>
+            <p>${esc(b.desc)}</p>
+            <span class="resume-hint" hidden></span>
+          </span>
+        </a>`).join("");
+      return `<div class="cat-block"><div class="section-title">${esc(cat)}</div><div class="grid">${cards}</div></div>`;
+    }).join("");
+  }
+
+  /* ---------- riprendi la lettura (dai segnalibri, stesso dominio) ---------- */
+  function readBM(key) {
+    try { return JSON.parse(localStorage.getItem("custombooks:bm:" + key) || "null"); } catch (e) { return null; }
+  }
+  function renderResume() {
+    const grid = document.getElementById("resume-grid");
+    const sec = document.getElementById("resume");
+    let html = "";
+    BOOKS.forEach((b) => {
+      const bm = readBM(b.key);
+      if (!bm || !bm.file) return;
+      const href = enc(b.folder) + "/" + bm.file + (bm.sectionId ? "#" + bm.sectionId : "");
+      const where = [bm.chapText, bm.sectionLabel].filter(Boolean).map(esc).join(" · ");
+      html += `
+        <a class="resume book" href="${href}" data-search="${esc((b.title + " riprendi").toLowerCase())}">
+          <span class="badge">${b.glyph}</span>
+          <span class="txt">
+            <span class="rlabel">↪ Riprendi</span>
+            <h3>${esc(b.title)}</h3>
+            <span class="where">${where || "dove eri arrivato"}</span>
+          </span>
+        </a>`;
+      // segnala anche sulla card del libro
+      const card = document.querySelector('.book[data-key="' + (window.CSS && CSS.escape ? CSS.escape(b.key) : b.key) + '"]');
+      if (card) { const rh = card.querySelector(".resume-hint"); if (rh) { rh.textContent = "🔖 hai un segnalibro qui"; rh.hidden = false; } }
+    });
+    grid.innerHTML = html;
+    sec.hidden = html === "";
+  }
+
+  /* ---------- ricerca / filtro ---------- */
+  function applyFilter(q) {
+    q = (q || "").trim().toLowerCase();
+    let any = false;
+    document.querySelectorAll("#library .book").forEach((el) => {
+      const show = !q || el.dataset.search.includes(q);
+      el.style.display = show ? "" : "none";
+      if (show) any = true;
+    });
+    // nascondi le materie senza risultati
+    document.querySelectorAll("#library .cat-block").forEach((blk) => {
+      const visible = blk.querySelector('.book:not([style*="display: none"])');
+      blk.style.display = visible ? "" : "none";
+    });
+    // durante la ricerca nascondo la banda "Riprendi" per tenere puliti i risultati
+    const sec = document.getElementById("resume");
+    if (!sec.hidden) sec.style.display = q ? "none" : "";
+    document.getElementById("empty").style.display = any ? "none" : "block";
+  }
+
+  /* ---------- tema ---------- */
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") ||
+      (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  }
+  function updateThemeIco() { document.getElementById("theme-btn").textContent = currentTheme() === "dark" ? "☀" : "☾"; }
+  document.getElementById("theme-btn").addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("custombooks:theme", next); } catch (e) {}
+    updateThemeIco();
+  });
+
+  /* ---------- init ---------- */
+  renderLibrary();
+  renderResume();
+  updateThemeIco();
+  const q = document.getElementById("q");
+  q.addEventListener("input", () => applyFilter(q.value));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) { e.preventDefault(); q.focus(); }
+    if (e.key === "Escape" && document.activeElement === q) { q.value = ""; applyFilter(""); q.blur(); }
+  });
+  // se torni sulla pagina dopo aver letto, aggiorna i "riprendi"
+  window.addEventListener("focus", renderResume);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) renderResume(); });
+</script>
 </body>
 </html>

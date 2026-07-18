@@ -12,7 +12,7 @@
   const cap = TOC.find((c) => c.n === chapN) || null;
 
   /* ---------- tema ---------- */
-  const savedTheme = localStorage.getItem("al-theme");
+  const savedTheme = localStorage.getItem("dsp-theme");
   if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
   else if (window.matchMedia("(prefers-color-scheme: dark)").matches)
     document.documentElement.setAttribute("data-theme", "dark");
@@ -21,7 +21,7 @@
     const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
     const next = cur === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("al-theme", next);
+    localStorage.setItem("dsp-theme", next);
     document.getElementById("theme-ico").textContent = next === "dark" ? "☀" : "☾";
   }
 
@@ -33,7 +33,7 @@
   bar.className = "topbar";
   bar.innerHTML = `
     <div class="progress" id="progress"></div>
-    <a class="brand" href="index.html"><span class="glyph">λ</span> Algebra Lineare</a>
+    <a class="brand" href="index.html"><span class="glyph">∿</span> DSP</a>
     <button class="nav-btn" id="mm-btn" aria-expanded="false" aria-controls="megamenu">
       Indice <span class="chev">▾</span>
     </button>
