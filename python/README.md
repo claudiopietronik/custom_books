@@ -16,7 +16,7 @@ Contenuto originale scritto ex novo.
 - [x] 3 — Numeri e operatori
 - [x] 4 — Le stringhe
 - [x] 5 — Liste e tuple
-- [ ] 6 — Dizionari e insiemi
+- [x] 6 — Dizionari e insiemi
 - [ ] 7 — Prendere decisioni
 - [ ] 8 — I cicli
 - [ ] 9 — Le funzioni

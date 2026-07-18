@@ -93,7 +93,7 @@ const TOC = [
     n: 6,
     titolo: "Dizionari e insiemi",
     file: "cap06-dizionari-insiemi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Il dizionario: chiave → valore" },
       { id: "s6-2", n: "6.2", t: "Leggere, aggiungere, aggiornare" },
