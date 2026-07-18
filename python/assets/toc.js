@@ -125,7 +125,7 @@ const TOC = [
     n: 8,
     titolo: "I cicli",
     file: "cap08-cicli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "for: ripetere per ogni elemento" },
       { id: "s8-2", n: "8.2", t: "range()" },

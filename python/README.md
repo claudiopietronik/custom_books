@@ -18,7 +18,7 @@ Contenuto originale scritto ex novo.
 - [x] 5 — Liste e tuple
 - [x] 6 — Dizionari e insiemi
 - [x] 7 — Prendere decisioni
-- [ ] 8 — I cicli
+- [x] 8 — I cicli
 - [ ] 9 — Le funzioni
 - [ ] 10 — Moduli, pacchetti e ambienti
 - [ ] 11 — Errori ed eccezioni
