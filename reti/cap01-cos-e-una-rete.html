@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Cos'è una rete — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 1</div>
+    <h1>Cos'è una rete</h1>
+    <p class="standfirst">
+      Premi Invio, e in mezzo secondo compare una pagina che magari viveva su un computer dall'altra parte del
+      mondo. In quel mezzo secondo è successo di tutto: il tuo messaggio è stato spezzato in <b>pacchetti</b>,
+      ha attraversato il WiFi di casa, cavi in fibra, forse un cavo sotto l'oceano, decine di <b>router</b> che
+      in microsecondi hanno deciso da che parte mandarlo — ed è tornato indietro con la risposta. <mark>Questo
+      libro racconta quel viaggio, pezzo per pezzo.</mark> In questo capitolo la visione d'insieme: cos'è una
+      rete, chi parla con chi, e l'idea geniale che fa funzionare tutto — la commutazione di pacchetto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è una rete e chi ne fa parte (§1.1), il modello <b>client-server</b> che governa quasi tutto il web
+      (§1.2), l'idea fondante di internet: la <b>commutazione di pacchetto</b> (§1.3), e la <b>panoramica del
+      viaggio di un click</b> (§1.4) — la mappa che riempiremo nei prossimi quindici capitoli. Chiudiamo con il
+      primo <b>laboratorio</b> (§1.5): i tuoi primi comandi di rete, sul tuo computer.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: vivi dentro una rete</div>
+    <p style="margin-bottom:0">
+      Ogni cosa che fai con un dispositivo — messaggi, video, mappe, pagamenti, questo stesso libro — passa da
+      una rete. <mark>Capire come funziona ti trasforma da passeggero a pilota</mark>: sai perché il WiFi è
+      lento, cosa fa davvero il router, perché un sito non si apre, cosa significa quel «DNS non risponde».
+      Ed è la base indispensabile per tutto il resto della collana: non puoi capire un server, Docker o il
+      cloud senza sapere come i computer si parlano. Si parte da qui.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">Sezione 1.1</span>Computer che parlano tra loro</h2>
+
+  <p class="lead">
+    Una <b>rete</b> è un insieme di dispositivi collegati che si scambiano dati. Tutto qui — ma da questa idea
+    semplice nasce la struttura più grande mai costruita dall'umanità.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le parole di base</div>
+    <ul style="margin-bottom:0">
+      <li>Un <b>host</b> è qualsiasi dispositivo «finale» collegato alla rete: il tuo PC, il telefono, una smart
+          TV, un server, una stampante. È chi <em>usa</em> la rete.</li>
+      <li>I <b>nodi intermedi</b> — switch e router, li conosceremo bene — non usano la rete: la <em>fanno
+          funzionare</em>, smistando il traffico come incroci e caselli.</li>
+      <li>I <b>collegamenti</b> (link) sono le strade: cavi di rame, fibra ottica, onde radio (WiFi, 4G/5G).</li>
+      <li>Una <b>LAN</b> (Local Area Network) è una rete piccola e locale — casa tua, un ufficio. Una <b>WAN</b>
+          (Wide Area Network) collega luoghi distanti. E <b>internet</b>? <mark>È la «rete delle reti»</mark>:
+          milioni di LAN e reti di operatori, tutte interconnesse, che si parlano grazie a un linguaggio comune
+          (i <b>protocolli</b>, il tema del Capitolo 2).</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'intuizione: il sistema postale</div>
+    <p style="margin-bottom:0">
+      L'analogia che useremo per tutto il libro: la rete come <b>sistema postale</b>. Gli host sono le case (chi
+      spedisce e riceve), i collegamenti sono le strade, i router sono i centri di smistamento, e i dati
+      viaggiano in «buste» con un <b>indirizzo del destinatario e del mittente</b>. Come le poste non sanno né
+      vogliono sapere cosa c'è <em>dentro</em> la busta, la rete trasporta i tuoi dati senza doverli capire.
+      Tienila a mente: quasi ogni concetto dei prossimi capitoli — indirizzi, instradamento, imbustamento —
+      avrà il suo gemello postale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">Sezione 1.2</span>Client e server</h2>
+
+  <p class="lead">
+    Nella maggior parte delle conversazioni in rete i due interlocutori hanno ruoli diversi: uno <b>chiede</b> e
+    uno <b>risponde</b>. È il modello <b>client-server</b>, e regge quasi tutto ciò che usi ogni giorno.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Chi chiede e chi risponde</div>
+    <p>
+      Il <b>client</b> è chi <b>inizia</b> la conversazione e chiede qualcosa: il tuo browser che chiede una
+      pagina, l'app che chiede i messaggi nuovi, Spotify che chiede il prossimo pezzo di canzone. Il
+      <b>server</b> è un computer che sta <b>sempre acceso, in ascolto</b>, pronto a rispondere alle richieste
+      di tanti client contemporaneamente. «Server» non è un tipo di hardware speciale: <mark>è un ruolo</mark> —
+      un programma in ascolto su un computer (spesso in un datacenter, ma può essere il PC di casa: nei libri
+      su Linux e Hetzner ne costruiremo uno noi).
+    </p>
+    <p style="margin-bottom:0">
+      Il ritmo è sempre lo stesso, e lo ritroverai ovunque: <b>richiesta → risposta</b>. Il client dice «dammi
+      la home di Wikipedia», il server risponde «eccola» (o «non ce l'ho», o «non ti è permesso» — anche i no
+      sono risposte, con i loro codici: li vedremo con HTTP nel Capitolo 11).
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: «il server» non è «il sito»</div>
+    <p style="margin-bottom:0">
+      Un sito grande non vive su <em>un</em> computer: vive su <b>tanti server</b>, spesso sparsi per il mondo,
+      dietro un unico nome. E lo stesso computer può ospitare <b>tanti siti</b>. La separazione tra «nome del
+      sito», «indirizzo di rete» e «macchina fisica» è uno dei fili rossi del libro (DNS, Capitolo 10). Inoltre
+      non tutto è client-server: nelle reti <b>peer-to-peer</b> (come BitTorrent) i partecipanti sono pari e
+      fanno entrambi i ruoli. Ma il web, la posta, le app: quasi tutto è client-server.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">Sezione 1.3</span>La commutazione di pacchetto</h2>
+
+  <p class="lead">
+    Ecco l'idea che ha reso possibile internet. Come condividere gli stessi cavi tra milioni di conversazioni
+    contemporanee? Non riservando una linea a ciascuno (come il vecchio telefono), ma <b>spezzando tutto in
+    pacchetti</b> che si mescolano per strada.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Circuiti vs pacchetti</div>
+    <p>
+      Il telefono di una volta usava la <b>commutazione di circuito</b>: quando chiamavi, la rete «riservava»
+      un percorso fisico dedicato tra te e l'altra persona, tutto per voi, per l'intera durata della chiamata —
+      anche nei silenzi. Affidabile, ma <b>spreca</b>: la linea resta occupata anche quando non passa niente.
+    </p>
+    <p style="margin-bottom:0">
+      Internet usa la <b>commutazione di pacchetto</b>: ogni messaggio viene <b>spezzato in pacchetti</b>
+      (qualche migliaio di byte l'uno), e ogni pacchetto viaggia <b>da solo</b>, con scritto sopra mittente e
+      destinatario. I pacchetti di conversazioni diverse <mark>si mescolano sugli stessi cavi</mark>, come auto
+      di viaggiatori diversi sulla stessa autostrada; a destinazione, ognuno viene consegnato al legittimo
+      proprietario e il messaggio viene <b>ricomposto</b>. Nessuna linea riservata: i cavi lavorano sempre al
+      massimo, per tutti.
+    </p>
+  </div>
+
+  <div class="widget" id="w-switch">
+    <div class="w-head">
+      <span>Circuito vs pacchetto: condividere la linea</span>
+      <span class="hint">commuta e guarda il cavo condiviso</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsw-svg" viewBox="0 0 560 300" role="img" aria-label="Confronto tra commutazione di circuito, con la linea riservata a una sola conversazione, e commutazione di pacchetto, con i pacchetti di più conversazioni mescolati sullo stesso cavo"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center">
+      <button class="w-btn" id="wsw-mode">modalità: pacchetto</button>
+    </div>
+    <div class="w-readout" id="wsw-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché i pacchetti hanno vinto</div>
+    <ul style="margin-bottom:0">
+      <li><b>Efficienza:</b> nessuna capacità sprecata nei silenzi — ogni buco è riempito dai pacchetti di
+          qualcun altro. È perché la stessa fibra regge milioni di utenti.</li>
+      <li><b>Robustezza:</b> ogni pacchetto può prendere una strada diversa. <mark>Se un cavo si rompe, i
+          pacchetti girano intorno al guasto</mark> — non c'è nessuna «linea» da ricostruire. (Non a caso l'idea
+          nacque in piena guerra fredda, pensando a reti che sopravvivessero ai danni.)</li>
+      <li><b>Il prezzo:</b> nessuna garanzia. I pacchetti possono arrivare in ritardo, in disordine, o perdersi
+          del tutto. Sembra un difetto fatale — ma nel Capitolo 9 vedremo il trucco (TCP) con cui la rete
+          costruisce affidabilità <em>sopra</em> un trasporto inaffidabile. È uno dei colpi di genio di internet.</li>
+    </ul>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">Sezione 1.4</span>Il viaggio di un click (panoramica)</h2>
+
+  <p class="lead">
+    Mettiamo tutto insieme, in anteprima. Scrivi <code>wikipedia.org</code> e premi Invio: ecco — a volo
+    d'uccello — cosa succede. Ogni tappa è un capitolo di questo libro.
+  </p>
+
+  <div class="passi">
+    <ol>
+      <li><b>Il nome diventa un numero.</b> La rete non capisce «wikipedia.org»: capisce indirizzi numerici
+          (IP). Il browser chiede al <b>DNS</b> — l'elenco telefonico di internet — «che indirizzo ha
+          wikipedia.org?» e ottiene qualcosa come <code>185.15.59.224</code>. <em>(Capitoli 6 e 10)</em></li>
+      <li><b>Si apre una conversazione.</b> Il tuo PC e il server si mettono d'accordo con una «stretta di
+          mano» (<b>TCP</b>) e stabiliscono un canale affidabile; poi, con una seconda stretta di mano
+          crittografica (<b>TLS</b>), cifrano tutto. <em>(Capitoli 9 e 12)</em></li>
+      <li><b>Parte la richiesta.</b> Il browser scrive la domanda in <b>HTTP</b> («GET /wiki/Pagina_principale»),
+          che viene spezzata in <b>pacchetti</b>. <em>(Capitolo 11)</em></li>
+      <li><b>I pacchetti attraversano il mondo.</b> WiFi di casa → router → rete del tuo operatore → dorsali in
+          fibra → datacenter. A ogni incrocio un <b>router</b> legge l'indirizzo e sceglie la prossima strada,
+          in microsecondi. <em>(Capitoli 3–8)</em></li>
+      <li><b>Il server risponde.</b> Trova la pagina e la rispedisce — in pacchetti, per la stessa via (o
+          un'altra!). Il browser li ricompone e costruisce la pagina che vedi. <em>(Capitolo 16, il gran
+          finale)</em></li>
+    </ol>
+  </div>
+
+  <div class="widget" id="w-journey">
+    <div class="w-head">
+      <span>Il viaggio di un click, animato</span>
+      <span class="hint">premi «invia richiesta» e segui il pacchetto</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wj-svg" viewBox="0 0 560 300" role="img" aria-label="Un pacchetto parte dal portatile, attraversa il router di casa, la rete dell'operatore e internet, raggiunge il server e la risposta torna indietro"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center">
+      <button class="w-btn" id="wj-go">invia richiesta</button>
+    </div>
+    <div class="w-readout" id="wj-out"></div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🖋</span> Nota a margine: quanto dura davvero?</div>
+    <p style="margin-bottom:0">
+      Tutto questo — nome, strette di mano, richiesta, attraversata del mondo, risposta — di solito sta in
+      <b>100–500 millisecondi</b>. Un pacchetto Milano–New York impiega ~40 ms solo di viaggio (la luce nella
+      fibra fa ~200.000 km/s: nemmeno la fisica si può battere — l'abbiamo vista nel libro di Fisica 2!).
+      <mark>Quando una pagina è lenta, il colpevole quasi mai è la distanza</mark>: sono i passaggi in mezzo. Il
+      Capitolo 13 è dedicato proprio a dove si perde tempo e come il web moderno lo recupera.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">Sezione 1.5</span>Laboratorio: i primi comandi</h2>
+
+  <p class="lead">
+    Basta teoria: mettiamo le mani sulla rete <b>vera</b> — la tua. Apri il terminale e segui i passi; accanto
+    a ogni comando trovi l'output atteso (il tuo sarà simile, con numeri diversi). Su Windows: tasto Start,
+    scrivi <code>cmd</code>, Invio. Su Mac/Linux: apri «Terminale».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>ping</code> <span class="tag">«ci sei? quanto disti?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ping</span> <span class="ar">wikipedia.org</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">ping</span> — il sonar della rete</dt>
+        <dd>manda al destinatario piccoli pacchetti «di prova» che dicono solo <em>«rispondimi»</em>. Se la
+            risposta torna, il destinatario è <b>raggiungibile</b>, e il tempo di andata e ritorno misura la
+            <b>latenza</b>. Si usa da quarant'anni come primo test di ogni problema di rete: «prima di tutto,
+            pinga».</dd>
+        <dt><span class="mono">wikipedia.org</span> — il bersaglio</dt>
+        <dd>puoi mettere un nome (verrà tradotto in indirizzo IP — eccolo, il DNS che lavora per te) oppure un
+            indirizzo numerico diretto, come <code>1.1.1.1</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Output atteso (Windows; su Mac/Linux continua finché non premi Ctrl+C):
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Esecuzione di Ping wikipedia.org [<span class="hl">185.15.59.224</span>] con 32 byte di dati:
+Risposta da 185.15.59.224: byte=32 durata=<span class="hl">21ms</span> TTL=58
+Risposta da 185.15.59.224: byte=32 durata=20ms TTL=58
+Risposta da 185.15.59.224: byte=32 durata=22ms TTL=58
+Risposta da 185.15.59.224: byte=32 durata=20ms TTL=58
+
+Statistiche Ping per 185.15.59.224:
+    Pacchetti: Trasmessi = 4, Ricevuti = 4, <span class="hl">Persi = 0 (0% persi)</span></pre>
+      </div>
+      Leggi tre cose: l'<b>indirizzo IP</b> tra parentesi (il nome tradotto in numero!), la <b>durata</b> in
+      millisecondi (la latenza: sotto i 30 ms è ottima, sopra i 100 si sente), e i <b>persi</b> (0% = linea
+      sana; se perdi pacchetti, qualcosa non va). Prova anche <code>ping 1.1.1.1</code>: senza nome da
+      tradurre, spesso è ancora più veloce.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>ipconfig</code> <span class="tag">«chi sono io, in rete?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ipconfig</span>   <span class="c">(su Mac/Linux: ifconfig oppure ip addr)</span></pre>
+    </div>
+    <div class="f-note">
+      Output atteso (estratto):
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Scheda LAN wireless Wi-Fi:
+
+   Indirizzo IPv4. . . . . . . . . . : <span class="hl">192.168.1.42</span>
+   Subnet mask . . . . . . . . . . . : 255.255.255.0
+   Gateway predefinito . . . . . . . : <span class="hl">192.168.1.1</span></pre>
+      </div>
+      Due numeri da riconoscere. Il tuo <b>indirizzo IPv4</b> (qui <code>192.168.1.42</code>): l'indirizzo del
+      tuo PC <em>dentro casa</em> — quasi certamente inizia con <code>192.168…</code>, e nel Capitolo 6
+      scoprirai perché tutti i PC del mondo sembrano avere lo stesso. Il <b>gateway predefinito</b> (qui
+      <code>192.168.1.1</code>): <mark>è il tuo router — la porta di casa verso internet</mark>. Ogni pacchetto
+      diretto «fuori» passa prima da lì. Bonus: incolla l'indirizzo del gateway nel browser
+      (<code>http://192.168.1.1</code>) e ti si presenta la pagina di amministrazione del router — la
+      esploreremo nel Capitolo 8.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li>Una rete = <b>host</b> (chi la usa) + <b>nodi</b> (chi smista) + <b>collegamenti</b> (le strade).
+          Internet è <mark>la rete delle reti</mark>. Analogia guida: il sistema postale (§1.1).</li>
+      <li><b>Client-server</b> (§1.2): il client chiede, il server (sempre in ascolto) risponde. Il ritmo di
+          tutto il web: <mark>richiesta → risposta</mark>.</li>
+      <li><b>Commutazione di pacchetto</b> (§1.3): i dati viaggiano spezzati in pacchetti indipendenti che
+          condividono i cavi con tutti. Efficiente e robusta, ma <mark>senza garanzie</mark> (ci penserà TCP).</li>
+      <li>Il <b>viaggio di un click</b> (§1.4): DNS → strette di mano (TCP, TLS) → richiesta HTTP → router dopo
+          router → risposta. Ogni tappa è un capitolo. E ora sai usare <code>ping</code> e <code>ipconfig</code>
+          (§1.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo la mappa: host che si parlano, pacchetti che viaggiano, un click che attraversa il mondo. Ma come
+    fanno <em>milioni</em> di dispositivi diversi — telefoni, frigoriferi, supercomputer — a capirsi alla
+    perfezione? Con delle regole comuni scritte nei minimi dettagli: i <b>protocolli</b>. E per non impazzire,
+    queste regole sono organizzate <b>a strati</b>, come una catena di montaggio in cui ognuno fa solo il suo
+    pezzo. Nel <strong>Capitolo 2</strong> scopriamo il <b>modello a livelli</b> — l'idea architetturale più
+    importante di tutta l'informatica delle reti — e l'<b>incapsulamento</b>: <mark>la busta dentro la busta
+    dentro la busta</mark> che porta ogni tuo pacchetto a destinazione.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">Sezione 1.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.1</div>
+    <p style="margin-bottom:0">
+      Nella tua casa: elenca almeno 4 <b>host</b> collegati alla rete, il <b>nodo</b> che li smista e i tipi di
+      <b>collegamento</b> usati.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.2</div>
+    <p style="margin-bottom:0">
+      Quando guardi un video su YouTube, chi è il client e chi è il server? E quando fai un backup del telefono
+      sul cloud?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.3</div>
+    <p style="margin-bottom:0">
+      (Pratico) Esegui <code>ping google.com</code> e poi <code>ping wikipedia.org</code>. Confronta le durate:
+      quale risponde più in fretta da casa tua? I persi sono a 0%?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.4</div>
+    <p style="margin-bottom:0">
+      Vero o falso, con una riga:
+      (a) In internet ogni conversazione ha una linea fisica riservata. &nbsp;
+      (b) Un server è un tipo speciale di hardware. &nbsp;
+      (c) I pacchetti della stessa richiesta possono prendere strade diverse. &nbsp;
+      (d) Il gateway predefinito è il tuo router.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">Sezione 1.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.1</div>
+    <p style="margin-bottom:0">
+      Esempio tipico — host: PC, telefono, smart TV, console (e magari stampante, tablet, assistente vocale…);
+      nodo: il <b>router di casa</b> (che fa anche da switch e access point WiFi, Capitolo 8); collegamenti:
+      <b>WiFi</b> per quasi tutto, <b>cavo Ethernet</b> magari per PC o TV, e la linea <b>in fibra o rame</b>
+      del router verso l'operatore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.2</div>
+    <p style="margin-bottom:0">
+      Su YouTube: il <b>client</b> è il tuo browser/app (chiede il video), il <b>server</b> è quello di YouTube
+      (lo fornisce). Nel backup: ancora il telefono è il client (stavolta <em>invia</em> dati con la richiesta) e
+      il cloud è il server. <mark>Client non significa «chi scarica»: significa chi <b>inizia</b> la
+      conversazione.</mark>
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.3</div>
+    <p style="margin-bottom:0">
+      Risultato tipico: entrambi sotto i 30 ms, spesso Google un filo più veloce (ha server praticamente
+      ovunque, anche dentro le reti degli operatori — è il tema delle CDN, Capitolo 13). Persi deve essere
+      <b>0%</b>: perdite ricorrenti indicano un problema (spesso il WiFi — Capitolo 5).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) FALSO.</b> Quella è la commutazione di circuito; internet mescola pacchetti sugli stessi cavi (§1.3).
+      <br><b>(b) FALSO.</b> È un <b>ruolo</b>: un programma in ascolto su un computer qualsiasi (§1.2).
+      <br><b>(c) VERO.</b> Ogni pacchetto è instradato indipendentemente (§1.3).
+      <br><b>(d) VERO.</b> È la «porta di casa»: tutto il traffico verso internet passa da lì (§1.5).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+const fmt = (v, d = 2) => { const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? String(r) : v.toFixed(d); };
+
+/* ============================================================================
+   WIDGET §1.3 — circuito vs pacchetto (animato)
+   Due coppie A→B (viola) e C→D (arancio) condividono un cavo centrale.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsw-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsw-out');
+  const btn = document.getElementById('wsw-mode');
+  let packet = true, t = 0, last = null;
+  btn.addEventListener('click', () => { packet = !packet; btn.textContent = 'modalità: ' + (packet ? 'pacchetto' : 'circuito'); });
+
+  // topologia: A(-4,1) C(-4,-1) → nodo L(-1.6,0) → cavo → nodo R(1.6,0) → B(4,1) D(4,-1)
+  const L = [-1.6, 0], R = [1.6, 0];
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt * 0.55;
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.1, ymax: 2.1, iso: true });
+    const A = [-4, 1.2], C = [-4, -1.2], B = [4, 1.2], D = [4, -1.2];
+    // collegamenti
+    [[A, L], [C, L], [L, R], [R, B], [R, D]].forEach(([u, v]) => p.line(u[0], u[1], v[0], v[1], { color: 'var(--ink-faint)', width: packet ? 2 : 2 }));
+    // host e nodi
+    [[A, '💻'], [C, '💻'], [B, '🖥'], [D, '🖥']].forEach(([pt, e]) => p.text(pt[0], pt[1], e, { size: 20, anchor: 'middle', dy: 7 }));
+    [L, R].forEach(n => { p.dot(n[0], n[1], { color: 'var(--ink-soft)', r: 9 }); });
+
+    if (!packet) {
+      // circuito: la linea A→B è riservata (viola pieno), C→D bloccata
+      [[A, L], [L, R], [R, B]].forEach(([u, v]) => p.line(u[0], u[1], v[0], v[1], { color: 'var(--violet)', width: 4 }));
+      const f = (t % 1);
+      const seg = f < 0.33 ? lerp(A, L, f / 0.33) : f < 0.66 ? lerp(L, R, (f - 0.33) / 0.33) : lerp(R, B, (f - 0.66) / 0.34);
+      p.dot(seg[0], seg[1], { color: 'var(--violet)', r: 6 });
+      p.text(-4, -1.9, '✖ C aspetta: linea occupata', { color: 'var(--warm)', size: 11, anchor: 'start' });
+    } else {
+      // pacchetto: pacchetti di entrambe le coppie interleaved sul cavo centrale
+      for (let k = 0; k < 6; k++) {
+        const f = ((t * 0.9 + k / 6) % 1);
+        const mine = k % 2 === 0;                 // alterna viola/arancio
+        const from = mine ? A : C, to = mine ? B : D;
+        const seg = f < 0.33 ? lerp(from, L, f / 0.33) : f < 0.66 ? lerp(L, R, (f - 0.33) / 0.33) : lerp(R, to, (f - 0.66) / 0.34);
+        p.rect(seg[0] - 0.14, seg[1] - 0.1, seg[0] + 0.14, seg[1] + 0.1, { fill: mine ? 'var(--violet)' : 'var(--warm)', color: 'none' });
+      }
+    }
+
+    out.innerHTML = `
+      <div class="big">${packet
+        ? '<b style="color:var(--accent)">PACCHETTO</b>: i dati di <b style="color:var(--violet)">A→B</b> e <b style="color:var(--warm)">C→D</b> condividono lo stesso cavo'
+        : '<b style="color:var(--violet)">CIRCUITO</b>: la linea è riservata ad A→B, C deve aspettare'}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${packet
+          ? 'Ogni pacchetto porta il suo indirizzo e viaggia da solo: sul cavo centrale i pacchetti delle due conversazioni <mark>si alternano</mark>, e a destra ognuno arriva al destinatario giusto. Nessuno spreco, nessuna attesa (§1.3).'
+          : 'Come il vecchio telefono: percorso dedicato, garantito ma <mark>sprecato nei silenzi</mark> — e chi arriva dopo trova occupato. Premi il pulsante per passare alla commutazione di pacchetto.'}
+      </div>`;
+  }
+  requestAnimationFrame(frame);
+})();
+
+
+/* ============================================================================
+   WIDGET §1.4 — il viaggio di un click (richiesta → risposta) animato
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wj-svg');
+  if (!svg) return;
+  const out = document.getElementById('wj-out');
+  const btn = document.getElementById('wj-go');
+  // tappe: PC → router casa → operatore → internet (2 router) → server
+  const stops = [[-4.4, -0.6], [-2.6, 0.4], [-0.9, -0.5], [0.9, 0.5], [2.6, -0.4], [4.3, 0.5]];
+  const labels = ['il tuo PC', 'router di casa', 'operatore', 'internet', 'internet', 'server'];
+  const emoji = ['💻', '📶', '🏢', '🌐', '🌐', '🗄'];
+  let t = -1, last = null, running = false;
+  btn.addEventListener('click', () => { t = 0; running = true; last = null; requestAnimationFrame(frame); });
+
+  const TOTAL = stops.length - 1;   // segmenti
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function frame(now) {
+    if (!running) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt * 1.6;
+    draw();
+    if (t < TOTAL * 2 + 0.4) requestAnimationFrame(frame);
+    else { running = false; draw(); }
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -1.7, ymax: 1.7, iso: true });
+    // percorso
+    for (let i = 0; i < TOTAL; i++) p.line(stops[i][0], stops[i][1], stops[i + 1][0], stops[i + 1][1], { color: 'var(--ink-faint)', width: 2 });
+    // tappe
+    stops.forEach((s, i) => {
+      p.text(s[0], s[1], emoji[i], { size: 20, anchor: 'middle', dy: 7 });
+      p.text(s[0], s[1] - 0.42, labels[i], { color: 'var(--ink-faint)', size: 9, anchor: 'middle' });
+    });
+    let msg = 'Premi «invia richiesta»: seguirai il pacchetto fino al server e ritorno.';
+    if (t >= 0) {
+      const going = t <= TOTAL;
+      const tt = going ? t : TOTAL * 2 - t;         // ritorno: percorso inverso
+      const seg = Math.min(TOTAL - 1, Math.floor(Math.max(0, tt)));
+      const f = Math.min(1, Math.max(0, tt - seg));
+      const pos = lerp(stops[seg], stops[seg + 1], f);
+      p.rect(pos[0] - 0.16, pos[1] - 0.11, pos[0] + 0.16, pos[1] + 0.11, { fill: going ? 'var(--accent)' : 'var(--green)', color: 'none' });
+      if (t > TOTAL * 2) msg = '✅ Risposta arrivata: il browser ricompone i pacchetti e disegna la pagina. Tutto in poche centinaia di millisecondi.';
+      else if (going) msg = '→ <b style="color:var(--accent)">Richiesta</b> in viaggio: ' + labels[Math.min(TOTAL, seg + 1)] + ' — a ogni tappa un router legge l\'indirizzo e sceglie la strada.';
+      else msg = '← <b style="color:var(--green)">Risposta</b> in viaggio verso di te (può fare anche un\'altra strada!).';
+    }
+    out.innerHTML = `<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">${msg}</div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
