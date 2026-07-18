@@ -12,7 +12,7 @@ Contenuto originale scritto ex novo.
 ## Stato
 
 - [x] 1 — Il primo programma
-- [ ] 2 — Variabili e tipi
+- [x] 2 — Variabili e tipi
 - [ ] 3 — Numeri e operatori
 - [ ] 4 — Le stringhe
 - [ ] 5 — Liste e tuple
