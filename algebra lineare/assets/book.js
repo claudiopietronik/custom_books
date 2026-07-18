@@ -365,3 +365,26 @@ const W = {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
+
+/* ============================================================================
+   Fix barra sempre visibile — forza la topbar in position:fixed via JS.
+   Gli stili inline vincono su qualsiasi CSS (anche vecchio in cache del browser),
+   così la barra (indice + segnalibro + tema) resta ancorata in cima allo scroll.
+   ========================================================================= */
+(function () {
+  if (window.__barFix) return;
+  window.__barFix = true;
+  function fixBar() {
+    var bar = document.querySelector(".topbar");
+    if (!bar) return;
+    var navH = (getComputedStyle(document.documentElement).getPropertyValue("--nav-h") || "").trim() || "56px";
+    bar.style.position = "fixed";
+    bar.style.top = "0";
+    bar.style.left = "0";
+    bar.style.right = "0";
+    bar.style.zIndex = "200";
+    document.body.style.paddingTop = navH;
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fixBar);
+  else fixBar();
+})();
