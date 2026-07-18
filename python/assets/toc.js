@@ -221,7 +221,7 @@ const TOC = [
     n: 14,
     titolo: "Il Python elegante",
     file: "cap14-python-elegante.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Iterare bene (enumerate, zip)" },
       { id: "s14-2", n: "14.2", t: "Comprehension di liste e dizionari" },

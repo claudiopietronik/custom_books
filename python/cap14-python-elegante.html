@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Il Python elegante — Python</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Il Python elegante</h1>
+    <p class="standfirst">
+      Sai già scrivere qualsiasi programma: hai tutti i costrutti fondamentali. Ora impari a scriverli <b>bene</b> —
+      nel modo conciso, leggibile e caratteristico che i programmatori chiamano «<b>pythonico</b>». Non sono
+      funzionalità nuove indispensabili: sono <b>modi più eleganti</b> di fare cose che già sai fare, che rendono il
+      codice più corto e più chiaro. Le <b>comprehension</b> per costruire liste in una riga, gli strumenti per
+      <b>iterare con stile</b>, i <b>generatori</b> per gestire grandi quantità di dati senza sprechi. <mark>È la
+      differenza tra parlare una lingua e parlarla con eleganza</mark> — e ti farà anche leggere con più facilità
+      il codice degli altri, che è pieno di questi idiomi.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Iterare bene con <b>enumerate e zip</b> (§14.1), le <b>comprehension</b> di liste e dizionari (§14.2), i
+      <b>generatori</b> e <code>yield</code> (§14.3), le funzioni come valori con <b>lambda e map</b> (§14.4), e i
+      principi dello <b>stile pythonico</b> (§14.5). Nel laboratorio (§14.6) riscrivi codice «goffo» in bello.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: leggere e scrivere come i pro</div>
+    <p style="margin-bottom:0">
+      Questi idiomi sono <b>ovunque</b> nel codice Python reale: senza conoscerli, faticheresti a leggere quello
+      degli altri (e delle librerie). <mark>Le comprehension, in particolare, sono forse la cosa più
+      «riconoscibilmente Python»</mark> che esista. Impararle ti fa scrivere meno codice, più chiaro, e ti fa
+      sentire finalmente «a casa» nel linguaggio. Non è un capitolo di nozioni obbligatorie, ma di fluidità: ed è
+      la fluidità che distingue chi «se la cava» da chi padroneggia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Iterare bene (enumerate, zip)</h2>
+
+  <p class="lead">
+    Due funzioni che rendono i cicli più eleganti: <code>enumerate</code> quando ti serve <b>anche l'indice</b>, e
+    <code>zip</code> per scorrere <b>due liste in parallelo</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">enumerate e zip <span class="tag">indice + valore · due liste insieme</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="nm">nomi</span> <span class="op">=</span> [<span class="st">"Ada"</span>, <span class="st">"Bea"</span>, <span class="st">"Cid"</span>]
+
+<span class="cm"># enumerate: indice E valore insieme (invece di gestire un contatore a mano)</span>
+<span class="kw">for</span> <span class="nm">i</span>, <span class="nm">nome</span> <span class="kw">in</span> <span class="bi">enumerate</span>(<span class="nm">nomi</span>):
+    <span class="bi">print</span>(<span class="st">f"</span><span class="op">{</span><span class="nm">i</span><span class="op">}</span><span class="st">: </span><span class="op">{</span><span class="nm">nome</span><span class="op">}</span><span class="st">"</span>)     <span class="cm"># 0: Ada / 1: Bea / 2: Cid</span>
+
+<span class="cm"># zip: scorre due liste in parallelo</span>
+<span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">9</span>, <span class="nm">6</span>]
+<span class="kw">for</span> <span class="nm">nome</span>, <span class="nm">voto</span> <span class="kw">in</span> <span class="bi">zip</span>(<span class="nm">nomi</span>, <span class="nm">voti</span>):
+    <span class="bi">print</span>(<span class="st">f"</span><span class="op">{</span><span class="nm">nome</span><span class="op">}</span><span class="st">: </span><span class="op">{</span><span class="nm">voto</span><span class="op">}</span><span class="st">"</span>)         <span class="cm"># Ada: 7 / Bea: 9 / Cid: 6</span></pre>
+    </div>
+    <div class="f-note">
+      Senza <code>enumerate</code>, per avere l'indice dovresti gestire un contatore a mano (<code>i = 0</code> …
+      <code>i += 1</code>): brutto e soggetto a errori. Senza <code>zip</code>, dovresti usare gli indici per
+      accoppiare gli elementi. <mark>Questi strumenti eliminano codice noioso e fonte di bug</mark>, esprimendo
+      direttamente l'intenzione: «per ogni elemento con il suo indice», «per ogni coppia».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Comprehension di liste e dizionari</h2>
+
+  <p class="lead">
+    Il gioiello della corona. Una <b>list comprehension</b> costruisce una lista in <b>una sola riga</b>, al posto
+    di un ciclo con <code>append</code>. Una volta capita, non ne farai più a meno.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le comprehension <span class="tag">[espressione for x in collezione]</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="cm"># il modo "lungo" con un ciclo:</span>
+<span class="nm">quadrati</span> <span class="op">=</span> []
+<span class="kw">for</span> <span class="nm">n</span> <span class="kw">in</span> <span class="bi">range</span>(<span class="nm">5</span>):
+    <span class="nm">quadrati</span><span class="op">.</span><span class="fn">append</span>(<span class="nm">n</span> <span class="op">**</span> <span class="nm">2</span>)
+
+<span class="cm"># la stessa cosa, in UNA riga (comprehension):</span>
+<span class="nm">quadrati</span> <span class="op">=</span> [<span class="nm">n</span> <span class="op">**</span> <span class="nm">2</span> <span class="kw">for</span> <span class="nm">n</span> <span class="kw">in</span> <span class="bi">range</span>(<span class="nm">5</span>)]   <span class="cm"># [0, 1, 4, 9, 16]</span>
+
+<span class="cm"># con un filtro (if): solo i pari</span>
+<span class="nm">pari</span> <span class="op">=</span> [<span class="nm">n</span> <span class="kw">for</span> <span class="nm">n</span> <span class="kw">in</span> <span class="bi">range</span>(<span class="nm">10</span>) <span class="kw">if</span> <span class="nm">n</span> <span class="op">%</span> <span class="nm">2</span> <span class="op">==</span> <span class="nm">0</span>]  <span class="cm"># [0, 2, 4, 6, 8]</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la struttura: <span class="mono">[espressione for x in collezione]</span></dt>
+        <dd>si legge «<b>l'espressione</b>, per ogni <code>x</code> nella collezione». Costruisce una nuova lista
+            applicando l'espressione a ogni elemento. <mark>È un ciclo + append condensati in una riga</mark>.</dd>
+        <dt>con filtro: <span class="mono">[x for x in coll if condizione]</span></dt>
+        <dd>l'<code>if</code> finale <b>seleziona</b> quali elementi includere. «Prendi x, per ogni x, se la
+            condizione è vera».</dd>
+        <dt>anche dict comprehension</dt>
+        <dd><code>{n: n**2 for n in range(4)}</code> costruisce un <b>dizionario</b> allo stesso modo:
+            <code>{0:0, 1:1, 2:4, 3:9}</code>.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-comp">
+    <div class="w-head">
+      <span>Da ciclo a comprehension</span>
+      <span class="hint">confronta le due forme e il risultato</span>
+    </div>
+    <div class="w-stage" style="min-height:180px">
+      <div id="wcp-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-e="0">quadrati</button>
+      <button class="w-btn" data-e="1">solo i pari</button>
+      <button class="w-btn" data-e="2">maiuscole</button>
+    </div>
+    <div class="w-readout" id="wcp-out"></div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Con moderazione</div>
+    <p style="margin-bottom:0">
+      Le comprehension sono bellissime, ma <mark>se diventano troppo complesse (filtri multipli, cicli annidati,
+      espressioni contorte) perdono il loro pregio: la leggibilità</mark>. Regola pratica: se una comprehension non
+      si legge <b>in un colpo d'occhio</b>, torna al buon vecchio ciclo — più lungo ma chiaro. L'eleganza serve la
+      leggibilità, non il contrario. Una riga «furba» ma indecifrabile è peggio di tre righe ovvie.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Generatori e yield</h2>
+
+  <p class="lead">
+    E se dovessi elaborare <b>milioni</b> di elementi, o una sequenza <b>infinita</b>? Costruire una lista enorme
+    sprecherebbe memoria. I <b>generatori</b> producono i valori <b>uno alla volta, su richiesta</b>: memoria
+    minima, potenza massima.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Produrre a richiesta con yield</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="kw">def</span> <span class="fn">conta_fino_a</span>(<span class="nm">n</span>):
+    <span class="nm">i</span> <span class="op">=</span> <span class="nm">1</span>
+    <span class="kw">while</span> <span class="nm">i</span> <span class="op">&lt;=</span> <span class="nm">n</span>:
+        <span class="kw">yield</span> <span class="nm">i</span>       <span class="cm"># "restituisce" i, ma si mette in PAUSA (non finisce!)</span>
+        <span class="nm">i</span> <span class="op">+=</span> <span class="nm">1</span>
+
+<span class="kw">for</span> <span class="nm">numero</span> <span class="kw">in</span> <span class="fn">conta_fino_a</span>(<span class="nm">5</span>):   <span class="cm"># produce 1,2,3,4,5 uno alla volta</span>
+    <span class="bi">print</span>(<span class="nm">numero</span>)</pre>
+    </div>
+    <p style="margin-bottom:0">
+      Un generatore è una funzione che usa <code>yield</code> invece di <code>return</code>. La differenza cruciale:
+      <mark><code>yield</code> «restituisce» un valore ma <b>mette in pausa</b> la funzione</mark>, che riprende da
+      dove era rimasta quando le si chiede il prossimo valore. Così i valori si producono <b>pigramente</b>, uno per
+      volta, senza mai costruire l'intera sequenza in memoria. Perfetto per file enormi, flussi di dati, sequenze
+      lunghissime. Esiste anche la forma compatta, come una comprehension ma con le tonde:
+      <code>(n**2 for n in range(1000000))</code> — un generatore che non occupa memoria finché non lo scorri.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Funzioni come valori (lambda, map)</h2>
+
+  <p class="lead">
+    In Python le funzioni sono <b>valori</b> come gli altri: puoi metterle in variabili, passarle ad altre
+    funzioni. Da qui le <b>lambda</b> (mini-funzioni al volo) e strumenti come <code>map</code> e
+    <code>sorted</code> con chiave.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">lambda e funzioni-argomento <span class="tag">funzioni usa e getta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="cm"># una lambda: una funzione anonima, in una riga</span>
+<span class="nm">doppio</span> <span class="op">=</span> <span class="kw">lambda</span> <span class="nm">x</span>: <span class="nm">x</span> <span class="op">*</span> <span class="nm">2</span>
+<span class="bi">print</span>(<span class="nm">doppio</span>(<span class="nm">5</span>))          <span class="cm"># 10   (equivale a def doppio(x): return x*2)</span>
+
+<span class="cm"># passare una funzione come "chiave" per ordinare</span>
+<span class="nm">parole</span> <span class="op">=</span> [<span class="st">"casa"</span>, <span class="st">"a"</span>, <span class="st">"albero"</span>, <span class="st">"bo"</span>]
+<span class="bi">print</span>(<span class="bi">sorted</span>(<span class="nm">parole</span>, <span class="nm">key</span><span class="op">=</span><span class="bi">len</span>))   <span class="cm"># ordina per LUNGHEZZA: ['a','bo','casa','albero']</span></pre>
+    </div>
+    <div class="f-note">
+      Una <code>lambda</code> è una funzione «usa e getta» senza nome, comoda quando serve una funzioncina al volo,
+      spesso come argomento di un'altra. L'esempio più utile è <code>sorted(..., key=...)</code>: passi una
+      funzione che dice <b>secondo cosa ordinare</b>. <code>sorted(persone, key=lambda p: p["eta"])</code> ordina
+      una lista di dizionari per età. <mark>Il fatto che le funzioni siano valori è ciò che rende Python così
+      flessibile</mark> — un'idea potente che ritroverai in molti framework.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Lo stile «pythonico»</h2>
+
+  <p class="lead">
+    «Pythonico» descrive il codice che sfrutta lo spirito del linguaggio: leggibile, semplice, esplicito. Non è
+    solo estetica — è una filosofia che rende il codice migliore.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Lo Zen di Python (l'essenziale)</div>
+    <p style="margin-bottom:0">
+      Python ha un «manifesto» (scrivi <code>import this</code> nella REPL per leggerlo tutto!). I principi chiave:
+    </p>
+    <ul style="margin:.5rem 0 0">
+      <li>«<b>Il bello è meglio del brutto</b>» e «<b>il leggibile conta</b>»: il codice si legge più di quanto si
+          scriva.</li>
+      <li>«<b>L'esplicito è meglio dell'implicito</b>»: meglio chiaro che «furbo». Nomi parlanti, niente magie
+          nascoste.</li>
+      <li>«<b>Il semplice è meglio del complesso</b>»: la soluzione più semplice che funziona, di solito, è la
+          migliore.</li>
+      <li>«<b>Dovrebbe esserci un modo ovvio per farlo</b>»: Python predilige una via chiara e canonica.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>In pratica: nomi chiari, funzioni piccole, poche righe che fanno molto senza
+      trucchi, e sempre la domanda «un altro capirà questo codice tra sei mesi?»</mark>. Gli idiomi di questo
+      capitolo (comprehension, enumerate/zip) sono pythonici <em>perché</em> esprimono l'intenzione in modo diretto
+      e leggibile — non perché sono corti.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Laboratorio: riscrivere in bello</h2>
+
+  <p class="lead">
+    Il modo migliore per assimilare lo stile pythonico è <b>rifattorizzare</b>: prendere codice funzionante ma
+    «goffo» e riscriverlo elegante. Vediamo un esempio completo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Prima e dopo <span class="tag">stesso risultato, stile diverso</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">prima.py — funziona, ma goffo</div>
+      <pre><span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">4</span>, <span class="nm">9</span>, <span class="nm">5</span>, <span class="nm">8</span>]
+<span class="nm">promossi</span> <span class="op">=</span> []
+<span class="kw">for</span> <span class="nm">i</span> <span class="kw">in</span> <span class="bi">range</span>(<span class="bi">len</span>(<span class="nm">voti</span>)):
+    <span class="kw">if</span> <span class="nm">voti</span>[<span class="nm">i</span>] <span class="op">&gt;=</span> <span class="nm">6</span>:
+        <span class="nm">promossi</span><span class="op">.</span><span class="fn">append</span>(<span class="nm">voti</span>[<span class="nm">i</span>])
+<span class="nm">totale</span> <span class="op">=</span> <span class="nm">0</span>
+<span class="kw">for</span> <span class="nm">v</span> <span class="kw">in</span> <span class="nm">promossi</span>:
+    <span class="nm">totale</span> <span class="op">=</span> <span class="nm">totale</span> <span class="op">+</span> <span class="nm">v</span>
+<span class="bi">print</span>(<span class="nm">totale</span> <span class="op">/</span> <span class="bi">len</span>(<span class="nm">promossi</span>))</pre>
+    </div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">dopo.py — pythonico</div>
+      <pre><span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">4</span>, <span class="nm">9</span>, <span class="nm">5</span>, <span class="nm">8</span>]
+<span class="nm">promossi</span> <span class="op">=</span> [<span class="nm">v</span> <span class="kw">for</span> <span class="nm">v</span> <span class="kw">in</span> <span class="nm">voti</span> <span class="kw">if</span> <span class="nm">v</span> <span class="op">&gt;=</span> <span class="nm">6</span>]   <span class="cm"># comprehension con filtro</span>
+<span class="bi">print</span>(<span class="bi">sum</span>(<span class="nm">promossi</span>) <span class="op">/</span> <span class="bi">len</span>(<span class="nm">promossi</span>))         <span class="cm"># sum() invece del ciclo-accumulatore</span></pre>
+    </div>
+    <div class="f-note">
+      Da 9 righe a 3, e <b>molto più chiare</b>: la comprehension esprime «i voti ≥ 6», <code>sum()</code> evita
+      l'accumulatore a mano, e si scorre la lista <b>direttamente</b> invece che per indice. <mark>Stesso
+      risultato, ma il «dopo» dice cosa fa a colpo d'occhio</mark>. Questo è lo stile pythonico: non trucchi per
+      accorciare, ma esprimere l'intenzione nel modo più diretto. Prova tu: prendi un tuo vecchio programmino e
+      cerca cicli con <code>append</code> da trasformare in comprehension, o accumulatori sostituibili con
+      <code>sum</code>/<code>max</code>/<code>min</code>.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li><b>enumerate</b> (indice + valore) e <b>zip</b> (due liste in parallelo) rendono i cicli eleganti e senza
+          contatori a mano (§14.1).</li>
+      <li>Le <b>comprehension</b> <code>[espr for x in coll if cond]</code> costruiscono liste (o dizionari) in una
+          riga; usale finché restano leggibili (§14.2).</li>
+      <li>I <b>generatori</b> (<code>yield</code>, o <code>(… for …)</code>) producono valori uno alla volta, senza
+          sprecare memoria — per dati enormi o infiniti (§14.3).</li>
+      <li>Le <b>funzioni sono valori</b>: <b>lambda</b> per mini-funzioni al volo, <code>key=</code> per ordinare
+          su misura (§14.4). Lo <b>stile pythonico</b> = leggibile, esplicito, semplice (§14.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora scrivi Python con eleganza. Manca un ultimo tassello di «cultura» prima del gran finale: una passeggiata tra
+    gli strumenti pronti della <b>libreria standard</b>, che risolvono al volo problemi ricorrenti — date e orari,
+    casualità, matematica, e persino parlare col web. Nel <strong>Capitolo 15</strong> vediamo <code>datetime</code>,
+    <code>random</code>, <code>collections</code> e altri moduli utilissimi in pratica, così saprai <em>cosa
+    cercare</em> quando ti serve. Poi, nel Capitolo 16, il gran finale: costruiremo insieme un <b>progetto
+    completo</b>, mettendo in campo tutto ciò che hai imparato.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Riscrivi con una comprehension: un ciclo che costruisce la lista dei cubi dei numeri da 1 a 5
+      (<code>[1, 8, 27, 64, 125]</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Data <code>parole = ["ciao", "a", "mondo", "py"]</code>, scrivi una comprehension che tenga solo le parole di
+      <b>almeno 3 lettere</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Quando è meglio un <b>generatore</b> rispetto a una lista? Cosa fa <code>yield</code> di diverso da
+      <code>return</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Data <code>persone = [{"nome": "Bea", "eta": 30}, {"nome": "Ada", "eta": 25}]</code>, ordinala per
+      età usando <code>sorted</code> con <code>key</code>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-8"><span class="secnum">Sezione 14.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      <code>cubi = [n ** 3 for n in range(1, 6)]</code> → <code>[1, 8, 27, 64, 125]</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      <code>[p for p in parole if len(p) &gt;= 3]</code> → <code>['ciao', 'mondo']</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      Un <b>generatore</b> è meglio quando i dati sono <b>tanti</b> (o infiniti) e non vuoi tenerli tutti in
+      memoria: produce un valore alla volta, su richiesta. <code>yield</code> restituisce un valore ma <b>mette in
+      pausa</b> la funzione (che riprende al prossimo valore), mentre <code>return</code> la <b>termina</b>
+      restituendo un solo risultato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      <code>sorted(persone, key=lambda p: p["eta"])</code> → prima Ada (25), poi Bea (30). La lambda dice «ordina
+      guardando il valore della chiave 'eta' di ogni dizionario».
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.2 — da ciclo a comprehension (confronto + risultato)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wcp-view');
+  if (!view) return;
+  const out = document.getElementById('wcp-out');
+  const btns = document.querySelectorAll('#w-comp .w-btn');
+  const ex = [
+    {
+      loop: 'out = []\nfor n in range(5):\n    out.append(n**2)',
+      comp: '[n**2 for n in range(5)]',
+      res: '[0, 1, 4, 9, 16]',
+      note: 'Per ogni n, l\'espressione <code>n**2</code>. Il ciclo con append diventa una riga.'
+    },
+    {
+      loop: 'out = []\nfor n in range(10):\n    if n % 2 == 0:\n        out.append(n)',
+      comp: '[n for n in range(10) if n % 2 == 0]',
+      res: '[0, 2, 4, 6, 8]',
+      note: 'L\'<code>if</code> finale <b>filtra</b>: tiene solo gli elementi che soddisfano la condizione.'
+    },
+    {
+      loop: 'out = []\nfor s in ["ada","bea"]:\n    out.append(s.upper())',
+      comp: '[s.upper() for s in ["ada","bea"]]',
+      res: "['ADA', 'BEA']",
+      note: 'L\'espressione può essere qualsiasi cosa, anche una chiamata di metodo come <code>s.upper()</code>.'
+    }
+  ];
+  function esc(s) { return s.replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function show(i) {
+    const e = ex[i];
+    view.innerHTML = `
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; align-items:center">
+        <div style="text-align:left">
+          <div style="color:var(--ink-faint); font-size:.75rem; margin-bottom:.3rem">il modo lungo</div>
+          <pre style="background:#14161c; color:#98a0b0; padding:.6rem .9rem; border-radius:9px; font-family:var(--mono); font-size:.78rem; margin:0">${esc(e.loop)}</pre>
+        </div>
+        <div style="font-size:1.4rem; color:var(--green)">→</div>
+        <div style="text-align:left">
+          <div style="color:var(--green); font-size:.75rem; margin-bottom:.3rem">comprehension</div>
+          <pre style="background:#14161c; color:#c3e88d; padding:.6rem .9rem; border-radius:9px; font-family:var(--mono); font-size:.82rem; margin:0">${esc(e.comp)}</pre>
+        </div>
+      </div>
+      <div style="text-align:center; margin-top:.8rem; font-family:var(--mono)">risultato: <b style="color:var(--accent)">${esc(e.res)}</b></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + e.note + ' <mark>Stesso risultato, molte righe in meno.</mark></div>';
+    btns.forEach((b, k) => b.style.outline = k === i ? '2px solid var(--accent)' : 'none');
+  }
+  btns.forEach((b, i) => b.addEventListener('click', () => show(i)));
+  show(0);
+})();
+</script>
+</body>
+</html>

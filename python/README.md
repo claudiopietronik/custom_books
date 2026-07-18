@@ -24,7 +24,7 @@ Contenuto originale scritto ex novo.
 - [x] 11 — Errori ed eccezioni
 - [x] 12 — File e dati
 - [x] 13 — Programmazione a oggetti
-- [ ] 14 — Il Python elegante
+- [x] 14 — Il Python elegante
 - [ ] 15 — La libreria standard, in pratica
 - [ ] 16 — Un progetto completo
 
