@@ -205,7 +205,7 @@ const TOC = [
     n: 13,
     titolo: "Programmazione a oggetti",
     file: "cap13-oggetti-classi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Oggetti: dati + comportamento" },
       { id: "s13-2", n: "13.2", t: "class e __init__" },

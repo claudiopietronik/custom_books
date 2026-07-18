@@ -23,7 +23,7 @@ Contenuto originale scritto ex novo.
 - [x] 10 — Moduli, pacchetti e ambienti
 - [x] 11 — Errori ed eccezioni
 - [x] 12 — File e dati
-- [ ] 13 — Programmazione a oggetti
+- [x] 13 — Programmazione a oggetti
 - [ ] 14 — Il Python elegante
 - [ ] 15 — La libreria standard, in pratica
 - [ ] 16 — Un progetto completo
