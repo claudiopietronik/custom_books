@@ -189,7 +189,7 @@ const TOC = [
     n: 12,
     titolo: "File e dati",
     file: "cap12-file-dati.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Leggere e scrivere file di testo" },
       { id: "s12-2", n: "12.2", t: "with: aprire in sicurezza" },
