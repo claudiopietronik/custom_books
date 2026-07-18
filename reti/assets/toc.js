@@ -91,7 +91,7 @@ const TOC = [
     n: 6,
     titolo: "L'indirizzo IP",
     file: "cap06-indirizzo-ip.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Un indirizzo per ogni host" },
       { id: "s6-2", n: "6.2", t: "IPv4: i quattro numeri" },

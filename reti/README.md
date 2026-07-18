@@ -29,7 +29,7 @@ Contenuto originale scritto ex novo.
 - [x] 3 — Il livello fisico
 - [x] 4 — Ethernet e la LAN
 - [x] 5 — Il WiFi
-- [ ] 6 — L'indirizzo IP
+- [x] 6 — L'indirizzo IP
 - [ ] 7 — Il routing
 - [ ] 8 — La rete di casa
 - [ ] 9 — UDP e TCP

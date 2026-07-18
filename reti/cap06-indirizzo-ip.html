@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · L'indirizzo IP — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>L'indirizzo IP</h1>
+    <p class="standfirst">
+      Il MAC dice <em>chi</em> sei nella tua stanza; ma per raggiungere un server dall'altra parte del mondo serve
+      dire <em>dove</em> sei. È il compito dell'<b>indirizzo IP</b>: l'identità di ogni dispositivo su internet, e
+      il vero collante che tiene insieme miliardi di reti diverse in una sola. In questo capitolo capiamo com'è
+      fatto un indirizzo IPv4, il trucco della <b>maschera di sottorete</b> che divide «rete» da «host», perché
+      quasi tutti in casa hanno un indirizzo <code>192.168.…</code>, e perché il mondo sta (lentamente) passando a
+      <b>IPv6</b>. <mark>È il capitolo che trasforma «internet» da parola magica in indirizzi che sai leggere.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché serve un indirizzo globale (§6.1), la struttura di <b>IPv4</b> (§6.2), la <b>maschera di sottorete</b>
+      e la notazione <b>CIDR</b> che separano rete e host (§6.3), la distinzione cruciale tra indirizzi
+      <b>pubblici e privati</b> (§6.4) e il futuro già presente, <b>IPv6</b> (§6.5). Nel laboratorio (§6.6) leggi
+      i tuoi indirizzi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: l'alfabeto di internet</div>
+    <p style="margin-bottom:0">
+      Gli indirizzi IP sono ovunque: nelle impostazioni del router, nei log di un server, nelle regole di un
+      firewall, negli errori di connessione. <mark>Saperli leggere — capire cos'è privato e cos'è pubblico, cosa
+      significa <code>/24</code>, perché <code>192.168.1.1</code> è quasi sempre il router — è una competenza che
+      userai in ogni libro successivo</mark>: senza IP non c'è routing (Cap. 7), non c'è server (Cap. 8), non c'è
+      cloud. È l'alfabeto: impariamolo bene.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Un indirizzo per ogni host</h2>
+
+  <p class="lead">
+    Perché non basta il MAC? Perché il MAC è <b>piatto</b>: non dice dove sei. Cercare un dispositivo per MAC tra
+    miliardi sarebbe come cercare una persona conoscendo solo il codice fiscale, senza indirizzo. L'IP risolve
+    proprio questo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Un indirizzo «geografico»</div>
+    <p style="margin-bottom:0">
+      L'indirizzo IP è <b>gerarchico</b>, come un indirizzo postale: <em>nazione → città → via → civico</em>. La
+      parte iniziale identifica <b>la rete</b> (il «quartiere» di internet), quella finale <b>l'host</b> dentro
+      quella rete (il «civico»). <mark>Questa gerarchia è ciò che rende possibile il routing</mark>: un router
+      lontano non ha bisogno di sapere dove sei <em>esattamente</em>, gli basta sapere «i pacchetti per quel
+      quartiere vanno di là». Man mano che il pacchetto si avvicina, i router hanno mappe sempre più dettagliate,
+      finché l'ultimo lo consegna al civico giusto. Senza gerarchia, ogni router dovrebbe conoscere ogni singolo
+      dispositivo del pianeta: impossibile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>IPv4: i quattro numeri</h2>
+
+  <p class="lead">
+    L'indirizzo IP più diffuso è ancora <b>IPv4</b>: quei quattro numeri separati da punti che hai visto mille
+    volte, tipo <code>192.168.1.42</code>. Vediamo come è fatto davvero, sotto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un indirizzo IPv4 <span class="tag">32 bit = 4 byte «ottetti»</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:1.05rem; text-align:center">
+        <span style="color:var(--accent)">192</span>.<span style="color:var(--accent)">168</span>.<span style="color:var(--accent)">1</span>.<span style="color:var(--warm)">42</span>
+        &nbsp;=&nbsp;
+        <span style="font-size:.8rem; color:var(--ink-soft)">11000000·10101000·00000001·00101010</span>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>quattro <b>ottetti</b></dt>
+        <dd>ogni numero è un byte, cioè 8 bit, quindi va da <b>0 a 255</b> (per questo non esistono IP tipo
+            <code>300.1.1.1</code>: 300 non sta in un byte). Quattro byte = <b>32 bit</b> in tutto.</dd>
+        <dt>quanti indirizzi?</dt>
+        <dd>32 bit danno \(2^{32} \approx\) <b>4,3 miliardi</b> di indirizzi. Sembravano infiniti negli anni '80;
+            oggi, con miliardi di telefoni, PC, TV e lampadine smart, <mark>sono finiti</mark>. È il grande
+            problema che ha spinto verso IPv6 (§6.5) e i trucchi come il NAT (§6.4).</dd>
+        <dt>i due «pezzi» nascosti</dt>
+        <dd>un indirizzo IPv4 <b>non</b> è tutto uguale: una parte identifica la <b>rete</b>, il resto l'<b>host</b>.
+            Ma dove passa il confine? Non è fisso: lo dice la <b>maschera di sottorete</b>, che vediamo ora.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Sottoreti e notazione CIDR</h2>
+
+  <p class="lead">
+    Ecco il concetto più «tecnico» del capitolo, ma anche il più potente: la <b>maschera</b> che divide
+    l'indirizzo in «parte-rete» e «parte-host». Una volta capito, leggerai qualsiasi configurazione di rete.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La maschera: dove passa il confine</div>
+    <p style="margin-bottom:0">
+      La <b>maschera di sottorete</b> dice quanti bit, <b>a partire da sinistra</b>, formano la parte-rete. Il
+      resto è la parte-host. Si scrive in due modi equivalenti: come quattro numeri (<code>255.255.255.0</code>)
+      o, più moderno, come <b>CIDR</b>: una barra e il numero di bit-rete, es. <b><code>/24</code></b> (=24 bit di
+      rete). Quindi <code>192.168.1.42/24</code> significa: <mark>i primi 24 bit (<code>192.168.1</code>) sono la
+      <b>rete</b>, gli ultimi 8 (<code>.42</code>) sono l'<b>host</b></mark>. Tutti i dispositivi con gli stessi
+      primi 24 bit sono «vicini di casa» nella stessa rete e si parlano direttamente; per raggiungere un IP con
+      rete diversa, si passa dal router.
+    </p>
+  </div>
+
+  <div class="widget" id="w-subnet">
+    <div class="w-head">
+      <span>La maschera divide rete e host</span>
+      <span class="hint">sposta il prefisso /n e guarda cosa cambia</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsn-svg" viewBox="0 0 560 300" role="img" aria-label="I 32 bit di un indirizzo IPv4: il prefisso di sottorete decide quanti bit iniziali sono la rete e quanti restano per gli host"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center; flex-wrap:wrap">
+      <label style="font-size:.85rem; color:var(--ink-soft)">prefisso /n</label>
+      <input type="range" id="wsn-n" min="8" max="30" step="1" value="24" style="width:220px">
+    </div>
+    <div class="w-readout" id="wsn-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché è utile: reti su misura</div>
+    <p style="margin-bottom:0">
+      La maschera ti fa <b>ritagliare reti della dimensione giusta</b>. Una <code>/24</code> ospita ~254 host
+      (una casa, un piccolo ufficio); una <code>/16</code> decine di migliaia (una grande azienda); una
+      <code>/30</code> solo 2 host (un collegamento punto-punto tra due router). <mark>Più piccola è la parte-host,
+      meno dispositivi, ma più reti separate puoi creare</mark> — utile per dividere e proteggere (la rete degli
+      ospiti separata da quella di casa, Cap. 15). Due indirizzi in ogni rete sono «speciali» e non assegnabili:
+      il primo (identifica la rete stessa) e l'ultimo (il <b>broadcast</b>, «a tutti»).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Indirizzi pubblici e privati</h2>
+
+  <p class="lead">
+    Ecco perché il tuo PC e quello di milioni di altre persone hanno <b>lo stesso</b> indirizzo
+    <code>192.168.1.42</code> senza conflitti: esistono due mondi di indirizzi, quello <b>privato</b> (interno) e
+    quello <b>pubblico</b> (su internet).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Due mondi separati</div>
+    <ul style="margin-bottom:0">
+      <li>Gli indirizzi <b>privati</b> sono riservati alle reti locali e <b>riutilizzabili</b> da chiunque:
+          <code>192.168.x.x</code>, <code>10.x.x.x</code>, <code>172.16–31.x.x</code>. Non sono validi su
+          internet — esistono solo dentro casa/ufficio. Ecco perché li vedi ovunque: ogni casa ha la sua
+          <code>192.168.1.0/24</code> «fotocopia», isolata dalle altre.</li>
+      <li>Gli indirizzi <b>pubblici</b> sono <b>unici al mondo</b> e assegnati dagli enti competenti: è
+          l'indirizzo con cui la tua rete appare su internet. Di solito ne hai <b>uno solo</b> per tutta la casa,
+          quello del router.</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--violet)">
+    <div class="box-title" style="color:var(--violet)"><span class="ico">🧠</span> Da ricordare: hai due IP diversi</div>
+    <p style="margin-bottom:0">
+      In questo momento hai <b>due</b> indirizzi: uno <b>privato</b> (es. <code>192.168.1.42</code>, dentro casa)
+      e uno <b>pubblico</b> (quello del router, con cui esci su internet — cercalo digitando «qual è il mio IP» su
+      Google). <mark>Tutti i dispositivi di casa condividono lo <em>stesso</em> IP pubblico</mark>: il router fa
+      la «magia» che permette a molti dispositivi privati di uscire da un solo indirizzo pubblico. Quella magia si
+      chiama <b>NAT</b> ed è la protagonista del Capitolo 8. Per ora tieni la distinzione: privato = qui dentro,
+      pubblico = come mi vede il mondo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>IPv6</h2>
+
+  <p class="lead">
+    4,3 miliardi di indirizzi IPv4 non bastano più. La soluzione definitiva è <b>IPv6</b>: indirizzi molto più
+    lunghi, in quantità praticamente infinita. Lo stai già usando, spesso senza saperlo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un indirizzo IPv6 <span class="tag">128 bit invece di 32</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:.82rem; text-align:center; word-break:break-all">
+        <span style="color:var(--accent)">2001:0db8:85a3:0000</span>:<span style="color:var(--warm)">0000:8a2e:0370:7334</span>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>128 bit = numeri sterminati</dt>
+        <dd>IPv6 usa <b>128 bit</b> (scritti in gruppi esadecimali), per un totale di \(2^{128}\) indirizzi: un
+            numero con 39 cifre. <mark>Bastano per dare un indirizzo a ogni granello di sabbia della Terra</mark>,
+            e molti di più. Il problema della scarsità sparisce del tutto.</dd>
+        <dt>niente più NAT (in teoria)</dt>
+        <dd>con IPv6 ogni dispositivo può avere un indirizzo <b>pubblico</b> vero: si torna all'idea originale di
+            internet, dove ogni host è raggiungibile direttamente. Comodo, ma cambia le regole della sicurezza
+            (serve un buon firewall, Cap. 15).</dd>
+        <dt>convivenza</dt>
+        <dd>la transizione è lenta: IPv4 e IPv6 <b>convivono</b> da anni («dual stack»). Il tuo telefono
+            probabilmente ha già entrambi. Non serve «scegliere»: i sistemi usano IPv6 quando possono e IPv4
+            quando serve.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Piccole comodità: gli zeri si possono comprimere (<code>2001:db8::1</code>), e <code>::1</code> è il
+      «localhost» di IPv6 (l'equivalente di <code>127.0.0.1</code>, «me stesso»). Non serve memorizzare IPv6 a
+      mano: tanto ci pensa il DNS a tradurre i nomi (Cap. 10).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Laboratorio: i tuoi indirizzi</h2>
+
+  <p class="lead">
+    Scopriamo <b>tutti</b> i tuoi indirizzi: quello privato (dentro casa), la maschera, e quello pubblico (come ti
+    vede internet). Bastano un comando e una ricerca.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Privato + maschera: <code>ipconfig</code> <span class="tag">chi sei in casa</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ipconfig</span></pre>
+    </div>
+    <div class="f-note">
+      <div class="term" style="margin:0 auto">
+        <div class="t-head">Output (estratto)</div>
+        <pre><span class="out">   Indirizzo IPv4. . . . . : <span class="hl">192.168.1.42</span>   ← il tuo IP privato
+   Subnet mask . . . . . . : <span class="hl">255.255.255.0</span>  ← cioè /24
+   Gateway predefinito . . : 192.168.1.1    ← il router</span></pre>
+      </div>
+      La subnet mask <code>255.255.255.0</code> è la <code>/24</code>: i primi tre ottetti
+      (<code>192.168.1</code>) sono la <b>rete</b>, l'ultimo (<code>.42</code>) è il tuo <b>host</b>. Tutti i
+      dispositivi di casa condividono <code>192.168.1.___</code> e si parlano diretti; il <code>.1</code> è il
+      router.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Pubblico: «qual è il mio IP» <span class="tag">come ti vede il mondo</span></div>
+    <div class="f-note" style="margin-top:0">
+      L'IP <b>pubblico</b> non lo vede <code>ipconfig</code> (il tuo PC conosce solo il privato): lo sa solo
+      «l'esterno». Il modo più semplice: cerca <b>«qual è il mio IP»</b> su Google, o da terminale
+      <code>curl ifconfig.me</code>.
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Terminale</div>
+        <pre><span class="p">C:\&gt; </span><span class="cmd">curl</span> <span class="ar">ifconfig.me</span>
+<span class="out"><span class="hl">93.44.128.17</span></span>   <span class="c">← l'IP pubblico della tua rete (uno per tutta la casa)</span></pre>
+      </div>
+      <mark>Confronta i due: <code>192.168.1.42</code> (privato, quello che il tuo PC crede di essere) e
+      <code>93.44.128.17</code> (pubblico, come ti vede internet).</mark> Chiedi lo stesso a un altro dispositivo
+      di casa: IP privato <b>diverso</b>, ma IP pubblico <b>identico</b>. È il NAT all'opera — prossimo mistero da
+      svelare.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>L'IP è un indirizzo <b>gerarchico</b> («dove»), a differenza del MAC («chi»): è ciò che rende possibile
+          il routing globale (§6.1).</li>
+      <li><b>IPv4</b> = 32 bit = 4 ottetti (0–255); ~4,3 miliardi di indirizzi, ormai finiti (§6.2).</li>
+      <li>La <b>maschera / CIDR</b> (es. <code>/24</code>) divide l'indirizzo in <b>rete</b> (bit iniziali) e
+          <b>host</b> (bit finali); decide quanti dispositivi entrano in una rete (§6.3).</li>
+      <li><b>Privato</b> (192.168/10/172.16, riutilizzabile, interno) vs <b>pubblico</b> (unico, su internet). Hai
+          entrambi (§6.4). <b>IPv6</b> (128 bit) risolve la scarsità per sempre (§6.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora ogni dispositivo ha un indirizzo che dice <em>dove</em> si trova. Ma sapere l'indirizzo non basta: come fa
+    un pacchetto a <b>trovare la strada</b> da casa tua fino a quell'indirizzo, attraversando decine di reti
+    sconosciute di operatori diversi, senza una mappa unica di internet? Ogni router lungo il cammino prende una
+    decisione locale: «per quel quartiere, di qua». Nel <strong>Capitolo 7</strong> entriamo nel cuore pulsante di
+    internet: il <b>routing</b> — come i pacchetti trovano la via, salto dopo salto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Perché <code>256.1.1.1</code> non può esistere come indirizzo IPv4? E quanti bit ha in tutto un IPv4?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      In <code>10.0.5.7/16</code>, qual è la parte-rete e quale la parte-host? Due dispositivi <code>10.0.5.7</code>
+      e <code>10.0.9.3</code> sono nella stessa rete?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Due amici, in due case diverse, hanno entrambi l'IP <code>192.168.1.10</code>. Come è possibile senza
+      conflitti? Che tipo di indirizzo è?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Trova il tuo IP privato (<code>ipconfig</code>) e il pubblico («qual è il mio IP»). Poi fai lo
+      stesso dal telefono sulla stessa rete: quale coincide e quale no? Perché?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-8"><span class="secnum">Sezione 6.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      Perché ogni ottetto è un <b>byte</b> (8 bit) e arriva al massimo a <b>255</b>: 256 non ci sta. Un IPv4 ha
+      <b>32 bit</b> in totale (4 ottetti × 8).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      <code>/16</code> = primi 16 bit di rete: la parte-rete è <code>10.0</code>, la parte-host è
+      <code>.5.7</code>. Siccome entrambi condividono <code>10.0</code>, <b>sì</b>, <code>10.0.5.7</code> e
+      <code>10.0.9.3</code> sono nella <b>stessa rete /16</b> e si parlano direttamente (con una <code>/24</code>
+      invece <em>non</em> lo sarebbero, perché differiscono nel terzo ottetto).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>192.168.1.10</code> è un indirizzo <b>privato</b>: esiste solo <em>dentro</em> ciascuna rete
+      locale, non su internet, quindi ogni casa può riusarlo liberamente senza conflitti. I due amici appaiono su
+      internet con i loro IP <b>pubblici</b>, che invece sono diversi e unici.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      L'IP <b>privato</b> è <b>diverso</b> tra PC e telefono (es. <code>.42</code> e <code>.28</code>): sono host
+      distinti nella stessa rete. L'IP <b>pubblico</b> è <b>identico</b>: entrambi escono su internet dallo stesso
+      router, che li fa condividere un solo indirizzo pubblico (NAT, Cap. 8).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.3 — la maschera divide rete/host (32 bit)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsn-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsn-out');
+  const sN = document.getElementById('wsn-n');
+  sN.addEventListener('input', draw);
+
+  function draw() {
+    const n = +sN.value;                     // prefisso /n
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 32, ymin: -2, ymax: 2 });
+    // 32 bit come celle, con separatori ogni 8 (ottetti)
+    for (let i = 0; i < 32; i++) {
+      const net = i < n;
+      p.rect(i + 0.06, -0.5, i + 0.94, 0.5, {
+        fill: net ? 'color-mix(in srgb,var(--accent) 30%,transparent)' : 'color-mix(in srgb,var(--warm) 26%,transparent)',
+        color: net ? 'var(--accent)' : 'var(--warm)', width: 1
+      });
+    }
+    // linee ottetti + etichette
+    for (let o = 0; o <= 4; o++) p.line(o * 8, -0.7, o * 8, 0.7, { color: 'var(--ink-faint)', width: o % 4 ? 1 : 1.5 });
+    p.text(0, 0.5, '← 32 bit →', { size: 10, anchor: 'start', dy: -10, color: 'var(--ink-faint)' });
+    // confine mobile
+    p.line(n, -1, n, 1.1, { color: 'var(--ink)', width: 2.5, dash: '4 3' });
+    p.text(n / 2, -0.5, 'RETE (' + n + ' bit)', { size: 12, anchor: 'middle', dy: 28, color: 'var(--accent)', bold: true });
+    p.text((n + 32) / 2, -0.5, 'HOST (' + (32 - n) + ')', { size: 12, anchor: 'middle', dy: 28, color: 'var(--warm)', bold: true });
+
+    const hostBits = 32 - n;
+    const hosts = hostBits >= 1 ? Math.pow(2, hostBits) - 2 : 0;   // -2: rete e broadcast
+    const mask = maskFrom(n);
+    out.innerHTML = `
+      <div class="big">/${n} &nbsp;·&nbsp; maschera <b>${mask}</b> &nbsp;·&nbsp; host utilizzabili: <b>${hosts.toLocaleString('it-IT')}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Sposta il prefisso: più bit alla <b style="color:var(--accent)">rete</b> ⇒ meno bit per gli
+        <b style="color:var(--warm)">host</b> ⇒ meno dispositivi per rete (ma più reti separate).
+        Una <code>/24</code> = 254 host (una casa), una <code>/16</code> = 65.534 (una grande azienda), una
+        <code>/30</code> = 2 (un link tra due router). <mark>Due indirizzi sono sempre riservati</mark>: rete e broadcast.
+      </div>`;
+  }
+  function maskFrom(n) {
+    const oct = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) { const b = Math.min(8, Math.max(0, n - i * 8)); oct[i] = 256 - Math.pow(2, 8 - b); }
+    return oct.join('.');
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
