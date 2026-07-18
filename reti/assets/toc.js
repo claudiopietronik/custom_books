@@ -43,7 +43,7 @@ const TOC = [
     n: 3,
     titolo: "Il livello fisico",
     file: "cap03-livello-fisico.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Bit e segnali" },
       { id: "s3-2", n: "3.2", t: "Il rame: doppino e cavi Ethernet" },

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Il livello fisico — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Il livello fisico</h1>
+    <p class="standfirst">
+      Alla base di tutto, sotto ogni astrazione, c'è un fatto brutale: <mark>uno zero e un uno devono diventare
+      qualcosa di fisico</mark> — una tensione in un filo di rame, un lampo di luce in una fibra, un'onda radio
+      nell'aria. È il livello più concreto e più ignorato della pila, eppure decide la vera velocità della tua
+      connessione. In questo capitolo scendiamo fino al metallo: come un bit viaggia davvero, perché la fibra ha
+      stravinto sul rame, come fa il WiFi a spedire dati nell'aria, e cosa significano — davvero — le due parole
+      che compri dal tuo operatore: <b>banda</b> e <b>latenza</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Come un bit diventa segnale (§3.1), i tre grandi mezzi di trasmissione — <b>rame</b> (§3.2), <b>fibra
+      ottica</b> (§3.3) e <b>onde radio</b> (§3.4) — e infine le due grandezze che misurano ogni connessione,
+      <b>banda</b> e <b>latenza</b> (§3.5), spesso confuse tra loro. Nel laboratorio (§3.6) misuri la tua linea.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la velocità vera</div>
+    <p style="margin-bottom:0">
+      Quando una videochiamata si impalla o un download striscia, la causa sta quasi sempre <b>qui sotto</b>: il
+      mezzo fisico e i suoi limiti. <mark>Capire la differenza tra banda e latenza spiega il 90% delle frustrazioni
+      di rete</mark>: perché la fibra «da 1 Gbit» non rende un gioco online più reattivo, perché il satellite è
+      velocissimo eppure lentissimo, perché due tacche di WiFi vanno peggio del cavo. È lo strato che nessuno
+      spiega, e proprio per questo quello che ti dà più superpoteri quotidiani.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Bit e segnali</h2>
+
+  <p class="lead">
+    Un computer conosce solo <b>0</b> e <b>1</b>. Per spedirli, deve trasformarli in un fenomeno fisico che
+    l'altro capo sappia rileggere. Questa traduzione — bit ⇄ segnale — è tutto il livello fisico.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Dal numero al fenomeno</div>
+    <p style="margin-bottom:0">
+      L'idea più semplice: assegnare a 0 e 1 due <b>stati fisici distinti</b> e alternarli nel tempo. Nel rame,
+      per esempio, «tensione alta = 1, tensione bassa = 0»; nella fibra «luce accesa = 1, spenta = 0»; nella
+      radio si modula un'onda. Il mittente cambia lo stato molte milioni (o miliardi) di volte al secondo; il
+      ricevitore <b>campiona</b> il segnale a intervalli regolari e ricostruisce i bit. <mark>Perché funzioni,
+      i due capi devono essere d'accordo sul ritmo</mark> (il <b>clock</b>): se leggo troppo presto o troppo
+      tardi, scambio gli 0 per 1. Sincronizzarsi sul ritmo è metà del mestiere del livello fisico.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il nemico di sempre: il rumore</div>
+    <p style="margin-bottom:0">
+      Nessun mezzo è perfetto: interferenze, calore, disturbi elettrici «sporcano» il segnale. Se il rumore è
+      troppo forte rispetto al segnale, il ricevitore <b>sbaglia a leggere</b> qualche bit. Due difese: tenere il
+      segnale ben più forte del rumore (il famoso <b>rapporto segnale/rumore</b>), e usare codici che permettono
+      di <b>accorgersi degli errori</b> (e a volte correggerli). <mark>Più un mezzo è immune al rumore, più bit al
+      secondo può reggere in modo affidabile</mark> — ed è qui che la fibra umilia il rame.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Il rame: doppino e cavi Ethernet</h2>
+
+  <p class="lead">
+    Il mezzo storico: fili di <b>rame</b> che portano segnali elettrici. Economico, ovunque, ma con limiti fisici
+    che la distanza e le frequenze alte fanno pesare.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il doppino intrecciato</div>
+    <p style="margin-bottom:0">
+      Il cavo Ethernet che colleghi al PC (categoria Cat5e/Cat6, connettore <b>RJ45</b>) contiene <b>quattro
+      coppie</b> di fili di rame, ognuna <b>intrecciata</b> (twisted pair). Perché intrecciati? L'intreccio fa sì
+      che i disturbi colpiscano ugualmente i due fili della coppia, così la loro <b>differenza</b> (che è ciò che
+      conta) resta pulita: il rumore si cancella. È un trucco geniale e vecchissimo — lo stesso del telefono.
+      Un cavo Ethernet in rame porta comodamente <b>1 Gbit/s</b> (Gigabit) fino a ~100 metri; oltre, il segnale
+      si degrada troppo.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: il rame «da lontano» crolla</div>
+    <p style="margin-bottom:0">
+      Il rame ha un difetto fisico: <mark>più il segnale è veloce (alta frequenza) e più il filo è lungo, più il
+      segnale si attenua</mark>. È il motivo per cui la vecchia ADSL diventava lentissima se abitavi lontano dalla
+      centralina, e perché il rame per le lunghe distanze è stato pensionato. La fibra, che vedremo ora, non ha
+      questo problema: la luce viaggia per chilometri quasi senza perdite. Il rame resiste nell'«ultimo tratto»
+      dentro casa e negli uffici, dove le distanze sono corte e il costo conta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>La fibra ottica</h2>
+
+  <p class="lead">
+    La spina dorsale di internet moderna: sottilissimi fili di <b>vetro</b> in cui i bit viaggiano come
+    <b>lampi di luce</b>. Immune ai disturbi elettrici, capace di distanze enormi e velocità sbalorditive.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Luce intrappolata nel vetro</div>
+    <p style="margin-bottom:0">
+      Una fibra è un filo di vetro finissimo (un capello) in cui la luce, entrando con l'angolo giusto, rimbalza
+      sulle pareti interne senza mai uscire (<b>riflessione totale</b> — pura fisica, l'abbiamo vista in Fisica 2).
+      Un laser accende e spegne la luce miliardi di volte al secondo; all'altro capo un fotodiodo la rilegge.
+      Vantaggi enormi: <mark>nessuna interferenza elettromagnetica</mark> (è luce, non elettricità), pochissima
+      attenuazione (segnali per <b>decine di km</b> senza rigenerazione), e banda spaventosa. I cavi
+      <b>sottomarini</b> che collegano i continenti sono fasci di fibre: è lì che passa, letteralmente, internet.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Fibra» non è sempre fibra fino a casa</div>
+    <p style="margin-bottom:0">
+      Occhio alle sigle dell'operatore: <b>FTTH</b> (Fiber To The Home) = fibra <em>fino dentro casa</em>, la
+      migliore; <b>FTTC</b> (Fiber To The Cabinet) = fibra fino all'armadio in strada, poi <b>rame</b> per
+      l'ultimo tratto fino a te (più lento, dipende dalla distanza dall'armadio). <mark>La stessa parola «fibra»
+      può nascondere prestazioni molto diverse</mark>: se puoi scegliere, FTTH è quella «vera» end-to-end.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Le onde radio</h2>
+
+  <p class="lead">
+    Quando non c'è (o non vuoi) un filo, i bit viaggiano nell'aria come <b>onde radio</b>: è il WiFi, il 4G/5G,
+    il Bluetooth, il satellite. Comodissimo, ma con regole e limiti tutti suoi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Modulare un'onda</div>
+    <p style="margin-bottom:0">
+      Un'antenna trasmittente fa oscillare un campo elettromagnetico a una certa <b>frequenza</b> (per il WiFi,
+      2,4 o 5 GHz); i bit si spediscono <b>modulando</b> l'onda — cambiandone ampiezza, fase o frequenza secondo
+      schemi concordati. L'aria, però, è un mezzo <b>condiviso e caotico</b>: le onde si attenuano con la
+      distanza, i muri le bloccano, e <mark>tutti trasmettono nello stesso spazio</mark>, quindi bisogna fare a
+      turno per non sovrapporsi. È il motivo per cui il senza-fili è quasi sempre meno stabile del cavo — ne
+      parliamo a fondo nel Capitolo 5, tutto dedicato al WiFi.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: comodo ≠ migliore</div>
+    <p style="margin-bottom:0">
+      La radio è condivisa, quindi <b>la banda si spartisce</b> tra tutti i dispositivi vicini, ed è vulnerabile
+      a interferenze e ostacoli. Per gaming, videochiamate importanti o grandi trasferimenti, <mark>un cavo
+      Ethernet batte quasi sempre il WiFi</mark>: più stabile, più veloce, latenza più bassa. Il senza-fili è per
+      la comodità e la mobilità, non per le massime prestazioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Banda e latenza</h2>
+
+  <p class="lead">
+    Le due grandezze che descrivono ogni connessione — e la fonte di infinite confusioni. Sono <b>indipendenti</b>:
+    una linea può avere tanta banda e tanta latenza insieme. Capire la differenza è il cuore di questo capitolo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Due cose diverse</div>
+    <ul style="margin-bottom:0">
+      <li>La <b>banda</b> (bandwidth, o «velocità») è <b>quanti bit al secondo</b> puoi far passare: si misura in
+          Mbit/s o Gbit/s. È la <em>larghezza</em> del tubo. Più banda = scarichi file grandi più in fretta.</li>
+      <li>La <b>latenza</b> (o <b>ping</b>) è <b>quanto tempo impiega un bit ad arrivare</b> dall'altra parte: si
+          misura in millisecondi. È la <em>lunghezza</em> del tubo. Meno latenza = la rete «risponde» più
+          reattiva.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'analogia: l'autostrada</div>
+    <p style="margin-bottom:0">
+      Immagina un'autostrada. La <b>banda</b> è il <b>numero di corsie</b>: più corsie, più auto al secondo
+      passano. La <b>latenza</b> è la <b>lunghezza del tragitto</b>: quanto ci mette una singola auto ad arrivare.
+      <mark>Aggiungere corsie (banda) non accorcia il viaggio (latenza)</mark>: un TIR che parte da Milano arriva
+      a Napoli nello stesso tempo che ci siano 2 o 20 corsie. Ecco perché passare da 100 a 1000 Mbit non rende un
+      gioco online più reattivo: il gioco manda pochi dati (bastano poche corsie), ma è sensibile al <em>tempo di
+      viaggio</em>, che dipende dalla distanza e dagli intoppi, non dalla banda.
+    </p>
+  </div>
+
+  <div class="widget" id="w-bw">
+    <div class="w-head">
+      <span>Banda vs latenza: l'autostrada dei bit</span>
+      <span class="hint">regola corsie (banda) e lunghezza (latenza)</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wbw-svg" viewBox="0 0 560 300" role="img" aria-label="Un'autostrada di bit: più corsie significano più banda, un tragitto più lungo significa più latenza; le due grandezze sono indipendenti"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; flex-wrap:wrap; justify-content:center">
+      <label style="font-size:.85rem; color:var(--ink-soft)">banda (corsie)</label>
+      <input type="range" id="wbw-b" min="1" max="5" step="1" value="2" style="width:120px">
+      <label style="font-size:.85rem; color:var(--ink-soft)">latenza (distanza)</label>
+      <input type="range" id="wbw-l" min="1" max="5" step="1" value="2" style="width:120px">
+    </div>
+    <div class="w-readout" id="wbw-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--violet)">
+    <div class="box-title" style="color:var(--violet)"><span class="ico">🧠</span> Da ricordare: il limite invalicabile</div>
+    <p style="margin-bottom:0">
+      La latenza ha un pavimento che <b>nessuna tecnologia può sfondare</b>: la luce nella fibra viaggia a
+      ~200.000 km/s. Milano–New York (~6.500 km) fa almeno ~33 ms solo andata, ~66 ms andata-e-ritorno — <b>per
+      sempre</b>, comprali pure la fibra più costosa del mondo. <mark>La banda si può aumentare; la distanza no.</mark>
+      Ecco perché i servizi mettono i server vicino a te (le CDN, Cap. 13) e perché l'internet satellitare
+      geostazionario, per quanto «veloce» in banda, ha una latenza pessima: il segnale deve salire a 36.000 km e
+      ridiscendere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Laboratorio: misurare la tua linea</h2>
+
+  <p class="lead">
+    Misuriamo <b>latenza</b> e <b>banda</b> della tua connessione, e distinguiamole con mano. Prima la latenza,
+    col vecchio amico <code>ping</code>; poi la banda, con un test di velocità.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Latenza: <code>ping</code> vicino e lontano <span class="tag">la distanza si sente</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ping</span> <span class="ar">1.1.1.1</span>              <span class="c">un server vicino (in Italia/Europa)</span>
+<span class="p">C:\&gt; </span><span class="cmd">ping</span> <span class="ar">google.com</span>           <span class="c">confronta</span></pre>
+    </div>
+    <div class="f-note">
+      Guarda solo la <b>durata</b> (i millisecondi): è la latenza. Da una buona linea fissa vedrai <b>1–20 ms</b>
+      verso server vicini; da rete mobile, o verso server lontani, molto di più. <mark>Nota che questo numero non
+      c'entra nulla con «quanti Mega» hai</mark>: è tempo di viaggio, non larghezza del tubo. Prova a pingare
+      mentre scarichi qualcosa di pesante: vedrai la latenza <b>peggiorare</b> (le corsie si intasano — è il
+      «bufferbloat»).
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Banda: un test di velocità <span class="tag">quanti Mbit/s davvero</span></div>
+    <div class="f-note" style="margin-top:0">
+      Per la banda serve un test dedicato. Il più diretto da terminale (se hai Python installato — lo vedremo nel
+      libro dedicato) è <code>speedtest</code>; senza installare nulla, apri il browser su un sito come
+      <b>fast.com</b> o <b>speedtest.net</b> e leggi tre numeri:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Risultato tipico (fibra FTTH)</div>
+        <pre><span class="out">Download:  <span class="hl">300 Mbit/s</span>    <span class="c">← banda in ingresso (scaricare)</span>
+Upload:     <span class="hl">100 Mbit/s</span>    <span class="c">← banda in uscita (caricare, spesso minore!)</span>
+Ping (latenza): <span class="hl">8 ms</span>       <span class="c">← tempo di viaggio: la stessa cosa del comando ping</span></pre>
+      </div>
+      Tre cose da notare. <b>Download &gt; Upload</b> quasi sempre: le linee casalinghe sono «asimmetriche»,
+      pensate per chi consuma più di quanto produce (ma per un server, l'upload conta! — Cap. 8). Il <b>ping</b>
+      qui è la latenza, la stessa del comando. E <mark>banda e latenza sono numeri separati</mark>: 300 Mbit non
+      dicono nulla sugli 8 ms, e viceversa.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li>Un bit diventa un <b>segnale fisico</b> (tensione, luce, onda); i due capi si accordano sul <b>ritmo</b>,
+          e il nemico è sempre il <b>rumore</b> (§3.1).</li>
+      <li>Tre mezzi: <b>rame</b> (economico ma crolla con distanza e frequenza), <b>fibra</b> (luce nel vetro:
+          immune ai disturbi, lunghe distanze, tanta banda — la dorsale di internet), <b>radio</b> (comoda ma
+          condivisa e instabile) (§3.2–3.4).</li>
+      <li><b>Banda</b> = bit/s (le corsie); <b>latenza</b> = tempo di viaggio (la lunghezza). <mark>Indipendenti</mark>:
+          più banda non riduce la latenza (§3.5).</li>
+      <li>La latenza ha un <b>limite fisico</b> (la velocità della luce × distanza) che nessuna banda può battere.
+          E ora sai misurarle entrambe (§3.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo far viaggiare i bit su un singolo tratto — un cavo, una fibra, un'onda. Ma una rete è fatta di
+    <b>tanti</b> dispositivi che condividono lo stesso mezzo: come fanno a non pestarsi i piedi, e a far arrivare
+    i bit <em>al dispositivo giusto</em> nella stanza accanto? Serve un modo per dare a ciascuno un
+    <b>indirizzo</b> locale e per organizzare il traffico dentro la rete locale. Nel <strong>Capitolo 4</strong>
+    saliamo di un gradino, al <b>livello di collegamento</b>: <b>Ethernet</b>, gli <b>indirizzi MAC</b>, i
+    <b>frame</b> e lo <b>switch</b> — come funziona, davvero, la tua rete di casa o dell'ufficio.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Un amico dice: «ho preso la fibra da 1 Giga, ora il mio gioco online avrà meno lag». Ha ragione? Spiega con
+      banda e latenza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Perché i fili di un cavo Ethernet sono <b>intrecciati</b>? Cosa risolve l'intreccio?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Un'offerta dice «FTTC fino a 200 Mbit», un'altra «FTTH fino a 100 Mbit». Perché la seconda potrebbe essere
+      preferibile? Cosa cambia fisicamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Pinga <code>1.1.1.1</code> e prendi nota della latenza. Poi avvia un download pesante e ripingi:
+      di quanto peggiora? Cosa ci dice sull'autostrada intasata?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">Sezione 3.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      <b>No</b> (o quasi). Il «lag» di un gioco è <b>latenza</b>, non banda: dipende dalla distanza dal server e
+      dagli intoppi lungo il percorso, non da quanti Mbit hai. Un gioco manda pochissimi dati. <mark>1 Giga aiuta
+      i download, non la reattività.</mark> Semmai, un cavo Ethernet al posto del WiFi ridurrebbe la latenza più
+      di qualsiasi upgrade di banda.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      L'intreccio fa sì che i disturbi esterni colpiscano <b>ugualmente</b> i due fili della coppia; poiché
+      l'informazione sta nella loro <b>differenza</b>, il rumore comune si <b>cancella</b>. Risolve le
+      interferenze e permette velocità alte su rame.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      In <b>FTTC</b> l'ultimo tratto fino a casa è in <b>rame</b>: la velocità reale dipende dalla distanza
+      dall'armadio e può essere molto sotto il «fino a». In <b>FTTH</b> la <b>fibra arriva dentro casa</b>:
+      prestazioni stabili e vicine al nominale, più immuni ai disturbi. A parità di prezzo, la fibra end-to-end è
+      di norma la scelta migliore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      Tipicamente la latenza <b>peggiora</b> durante il download (a volte da ~10 ms a centinaia di ms): le «corsie»
+      si riempiono e i pacchetti fanno la fila nei buffer (bufferbloat). Dimostra che banda satura e latenza sono
+      legate <em>quando c'è congestione</em>, pur restando concetti distinti (i router di qualità con «Smart
+      Queue» attenuano molto l'effetto).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.5 — banda vs latenza (autostrada dei bit, animata)
+   banda = numero di corsie; latenza = lunghezza del tragitto
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wbw-svg');
+  if (!svg) return;
+  const out = document.getElementById('wbw-out');
+  const sB = document.getElementById('wbw-b');
+  const sL = document.getElementById('wbw-l');
+  let t = 0, last = null;
+  sB.addEventListener('input', draw); sL.addEventListener('input', draw);
+
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt; draw(); requestAnimationFrame(frame);
+  }
+
+  function draw() {
+    const lanes = +sB.value;              // 1..5 corsie (banda)
+    const distF = +sL.value;              // 1..5 lunghezza (latenza)
+    const xL = -4.4, xR = -4.4 + 1.6 * distF;   // il tragitto si allunga con la latenza
+    const speed = 1.4;                    // stessa velocità di viaggio per ogni auto (fisica!)
+    const travel = (xR - xL) / speed;     // tempo di attraversamento = latenza
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.6, ymax: 2.6 });
+    const laneGap = 0.62, y0 = -(lanes - 1) * laneGap / 2;
+
+    // asfalto
+    p.rect(xL, y0 - 0.42, xR, y0 + (lanes - 1) * laneGap + 0.42, { fill: 'color-mix(in srgb,var(--ink) 8%,transparent)', color: 'var(--ink-faint)' });
+    // caselli
+    p.text(xL, 2.05, '🏠 tu', { size: 12, anchor: 'middle' });
+    p.text(xR, 2.05, '🖥 server', { size: 12, anchor: 'middle' });
+
+    // auto (bit) su ogni corsia
+    for (let L = 0; L < lanes; L++) {
+      const y = y0 + L * laneGap;
+      p.line(xL, y, xR, y, { color: 'var(--ink-faint)', width: 1, dash: '2 4' });
+      for (let k = 0; k < 3; k++) {
+        const f = ((t / travel) + k / 3 + L * 0.13) % 1;
+        const x = xL + (xR - xL) * f;
+        p.rect(x - 0.13, y - 0.12, x + 0.13, y + 0.12, { fill: 'var(--accent)', color: 'none' });
+      }
+    }
+
+    const latMs = Math.round(travel * 20);        // scala arbitraria per dare un numero
+    const bw = lanes * 100;
+    out.innerHTML = `
+      <div class="big"><b style="color:var(--accent)">Banda</b> ≈ ${bw} Mbit/s (${lanes} corsi${lanes === 1 ? 'a' : 'e'})
+        &nbsp;·&nbsp; <b style="color:var(--warm)">Latenza</b> ≈ ${latMs} ms</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Aumenta la <b>banda</b>: più corsie, più bit al secondo — ma ogni auto arriva <mark>nello stesso tempo</mark>.
+        Aumenta la <b>latenza</b>: il tragitto si allunga e ogni auto ci mette di più — <mark>indipendentemente</mark>
+        da quante corsie ci sono. Sono due manopole separate (§3.5).
+      </div>`;
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
