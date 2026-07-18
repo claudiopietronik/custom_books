@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · HTTPS e TLS — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>HTTPS e TLS</h1>
+    <p class="standfirst">
+      Tutto ciò che abbiamo visto finora viaggia <b>in chiaro</b>: le tue richieste HTTP, comprese password e
+      numeri di carta, attraversano il WiFi del bar, il tuo operatore, decine di router — e chiunque, lungo il
+      percorso, potrebbe leggerle. Inaccettabile. La soluzione è avvolgere HTTP in una <b>busta blindata</b>:
+      <b>HTTPS</b>, cioè HTTP dentro il protocollo di sicurezza <b>TLS</b>. Fa tre cose insieme:
+      <mark>cifra (nessuno legge), verifica l'identità (parli davvero col sito giusto) e garantisce l'integrità
+      (nessuno ha alterato i dati)</mark>. In questo capitolo apriamo il lucchetto e scopriamo la crittografia,
+      i certificati e la stretta di mano che protegge, ogni giorno, tutta la tua vita online.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché cifrare (§12.1), le due grandi idee della <b>crittografia</b> — simmetrica e asimmetrica (§12.2), i
+      <b>certificati</b> e le autorità che garantiscono l'identità (§12.3), l'<b>handshake TLS</b> che mette tutto
+      insieme (§12.4) e cosa dice davvero il <b>lucchetto</b> del browser (§12.5). Nel laboratorio (§12.6)
+      ispezioni un certificato reale.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la fiducia di tutto internet</div>
+    <p style="margin-bottom:0">
+      HTTPS è ciò che rende sicuro fare login, pagare, chattare. <mark>Senza, l'internet moderno non
+      esisterebbe</mark>: nessuno inserirebbe una password su una connessione che chiunque può leggere. Capirlo ti
+      protegge (sai riconoscere una connessione sicura da una che non lo è), e sarà indispensabile nei libri sul
+      deploy: mettere online un sito significa oggi, sempre, <b>ottenere e installare un certificato TLS</b>. Il
+      lucchetto non è un dettaglio: è il fondamento della fiducia digitale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Perché serve cifrare</h2>
+
+  <p class="lead">
+    Ricorda la pila: i tuoi dati passano di router in router, su reti che non controlli. In chiaro, ognuno di
+    quei punti è un potenziale <b>orecchio indiscreto</b>. HTTPS chiude questa falla.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Tre garanzie in una</div>
+    <ul style="margin-bottom:0">
+      <li><b>Riservatezza</b> (cifratura): i dati sono illeggibili a chi li intercetta. Solo tu e il server li
+          capite.</li>
+      <li><b>Autenticità</b>: hai la garanzia di parlare davvero col sito giusto, non con un impostore che si
+          finge la tua banca.</li>
+      <li><b>Integrità</b>: nessuno può <b>alterare</b> i dati in transito senza che ve ne accorgiate (niente
+          pubblicità iniettate, niente download manomessi).</li>
+    </ul>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Cosa vede chi spia una connessione HTTP (non-S)</div>
+    <p style="margin-bottom:0">
+      Su HTTP semplice, chi controlla la rete (il WiFi pubblico, un router compromesso) vede <b>tutto</b>: le
+      pagine che visiti, i moduli che invii, le <b>password in chiaro</b>. Peggio: può <b>modificare</b> le
+      risposte al volo. <mark>Per questo oggi i browser marchiano i siti HTTP come «Non sicuro»</mark> e il web è
+      quasi interamente passato a HTTPS. Nota però: HTTPS nasconde il <em>contenuto</em>, ma non del tutto <em>con
+      chi</em> parli — l'indirizzo del server e il nome del sito (via DNS, Cap. 10) restano in parte visibili. La
+      riservatezza è dei dati, non dell'esistenza della connessione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Crittografia simmetrica e asimmetrica</h2>
+
+  <p class="lead">
+    La cifratura si basa su due idee complementari. Capirle è più facile di quanto sembri, e insieme risolvono un
+    problema all'apparenza impossibile: <b>concordare un segreto parlando su un canale non sicuro</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Una chiave o due?</div>
+    <ul style="margin-bottom:0">
+      <li><b>Simmetrica</b>: <b>una sola chiave</b> cifra e decifra, come una serratura con una chiave sola. Veloce
+          ed efficiente — ma c'è un problema: <mark>come fai a consegnare la chiave all'altro senza che qualcuno la
+          intercetti?</mark></li>
+      <li><b>Asimmetrica</b>: <b>due chiavi legate</b>, una <b>pubblica</b> (che dai a tutti) e una <b>privata</b>
+          (che tieni segreta). Ciò che si cifra con la pubblica si apre <b>solo</b> con la privata. Geniale: puoi
+          pubblicare la tua chiave pubblica al mondo, e chiunque può mandarti un messaggio segreto che <b>solo tu</b>
+          puoi leggere. Ma è lenta.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il trucco: usarle insieme</div>
+    <p style="margin-bottom:0">
+      HTTPS sfrutta il meglio di entrambe. Usa quella <b>asimmetrica</b> (sicura ma lenta) solo per una cosa:
+      <b>mettersi d'accordo, in sicurezza, su una chiave simmetrica segreta</b>. Poi, per tutto il resto della
+      conversazione (che può essere enorme), usa quella <b>simmetrica</b> (velocissima) con la chiave appena
+      concordata. <mark>Asimmetrica per scambiare il segreto, simmetrica per parlare</mark>: è la combinazione che
+      rende HTTPS insieme sicuro e veloce. La cassaforte del cartello: la lettera arriva in una scatola con
+      lucchetto pubblico che solo il destinatario apre, e dentro c'è la chiave della cassaforte veloce che useranno
+      poi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>I certificati e le autorità</h2>
+
+  <p class="lead">
+    La cifratura protegge i dati, ma resta una domanda: <b>come fai a sapere che la chiave pubblica è davvero della
+    tua banca</b>, e non di un impostore? La risposta è un sistema di fiducia basato su <b>certificati</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il documento d'identità del sito</div>
+    <p style="margin-bottom:0">
+      Un <b>certificato</b> è come una carta d'identità digitale del sito: contiene il nome del dominio e la sua
+      chiave pubblica, ed è <b>firmato da un'autorità di certificazione</b> (CA), un ente di cui il tuo browser si
+      fida. La firma della CA dice: «<em>garantisco io che questa chiave pubblica appartiene davvero a
+      questo dominio</em>». Il browser conosce già (di fabbrica) le CA fidate, e verifica la firma. <mark>Se torna,
+      hai la prova crittografica di parlare col sito vero</mark>; se non torna (o il certificato è scaduto, o non
+      corrisponde al dominio), il browser mostra il temuto avviso rosso di sicurezza.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La catena di fiducia</div>
+    <p style="margin-bottom:0">
+      È una catena: il tuo browser si fida di poche <b>CA radice</b>; queste firmano CA intermedie; queste firmano
+      i certificati dei singoli siti. <mark>Basta fidarsi della radice per fidarsi, a cascata, di milioni di
+      siti</mark>. Oggi ottenere un certificato è gratis e automatico (grazie a iniziative come Let's Encrypt): è
+      uno dei motivi per cui HTTPS ha potuto diventare universale — lo installerai tu stesso, in pochi minuti, nel
+      libro sul deploy.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>L'handshake TLS</h2>
+
+  <p class="lead">
+    Mettiamo tutto insieme. Prima di scambiare un solo dato HTTPS, client e server fanno una <b>stretta di mano
+    TLS</b>: verificano l'identità e concordano la chiave segreta. Ecco i passi, animati.
+  </p>
+
+  <div class="widget" id="w-tls">
+    <div class="w-head">
+      <span>L'handshake TLS, passo per passo</span>
+      <span class="hint">avvia la stretta di mano sicura</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wt-svg" viewBox="0 0 560 320" role="img" aria-label="Client e server si scambiano hello, il certificato viene verificato con la CA, si concorda una chiave simmetrica e il canale diventa cifrato"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wt-go">▶ avvia handshake TLS</button>
+    </div>
+    <div class="w-readout" id="wt-out"></div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Cosa succede, in breve</div>
+    <ol style="margin-bottom:0">
+      <li><b>Ciao</b>: il client si presenta e dice quali cifrari sa usare.</li>
+      <li><b>Certificato</b>: il server invia il suo certificato; il client <b>verifica la firma della CA</b> — è
+          davvero il sito giusto?</li>
+      <li><b>Scambio chiave</b>: usando la crittografia asimmetrica, concordano <b>in sicurezza</b> una chiave
+          simmetrica segreta (che nessun origliatore può ricavare).</li>
+      <li><b>Canale cifrato</b>: da qui in poi tutto — le richieste HTTP e le risposte — viaggia <b>cifrato</b>
+          con quella chiave veloce. Il lucchetto si chiude.</li>
+    </ol>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il prezzo: un altro round-trip</div>
+    <p style="margin-bottom:0">
+      Come l'handshake TCP (Cap. 9), anche quello TLS costa <b>tempo</b> — un altro giro andata-ritorno prima di
+      inviare dati. Per un sito lontano si sente. <mark>Ecco perché la latenza di apertura di una pagina HTTPS
+      include TCP + TLS</mark>, ed è uno dei motivi per cui il web moderno riusa le connessioni e ha inventato
+      versioni più rapide (TLS 1.3, e QUIC in HTTP/3 — Cap. 13), che riducono queste strette di mano al minimo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Il lucchetto nel browser</h2>
+
+  <p class="lead">
+    Quel piccolo lucchetto nella barra degli indirizzi è il risultato visibile di tutto questo. Ma attenzione a
+    cosa significa <b>davvero</b> — e a cosa <b>non</b> significa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Cosa dice (e cosa non dice) il lucchetto</div>
+    <p style="margin-bottom:0">
+      Il lucchetto dice: <b>la connessione è cifrata</b> e <b>il certificato è valido per questo dominio</b>. È
+      una garanzia importante — nessuno legge o altera i dati in transito. <mark>Ma NON dice che il sito è
+      «buono» o onesto</mark>: anche un sito truffaldino può avere un lucchetto (il certificato è gratis per
+      tutti!). Il lucchetto certifica <b>il canale</b>, non <b>l'intenzione</b> di chi c'è dall'altra parte. La
+      lezione: «connessione sicura» significa «nessuno origlia tra te e quel sito», non «quel sito è
+      affidabile». Distinguere le due cose ti protegge dalle truffe che sfruttano proprio la falsa sensazione di
+      sicurezza del lucchetto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Laboratorio: ispezionare un certificato</h2>
+
+  <p class="lead">
+    Guardiamo un certificato reale: chi l'ha emesso, per quale dominio, fino a quando è valido. Due strade: il
+    browser (facile) e <code>curl</code> (da terminale).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Nel browser <span class="tag">clicca il lucchetto</span></div>
+    <div class="f-note" style="margin-top:0">
+      Su qualsiasi sito HTTPS, <b>clicca il lucchetto</b> accanto all'indirizzo → «La connessione è sicura» →
+      «Il certificato è valido». Vedrai: il <b>dominio</b> per cui è emesso, la <b>CA</b> che l'ha firmato, e le
+      <b>date di validità</b>. <mark>Prova a trovare un certificato scaduto o sbagliato</mark> (alcuni siti di test
+      come <code>expired.badssl.com</code> esistono apposta): il browser ti sbarrerà la strada con un avviso rosso
+      — è la catena di fiducia che fa il suo lavoro.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Da terminale: <code>curl -v</code> <span class="tag">vedi la stretta di mano TLS</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">curl</span> <span class="fl">-v</span> <span class="ar">https://example.com</span>   <span class="c">-v = "verbose": mostra i dettagli</span></pre>
+    </div>
+    <div class="f-note">
+      Tra le righe che iniziano con <code>*</code> vedrai la negoziazione TLS in diretta:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output (estratto)</div>
+        <pre><span class="out">* &nbsp;SSL connection using TLSv1.3 / <span class="hl">cifrario moderno</span>
+* &nbsp;Server certificate:
+* &nbsp; &nbsp;subject: CN=<span class="hl">example.com</span>          <span class="c">← per quale dominio</span>
+* &nbsp; &nbsp;issuer:  C=US, O=<span class="hl">DigiCert Inc</span>     <span class="c">← quale CA l'ha firmato</span>
+* &nbsp; &nbsp;SSL certificate verify <span class="hl">ok</span>.        <span class="c">← la firma è valida ✓</span></span></pre>
+      </div>
+      Leggi tre cose: la <b>versione TLS</b> (oggi 1.2 o 1.3), il <b>dominio</b> del certificato (deve combaciare
+      col sito!), e la <b>CA</b> che lo garantisce, con l'esito della verifica. <mark>Hai appena visto la fiducia
+      di internet costruirsi in tre righe.</mark>
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>HTTPS = HTTP dentro TLS</b>: dà riservatezza (cifratura), autenticità (parli col sito giusto) e
+          integrità (dati non alterati) (§12.1).</li>
+      <li>Crittografia <b>simmetrica</b> (una chiave, veloce) + <b>asimmetrica</b> (pubblica/privata, sicura): TLS
+          usa l'asimmetrica per <b>concordare</b> una chiave simmetrica, poi parla in simmetrico (§12.2).</li>
+      <li>Il <b>certificato</b>, firmato da una <b>CA</b> fidata, prova l'identità del sito; è una <b>catena di
+          fiducia</b> dalle CA radice (§12.3).</li>
+      <li>L'<b>handshake TLS</b> verifica il certificato e concorda la chiave, poi cifra tutto (§12.4). Il
+          <b>lucchetto</b> garantisce il <em>canale</em>, non l'onestà del sito (§12.5). E sai ispezionare un
+          certificato (§12.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo un web completo e sicuro: nomi risolti, connessioni affidabili, richieste cifrate. Funziona — ma è
+    <b>abbastanza veloce</b>? Ogni pagina richiede handshake su handshake, decine di file, e magari un server
+    dall'altra parte del mondo. Perché alcuni siti volano e altri arrancano? Nel <strong>Capitolo 13</strong> ci
+    dedichiamo alla <b>velocità del web</b>: dove si perde tempo, come la <b>cache</b> e le <b>CDN</b> avvicinano
+    i contenuti a te, e cosa cambiano le nuove versioni <b>HTTP/2 e HTTP/3</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Quali <b>tre</b> garanzie offre HTTPS? Per ciascuna, di' cosa andrebbe storto senza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Perché HTTPS usa <b>sia</b> la crittografia asimmetrica <b>sia</b> quella simmetrica, invece di una sola? Che
+      ruolo ha ognuna?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Un sito di truffe ha il lucchetto verde. È «sicuro»? Spiega cosa garantisce e cosa non garantisce il
+      lucchetto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Clicca il lucchetto di un sito che usi spesso: chi ha emesso il certificato e fino a quando è
+      valido? Poi prova <code>curl -v https://example.com</code> e trova la CA e la versione TLS.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      <b>Riservatezza</b> (senza: chiunque sulla rete legge password e dati), <b>autenticità</b> (senza: un
+      impostore può fingersi la tua banca), <b>integrità</b> (senza: i dati in transito possono essere alterati —
+      pubblicità iniettate, download manomessi).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      L'<b>asimmetrica</b> è sicura ma lenta; la <b>simmetrica</b> è velocissima ma richiede una chiave condivisa.
+      TLS usa l'asimmetrica <b>solo per concordare in sicurezza</b> una chiave simmetrica, poi cifra tutto il resto
+      con la simmetrica: <b>sicurezza + velocità</b>. Usarne una sola costringerebbe a scegliere tra le due.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      <b>No, non è affidabile.</b> Il lucchetto garantisce solo che la <b>connessione</b> è cifrata e il
+      certificato è valido per quel dominio — non che chi gestisce il sito sia onesto. Anche i truffatori ottengono
+      certificati (sono gratis). «Sicuro» = nessuno origlia tra te e il sito; <b>non</b> = il sito è degno di
+      fiducia.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      Risposte personali: vedrai il dominio, la CA emittente (DigiCert, Let's Encrypt, Google Trust…), le date di
+      validità e, con <code>curl -v</code>, la versione TLS (1.2/1.3) e l'esito «verify ok». Se un certificato è
+      scaduto o non combacia col dominio, il browser blocca con un avviso.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.4 — handshake TLS a passi (sequenza client/server + CA)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wt-out');
+  const bGo = document.getElementById('wt-go');
+  const CX = -3.2, SX = 3.2;
+
+  const seq = [
+    { label: '👋 Client Hello (so questi cifrari)', color: 'var(--accent)', dir: 1, note: 'Il client si presenta e propone i cifrari che sa usare.' },
+    { label: '📜 Certificato del server', color: 'var(--warm)', dir: -1, note: 'Il server manda il suo <b>certificato</b> (dominio + chiave pubblica), firmato da una CA.' },
+    { label: '🔎 verifico la firma della CA…', color: 'var(--ink-soft)', dir: 0, note: 'Il client controlla la firma con le CA di cui si fida: <b>è davvero il sito giusto?</b> ✓' },
+    { label: '🔐 scambio chiave (asimmetrico)', color: 'var(--accent)', dir: 1, note: 'Usando la crittografia asimmetrica, i due concordano <b>in sicurezza</b> una chiave simmetrica segreta.' },
+    { label: '🔒 canale cifrato attivo', color: 'var(--green)', dir: 0, note: '✅ Da ora tutto (richieste e risposte HTTP) viaggia <b>cifrato</b> con la chiave veloce. Il lucchetto si chiude.' }
+  ];
+  let idx = -1, anim = null, last = null;
+
+  bGo.addEventListener('click', () => { idx = 0; anim = { t: 0 }; last = null; requestAnimationFrame(step); });
+
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.3;
+    if (anim.t >= 1) { idx++; if (idx >= seq.length) { anim = null; draw(); return; } anim.t = 0; last = null; }
+    draw(); requestAnimationFrame(step);
+  }
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.3, ymax: 2.3 });
+    const locked = (idx >= seq.length);
+    // linee di vita
+    p.line(CX, 1.7, CX, -2.2, { color: 'var(--ink-faint)', width: 1.5 });
+    p.line(SX, 1.7, SX, -2.2, { color: 'var(--ink-faint)', width: 1.5 });
+    p.text(CX, 1.9, '💻 client', { size: 12, anchor: 'middle', color: 'var(--accent)', bold: true });
+    p.text(SX, 1.9, (locked ? '🔒 ' : '🗄 ') + 'server', { size: 12, anchor: 'middle', color: 'var(--warm)', bold: true });
+    // messaggi completati
+    const yFor = i => 1.2 - i * 0.62;
+    for (let i = 0; i < Math.min(idx, seq.length); i++) drawMsg(p, seq[i], yFor(i), 1);
+    if (anim && idx < seq.length) drawMsg(p, seq[idx], yFor(idx), anim.t);
+
+    let msg = 'Premi «avvia handshake TLS»: verifica del certificato, scambio della chiave, canale cifrato.';
+    if (idx >= 0 && idx < seq.length) msg = '<b>Passo ' + (idx + 1) + '/' + seq.length + '</b> — ' + seq[idx].note;
+    else if (locked) msg = '✅ <b style="color:var(--green)">Handshake completato</b>: il canale è cifrato. Ora HTTP viaggia sicuro dentro TLS (§12.4).';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">' + msg + '</div>';
+  }
+  function drawMsg(p, m, y, prog) {
+    if (m.dir === 0) { // evento locale su un lato (verifica CA / canale attivo)
+      const x = (m.color === 'var(--green)') ? 0 : CX;
+      p.text(x, y, m.label, { size: 11, anchor: 'middle', color: m.color, bold: true });
+      return;
+    }
+    const x0 = m.dir === 1 ? CX : SX, x1 = m.dir === 1 ? SX : CX;
+    const xEnd = x0 + (x1 - x0) * prog;
+    p.line(x0, y, xEnd, y, { color: m.color, width: 2.4 });
+    p.dot(xEnd, y, { color: m.color, r: 4 });
+    p.text((x0 + x1) / 2, y, m.label, { size: 10, anchor: 'middle', dy: -6, color: m.color, bold: true });
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

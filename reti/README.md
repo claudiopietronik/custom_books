@@ -35,7 +35,7 @@ Contenuto originale scritto ex novo.
 - [x] 9 — UDP e TCP
 - [x] 10 — Il DNS
 - [x] 11 — HTTP
-- [ ] 12 — HTTPS e TLS
+- [x] 12 — HTTPS e TLS
 - [ ] 13 — Il web veloce
 - [ ] 14 — Email e altri protocolli
 - [ ] 15 — La sicurezza in rete

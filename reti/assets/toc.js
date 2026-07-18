@@ -186,7 +186,7 @@ const TOC = [
     n: 12,
     titolo: "HTTPS e TLS",
     file: "cap12-https-tls.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Perché serve cifrare" },
       { id: "s12-2", n: "12.2", t: "Crittografia simmetrica e asimmetrica" },
