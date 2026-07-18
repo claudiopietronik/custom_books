@@ -45,7 +45,7 @@ const TOC = [
     n: 3,
     titolo: "Numeri e operatori",
     file: "cap03-numeri-operatori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Interi e decimali" },
       { id: "s3-2", n: "3.2", t: "Operatori aritmetici" },

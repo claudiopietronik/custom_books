@@ -13,7 +13,7 @@ Contenuto originale scritto ex novo.
 
 - [x] 1 — Il primo programma
 - [x] 2 — Variabili e tipi
-- [ ] 3 — Numeri e operatori
+- [x] 3 — Numeri e operatori
 - [ ] 4 — Le stringhe
 - [ ] 5 — Liste e tuple
 - [ ] 6 — Dizionari e insiemi
