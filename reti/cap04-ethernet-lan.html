@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Ethernet e la LAN — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>Ethernet e la LAN</h1>
+    <p class="standfirst">
+      Saliamo di un gradino: dal singolo filo alla <b>rete locale</b> — la LAN di casa o dell'ufficio, dove una
+      manciata di dispositivi condivide lo stesso spazio e deve consegnarsi dati a vicenda. Qui regna
+      <b>Ethernet</b>, la tecnologia di rete locale più diffusa del pianeta, con i suoi indirizzi «di fabbrica»
+      (i <b>MAC</b>), le sue buste (i <b>frame</b>) e la scatola quasi magica che smista tutto senza sbagliare
+      un colpo: lo <b>switch</b>. <mark>È il livello dove «rete» smette di essere astratta e diventa la presa nel
+      muro e la lucina che lampeggia.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è una <b>LAN</b> (§4.1), l'indirizzo <b>MAC</b> stampato in ogni scheda di rete (§4.2), la busta di
+      questo livello — il <b>frame Ethernet</b> (§4.3), la scatola che impara e smista — lo <b>switch</b> (§4.4),
+      e il ponte tra il mondo IP e il mondo MAC: <b>ARP</b> (§4.5). Nel laboratorio (§4.6) esplori i dispositivi
+      della tua rete.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la rete che tocchi con mano</div>
+    <p style="margin-bottom:0">
+      Questo è lo strato dei cavi che colleghi, delle porte del router, dei dispositivi che «si vedono» in casa.
+      Capirlo ti fa capire <mark>perché la stampante di rete a volte sparisce, cos'è quell'elenco di aggeggi
+      connessi, perché un cavo in una presa sì e in un'altra no</mark>. Ed è il gradino indispensabile prima di
+      salire agli indirizzi IP (Cap. 6): l'IP dice «in quale casa», il MAC dice «in quale mano», qui nella stanza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>La rete locale</h2>
+
+  <p class="lead">
+    Una <b>LAN</b> (Local Area Network) è un gruppo di dispositivi vicini che condividono la stessa rete: casa,
+    ufficio, aula. Al suo interno i dispositivi si parlano <b>direttamente</b>, senza passare da internet.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il vicinato digitale</div>
+    <p style="margin-bottom:0">
+      Pensa alla LAN come al tuo <b>condominio</b>: dentro, i vicini possono bussare l'uno alla porta dell'altro
+      senza scomodare le poste. Il tuo PC può parlare con la stampante, la TV con il telefono, tutto <b>dentro
+      casa</b>, senza che un solo bit esca su internet. Quando invece un dispositivo vuole raggiungere qualcosa
+      <b>fuori</b> (un sito), consegna il tutto al <b>portinaio</b> — il router — che fa da ponte verso il mondo
+      (Cap. 8). <mark>Dentro la LAN si usa Ethernet/WiFi e gli indirizzi MAC; per uscire serve IP.</mark> Questa
+      distinzione «dentro vs fuori» tornerà di continuo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>L'indirizzo MAC</h2>
+
+  <p class="lead">
+    Ogni scheda di rete al mondo — WiFi o Ethernet — nasce con un <b>indirizzo unico</b> impresso dal produttore:
+    il <b>MAC address</b>. È il «nome di battesimo» hardware del dispositivo sulla rete locale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'indirizzo MAC <span class="tag">48 bit, unico al mondo</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:1.15rem; text-align:center">
+        <span style="color:var(--accent)">A4:C3:F0</span> : <span style="color:var(--warm)">1B:2E:9D</span>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span style="color:var(--accent)">prima metà</span> — il produttore</dt>
+        <dd>i primi 3 byte identificano <b>l'azienda</b> che ha fatto la scheda (Apple, Intel, TP-Link…): è un
+            codice assegnato a livello mondiale. Da un MAC puoi risalire alla marca dell'apparecchio.</dd>
+        <dt><span style="color:var(--warm)">seconda metà</span> — il numero di serie</dt>
+        <dd>gli altri 3 byte sono un progressivo scelto dal produttore, unico per quella scheda. Insieme, i 48
+            bit danno un indirizzo <mark>teoricamente unico su tutto il pianeta</mark>.</dd>
+        <dt>a cosa serve</dt>
+        <dd>a consegnare i frame <b>dentro la rete locale</b>: «questo è per la scheda A4:C3:F0:1B:2E:9D». È un
+            indirizzo <b>piatto</b> (non dice <em>dove</em> sei, solo <em>chi</em> sei) e per questo funziona solo
+            in locale: per andare lontano serve l'IP, che invece è «geografico» (Cap. 6).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Curiosità utile per la privacy: telefoni e PC moderni usano spesso un <b>MAC casuale</b> per ogni rete WiFi,
+      proprio perché il MAC, essendo fisso e unico, permetterebbe di <b>tracciarti</b> tra un locale e l'altro.
+      <mark>Un identificatore unico e permanente è comodo per la rete ma pericoloso per la privacy</mark>: la
+      randomizzazione è il compromesso.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Il frame Ethernet</h2>
+
+  <p class="lead">
+    La busta del livello di collegamento si chiama <b>frame</b>. Ha una struttura semplice: chi lo manda, a chi va,
+    cosa contiene, e un controllo per accorgersi degli errori.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di un frame Ethernet <span class="tag">l'involucro più esterno</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:.8rem; display:flex; flex-wrap:wrap; justify-content:center; gap:3px; text-align:center">
+        <span style="background:color-mix(in srgb,var(--warm) 20%,transparent); padding:.3rem .5rem; border-radius:6px">MAC dest.</span>
+        <span style="background:color-mix(in srgb,var(--accent) 20%,transparent); padding:.3rem .5rem; border-radius:6px">MAC mitt.</span>
+        <span style="background:color-mix(in srgb,var(--ink) 10%,transparent); padding:.3rem .5rem; border-radius:6px">tipo</span>
+        <span style="background:color-mix(in srgb,var(--green) 20%,transparent); padding:.3rem .9rem; border-radius:6px">DATI (il pacchetto IP)</span>
+        <span style="background:color-mix(in srgb,var(--gold) 26%,transparent); padding:.3rem .5rem; border-radius:6px">FCS</span>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>MAC destinazione</b> e <b>MAC mittente</b></dt>
+        <dd>a chi va e da chi viene, dentro la LAN. Lo switch userà questi per smistare (§4.4).</dd>
+        <dt><b>tipo</b></dt>
+        <dd>dice cosa c'è dentro i dati (di solito «un pacchetto IPv4» o «IPv6», oppure «una richiesta ARP»).
+            Serve al ricevitore per passare il contenuto allo strato giusto (de-incapsulamento, Cap. 2).</dd>
+        <dt><b>DATI</b> — il carico</dt>
+        <dd>qui dentro sta <b>tutto il resto della pila</b>: il pacchetto IP, che contiene il segmento TCP, che
+            contiene i dati HTTP. Il frame non li apre né li capisce: li trasporta e basta. Massimo ~1500 byte
+            (l'<b>MTU</b> di cui parlavamo).</dd>
+        <dt><b>FCS</b> — il sigillo di controllo</dt>
+        <dd>un codice calcolato sui bit del frame. Il ricevitore lo ricalcola: se non torna, il frame è
+            <mark>arrivato corrotto e viene buttato</mark>. Ethernet rileva gli errori ma non li corregge: se un
+            frame è rovinato, sparisce (toccherà a TCP, più su, accorgersene e richiederlo — Cap. 9).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Lo switch</h2>
+
+  <p class="lead">
+    Il cuore di ogni LAN moderna. Lo <b>switch</b> è la scatola con tante porte a cui colleghi i dispositivi (nel
+    router di casa è integrato). Il suo talento: consegnare ogni frame <b>solo</b> alla porta giusta, senza
+    disturbare le altre.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Una scatola che impara</div>
+    <p style="margin-bottom:0">
+      Lo switch tiene una <b>tabella</b> «MAC → porta»: su quale porta si trova ciascun dispositivo. All'inizio è
+      vuota, ma <b>impara osservando</b>: ogni volta che un frame entra da una porta, annota «il MAC mittente sta
+      su questa porta». Quando poi arriva un frame <em>per</em> quel MAC, sa già dove mandarlo — solo lì.
+      <mark>E se non sa ancora dov'è il destinatario?</mark> Manda il frame a <b>tutte</b> le porte (broadcast di
+      apprendimento); appena il vero destinatario risponde, lo switch impara e la volta dopo va dritto. Semplice,
+      automatico, senza configurazione.
+    </p>
+  </div>
+
+  <div class="widget" id="w-switch">
+    <div class="w-head">
+      <span>Lo switch impara e smista</span>
+      <span class="hint">manda un frame e guarda cosa fa lo switch</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wsw-svg" viewBox="0 0 560 320" role="img" aria-label="Uno switch centrale con quattro dispositivi: quando non conosce il destinatario inonda tutte le porte, quando lo ha imparato consegna solo alla porta giusta"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wsw-send">A → C: invia frame</button>
+      <button class="w-btn" id="wsw-reset">reset (svuota tabella)</button>
+    </div>
+    <div class="w-readout" id="wsw-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Switch vs hub: perché conta</div>
+    <p style="margin-bottom:0">
+      Il nonno dello switch era l'<b>hub</b>: ripeteva ogni frame a <em>tutte</em> le porte, sempre. Risultato:
+      traffico inutile ovunque, collisioni, e chiunque poteva «origliare» il traffico altrui. Lo switch, mandando
+      ogni frame <b>solo</b> alla porta giusta, è più veloce, più efficiente e più riservato. <mark>È il motivo
+      per cui la tua LAN regge decine di dispositivi che chiacchierano insieme</mark> senza intasarsi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>ARP: da IP a MAC</h2>
+
+  <p class="lead">
+    C'è un problema di traduzione. I programmi ragionano in <b>indirizzi IP</b> («manda a 192.168.1.5»), ma la
+    consegna dentro la LAN avviene per <b>MAC</b>. Chi fa da ponte? Un protocollo essenziale: <b>ARP</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> «Chi ha questo IP? Batta un colpo»</div>
+    <p style="margin-bottom:0">
+      Quando il tuo PC deve consegnare un pacchetto a <code>192.168.1.5</code> nella stessa rete, ma non conosce
+      il suo MAC, <b>grida a tutti</b> (broadcast): «<em>Chi ha l'indirizzo 192.168.1.5? Ditemi il vostro MAC!</em>».
+      Tutti i dispositivi della LAN sentono la domanda, ma <b>solo il proprietario</b> di quell'IP risponde:
+      «<em>Sono io, il mio MAC è A4:C3:…</em>». A quel punto il PC può imbustare il frame col MAC giusto — e se lo
+      <b>annota in cache</b> (la tabella ARP) per non richiederlo ogni volta. <mark>ARP è il traduttore
+      IP→MAC</mark> che rende possibile la consegna locale.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: ARP si fida di chiunque</div>
+    <p style="margin-bottom:0">
+      ARP fu progettato in tempi ingenui: <b>non verifica</b> chi risponde. Un dispositivo malevolo può mentire
+      («l'IP del router? il MAC sono io!») e dirottare il traffico verso di sé — è l'<b>ARP spoofing</b>, un
+      classico attacco da rete locale (Cap. 15). <mark>Dentro la LAN ci si fida per progetto</mark>: ecco perché
+      collegarsi a una rete WiFi pubblica sconosciuta è rischioso, e perché HTTPS (Cap. 12), che cifra tutto, è la
+      vera difesa anche quando la rete locale è ostile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Laboratorio: esplorare la tua LAN</h2>
+
+  <p class="lead">
+    Vediamo la tua rete locale «dall'interno»: il tuo MAC, e la tabella ARP con i vicini che il tuo PC ha già
+    conosciuto. Due comandi, e la LAN diventa visibile.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>getmac</code> / <code>ipconfig /all</code> <span class="tag">«qual è il mio MAC?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ipconfig</span> <span class="fl">/all</span>    <span class="c">(su Mac/Linux: ifconfig oppure ip link)</span></pre>
+    </div>
+    <div class="f-note">
+      Cerca la riga <b>Indirizzo fisico</b>: è il tuo <b>MAC</b>.
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output (estratto)</div>
+        <pre><span class="out">Scheda Ethernet:
+   Descrizione . . . . . . : Realtek Gaming GbE
+   <span class="hl">Indirizzo fisico. . . . : A4-C3-F0-1B-2E-9D</span>   ← il tuo MAC
+   Indirizzo IPv4. . . . . : 192.168.1.42</span></pre>
+      </div>
+      I primi tre byte (<code>A4-C3-F0</code>) rivelano il produttore della scheda; incollali in un sito «MAC
+      vendor lookup» e scoprirai la marca.
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>arp -a</code> <span class="tag">«chi sono i miei vicini?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">arp</span> <span class="fl">-a</span></pre>
+    </div>
+    <div class="f-note">
+      Mostra la <b>tabella ARP</b>: la mappa IP → MAC dei dispositivi che il tuo PC ha già «conosciuto» nella LAN.
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Interfaccia: 192.168.1.42
+  Indirizzo Internet    Indirizzo fisico       Tipo
+  <span class="hl">192.168.1.1</span>           b8-27-eb-0a-14-77      dinamico   <span class="c">← il router</span>
+  192.168.1.5           a4-c3-f0-1b-2e-9d      dinamico   <span class="c">← la stampante?</span>
+  192.168.1.28          3c-22-fb-91-0d-5e      dinamico   <span class="c">← il telefono?</span></pre>
+      </div>
+      Ogni riga è un vicino che il tuo PC ha incontrato. Il primo (di solito <code>.1</code>) è <b>il router</b>.
+      <mark>Prova a pingare un nuovo dispositivo di casa e poi rifare <code>arp -a</code></mark>: comparirà, perché
+      il ping ha costretto una richiesta ARP. Hai appena visto ARP popolare la sua cache in diretta.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li>La <b>LAN</b> è il vicinato: i dispositivi si parlano direttamente per MAC; per uscire serve il router
+          (§4.1).</li>
+      <li>Il <b>MAC</b> è l'indirizzo hardware unico di ogni scheda (produttore + serie); è <b>piatto</b>, dice
+          <em>chi</em> non <em>dove</em>, e funziona solo in locale (§4.2).</li>
+      <li>Il <b>frame</b> è la busta: MAC dest./mitt., tipo, dati (dentro c'è il pacchetto IP), e FCS che rileva
+          gli errori (§4.3).</li>
+      <li>Lo <b>switch</b> impara «MAC → porta» e consegna solo dove serve (§4.4). <b>ARP</b> traduce IP → MAC
+          gridando alla LAN «chi ha questo IP?» — comodo ma fidato ciecamente (§4.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo domato la rete locale <b>via cavo</b>. Ma gran parte dei dispositivi oggi non ha fili: si collega
+    all'aria. Portare Ethernet «senza cavo» sembra facile, e invece apre una scatola di problemi affascinanti —
+    un mezzo condiviso e invisibile dove tutti parlano insieme, i muri attenuano, i vicini interferiscono. Nel
+    <strong>Capitolo 5</strong> entriamo nel <b>WiFi</b>: frequenze e canali, perché a volte rallenta, come
+    sceglie l'access point, e come si è evoluta la sua sicurezza — tutto ciò che serve per farlo andare al meglio
+    in casa tua.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza di «filosofia» tra un indirizzo MAC e un indirizzo IP? Perché ne servono due?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Uno switch riceve un frame per un MAC che non ha mai visto. Cosa fa? E come farà, la volta dopo, ad andare
+      dritto alla porta giusta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Un frame arriva con l'FCS che «non torna». Che fine fa? Chi, più in alto nella pila, se ne accorgerà e
+      rimedierà?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Esegui <code>arp -a</code> e conta i dispositivi. Identifica il router (di solito <code>.1</code>).
+      Poi pinga un dispositivo nuovo e rifai <code>arp -a</code>: cos'è cambiato?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">Sezione 4.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      Il <b>MAC</b> è <b>piatto e permanente</b>: dice <em>chi</em> sei (identità hardware), utile solo nella rete
+      locale. L'<b>IP</b> è <b>gerarchico e geografico</b>: dice <em>dove</em> sei (in quale rete del mondo), e
+      permette il routing globale. <mark>Servono entrambi</mark>: l'IP porta il pacchetto fino alla rete giusta
+      attraverso il mondo, il MAC lo consegna al dispositivo giusto <em>dentro</em> quella rete (Cap. 6–7).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      Non conoscendo la porta, lo switch <b>inonda</b> il frame su tutte le porte (tranne quella d'origine).
+      Quando il destinatario risponde, il frame di risposta entra da una certa porta e lo switch <b>impara</b>
+      «quel MAC sta lì»: da quel momento consegna direttamente, senza più inondare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      Viene <b>scartato</b> subito: Ethernet rileva l'errore (FCS) ma non lo corregge. Nessuno lo ritrasmette a
+      questo livello. Se quei dati servivano a una connessione <b>TCP</b>, sarà TCP (Cap. 9) ad accorgersi del
+      «buco» e a richiedere il pezzo mancante. Se erano UDP, andranno semplicemente persi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      Dopo il ping a un dispositivo nuovo, la tabella ARP mostra <b>una riga in più</b>: il ping ha richiesto la
+      consegna locale, ARP ha tradotto quell'IP nel suo MAC e il risultato è finito in cache. Hai osservato ARP
+      lavorare e popolarsi in tempo reale.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.4 — lo switch impara e smista
+   4 host (A,B,C,D) attorno a uno switch. "A→C": se lo switch non conosce C,
+   inonda; impara A. Alla risposta di C impara C; poi le volte dopo va diretto.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wsw-svg');
+  if (!svg) return;
+  const out = document.getElementById('wsw-out');
+  const bSend = document.getElementById('wsw-send');
+  const bReset = document.getElementById('wsw-reset');
+
+  const SW = [0, 0];
+  const hosts = {
+    A: { pos: [-3.4, 1.6], col: 'var(--accent)' },
+    B: { pos: [3.4, 1.6], col: 'var(--ink-soft)' },
+    C: { pos: [3.4, -1.6], col: 'var(--green)' },
+    D: { pos: [-3.4, -1.6], col: 'var(--ink-soft)' }
+  };
+  let table = {};          // MAC (host) -> "porta" conosciuta
+  let anim = null;         // {from,to,flood,t,phase}
+  let msg = 'Tabella dello switch vuota. Premi «A → C: invia frame».';
+
+  bReset.addEventListener('click', () => { table = {}; anim = null; msg = 'Tabella svuotata: lo switch non sa più dov\'è nessuno.'; draw(); });
+  bSend.addEventListener('click', () => {
+    if (anim) return;
+    table['A'] = true;                            // lo switch impara subito A (mittente)
+    const known = !!table['C'];
+    anim = { from: 'A', to: 'C', flood: !known, t: 0, phase: 'out' };
+    requestAnimationFrame(step);
+  });
+
+  let last = null;
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.3;
+    if (anim.t >= 1) {
+      if (anim.phase === 'out') {
+        // il frame è arrivato a C: C risponde, lo switch impara C
+        table['C'] = true;
+        anim = { from: 'C', to: 'A', flood: false, t: 0, phase: 'back' };
+        last = null;
+      } else { anim = null; last = null; msg = 'Fatto. Ora lo switch <b>conosce C</b>: il prossimo A→C andrà <b>dritto</b>, senza inondare.'; draw(); return; }
+    }
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.6, ymax: 2.6, iso: true });
+    // collegamenti
+    for (const k in hosts) p.line(SW[0], SW[1], hosts[k].pos[0], hosts[k].pos[1], { color: 'var(--ink-faint)', width: 2 });
+    // switch
+    p.rect(-0.9, -0.55, 0.9, 0.55, { fill: 'color-mix(in srgb,var(--violet) 16%,transparent)', color: 'var(--violet)', width: 2 });
+    p.text(0, 0, 'SWITCH', { size: 12, anchor: 'middle', dy: 4, color: 'var(--violet)', bold: true });
+    // host
+    for (const k in hosts) {
+      const h = hosts[k];
+      p.dot(h.pos[0], h.pos[1], { color: h.col, r: 15 });
+      p.text(h.pos[0], h.pos[1], k, { size: 14, anchor: 'middle', dy: 5, color: 'var(--paper)', bold: true });
+    }
+    // frame in volo
+    if (anim) {
+      if (anim.flood && anim.phase === 'out') {
+        // inonda: un frame verso ogni host (tranne A)
+        ['B', 'C', 'D'].forEach(k => {
+          const pos = lerp(SW, hosts[k].pos, anim.t);
+          p.rect(pos[0] - 0.13, pos[1] - 0.11, pos[0] + 0.13, pos[1] + 0.11, { fill: k === 'C' ? 'var(--accent)' : 'var(--ink-faint)', color: 'none' });
+        });
+        // e il tratto A→switch nella primissima fase
+        if (anim.t < 0.5) { const q = lerp(hosts['A'].pos, SW, anim.t * 2); p.rect(q[0] - 0.13, q[1] - 0.11, q[0] + 0.13, q[1] + 0.11, { fill: 'var(--accent)', color: 'none' }); }
+      } else {
+        // consegna diretta from->switch->to
+        const src = hosts[anim.from].pos, dst = hosts[anim.to].pos;
+        const pos = anim.t < 0.5 ? lerp(src, SW, anim.t * 2) : lerp(SW, dst, (anim.t - 0.5) * 2);
+        const col = anim.phase === 'back' ? 'var(--green)' : 'var(--accent)';
+        p.rect(pos[0] - 0.13, pos[1] - 0.11, pos[0] + 0.13, pos[1] + 0.11, { fill: col, color: 'none' });
+      }
+    }
+    const known = Object.keys(table);
+    out.innerHTML = `
+      <div class="big">Tabella switch: ${known.length ? known.map(k => '<b>' + k + '</b>✓').join(' · ') : '<span style="color:var(--ink-faint)">vuota</span>'}</div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">${msg}</div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -59,7 +59,7 @@ const TOC = [
     n: 4,
     titolo: "Ethernet e la LAN",
     file: "cap04-ethernet-lan.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "La rete locale" },
       { id: "s4-2", n: "4.2", t: "L'indirizzo MAC" },

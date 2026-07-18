@@ -27,7 +27,7 @@ Contenuto originale scritto ex novo.
 - [x] 1 — Cos'è una rete
 - [x] 2 — Il modello a livelli
 - [x] 3 — Il livello fisico
-- [ ] 4 — Ethernet e la LAN
+- [x] 4 — Ethernet e la LAN
 - [ ] 5 — Il WiFi
 - [ ] 6 — L'indirizzo IP
 - [ ] 7 — Il routing
