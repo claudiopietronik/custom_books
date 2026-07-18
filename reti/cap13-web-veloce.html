@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Il web veloce — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Il web veloce</h1>
+    <p class="standfirst">
+      Abbiamo un web che <b>funziona</b> e che è <b>sicuro</b>. Ma perché alcuni siti volano e altri arrancano,
+      anche con la stessa connessione? La velocità percepita non dipende quasi mai da «quanti Mega» hai: dipende da
+      <b>quanti viaggi</b> deve fare il browser, <b>quanto sono lontani</b> i server, e da <b>quanto lavoro
+      inutile</b> si può evitare. <mark>Il trucco vincente di internet non è andare più veloce, ma non dover
+      andare affatto</mark> — riusare ciò che si ha già (cache) e avvicinare i contenuti a te (CDN). In questo
+      capitolo capiamo dove si perde tempo e con quali armi il web moderno lo recupera.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dove si perde davvero tempo (§13.1), la <b>cache</b> browser e server (§13.2), le <b>CDN</b> che avvicinano
+      i contenuti (§13.3), e le versioni moderne del protocollo — <b>HTTP/2 e HTTP/3</b> (§13.4). Nel laboratorio
+      (§13.5) misuri i tempi reali di caricamento di una pagina.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: fare siti che non fanno aspettare</div>
+    <p style="margin-bottom:0">
+      La lentezza fa scappare gli utenti e la velocità è, oggi, una funzionalità. <mark>Capire cache e CDN ti fa
+      diagnosticare perché un sito è lento e, quando ne costruirai uno, renderlo veloce</mark>. Questi concetti
+      tornano identici nel deploy (mettere una CDN davanti al tuo sito, impostare gli header di cache) e spiegano
+      pure la vita di tutti i giorni: perché la seconda visita a un sito è più rapida, perché svuotare la cache
+      «magicamente» risolve certi problemi. È la fisica pratica della velocità del web.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Dove si perde tempo</h2>
+
+  <p class="lead">
+    Caricare una pagina non è «scaricare un file»: è una <b>sequenza di viaggi</b>. E ogni viaggio costa latenza —
+    quel tempo di andata-ritorno che, ricordi (Cap. 3), la banda non può ridurre.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il conto dei viaggi</div>
+    <p style="margin-bottom:0">
+      Aprire una pagina «da zero» richiede, in fila: <b>DNS</b> (trova l'IP), <b>handshake TCP</b> (un round-trip),
+      <b>handshake TLS</b> (un altro round-trip), <b>richiesta HTTP</b> e attesa, poi <mark>decine di richieste
+      aggiuntive</mark> per immagini, CSS, script, font… ognuna col suo viaggetto. Su un sito lontano, ogni
+      round-trip può costare 50–150 ms: si sommano in fretta. <b>Il collo di bottiglia è quasi sempre il numero e
+      la lunghezza dei viaggi, non la banda</b>. Le strategie che seguono attaccano esattamente questo: ridurre i
+      viaggi (cache, HTTP/2) e accorciarli (CDN).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>La cache (browser e server)</h2>
+
+  <p class="lead">
+    L'arma più potente: <b>non richiedere ciò che hai già</b>. La cache conserva le risorse per riusarle, evitando
+    del tutto il viaggio. È il motivo per cui la seconda visita a un sito è molto più rapida della prima.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Ricordare per non riscaricare</div>
+    <p style="margin-bottom:0">
+      Quando scarichi il logo di un sito, il browser lo <b>tiene in cache</b> sul disco. Alla visita successiva, se
+      il logo non è cambiato, lo <b>riusa dal disco</b> — zero viaggi, istantaneo. Chi comanda è il server, con
+      l'header <code>Cache-Control</code> (Cap. 11): «<em>questa immagine puoi tenerla per una settimana</em>». Per
+      i file che <em>potrebbero</em> cambiare, esistono meccanismi di verifica leggera («è ancora valido?» →
+      «<b>304 Not Modified</b>, tienilo»), che costano un mini-viaggio invece del download intero. <mark>La cache
+      trasforma «scaricare» in «ho già»</mark>: è la più grande economia del web.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché a volte «svuota la cache» risolve</div>
+    <p style="margin-bottom:0">
+      Il rovescio: se il server dice «tieni questo file a lungo» e poi lo cambia, il browser può continuare a usare
+      la <b>vecchia versione</b> in cache — ed ecco pagine «rotte» o aggiornamenti che non si vedono. <mark>Per
+      questo «svuota la cache» o il ricaricamento forzato (Ctrl+F5) spesso risolve</mark>: costringe a riscaricare
+      tutto. I siti fatti bene evitano il problema cambiando il <em>nome</em> del file a ogni versione (es.
+      <code>stile.a3f9.css</code>), così il nuovo nome forza un nuovo download. È esattamente lo stesso trucco che
+      useremmo per aggiornare gli asset di un sito online.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Le CDN</h2>
+
+  <p class="lead">
+    E se il contenuto deve proprio essere scaricato? Allora conviene che parta da <b>vicino</b>. È l'idea delle
+    <b>CDN</b>: copiare i contenuti su server sparsi in tutto il mondo, così ognuno li riceve dal più vicino.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Avvicinare i contenuti all'utente</div>
+    <p style="margin-bottom:0">
+      Una <b>CDN</b> (Content Delivery Network) è una rete di server «di frontiera» (edge) distribuiti in centinaia
+      di città. Le risorse statiche di un sito (immagini, video, CSS, script) vengono <b>copiate su tutti</b>.
+      Quando le chiedi, non vai fino al server d'origine dall'altra parte del mondo: <mark>le prendi dall'edge più
+      vicino a te</mark>, magari nella tua stessa città. Risultato: la distanza — e quindi la latenza — crolla. È
+      il motivo per cui un video di YouTube o una libreria famosa partono in un lampo ovunque tu sia: non stanno
+      «lontano», ne esiste una copia a pochi millisecondi da te.
+    </p>
+  </div>
+
+  <div class="widget" id="w-cdn">
+    <div class="w-head">
+      <span>Con e senza CDN: la distanza è tutto</span>
+      <span class="hint">attiva la CDN e guarda la latenza</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wcdn-svg" viewBox="0 0 560 300" role="img" aria-label="Senza CDN l'utente raggiunge il server d'origine lontano; con CDN riceve i contenuti da un server edge vicino, con latenza molto minore"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center">
+      <button class="w-btn" id="wcdn-toggle">CDN: spenta</button>
+    </div>
+    <div class="w-readout" id="wcdn-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La CDN fa anche altro</div>
+    <p style="margin-bottom:0">
+      Oltre alla velocità, le CDN <b>alleggeriscono il server d'origine</b> (gran parte del traffico lo servono
+      loro) e <b>assorbono i picchi</b> e gli attacchi (Cap. 15): quando un sito diventa virale, è la CDN a reggere
+      l'ondata. <mark>Per questo mettere una CDN davanti a un sito è tra le prime mosse di ogni deploy serio</mark>
+      — spesso gratis per i volumi normali. Lo faremo, in pratica, nel libro sul deploy.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>HTTP/2 e HTTP/3 (QUIC)</h2>
+
+  <p class="lead">
+    Anche il protocollo si è evoluto per ridurre i viaggi. Il vecchio HTTP/1.1 caricava le risorse quasi una alla
+    volta; le versioni moderne le fanno viaggiare <b>tutte insieme</b> e con meno cerimonie.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'evoluzione di HTTP <span class="tag">sempre meno attese</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>HTTP/1.1</b> — una fila stretta</dt>
+        <dd>le richieste sulla stessa connessione andavano quasi <b>in fila</b>: una risorsa lenta bloccava le
+            altre dietro. I browser aprivano più connessioni per rimediare, ma era uno spreco.</dd>
+        <dt><b>HTTP/2</b> — tutto insieme (multiplexing)</dt>
+        <dd>su <b>una sola connessione</b> fa viaggiare <b>tante richieste in parallelo</b>, intrecciate. Niente più
+            fila: le decine di file di una pagina scendono insieme. Comprime anche gli header. Un grande balzo.</dd>
+        <dt><b>HTTP/3</b> — su QUIC (UDP)</dt>
+        <dd>abbandona TCP e usa <b>QUIC</b> (costruito su UDP): <mark>fonde gli handshake TCP e TLS in uno solo</mark>,
+            riducendo la latenza d'apertura, ed elimina un difetto di HTTP/2 (se un pacchetto si perde, non blocca
+            tutti gli altri flussi). È il web più veloce di oggi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non devi «attivare» nulla: browser e server negoziano automaticamente la versione migliore che entrambi
+      supportano. <mark>La tendenza è chiara: meno round-trip, più parallelismo</mark>. Tutto il progresso del web
+      moderno, in fondo, combatte la stessa nemica: la latenza dei viaggi (§13.1).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Laboratorio: misurare i tempi di una pagina</h2>
+
+  <p class="lead">
+    Misuriamo <b>dove</b> se ne va il tempo caricando una pagina, con due strumenti: <code>curl</code> per la
+    scomposizione dei tempi, e gli strumenti del browser per il quadro completo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Scomporre i tempi con <code>curl -w</code> <span class="tag">DNS, connessione, TLS, risposta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale (una riga)</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">curl</span> <span class="fl">-w</span> <span class="ar">"DNS %{time_namelookup}s | TCP %{time_connect}s | TLS %{time_appconnect}s | totale %{time_total}s\n"</span> <span class="fl">-o</span> <span class="ar">NUL</span> <span class="fl">-s</span> <span class="ar">https://example.com</span></pre>
+    </div>
+    <div class="f-note">
+      Il flag <span class="fl">-w</span> («write-out») stampa <b>timer interni</b> di curl; <span class="fl">-o
+      NUL</span> butta il contenuto (ci interessano i tempi), <span class="fl">-s</span> silenzia il resto.
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">DNS <span class="hl">0.021</span>s | TCP <span class="hl">0.055</span>s | TLS <span class="hl">0.110</span>s | totale 0.140s</span></pre>
+      </div>
+      Leggi la scaletta cumulativa: la <b>risoluzione DNS</b> (0,021s), poi la <b>connessione TCP</b> stabilita
+      (0,055s → l'handshake TCP è costato ~34 ms), poi <b>TLS</b> pronto (0,110s → la stretta TLS ~55 ms in più), e
+      infine il <b>totale</b>. <mark>Vedi con i tuoi occhi quanto costano gli handshake</mark> di cui parlavamo:
+      prova un sito lontano e guarda i numeri salire. Nel browser, il pannello <b>Rete</b> (F12 → Network)
+      mostra la stessa scomposizione, risorsa per risorsa: apri una pagina e osserva la cascata dei viaggi.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li>La lentezza del web è quasi sempre <b>numero e lunghezza dei viaggi</b> (latenza), non banda: DNS + TCP +
+          TLS + decine di richieste (§13.1).</li>
+      <li>La <b>cache</b> è l'arma più potente: <mark>non richiedere ciò che hai già</mark> (e «svuota la cache»
+          risolve quando resta bloccata su una vecchia versione) (§13.2).</li>
+      <li>Le <b>CDN</b> avvicinano i contenuti copiandoli su edge in tutto il mondo: meno distanza = meno latenza,
+          e reggono i picchi (§13.3).</li>
+      <li><b>HTTP/2</b> (multiplexing) e <b>HTTP/3/QUIC</b> (handshake fusi, niente blocco) riducono viaggi e
+          attese, in automatico (§13.4). E sai misurare i tempi con <code>curl -w</code> e il pannello Rete (§13.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo un web sicuro <em>e</em> veloce. Ci restano due tessere per completare il quadro. La prima: il web non
+    è l'unico servizio di internet — c'è la <b>posta elettronica</b>, con la sua storia curiosa, e il
+    <b>terminale remoto</b> (SSH) che userai tantissimo nei libri sui server. Nel <strong>Capitolo 14</strong>
+    vediamo come viaggia davvero una email (e perché lo spam è un problema così duro), e conosciamo SSH, la porta
+    d'accesso sicura a ogni macchina remota.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      La prima visita a un sito è lenta, la seconda molto più rapida, pur con la stessa connessione. Perché? Cosa è
+      cambiato tra le due?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Un'immagine è servita da una CDN con un edge nella tua città invece che dal server d'origine dall'altra parte
+      del mondo. Cosa cambia, e perché? Quale grandezza (banda o latenza) migliora?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      In una riga, qual è il vantaggio principale di HTTP/2 rispetto a HTTP/1.1? E cosa aggiunge HTTP/3 con QUIC?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Usa il comando <code>curl -w</code> del laboratorio su un sito italiano e su uno lontano (es.
+      <code>.jp</code> o <code>.au</code>). Come cambiano i tempi di TCP e TLS? Perché?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      Alla seconda visita molte risorse (immagini, CSS, script) sono già nella <b>cache</b> del browser: vengono
+      riusate dal disco senza rifare il viaggio in rete. Inoltre il DNS è in cache e le connessioni possono essere
+      riusate. Meno viaggi = molto più veloce.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Il contenuto parte da <b>molto più vicino</b>, quindi il tempo di andata-ritorno crolla: migliora la
+      <b>latenza</b> (la distanza fisica). La banda non c'entra: è la vicinanza a fare la differenza (ricorda il
+      limite della velocità della luce, Cap. 3).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      <b>HTTP/2</b>: fa viaggiare tante richieste <b>in parallelo su una sola connessione</b> (multiplexing),
+      eliminando la «fila» di HTTP/1.1. <b>HTTP/3 (QUIC)</b>: <b>fonde gli handshake</b> TCP+TLS in uno solo
+      (meno latenza d'apertura) ed evita che un pacchetto perso blocchi gli altri flussi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Verso il sito lontano, <b>time_connect (TCP)</b> e <b>time_appconnect (TLS)</b> crescono nettamente: ogni
+      handshake è un round-trip, e più distanza significa più millisecondi per giro. La differenza è tutta
+      <b>latenza dovuta alla distanza</b> — esattamente ciò che le CDN eliminano avvicinando i server.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.3 — con/senza CDN: distanza e latenza
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wcdn-svg');
+  if (!svg) return;
+  const out = document.getElementById('wcdn-out');
+  const btn = document.getElementById('wcdn-toggle');
+  let cdn = false, t = 0, last = null;
+  btn.addEventListener('click', () => { cdn = !cdn; btn.textContent = 'CDN: ' + (cdn ? 'attiva' : 'spenta'); });
+
+  const USER = [-4, -1.2], ORIGIN = [4, 1.4], EDGE = [-1.8, -0.2];
+
+  function frame(now) {
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    t += dt; draw(); requestAnimationFrame(frame);
+  }
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.2, ymax: 2.2, iso: true });
+    // "mondo" tenue
+    p.text(0, 2.0, '🌍 il mondo', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    // nodi
+    p.text(USER[0], USER[1], '🧑', { size: 22, anchor: 'middle', dy: 8 });
+    p.text(USER[0], USER[1] - 0.55, 'tu (Roma)', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    p.text(ORIGIN[0], ORIGIN[1], '🗄', { size: 20, anchor: 'middle', dy: 7 });
+    p.text(ORIGIN[0], ORIGIN[1] + 0.5, 'origine (Sydney)', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    if (cdn) { p.text(EDGE[0], EDGE[1], '📦', { size: 18, anchor: 'middle', dy: 6 }); p.text(EDGE[0], EDGE[1] - 0.5, 'edge CDN (Milano)', { size: 10, anchor: 'middle', color: 'var(--green)' }); }
+
+    const target = cdn ? EDGE : ORIGIN;
+    const distU = Math.hypot(target[0] - USER[0], target[1] - USER[1]);
+    // percorso e pacchetto avanti-indietro
+    p.line(USER[0], USER[1], target[0], target[1], { color: cdn ? 'var(--green)' : 'var(--warm)', width: 2, dash: '5 4' });
+    const f = (t % 1.6) / 1.6;
+    const go = f < 0.5 ? f * 2 : 1 - (f - 0.5) * 2;
+    const pos = lerp(USER, target, go);
+    p.rect(pos[0] - 0.15, pos[1] - 0.12, pos[0] + 0.15, pos[1] + 0.12, { fill: cdn ? 'var(--green)' : 'var(--warm)', color: 'none' });
+
+    const latMs = Math.round(distU * 18);
+    out.innerHTML = `
+      <div class="big">${cdn
+        ? '<b style="color:var(--green)">CDN attiva</b>: contenuto dall\'edge vicino · latenza ≈ ' + latMs + ' ms'
+        : '<b style="color:var(--warm)">Senza CDN</b>: fino all\'origine lontana · latenza ≈ ' + latMs + ' ms'}
+      </div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${cdn
+          ? 'La risorsa esiste in copia su un <b>edge vicino a te</b>: il viaggio è cortissimo, la latenza crolla. L\'origine lontana quasi non viene disturbata (§13.3).'
+          : 'Ogni richiesta deve arrivare fino al <b>server d\'origine dall\'altra parte del mondo</b>: tanta distanza, tanta latenza. <mark>Attiva la CDN</mark> e guarda cosa cambia.'}
+      </div>`;
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

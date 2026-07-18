@@ -36,7 +36,7 @@ Contenuto originale scritto ex novo.
 - [x] 10 — Il DNS
 - [x] 11 — HTTP
 - [x] 12 — HTTPS e TLS
-- [ ] 13 — Il web veloce
+- [x] 13 — Il web veloce
 - [ ] 14 — Email e altri protocolli
 - [ ] 15 — La sicurezza in rete
 - [ ] 16 — Il viaggio completo di un click

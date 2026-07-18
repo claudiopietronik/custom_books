@@ -202,7 +202,7 @@ const TOC = [
     n: 13,
     titolo: "Il web veloce",
     file: "cap13-web-veloce.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Dove si perde tempo" },
       { id: "s13-2", n: "13.2", t: "La cache (browser e server)" },
