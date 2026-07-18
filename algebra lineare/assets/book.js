@@ -456,6 +456,14 @@ const W = {
       }
     });
 
+    /* aggiorna quando torni sulla scheda/finestra (es. dopo aver modificato sull'altro dispositivo) */
+    function pullOnFocus() {
+      if (!getCode()) return;
+      syncPull().then(function (ch) { if (ch) { refreshBtn(); if (pop.style.display === "block") { renderPop(); positionPop(); } } });
+    }
+    window.addEventListener("focus", pullOnFocus);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) pullOnFocus(); });
+
     refreshBtn();
     if (getCode()) syncPull().then(function (ch) { if (ch) refreshBtn(); });
   }
