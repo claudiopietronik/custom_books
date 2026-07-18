@@ -157,7 +157,7 @@ const TOC = [
     n: 10,
     titolo: "Moduli, pacchetti e ambienti",
     file: "cap10-moduli-pacchetti.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "import: usare il codice altrui" },
       { id: "s10-2", n: "10.2", t: "La libreria standard" },

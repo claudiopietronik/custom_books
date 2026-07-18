@@ -20,7 +20,7 @@ Contenuto originale scritto ex novo.
 - [x] 7 — Prendere decisioni
 - [x] 8 — I cicli
 - [x] 9 — Le funzioni
-- [ ] 10 — Moduli, pacchetti e ambienti
+- [x] 10 — Moduli, pacchetti e ambienti
 - [ ] 11 — Errori ed eccezioni
 - [ ] 12 — File e dati
 - [ ] 13 — Programmazione a oggetti
