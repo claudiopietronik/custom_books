@@ -77,7 +77,7 @@ const TOC = [
     n: 5,
     titolo: "Liste e tuple",
     file: "cap05-liste-tuple.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Cos'è una lista" },
       { id: "s5-2", n: "5.2", t: "Aggiungere, togliere, cambiare" },

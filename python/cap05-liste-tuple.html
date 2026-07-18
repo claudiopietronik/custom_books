@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Liste e tuple — Python</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>Liste e tuple</h1>
+    <p class="standfirst">
+      Finora abbiamo custodito <b>un dato alla volta</b> in una variabile. Ma il mondo è fatto di raccolte: i nomi
+      di una classe, i voti di un esame, i prodotti di un carrello, le canzoni di una playlist. Serve un contenitore
+      capace di tenere <b>molti valori insieme</b>, in ordine, e di farci scorrere e cercare dentro. In Python è la
+      <b>lista</b> — forse la struttura dati più usata in assoluto — affiancata dalla sua cugina «bloccata», la
+      <b>tupla</b>. <mark>È un salto concettuale importante: da un valore singolo a intere collezioni di dati</mark>,
+      e apre la porta ai cicli del prossimo capitolo, dove imparerai a fare qualcosa «per ogni elemento».
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è una lista (§5.1), come <b>modificarla</b> — aggiungere, togliere, cambiare (§5.2), <b>indici, slicing e
+      lunghezza</b> (§5.3), le <b>tuple</b> immutabili e quando servono (§5.4), <b>ordinare e cercare</b> (§5.5).
+      Nel laboratorio (§5.6) costruisci una lista della spesa interattiva.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: gestire tante cose insieme</div>
+    <p style="margin-bottom:0">
+      Le liste sono <b>ovunque</b>: ogni volta che un programma gestisce «un elenco di qualcosa», dietro c'è una
+      lista. <mark>Sono anche la struttura su cui gireranno i cicli</mark> (Cap. 8): «per ogni prodotto nel
+      carrello, somma il prezzo», «per ogni studente, stampa il voto». Padroneggiarle — insieme agli indici già
+      visti sulle stringhe — è indispensabile per fare qualsiasi cosa non banale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Cos'è una lista</h2>
+
+  <p class="lead">
+    Una <b>lista</b> è una sequenza <b>ordinata</b> di valori, racchiusa tra <b>parentesi quadre</b> e separata da
+    virgole. Può contenere numeri, stringhe, o anche un misto — e può essere lunga quanto vuoi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Creare una lista <span class="tag">[ valore, valore, … ]</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="nm">spesa</span> <span class="op">=</span> [<span class="st">"pane"</span>, <span class="st">"latte"</span>, <span class="st">"uova"</span>]
+<span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>, <span class="nm">9</span>]
+<span class="nm">vuota</span> <span class="op">=</span> []                <span class="cm"># una lista vuota, da riempire poi</span>
+
+<span class="bi">print</span>(<span class="nm">spesa</span>)          <span class="cm"># ['pane', 'latte', 'uova']</span>
+<span class="bi">print</span>(<span class="bi">len</span>(<span class="nm">spesa</span>))     <span class="cm"># 3  (quanti elementi)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">[ … ]</span> — le parentesi quadre</dt>
+        <dd>segnano «questa è una lista». Gli elementi vanno separati da virgole.</dd>
+        <dt>ordinata e modificabile</dt>
+        <dd><b>ordinata</b>: gli elementi hanno una posizione fissa (un primo, un secondo…). <b>Modificabile</b>
+            (mutabile): puoi aggiungere, togliere e cambiare elementi dopo averla creata — a differenza delle
+            stringhe. <mark>È la sua caratteristica più utile</mark>.</dd>
+        <dt><span class="mono">len()</span></dt>
+        <dd>la stessa funzione delle stringhe: conta gli elementi. Una lista vuota ha <code>len</code> 0.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Aggiungere, togliere, cambiare</h2>
+
+  <p class="lead">
+    La forza delle liste è che si <b>modificano</b>. Ecco le operazioni che userai di continuo per farle crescere,
+    accorciare e aggiornare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Modificare una lista <span class="tag">append · insert · remove · pop</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="nm">spesa</span> <span class="op">=</span> [<span class="st">"pane"</span>, <span class="st">"latte"</span>]
+<span class="nm">spesa</span><span class="op">.</span><span class="fn">append</span>(<span class="st">"uova"</span>)      <span class="cm"># aggiunge in fondo → ['pane','latte','uova']</span>
+<span class="nm">spesa</span><span class="op">.</span><span class="fn">insert</span>(<span class="nm">0</span>, <span class="st">"olio"</span>)   <span class="cm"># inserisce in posizione 0 → ['olio','pane',...]</span>
+<span class="nm">spesa</span><span class="op">.</span><span class="fn">remove</span>(<span class="st">"latte"</span>)     <span class="cm"># toglie il primo "latte"</span>
+<span class="nm">spesa</span>[<span class="nm">0</span>] <span class="op">=</span> <span class="st">"burro"</span>        <span class="cm"># cambia l'elemento in posizione 0</span>
+<span class="nm">ultimo</span> <span class="op">=</span> <span class="nm">spesa</span><span class="op">.</span><span class="fn">pop</span>()      <span class="cm"># toglie E restituisce l'ultimo</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.append(x)</span> — aggiungi in fondo</dt>
+        <dd>il metodo più usato: mette <code>x</code> alla fine. Perfetto per costruire una lista un pezzo alla
+            volta (vedrai, coi cicli, quanto è comodo).</dd>
+        <dt><span class="mono">.insert(i, x)</span> — inserisci in posizione</dt>
+        <dd>mette <code>x</code> all'indice <code>i</code>, spostando gli altri in avanti.</dd>
+        <dt><span class="mono">.remove(x)</span> — togli per valore</dt>
+        <dd>elimina la <b>prima</b> occorrenza del valore <code>x</code>.</dd>
+        <dt><span class="mono">.pop()</span> — togli per posizione</dt>
+        <dd>senza argomenti toglie l'<b>ultimo</b> e te lo <b>restituisce</b>; <code>.pop(0)</code> toglie il
+            primo. Utile quando vuoi «prendere ed estrarre».</dd>
+        <dt><span class="mono">lista[i] = x</span> — cambia sul posto</dt>
+        <dd>sostituisce l'elemento all'indice <code>i</code>. <mark>Sulle stringhe non si poteva (immutabili),
+            sulle liste sì</mark>.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-list">
+    <div class="w-head">
+      <span>Costruire e modificare una lista</span>
+      <span class="hint">prova le operazioni e guarda la lista cambiare</span>
+    </div>
+    <div class="w-stage" style="min-height:150px">
+      <div id="wli-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wli-app">append("kiwi")</button>
+      <button class="w-btn" id="wli-ins">insert(0,"mela")</button>
+      <button class="w-btn" id="wli-pop">pop()</button>
+      <button class="w-btn" id="wli-rem">remove("pane")</button>
+      <button class="w-btn" id="wli-reset">↺ reset</button>
+    </div>
+    <div class="w-readout" id="wli-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Indici, slicing, lunghezza</h2>
+
+  <p class="lead">
+    Ottima notizia: gli <b>indici e lo slicing</b> funzionano <b>esattamente</b> come sulle stringhe (Cap. 4). Ciò
+    che hai imparato lì, vale identico qui — è la coerenza di Python.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Stessi indici delle stringhe</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head">Shell interattiva</div>
+      <pre><span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>, <span class="nm">9</span>]
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span>[<span class="nm">0</span>]        <span class="rs">7</span>        <span class="cm"># primo (da zero!)</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span>[<span class="op">-</span><span class="nm">1</span>]       <span class="rs">9</span>        <span class="cm"># ultimo</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span>[<span class="nm">1</span>:<span class="nm">3</span>]      <span class="rs">[8, 6]</span>   <span class="cm"># fetta: da 1 incluso a 3 escluso</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="st">"pane"</span> <span class="op">in</span> [<span class="st">"pane"</span>, <span class="st">"latte"</span>]  <span class="rs">True</span>  <span class="cm"># c'è dentro?</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Indice da <b>0</b>, indici negativi dalla fine, slicing <code>[a:b]</code> con fine esclusa: tutto come sulle
+      stringhe. In più, l'operatore <code>in</code> ti dice se un valore è <b>presente</b> nella lista
+      (True/False) — utilissimo per controllare «c'è già?». <mark>Una differenza chiave: <code>voti[0] = 10</code>
+      funziona</mark> (le liste sono modificabili), mentre sulla stringa dava errore.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>Le tuple (immutabili)</h2>
+
+  <p class="lead">
+    La <b>tupla</b> è come una lista, ma <b>non si può modificare</b> dopo la creazione. Si scrive con le
+    parentesi <b>tonde</b>. Sembra un limite, ed è invece una virtù in certi casi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Una lista «bloccata»</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="nm">punto</span> <span class="op">=</span> (<span class="nm">3</span>, <span class="nm">5</span>)        <span class="cm"># una tupla: coordinate x, y</span>
+<span class="bi">print</span>(<span class="nm">punto</span>[<span class="nm">0</span>])       <span class="cm"># 3  (indici come le liste)</span>
+<span class="cm"># punto[0] = 9  →  ERRORE! le tuple non si modificano</span>
+
+<span class="nm">x</span>, <span class="nm">y</span> <span class="op">=</span> <span class="nm">punto</span>       <span class="cm"># "spacchettamento": x=3, y=5 in un colpo</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Leggi e indicizzi una tupla come una lista, ma non puoi aggiungerci, toglierci o cambiarne gli elementi.
+      Quando conviene? <mark>Quando i dati <b>non devono cambiare</b></mark>: coordinate, una data (giorno, mese,
+      anno), una coppia di valori che «vanno insieme». L'immutabilità è una <b>garanzia</b>: nessuno modificherà
+      quei valori per sbaglio. Bonus elegante: lo <b>spacchettamento</b> <code>x, y = punto</code> assegna più
+      variabili in una riga — comodissimo (e funziona anche con le liste).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Ordinare e cercare</h2>
+
+  <p class="lead">
+    Due bisogni frequentissimi: mettere una lista <b>in ordine</b> e <b>trovare</b> qualcosa al suo interno.
+    Python li rende facili.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Ordinare e cercare <span class="tag">sort · sorted · count · index</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Shell interattiva</div>
+      <pre><span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span> <span class="op">=</span> [<span class="nm">7</span>, <span class="nm">9</span>, <span class="nm">6</span>, <span class="nm">8</span>]
+<span class="pr">&gt;&gt;&gt; </span><span class="bi">sorted</span>(<span class="nm">voti</span>)         <span class="rs">[6, 7, 8, 9]</span>   <span class="cm"># nuova lista ordinata</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span><span class="op">.</span><span class="fn">sort</span>()          <span class="cm"># ordina la lista SUL POSTO (non restituisce nulla)</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="bi">max</span>(<span class="nm">voti</span>), <span class="bi">min</span>(<span class="nm">voti</span>), <span class="bi">sum</span>(<span class="nm">voti</span>)  <span class="rs">(9, 6, 30)</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">voti</span><span class="op">.</span><span class="fn">count</span>(<span class="nm">6</span>)        <span class="rs">1</span>   <span class="cm"># quante volte compare</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">sorted(lista)</span> vs <span class="mono">lista.sort()</span></dt>
+        <dd>differenza sottile ma importante: <code>sorted(...)</code> <b>restituisce una nuova</b> lista ordinata
+            (l'originale resta com'è); <code>.sort()</code> <b>riordina l'originale sul posto</b> e non restituisce
+            nulla. <mark>Scegli in base a se vuoi conservare l'ordine originale o no</mark>.</dd>
+        <dt><span class="mono">max, min, sum</span></dt>
+        <dd>funzioni pronte su liste di numeri: massimo, minimo, somma. <code>sum(voti)/len(voti)</code> ti dà la
+            <b>media</b>!</dd>
+        <dt><span class="mono">.count(x)</span> e <span class="mono">.index(x)</span></dt>
+        <dd>quante volte compare <code>x</code>, e a quale posizione sta la prima occorrenza.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Laboratorio: una lista della spesa</h2>
+
+  <p class="lead">
+    Costruiamo una piccola lista della spesa e calcoliamo qualche statistica sui prezzi. È un assaggio di ciò che,
+    col prossimo capitolo (i cicli), diventerà davvero potente.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>spesa.py</code> <span class="tag">costruire e analizzare</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">spesa.py</div>
+      <pre><span class="nm">carrello</span> <span class="op">=</span> []                    <span class="cm"># parto da una lista vuota</span>
+<span class="nm">carrello</span><span class="op">.</span><span class="fn">append</span>(<span class="st">"pane"</span>)
+<span class="nm">carrello</span><span class="op">.</span><span class="fn">append</span>(<span class="st">"latte"</span>)
+<span class="nm">carrello</span><span class="op">.</span><span class="fn">append</span>(<span class="st">"mele"</span>)
+
+<span class="bi">print</span>(<span class="st">f"Nel carrello ci sono </span><span class="op">{</span><span class="bi">len</span>(<span class="nm">carrello</span>)<span class="op">}</span><span class="st"> articoli."</span>)
+<span class="bi">print</span>(<span class="st">f"Il primo è </span><span class="op">{</span><span class="nm">carrello</span><span class="op">[</span><span class="nm">0</span><span class="op">]</span><span class="op">}</span><span class="st">, in ordine: </span><span class="op">{</span><span class="bi">sorted</span>(<span class="nm">carrello</span>)<span class="op">}</span><span class="st">."</span>)
+
+<span class="nm">prezzi</span> <span class="op">=</span> [<span class="nm">1.20</span>, <span class="nm">0.99</span>, <span class="nm">2.50</span>]
+<span class="bi">print</span>(<span class="st">f"Totale: </span><span class="op">{</span><span class="bi">sum</span>(<span class="nm">prezzi</span>)<span class="op">:.2f}</span><span class="st"> € — più caro: </span><span class="op">{</span><span class="bi">max</span>(<span class="nm">prezzi</span>)<span class="op">}</span><span class="st"> €"</span>)</pre>
+    </div>
+    <div class="f-note">
+      Output:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Terminale</div>
+        <pre><span class="out">Nel carrello ci sono 3 articoli.
+Il primo è pane, in ordine: ['latte', 'mele', 'pane'].
+Totale: 4.69 € — più caro: 2.5 €</span></pre>
+      </div>
+      Vedi come lista, indici, <code>len</code>, <code>sorted</code>, <code>sum</code>, <code>max</code> e le
+      f-string collaborano. <mark>Ma aggiungere gli articoli a mano con tanti <code>append</code> è scomodo</mark>:
+      e se fossero 100? La risposta — chiedere all'utente in un <b>ciclo</b> finché non ha finito — è il cuore del
+      Capitolo 8. Le liste sono la metà della storia; i cicli sono l'altra metà.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li>Una <b>lista</b> <code>[a, b, c]</code> tiene molti valori ordinati ed è <b>modificabile</b>. <code>len()</code>
+          conta gli elementi (§5.1).</li>
+      <li>Modifica con <code>.append()</code> (in fondo), <code>.insert(i,x)</code>, <code>.remove(x)</code>,
+          <code>.pop()</code>, e <code>lista[i] = x</code> (§5.2).</li>
+      <li><b>Indici e slicing</b> come le stringhe (da 0, fine esclusa); <code>in</code> verifica la presenza (§5.3).
+          La <b>tupla</b> <code>(a, b)</code> è come una lista ma <b>immutabile</b>; comodo lo spacchettamento
+          <code>x, y = t</code> (§5.4).</li>
+      <li>Ordina con <code>sorted()</code> (nuova) o <code>.sort()</code> (sul posto); <code>max/min/sum</code>,
+          <code>.count()</code>, <code>.index()</code> (§5.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai le collezioni — ma finora le abbiamo riempite e lette a mano, elemento per elemento. Immagina di dover
+    stampare i 100 voti di una classe, o sommare i prezzi di un carrello con 50 articoli: scrivere 100 righe è
+    assurdo. Serve un modo per dire «<b>fai questo per ogni elemento</b>», automaticamente. È il potere dei
+    <b>cicli</b>, e cambia tutto. Ma prima, nel <strong>Capitolo 6</strong>, completiamo il quadro delle
+    collezioni con i <b>dizionari</b> — che invece di una posizione usano una <b>chiave</b> per ritrovare i valori
+    (come un vero vocabolario) — e gli <b>insiemi</b>. Poi, finalmente, i cicli.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Data <code>nomi = ["Ada", "Bea", "Cid"]</code>: aggiungi "Dan" in fondo, inserisci "Al" all'inizio, e togli
+      "Bea". Come sarà la lista finale?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra una lista e una tupla? Fai un esempio di dato per cui la tupla è più appropriata.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Data <code>voti = [7, 9, 6, 10, 8]</code>, scrivi le espressioni per: il voto più alto, la media, e la lista
+      ordinata (senza modificare l'originale).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Crea <code>top3.py</code>: parti da una lista di 5 numeri, ordinala dal più grande
+      (<code>sorted(lista, reverse=True)</code>) e stampa i primi tre con lo slicing <code>[:3]</code>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-8"><span class="secnum">Sezione 5.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      Dopo <code>append("Dan")</code> → <code>["Ada","Bea","Cid","Dan"]</code>; dopo <code>insert(0,"Al")</code> →
+      <code>["Al","Ada","Bea","Cid","Dan"]</code>; dopo <code>remove("Bea")</code> →
+      <code>["Al","Ada","Cid","Dan"]</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      La <b>lista</b> è <b>modificabile</b> (aggiungi/togli/cambia), la <b>tupla</b> è <b>immutabile</b> (bloccata
+      alla creazione). La tupla è più appropriata per dati che non devono cambiare, es. le <b>coordinate</b> di un
+      punto <code>(x, y)</code>, una data <code>(giorno, mese, anno)</code>, i colori RGB <code>(255, 0, 0)</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p style="margin-bottom:0">
+      Più alto: <code>max(voti)</code> → 10. Media: <code>sum(voti) / len(voti)</code> → 8.0. Ordinata senza
+      toccare l'originale: <code>sorted(voti)</code> → <code>[6, 7, 8, 9, 10]</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">top3.py</div>
+      <pre><span class="nm">numeri</span> <span class="op">=</span> [<span class="nm">4</span>, <span class="nm">9</span>, <span class="nm">2</span>, <span class="nm">10</span>, <span class="nm">7</span>]
+<span class="nm">ordinati</span> <span class="op">=</span> <span class="bi">sorted</span>(<span class="nm">numeri</span>, <span class="nm">reverse</span><span class="op">=</span><span class="nm">True</span>)  <span class="cm"># dal più grande</span>
+<span class="bi">print</span>(<span class="st">"I tre più grandi:"</span>, <span class="nm">ordinati</span>[:<span class="nm">3</span>])
+<span class="cm"># → I tre più grandi: [10, 9, 7]</span></pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.2 — costruire e modificare una lista
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wli-view');
+  if (!view) return;
+  const out = document.getElementById('wli-out');
+  const start = () => ['pane', 'latte', 'uova'];
+  let lst = start(), msg = 'Una lista di partenza. Prova le operazioni: guarda gli elementi e gli indici cambiare.';
+
+  const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+  btn('wli-app', () => { lst.push('kiwi'); msg = '<code>append("kiwi")</code>: aggiunge <b>in fondo</b>. La lista cresce a destra.'; draw(); });
+  btn('wli-ins', () => { lst.unshift('mela'); msg = '<code>insert(0,"mela")</code>: inserisce in <b>posizione 0</b>, tutti gli altri scalano avanti di un indice.'; draw(); });
+  btn('wli-pop', () => { if (lst.length) { const x = lst.pop(); msg = `<code>pop()</code>: toglie e <b>restituisce l'ultimo</b> ("${x}"). La lista si accorcia.`; } else msg = 'Lista vuota: niente da togliere.'; draw(); });
+  btn('wli-rem', () => { const i = lst.indexOf('pane'); if (i >= 0) { lst.splice(i, 1); msg = '<code>remove("pane")</code>: toglie la <b>prima occorrenza</b> del valore "pane".'; } else msg = '"pane" non è nella lista: <code>remove</code> darebbe errore.'; draw(); });
+  btn('wli-reset', () => { lst = start(); msg = 'Lista ripristinata.'; draw(); });
+
+  function draw() {
+    let cells = lst.map((v, i) => `<div style="display:inline-block; text-align:center; margin:0 3px">
+      <div style="padding:.5rem .7rem; border:2px solid var(--accent); border-radius:9px; background:color-mix(in srgb,var(--accent) 12%,transparent); font-family:var(--mono); font-weight:700; color:var(--accent)">${v}</div>
+      <div style="font-family:var(--mono); font-size:.72rem; color:var(--ink-faint); margin-top:.2rem">${i}</div>
+    </div>`).join('');
+    if (!lst.length) cells = '<span style="color:var(--ink-faint); font-family:var(--mono)">[ ]  (vuota)</span>';
+    view.innerHTML =
+      `<div style="margin-bottom:.7rem">${cells}</div>
+       <div style="font-family:var(--mono); font-size:.95rem; color:var(--ink-soft)">len = ${lst.length}</div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

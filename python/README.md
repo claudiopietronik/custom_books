@@ -15,7 +15,7 @@ Contenuto originale scritto ex novo.
 - [x] 2 — Variabili e tipi
 - [x] 3 — Numeri e operatori
 - [x] 4 — Le stringhe
-- [ ] 5 — Liste e tuple
+- [x] 5 — Liste e tuple
 - [ ] 6 — Dizionari e insiemi
 - [ ] 7 — Prendere decisioni
 - [ ] 8 — I cicli
