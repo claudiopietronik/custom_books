@@ -223,143 +223,218 @@ const W = {
 };
 
 /* ============================================================================
-   Segnalibro — salva e riprendi la posizione di lettura (per libro).
-   Aggiunge un pulsante 🔖 nella barra in alto; memorizza in localStorage.
-   Modulo autonomo: non dipende dal resto di book.js. Sicuro se caricato una volta.
+   Segnalibro — salva/riprendi la posizione di lettura (per libro) + SINCRONIZZA
+   tra dispositivi con un "codice di sincronizzazione".
+   Locale: localStorage. Remoto: jsonblob.com (archivio JSON gratuito, CORS).
+   Modulo autonomo, sicuro se caricato una volta (guardia __bmInit).
    ========================================================================= */
 (function () {
   if (window.__bmInit) return;
   window.__bmInit = true;
 
+  var SYNC_BASE = "https://jsonblob.com/api/jsonBlob";
+  var SYNC_KEY = "custombooks:synccode"; // codice globale (stesso per tutti i libri)
+
   function init() {
-    const bar = document.querySelector(".topbar");
+    var bar = document.querySelector(".topbar");
     if (!bar) return;
-    const brand = bar.querySelector(".brand");
-    const bookKey = "custombooks:bm:" + ((brand ? brand.textContent : document.title) || "libro").trim();
-    const curFile = location.pathname.split("/").pop() || "index.html";
+    var brand = bar.querySelector(".brand");
+    var bookKey = ((brand ? brand.textContent : document.title) || "libro").trim();
+    var lsKey = "custombooks:bm:" + bookKey;
+    var curFile = location.pathname.split("/").pop() || "index.html";
 
-    function getBM() { try { return JSON.parse(localStorage.getItem(bookKey) || "null"); } catch (e) { return null; } }
-    function setBM(v) { try { localStorage.setItem(bookKey, JSON.stringify(v)); } catch (e) {} }
-    function clearBM() { try { localStorage.removeItem(bookKey); } catch (e) {} }
+    /* ---- bookmark locale ---- */
+    function getBM() { try { return JSON.parse(localStorage.getItem(lsKey) || "null"); } catch (e) { return null; } }
+    function setBM(v) { try { localStorage.setItem(lsKey, JSON.stringify(v)); } catch (e) {} }
+    function clearBM() { try { localStorage.removeItem(lsKey); } catch (e) {} }
 
-    function currentSection() {
-      const heads = Array.from(document.querySelectorAll(".page h2[id], .page h3[id]"));
-      let chosen = null;
-      for (const h of heads) { if (h.getBoundingClientRect().top < 140) chosen = h; }
-      if (!chosen && heads.length) chosen = heads[0];
-      if (!chosen) return null;
-      const num = chosen.querySelector(".secnum");
-      const label = num ? chosen.textContent.replace(num.textContent, "").trim() : chosen.textContent.trim();
-      return { id: chosen.id, label: label };
+    /* ---- codice sync ---- */
+    function getCode() { try { return localStorage.getItem(SYNC_KEY) || ""; } catch (e) { return ""; } }
+    function setCode(c) { try { if (c) localStorage.setItem(SYNC_KEY, c); else localStorage.removeItem(SYNC_KEY); } catch (e) {} }
+
+    /* ---- remoto (jsonblob) ---- */
+    function remoteGet(code) {
+      return fetch(SYNC_BASE + "/" + encodeURIComponent(code), { headers: { "Accept": "application/json" } })
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }
+    function remotePut(code, obj) {
+      return fetch(SYNC_BASE + "/" + encodeURIComponent(code), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) })
+        .then(function (r) { return r.ok; }).catch(function () { return false; });
+    }
+    function remoteCreate(obj) {
+      return fetch(SYNC_BASE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) })
+        .then(function (r) {
+          if (!r.ok) return null;
+          var id = r.headers.get("X-jsonblob-id");
+          if (!id) { var loc = r.headers.get("Location"); id = loc ? loc.split("/").pop() : null; }
+          return id;
+        }).catch(function () { return null; });
     }
 
+    function syncPush() {
+      var code = getCode(); if (!code) return Promise.resolve();
+      var bm = getBM();
+      return remoteGet(code).then(function (data) {
+        if (!data || typeof data !== "object") data = { v: 1, books: {} };
+        if (!data.books) data.books = {};
+        if (bm) data.books[bookKey] = bm; else delete data.books[bookKey];
+        data.updatedAt = Date.now();
+        return remotePut(code, data);
+      });
+    }
+    function syncPull() {
+      var code = getCode(); if (!code) return Promise.resolve(false);
+      return remoteGet(code).then(function (data) {
+        if (!data || !data.books) return false;
+        var rbm = data.books[bookKey], lbm = getBM();
+        if (rbm && (!lbm || (rbm.updatedAt || 0) > (lbm.updatedAt || 0))) { setBM(rbm); return true; }
+        return false;
+      });
+    }
+
+    /* ---- posizione corrente ---- */
+    function currentSection() {
+      var heads = Array.prototype.slice.call(document.querySelectorAll(".page h2[id], .page h3[id]"));
+      var chosen = null;
+      for (var i = 0; i < heads.length; i++) if (heads[i].getBoundingClientRect().top < 140) chosen = heads[i];
+      if (!chosen && heads.length) chosen = heads[0];
+      if (!chosen) return null;
+      var num = chosen.querySelector(".secnum");
+      var label = num ? chosen.textContent.replace(num.textContent, "").trim() : chosen.textContent.trim();
+      return { id: chosen.id, label: label };
+    }
     function saveHere() {
-      const crumb = bar.querySelector(".crumb");
-      const h1 = document.querySelector(".page h1, h1");
-      const sec = currentSection();
+      var crumb = bar.querySelector(".crumb");
+      var h1 = document.querySelector(".page h1, h1");
+      var sec = currentSection();
       setBM({
         file: curFile,
         chapText: crumb ? crumb.textContent.trim() : (h1 ? h1.textContent.trim() : "Copertina"),
         sectionId: sec ? sec.id : null,
         sectionLabel: sec ? sec.label : null,
-        scrollY: Math.round(window.scrollY || 0)
+        scrollY: Math.round(window.scrollY || 0),
+        updatedAt: Date.now()
       });
     }
-
     function goToBM() {
-      const bm = getBM();
-      if (!bm) return;
+      var bm = getBM(); if (!bm) return;
       if (bm.file === curFile) {
         if (bm.sectionId && document.getElementById(bm.sectionId)) location.hash = "#" + bm.sectionId;
         else window.scrollTo({ top: bm.scrollY || 0, behavior: "smooth" });
-      } else {
-        location.href = bm.file + (bm.sectionId ? "#" + bm.sectionId : "");
-      }
+      } else { location.href = bm.file + (bm.sectionId ? "#" + bm.sectionId : ""); }
     }
 
-    /* pulsante nella barra, subito prima del tema */
-    const btn = document.createElement("button");
-    btn.className = "nav-btn icon ghost";
-    btn.id = "bm-btn";
-    btn.type = "button";
-    btn.textContent = "🔖";
-    const themeBtn = document.getElementById("theme-btn");
-    if (themeBtn && themeBtn.parentNode === bar) bar.insertBefore(btn, themeBtn);
-    else bar.appendChild(btn);
-
+    /* ---- pulsante ---- */
+    var btn = document.createElement("button");
+    btn.className = "nav-btn icon ghost"; btn.id = "bm-btn"; btn.type = "button"; btn.textContent = "🔖";
+    var themeBtn = document.getElementById("theme-btn");
+    if (themeBtn && themeBtn.parentNode === bar) bar.insertBefore(btn, themeBtn); else bar.appendChild(btn);
     function refreshBtn() {
-      const bm = getBM();
+      var bm = getBM();
       btn.title = bm ? "Segnalibro: " + (bm.chapText || "") : "Segnalibro — salva dove sei arrivato";
       btn.style.opacity = bm ? "1" : "0.75";
     }
 
-    /* popover */
-    const pop = document.createElement("div");
+    /* ---- popover ---- */
+    var pop = document.createElement("div");
     pop.id = "bm-pop";
-    pop.style.cssText = "position:fixed;z-index:1200;display:none;min-width:210px;max-width:290px;" +
+    pop.style.cssText = "position:fixed;z-index:1200;display:none;min-width:230px;max-width:300px;" +
       "background:var(--paper,#fff);color:var(--ink,#1c1b19);border:1px solid var(--rule,#e7e4dd);" +
       "border-radius:12px;box-shadow:var(--shadow,0 10px 30px rgba(0,0,0,.18));padding:.4rem;font-size:.9rem;";
     document.body.appendChild(pop);
-
-    const IB = "display:block;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;line-height:1.35";
+    var IB = "display:block;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;line-height:1.35";
+    var HR = '<div style="height:1px;background:var(--rule,#e7e4dd);margin:.3rem .2rem"></div>';
 
     function renderPop() {
-      const bm = getBM();
-      let html = '<button data-act="save" style="' + IB + '">📌&nbsp;&nbsp;Salva qui</button>';
+      var bm = getBM(), code = getCode();
+      var h = '<button data-act="save" style="' + IB + '">📌&nbsp;&nbsp;Salva qui</button>';
       if (bm) {
-        html += '<div style="height:1px;background:var(--rule,#e7e4dd);margin:.3rem .2rem"></div>';
-        html += '<button data-act="go" style="' + IB + '">↪&nbsp;&nbsp;Riprendi da qui' +
-          '<br><span style="color:var(--ink-soft,#6b6862);font-size:.82em">' +
+        h += HR;
+        h += '<button data-act="go" style="' + IB + '">↪&nbsp;&nbsp;Riprendi da qui<br><span style="color:var(--ink-soft,#6b6862);font-size:.82em">' +
           (bm.chapText || "") + (bm.sectionLabel ? " · " + bm.sectionLabel : "") + '</span></button>';
-        html += '<button data-act="del" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">🗑&nbsp;&nbsp;Rimuovi</button>';
-      } else {
-        html += '<div style="padding:.3rem .6rem;color:var(--ink-soft,#6b6862);font-size:.82em">Nessun segnalibro ancora</div>';
+        h += '<button data-act="del" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">🗑&nbsp;&nbsp;Rimuovi</button>';
       }
-      pop.innerHTML = html;
+      h += HR;
+      if (code) {
+        h += '<div style="padding:.35rem .6rem;font-size:.82em;color:var(--ink-soft,#6b6862)">🔗 Sync attivo tra dispositivi</div>';
+        h += '<button data-act="synccopy" style="' + IB + ';font-size:.86em">📋&nbsp;&nbsp;Copia codice sync</button>';
+        h += '<button data-act="syncoff" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">✖&nbsp;&nbsp;Disattiva sync</button>';
+      } else {
+        h += '<div style="padding:.35rem .6rem .1rem;font-size:.82em;color:var(--ink-soft,#6b6862)">Sincronizza tra telefono e PC:</div>';
+        h += '<button data-act="synccreate" style="' + IB + ';font-size:.86em">🔗&nbsp;&nbsp;Crea codice sync</button>';
+        h += '<button data-act="syncenter" style="' + IB + ';font-size:.86em">⌨&nbsp;&nbsp;Inserisci un codice</button>';
+      }
+      pop.innerHTML = h;
     }
-
     function openPop(open) {
       if (open) {
-        renderPop();
-        pop.style.display = "block";
-        const r = btn.getBoundingClientRect();
-        const w = pop.offsetWidth;
+        renderPop(); pop.style.display = "block";
+        var r = btn.getBoundingClientRect(), w = pop.offsetWidth;
         pop.style.top = (r.bottom + 8) + "px";
         pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + "px";
-      } else {
-        pop.style.display = "none";
-      }
+      } else { pop.style.display = "none"; }
     }
 
-    /* toast */
-    let toastEl = null, toastT = null;
+    /* ---- toast ---- */
+    var toastEl = null, toastT = null;
     function toast(msg) {
       if (!toastEl) {
         toastEl = document.createElement("div");
         toastEl.style.cssText = "position:fixed;z-index:1300;left:50%;bottom:26px;transform:translateX(-50%);" +
           "background:var(--ink,#1c1b19);color:var(--paper,#faf9f6);padding:.55rem 1.05rem;border-radius:999px;" +
-          "font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;";
+          "font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;max-width:82vw;text-align:center;";
         document.body.appendChild(toastEl);
       }
-      toastEl.textContent = msg;
-      toastEl.style.opacity = "1";
-      clearTimeout(toastT);
-      toastT = setTimeout(function () { toastEl.style.opacity = "0"; }, 1700);
+      toastEl.textContent = msg; toastEl.style.opacity = "1";
+      clearTimeout(toastT); toastT = setTimeout(function () { toastEl.style.opacity = "0"; }, 2200);
+    }
+    function copyText(t) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t).then(function () { toast("📋 Codice copiato"); }, function () { window.prompt("Copia il codice di sincronizzazione:", t); });
+      } else { window.prompt("Copia il codice di sincronizzazione:", t); }
     }
 
     btn.addEventListener("click", function (e) { e.stopPropagation(); openPop(pop.style.display !== "block"); });
     document.addEventListener("click", function (e) { if (e.target !== btn && !pop.contains(e.target)) openPop(false); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") openPop(false); });
+
     pop.addEventListener("click", function (e) {
-      const b = e.target.closest("button[data-act]");
-      if (!b) return;
-      const act = b.dataset.act;
-      if (act === "save") { saveHere(); refreshBtn(); openPop(false); toast("📌 Segnalibro salvato"); }
-      else if (act === "go") { openPop(false); goToBM(); }
-      else if (act === "del") { clearBM(); refreshBtn(); openPop(false); toast("Segnalibro rimosso"); }
+      var b = e.target.closest("button[data-act]"); if (!b) return;
+      var act = b.dataset.act;
+      if (act === "save") {
+        saveHere(); refreshBtn(); openPop(false); toast("📌 Segnalibro salvato"); syncPush();
+      } else if (act === "go") {
+        openPop(false); goToBM();
+      } else if (act === "del") {
+        clearBM(); refreshBtn(); openPop(false); toast("Segnalibro rimosso"); syncPush();
+      } else if (act === "synccopy") {
+        copyText(getCode()); openPop(false);
+      } else if (act === "syncoff") {
+        setCode(""); openPop(false); toast("Sync disattivato");
+      } else if (act === "synccreate") {
+        openPop(false); toast("Creo il codice…");
+        var bm0 = getBM();
+        remoteCreate({ v: 1, books: bm0 ? (function () { var o = {}; o[bookKey] = bm0; return o; })() : {}, updatedAt: Date.now() })
+          .then(function (id) {
+            if (!id) { toast("Errore: riprova (serve connessione)"); return; }
+            setCode(id);
+            window.prompt("✅ Sync attivato! Questo è il tuo CODICE. Copialo e, sull'altro dispositivo, usa «Inserisci un codice»:", id);
+            toast("🔗 Sync attivato");
+          });
+      } else if (act === "syncenter") {
+        openPop(false);
+        var c = window.prompt("Incolla qui il codice di sincronizzazione (dall'altro dispositivo):", "");
+        if (!c) return;
+        c = c.trim(); if (!c) return;
+        setCode(c);
+        toast("Sincronizzo…");
+        syncPull().then(function (changed) { refreshBtn(); toast(changed ? "🔗 Sincronizzato" : "🔗 Sync attivato"); });
+      }
     });
 
     refreshBtn();
+    /* al caricamento: se sync attivo, tira il bookmark dal cloud */
+    if (getCode()) syncPull().then(function (changed) { if (changed) refreshBtn(); });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
