@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · La libreria standard, in pratica — Python</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>La libreria standard, in pratica</h1>
+    <p class="standfirst">
+      Python arriva «con le batterie incluse»: una vasta collezione di moduli già pronti che risolvono al volo
+      problemi ricorrenti, senza installare nulla. Non serve conoscerli a memoria — serve <b>sapere che
+      esistono</b> e cosa cercare. In questo capitolo facciamo una passeggiata tra i più utili: gestire <b>date e
+      orari</b>, generare <b>numeri casuali</b>, fare <b>matematica</b>, usare <b>collezioni</b> specializzate, e
+      persino <b>parlare col web</b> con poche righe. <mark>È il capitolo che ti fa scoprire quanto lavoro puoi
+      evitare</mark>: prima di scrivere una funzione complicata, quasi sempre esiste già uno strumento pronto che
+      fa il lavoro per te.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>datetime</b> per date e orari (§15.1), <b>random</b> per la casualità (§15.2), <b>math</b> per la
+      matematica (§15.3), <b>collections</b> per collezioni comode (§15.4), e <b>requests</b> per il web (§15.5).
+      Nel laboratorio (§15.6) costruisci un piccolo strumento utile combinandoli.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la regola del «esiste già?»</div>
+    <p style="margin-bottom:0">
+      Il segno di un programmatore maturo non è scrivere tanto codice, ma scriverne <b>poco</b> riusando ciò che
+      c'è. <mark>Ogni riga che non scrivi è una riga che non può avere bug</mark>. Conoscere la libreria standard
+      ti fa risolvere in due righe cose che altrimenti costerebbero un pomeriggio — e ti insegna dove cercare per
+      tutto il resto. È anche un ponte verso l'ecosistema esterno: gli stessi meccanismi (import, funzioni, oggetti)
+      valgono per i pacchetti che userai nel libro di Backend Development.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Date e tempo (datetime)</h2>
+
+  <p class="lead">
+    Lavorare con date e orari a mano è un incubo (mesi di lunghezza diversa, anni bisestili…). Il modulo
+    <code>datetime</code> fa tutto per te.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modulo <code>datetime</code> <span class="tag">oggi, differenze, formattazione</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="kw">from</span> <span class="nm">datetime</span> <span class="kw">import</span> <span class="nm">date</span>, <span class="nm">timedelta</span>
+
+<span class="nm">oggi</span> <span class="op">=</span> <span class="nm">date</span><span class="op">.</span><span class="fn">today</span>()
+<span class="bi">print</span>(<span class="nm">oggi</span>)                 <span class="cm"># 2025-07-19</span>
+
+<span class="nm">tra_una_settimana</span> <span class="op">=</span> <span class="nm">oggi</span> <span class="op">+</span> <span class="fn">timedelta</span>(<span class="nm">days</span><span class="op">=</span><span class="nm">7</span>)   <span class="cm"># fai i conti sulle date!</span>
+<span class="bi">print</span>(<span class="nm">tra_una_settimana</span>)
+
+<span class="nm">compleanno</span> <span class="op">=</span> <span class="nm">date</span>(<span class="nm">2025</span>, <span class="nm">12</span>, <span class="nm">25</span>)
+<span class="nm">mancano</span> <span class="op">=</span> <span class="nm">compleanno</span> <span class="op">-</span> <span class="nm">oggi</span>       <span class="cm"># differenza tra date</span>
+<span class="bi">print</span>(<span class="st">f"Mancano </span><span class="op">{</span><span class="nm">mancano</span><span class="op">.</span><span class="nm">days</span><span class="op">}</span><span class="st"> giorni"</span>)</pre>
+    </div>
+    <div class="f-note">
+      Le operazioni chiave: <code>date.today()</code> (oggi), <code>timedelta</code> (una «durata» da sommare/
+      sottrarre alle date), e la <b>sottrazione tra date</b> che dà i giorni di differenza. <mark>Non devi mai più
+      preoccuparti di quanti giorni ha febbraio</mark>: datetime conosce il calendario. Per data <em>e</em> ora
+      insieme c'è <code>datetime.now()</code>, e per formattare le date come vuoi c'è <code>.strftime()</code>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Numeri casuali (random)</h2>
+
+  <p class="lead">
+    Per giochi, simulazioni, scelte casuali: il modulo <code>random</code>. Poche funzioni coprono quasi ogni
+    esigenza di casualità.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modulo <code>random</code> <span class="tag">dadi, scelte, mescolate</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="kw">import</span> <span class="nm">random</span>
+
+<span class="bi">print</span>(<span class="nm">random</span><span class="op">.</span><span class="fn">randint</span>(<span class="nm">1</span>, <span class="nm">6</span>))             <span class="cm"># un dado: intero a caso 1-6</span>
+<span class="bi">print</span>(<span class="nm">random</span><span class="op">.</span><span class="fn">choice</span>([<span class="st">"testa"</span>, <span class="st">"croce"</span>]))   <span class="cm"># un elemento a caso</span>
+
+<span class="nm">mazzo</span> <span class="op">=</span> [<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">5</span>]
+<span class="nm">random</span><span class="op">.</span><span class="fn">shuffle</span>(<span class="nm">mazzo</span>)                <span class="cm"># mescola la lista SUL POSTO</span>
+<span class="bi">print</span>(<span class="nm">mazzo</span>)                          <span class="cm"># es. [3, 1, 5, 2, 4]</span></pre>
+    </div>
+    <div class="f-note">
+      Le più usate: <code>randint(a, b)</code> (intero a caso, estremi inclusi), <code>choice(lista)</code> (un
+      elemento a caso), <code>shuffle(lista)</code> (mescola sul posto), <code>random()</code> (decimale tra 0 e 1),
+      <code>sample(lista, k)</code> (k elementi distinti a caso). Prova il widget qui sotto: lancia un dado tante
+      volte e guarda le frequenze <mark>livellarsi</mark> — la casualità nel breve è imprevedibile, ma su tanti
+      lanci si distribuisce equamente (è la legge dei grandi numeri, dal libro di Statistica!).
+    </div>
+  </div>
+
+  <div class="widget" id="w-rand">
+    <div class="w-head">
+      <span>random.randint(1, 6): il dado, tante volte</span>
+      <span class="hint">lancia e guarda le frequenze</span>
+    </div>
+    <div class="w-stage" style="min-height:190px">
+      <svg id="wrn-svg" viewBox="0 0 560 240" role="img" aria-label="Istogramma delle frequenze dei sei risultati di un dado su molti lanci: tende a livellarsi"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wrn-1">lancia 1 volta</button>
+      <button class="w-btn" id="wrn-100">lancia 100 volte</button>
+      <button class="w-btn" id="wrn-reset">↺ azzera</button>
+    </div>
+    <div class="w-readout" id="wrn-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Matematica (math)</h2>
+
+  <p class="lead">
+    Oltre agli operatori base (Cap. 3), il modulo <code>math</code> offre le funzioni matematiche «serie»: radici,
+    arrotondamenti, costanti, trigonometria.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modulo <code>math</code> <span class="tag">le funzioni matematiche</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Shell interattiva</div>
+      <pre><span class="kw">import</span> <span class="nm">math</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">math</span><span class="op">.</span><span class="fn">sqrt</span>(<span class="nm">144</span>)     <span class="rs">12.0</span>       <span class="cm"># radice quadrata</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">math</span><span class="op">.</span><span class="fn">floor</span>(<span class="nm">3.7</span>)     <span class="rs">3</span>          <span class="cm"># arrotonda per DIFETTO</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">math</span><span class="op">.</span><span class="fn">ceil</span>(<span class="nm">3.2</span>)      <span class="rs">4</span>          <span class="cm"># arrotonda per ECCESSO</span>
+<span class="pr">&gt;&gt;&gt; </span><span class="nm">math</span><span class="op">.</span><span class="nm">pi</span>            <span class="rs">3.14159...</span>  <span class="cm"># la costante π</span></pre>
+    </div>
+    <div class="f-note">
+      Utili: <code>sqrt</code> (radice), <code>floor</code>/<code>ceil</code> (arrotondamenti in giù/su),
+      <code>pi</code> ed <code>e</code> (costanti), <code>factorial</code>, le trigonometriche
+      (<code>sin/cos/tan</code>). <mark>Nota: per arrotondare «normalmente» c'è la funzione base
+      <code>round(x, n)</code></mark> (senza import), mentre <code>floor</code>/<code>ceil</code> forzano giù/su.
+      Se un giorno ti serviranno array e calcolo scientifico veloce, il pacchetto esterno <code>numpy</code>
+      (<code>pip install</code>) è lo standard — ma per la matematica quotidiana, <code>math</code> basta e avanza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Collezioni utili (collections)</h2>
+
+  <p class="lead">
+    Il modulo <code>collections</code> offre versioni «potenziate» delle strutture dati. La più utile per iniziare:
+    <code>Counter</code>, che conta le occorrenze in un colpo solo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Counter <span class="tag">contare, senza sforzo</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.py</div>
+      <pre><span class="kw">from</span> <span class="nm">collections</span> <span class="kw">import</span> <span class="nm">Counter</span>
+
+<span class="nm">voti</span> <span class="op">=</span> [<span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"C"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>]
+<span class="nm">conteggio</span> <span class="op">=</span> <span class="fn">Counter</span>(<span class="nm">voti</span>)
+<span class="bi">print</span>(<span class="nm">conteggio</span>)              <span class="cm"># Counter({'A': 3, 'B': 2, 'C': 1})</span>
+<span class="bi">print</span>(<span class="nm">conteggio</span><span class="op">.</span><span class="fn">most_common</span>(<span class="nm">1</span>))  <span class="cm"># [('A', 3)]  → il più frequente</span></pre>
+    </div>
+    <div class="f-note">
+      <code>Counter</code> conta automaticamente quante volte compare ogni elemento — un'operazione comunissima
+      (parole in un testo, voti, click) che a mano richiederebbe un ciclo e un dizionario con
+      <code>.get</code>. <mark>Con <code>most_common(n)</code> ottieni i più frequenti, già ordinati</mark>. Altri
+      utili in <code>collections</code>: <code>defaultdict</code> (un dizionario che crea da solo i valori
+      mancanti) e <code>deque</code> (una coda efficiente). Sono esattamente il tipo di strumento che, una volta
+      scoperto, ti fa dire «peccato non averlo saputo prima».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Il web dal terminale (requests)</h2>
+
+  <p class="lead">
+    Ricordi HTTP dal libro di Reti? Con il pacchetto <code>requests</code> (esterno, ma diffusissimo) puoi fare
+    richieste HTTP in poche righe e ricevere dati da internet — spesso in JSON, che ora sai maneggiare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il pacchetto <code>requests</code> <span class="tag">pip install requests</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">meteo.py — dopo: pip install requests</div>
+      <pre><span class="kw">import</span> <span class="nm">requests</span>
+
+<span class="nm">r</span> <span class="op">=</span> <span class="nm">requests</span><span class="op">.</span><span class="fn">get</span>(<span class="st">"https://api.github.com"</span>)   <span class="cm"># una richiesta GET (Cap. 11 di Reti!)</span>
+<span class="bi">print</span>(<span class="nm">r</span><span class="op">.</span><span class="nm">status_code</span>)   <span class="cm"># 200  → il codice di stato HTTP</span>
+
+<span class="nm">dati</span> <span class="op">=</span> <span class="nm">r</span><span class="op">.</span><span class="fn">json</span>()       <span class="cm"># il JSON diventa un dizionario Python!</span>
+<span class="bi">print</span>(<span class="nm">dati</span>[<span class="st">"current_user_url"</span>])</pre>
+    </div>
+    <div class="f-note">
+      Guarda come tutto si connette: <code>requests.get(url)</code> fa una <b>richiesta HTTP GET</b> (il metodo del
+      Cap. 11 di Reti!), <code>r.status_code</code> è il <b>codice di stato</b> (200 = ok), e <code>r.json()</code>
+      trasforma la risposta JSON in un <b>dizionario Python</b> (Cap. 12), pronto da usare. <mark>Con questo puoi
+      leggere dati da migliaia di servizi web (API)</mark>: meteo, cambio valute, notizie… È anche l'anticamera del
+      libro di Backend Development, dove starai <em>dall'altra parte</em> a <b>rispondere</b> a queste richieste.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Laboratorio: un piccolo strumento utile</h2>
+
+  <p class="lead">
+    Combiniamo alcuni moduli in uno strumentino vero: un «estrattore» che sceglie a caso dei vincitori da una lista
+    e stampa data e ora dell'estrazione. Piccolo, ma completo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>estrazione.py</code> <span class="tag">random + datetime</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">estrazione.py</div>
+      <pre><span class="kw">import</span> <span class="nm">random</span>
+<span class="kw">from</span> <span class="nm">datetime</span> <span class="kw">import</span> <span class="nm">datetime</span>
+
+<span class="nm">partecipanti</span> <span class="op">=</span> [<span class="st">"Ada"</span>, <span class="st">"Bea"</span>, <span class="st">"Cid"</span>, <span class="st">"Dan"</span>, <span class="st">"Eva"</span>]
+<span class="nm">quanti</span> <span class="op">=</span> <span class="bi">int</span>(<span class="bi">input</span>(<span class="st">"Quanti vincitori? "</span>))
+
+<span class="nm">vincitori</span> <span class="op">=</span> <span class="nm">random</span><span class="op">.</span><span class="fn">sample</span>(<span class="nm">partecipanti</span>, <span class="nm">quanti</span>)   <span class="cm"># k a caso, senza ripetizioni</span>
+<span class="nm">ora</span> <span class="op">=</span> <span class="nm">datetime</span><span class="op">.</span><span class="fn">now</span>()<span class="op">.</span><span class="fn">strftime</span>(<span class="st">"%d/%m/%Y %H:%M"</span>)   <span class="cm"># formatta data e ora</span>
+
+<span class="bi">print</span>(<span class="st">f"🎉 Estrazione del </span><span class="op">{</span><span class="nm">ora</span><span class="op">}</span><span class="st">"</span>)
+<span class="kw">for</span> <span class="nm">i</span>, <span class="nm">nome</span> <span class="kw">in</span> <span class="bi">enumerate</span>(<span class="nm">vincitori</span>, <span class="nm">1</span>):   <span class="cm"># enumerate da 1 (Cap. 14)</span>
+    <span class="bi">print</span>(<span class="st">f"</span><span class="op">{</span><span class="nm">i</span><span class="op">}</span><span class="st">° premio: </span><span class="op">{</span><span class="nm">nome</span><span class="op">}</span><span class="st">"</span>)</pre>
+    </div>
+    <div class="f-note">
+      Esecuzione:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Terminale</div>
+        <pre><span class="out">Quanti vincitori? </span><span class="hl">2</span>
+<span class="out">🎉 Estrazione del 19/07/2025 14:30
+1° premio: Cid
+2° premio: Ada</span></pre>
+      </div>
+      Un solo programmino, e già tre idee del libro al lavoro: <code>random.sample</code> (scelte casuali senza
+      ripetizioni), <code>datetime</code> con <code>strftime</code> (data formattata), <code>enumerate</code> con
+      inizio a 1 (Cap. 14). <mark>Questo è programmare davvero: comporre strumenti pronti per risolvere un
+      problema</mark>. Estendilo: leggi i partecipanti da un file (Cap. 12), o salva il risultato dell'estrazione
+      in un log.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li><b>datetime</b>: <code>date.today()</code>, <code>timedelta</code>, differenze tra date, <code>strftime</code>
+          per formattare (§15.1).</li>
+      <li><b>random</b>: <code>randint</code>, <code>choice</code>, <code>shuffle</code>, <code>sample</code> (§15.2).
+          <b>math</b>: <code>sqrt</code>, <code>floor/ceil</code>, <code>pi</code> (§15.3).</li>
+      <li><b>collections.Counter</b> conta le occorrenze e dà i più frequenti (<code>most_common</code>) (§15.4).</li>
+      <li><b>requests</b> (esterno) fa richieste HTTP: <code>.get()</code>, <code>.status_code</code>,
+          <code>.json()</code> → dizionario (§15.5). Regola d'oro: <mark>prima di scrivere, chiediti «esiste
+          già?»</mark>.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai tutto: le basi, lo stile e la conoscenza degli strumenti pronti. È arrivato il momento di <b>mettere tutto
+    insieme</b>. Nel <strong>Capitolo 16</strong>, il gran finale, costruiremo dall'inizio alla fine un <b>progetto
+    completo</b> — non un esempio isolato, ma un piccolo programma vero, dalla progettazione al codice funzionante,
+    passando per la struttura, le prove e le rifiniture. Vedrai come tutti i pezzi che hai imparato — variabili,
+    funzioni, file, classi, gestione errori — collaborano in un'unica applicazione. <mark>È lì che «saper
+    programmare» diventa davvero tuo.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Come calcoli quanti giorni mancano a una certa data (es. Natale) usando <code>datetime</code>? Che tipo di
+      oggetto ottieni dalla sottrazione tra due date?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Quale funzione di <code>random</code> useresti per: (a) simulare il lancio di un dado; (b) estrarre un nome a
+      caso da una lista; (c) mescolare un mazzo di carte?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Data una lista di parole, come conteresti in una riga quante volte compare ognuna? E come troveresti la più
+      frequente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi un «lancia moneta» che, con <code>random.choice</code>, stampa «Testa» o «Croce», e con un
+      ciclo lo lancia 10 volte contando quante teste escono.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-8"><span class="secnum">Sezione 15.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      <code>mancano = date(2025, 12, 25) - date.today()</code>, poi <code>mancano.days</code>. La sottrazione tra
+      due <code>date</code> restituisce un oggetto <b>timedelta</b> (una durata), da cui leggi <code>.days</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>random.randint(1, 6)</code>; (b) <code>random.choice(nomi)</code>; (c) <code>random.shuffle(mazzo)</code>
+      (mescola sul posto).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      <code>from collections import Counter</code> poi <code>c = Counter(parole)</code> conta tutto in una riga. La
+      più frequente: <code>c.most_common(1)</code> (restituisce una lista con la coppia (parola, conteggio) del
+      primo).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">moneta.py</div>
+      <pre><span class="kw">import</span> <span class="nm">random</span>
+<span class="nm">teste</span> <span class="op">=</span> <span class="nm">0</span>
+<span class="kw">for</span> <span class="nm">_</span> <span class="kw">in</span> <span class="bi">range</span>(<span class="nm">10</span>):
+    <span class="nm">esito</span> <span class="op">=</span> <span class="nm">random</span><span class="op">.</span><span class="fn">choice</span>([<span class="st">"Testa"</span>, <span class="st">"Croce"</span>])
+    <span class="bi">print</span>(<span class="nm">esito</span>)
+    <span class="kw">if</span> <span class="nm">esito</span> <span class="op">==</span> <span class="st">"Testa"</span>:
+        <span class="nm">teste</span> <span class="op">+=</span> <span class="nm">1</span>
+<span class="bi">print</span>(<span class="st">f"Teste: </span><span class="op">{</span><span class="nm">teste</span><span class="op">}</span><span class="st">/10"</span>)</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Nota <code>for _ in range(10)</code>: l'underscore <code>_</code> è la convenzione
+      per «una variabile del ciclo che non mi serve» (ripeto 10 volte, ma non uso il numero).</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.2 — random.randint: istogramma delle frequenze del dado
+   Nota: Math.random non è disponibile negli script del motore, ma nel BROWSER
+   (runtime della pagina) sì — questo widget gira nel browser dell'utente.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wrn-svg');
+  if (!svg) return;
+  const out = document.getElementById('wrn-out');
+  const counts = [0, 0, 0, 0, 0, 0];
+  let total = 0;
+  const rollOne = () => { const f = Math.floor(Math.random() * 6); counts[f]++; total++; };
+
+  document.getElementById('wrn-1').addEventListener('click', () => { rollOne(); draw(); });
+  document.getElementById('wrn-100').addEventListener('click', () => { for (let k = 0; k < 100; k++) rollOne(); draw(); });
+  document.getElementById('wrn-reset').addEventListener('click', () => { for (let k = 0; k < 6; k++) counts[k] = 0; total = 0; draw(); });
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: 0, xmax: 7, ymin: 0, ymax: 1.15 });
+    const maxC = Math.max(1, ...counts);
+    const ideal = total / 6;
+    for (let f = 0; f < 6; f++) {
+      const h = counts[f] / maxC;
+      p.rect(f + 0.6, 0, f + 1.4, h, { fill: 'color-mix(in srgb,var(--accent) 55%,transparent)', color: 'var(--accent)', width: 1 });
+      p.text(f + 1, 0, String(f + 1), { size: 12, anchor: 'middle', dy: 16, color: 'var(--ink-soft)' });
+      p.text(f + 1, h, String(counts[f]), { size: 10, anchor: 'middle', dy: -4, color: 'var(--ink)' });
+    }
+    // linea "atteso" (media)
+    if (total > 0) { const y = ideal / maxC; p.line(0.4, y, 6.6, y, { color: 'var(--warm)', width: 1.5, dash: '5 4' }); p.text(6.6, y, 'atteso', { size: 9, anchor: 'end', dy: -4, color: 'var(--warm)' }); }
+    out.innerHTML = `<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">Lanci totali: <b>${total}</b>. ${total < 30
+      ? 'Con pochi lanci le frequenze sono <mark>sbilanciate</mark>: la casualità nel breve è imprevedibile.'
+      : 'Con tanti lanci le sei barre <mark>si livellano</mark> verso il valore atteso (' + Math.round(ideal) + ' ciascuna): è la legge dei grandi numeri.'}</div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

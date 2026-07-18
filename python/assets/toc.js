@@ -237,7 +237,7 @@ const TOC = [
     n: 15,
     titolo: "La libreria standard, in pratica",
     file: "cap15-libreria-standard.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Date e tempo (datetime)" },
       { id: "s15-2", n: "15.2", t: "Numeri casuali (random)" },

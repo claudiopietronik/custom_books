@@ -25,7 +25,7 @@ Contenuto originale scritto ex novo.
 - [x] 12 — File e dati
 - [x] 13 — Programmazione a oggetti
 - [x] 14 — Il Python elegante
-- [ ] 15 — La libreria standard, in pratica
+- [x] 15 — La libreria standard, in pratica
 - [ ] 16 — Un progetto completo
 
 ## La collana
