@@ -223,249 +223,143 @@ const W = {
 };
 
 /* ============================================================================
-   Segnalibro — salva/riprendi la posizione di lettura (per libro) + SINCRONIZZA
-   tra dispositivi con un "codice di sincronizzazione".
-   Locale: localStorage. Remoto: jsonblob.com (archivio JSON gratuito, CORS).
-   v3: pull all'apertura del menù (no reload), sincronizza anche le cancellazioni
-   (timestamp per capitolo), feedback di stato. Guardia __bmInit.
+   Segnalibro — salva e riprendi la posizione di lettura (per libro).
+   Aggiunge un pulsante 🔖 nella barra in alto; memorizza in localStorage.
+   Modulo autonomo: non dipende dal resto di book.js. Sicuro se caricato una volta.
    ========================================================================= */
 (function () {
   if (window.__bmInit) return;
   window.__bmInit = true;
 
-  var SYNC_BASE = "https://jsonblob.com/api/jsonBlob";
-  var SYNC_KEY = "custombooks:synccode"; // codice globale (stesso per tutti i libri)
-
   function init() {
-    var bar = document.querySelector(".topbar");
+    const bar = document.querySelector(".topbar");
     if (!bar) return;
-    var brand = bar.querySelector(".brand");
-    var bookKey = ((brand ? brand.textContent : document.title) || "libro").trim();
-    var lsKey = "custombooks:bm:" + bookKey;
-    var tsKey = "custombooks:bmts:" + bookKey;
-    var curFile = location.pathname.split("/").pop() || "index.html";
+    const brand = bar.querySelector(".brand");
+    const bookKey = "custombooks:bm:" + ((brand ? brand.textContent : document.title) || "libro").trim();
+    const curFile = location.pathname.split("/").pop() || "index.html";
 
-    /* ---- bookmark + timestamp locali ---- */
-    function getBM() { try { return JSON.parse(localStorage.getItem(lsKey) || "null"); } catch (e) { return null; } }
-    function setBM(v) { try { if (v) localStorage.setItem(lsKey, JSON.stringify(v)); else localStorage.removeItem(lsKey); } catch (e) {} }
-    function getTS() { try { return parseInt(localStorage.getItem(tsKey) || "0", 10) || 0; } catch (e) { return 0; } }
-    function setTS(t) { try { localStorage.setItem(tsKey, String(t || Date.now())); } catch (e) {} }
+    function getBM() { try { return JSON.parse(localStorage.getItem(bookKey) || "null"); } catch (e) { return null; } }
+    function setBM(v) { try { localStorage.setItem(bookKey, JSON.stringify(v)); } catch (e) {} }
+    function clearBM() { try { localStorage.removeItem(bookKey); } catch (e) {} }
 
-    /* ---- codice sync ---- */
-    function getCode() { try { return localStorage.getItem(SYNC_KEY) || ""; } catch (e) { return ""; } }
-    function setCode(c) { try { if (c) localStorage.setItem(SYNC_KEY, c); else localStorage.removeItem(SYNC_KEY); } catch (e) {} }
-
-    /* ---- remoto (jsonblob) ---- */
-    function remoteGet(code) {
-      return fetch(SYNC_BASE + "/" + encodeURIComponent(code), { headers: { "Accept": "application/json" }, cache: "no-store" })
-        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
-    }
-    function remotePut(code, obj) {
-      return fetch(SYNC_BASE + "/" + encodeURIComponent(code), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) })
-        .then(function (r) { return r.ok; }).catch(function () { return false; });
-    }
-    function remoteCreate(obj) {
-      return fetch(SYNC_BASE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) })
-        .then(function (r) {
-          if (!r.ok) return null;
-          var id = r.headers.get("X-jsonblob-id");
-          if (!id) { var loc = r.headers.get("Location"); id = loc ? loc.split("/").pop() : null; }
-          return id;
-        }).catch(function () { return null; });
-    }
-
-    /* legge l'entry del libro corrente in formato normalizzato {at, bm} */
-    function readEntry(data) {
-      if (!data || !data.books) return null;
-      var e = data.books[bookKey];
-      if (e === undefined) return null;
-      if (e && typeof e === "object" && ("bm" in e || "at" in e)) return { at: e.at || 0, bm: e.bm || null };
-      return { at: (e && e.updatedAt) || 0, bm: e || null }; // formato vecchio: entry = bookmark
-    }
-
-    function syncPush() {
-      var code = getCode(); if (!code) return Promise.resolve(true);
-      return remoteGet(code).then(function (data) {
-        if (!data || typeof data !== "object") data = { v: 1, books: {} };
-        if (!data.books) data.books = {};
-        data.books[bookKey] = { at: getTS() || Date.now(), bm: getBM() };
-        data.updatedAt = Date.now();
-        return remotePut(code, data);
-      });
-    }
-    function syncPull() {
-      var code = getCode(); if (!code) return Promise.resolve(false);
-      return remoteGet(code).then(function (data) {
-        var e = readEntry(data);
-        if (!e) return false;
-        var localTs = getTS() || (getBM() && getBM().updatedAt) || 0;
-        if (e.at > localTs) { setBM(e.bm); setTS(e.at); return true; }
-        return false;
-      });
-    }
-
-    /* ---- posizione corrente ---- */
     function currentSection() {
-      var heads = Array.prototype.slice.call(document.querySelectorAll(".page h2[id], .page h3[id]"));
-      var chosen = null;
-      for (var i = 0; i < heads.length; i++) if (heads[i].getBoundingClientRect().top < 140) chosen = heads[i];
+      const heads = Array.from(document.querySelectorAll(".page h2[id], .page h3[id]"));
+      let chosen = null;
+      for (const h of heads) { if (h.getBoundingClientRect().top < 140) chosen = h; }
       if (!chosen && heads.length) chosen = heads[0];
       if (!chosen) return null;
-      var num = chosen.querySelector(".secnum");
-      var label = num ? chosen.textContent.replace(num.textContent, "").trim() : chosen.textContent.trim();
+      const num = chosen.querySelector(".secnum");
+      const label = num ? chosen.textContent.replace(num.textContent, "").trim() : chosen.textContent.trim();
       return { id: chosen.id, label: label };
     }
+
     function saveHere() {
-      var crumb = bar.querySelector(".crumb");
-      var h1 = document.querySelector(".page h1, h1");
-      var sec = currentSection();
-      var now = Date.now();
+      const crumb = bar.querySelector(".crumb");
+      const h1 = document.querySelector(".page h1, h1");
+      const sec = currentSection();
       setBM({
         file: curFile,
         chapText: crumb ? crumb.textContent.trim() : (h1 ? h1.textContent.trim() : "Copertina"),
         sectionId: sec ? sec.id : null,
         sectionLabel: sec ? sec.label : null,
-        scrollY: Math.round(window.scrollY || 0),
-        updatedAt: now
+        scrollY: Math.round(window.scrollY || 0)
       });
-      setTS(now);
     }
-    function removeHere() { setBM(null); setTS(Date.now()); }
+
     function goToBM() {
-      var bm = getBM(); if (!bm) return;
+      const bm = getBM();
+      if (!bm) return;
       if (bm.file === curFile) {
         if (bm.sectionId && document.getElementById(bm.sectionId)) location.hash = "#" + bm.sectionId;
         else window.scrollTo({ top: bm.scrollY || 0, behavior: "smooth" });
-      } else { location.href = bm.file + (bm.sectionId ? "#" + bm.sectionId : ""); }
+      } else {
+        location.href = bm.file + (bm.sectionId ? "#" + bm.sectionId : "");
+      }
     }
 
-    /* ---- pulsante ---- */
-    var btn = document.createElement("button");
-    btn.className = "nav-btn icon ghost"; btn.id = "bm-btn"; btn.type = "button"; btn.textContent = "🔖";
-    var themeBtn = document.getElementById("theme-btn");
-    if (themeBtn && themeBtn.parentNode === bar) bar.insertBefore(btn, themeBtn); else bar.appendChild(btn);
+    /* pulsante nella barra, subito prima del tema */
+    const btn = document.createElement("button");
+    btn.className = "nav-btn icon ghost";
+    btn.id = "bm-btn";
+    btn.type = "button";
+    btn.textContent = "🔖";
+    const themeBtn = document.getElementById("theme-btn");
+    if (themeBtn && themeBtn.parentNode === bar) bar.insertBefore(btn, themeBtn);
+    else bar.appendChild(btn);
+
     function refreshBtn() {
-      var bm = getBM();
+      const bm = getBM();
       btn.title = bm ? "Segnalibro: " + (bm.chapText || "") : "Segnalibro — salva dove sei arrivato";
       btn.style.opacity = bm ? "1" : "0.75";
     }
 
-    /* ---- popover ---- */
-    var pop = document.createElement("div");
+    /* popover */
+    const pop = document.createElement("div");
     pop.id = "bm-pop";
-    pop.style.cssText = "position:fixed;z-index:1200;display:none;min-width:236px;max-width:300px;" +
+    pop.style.cssText = "position:fixed;z-index:1200;display:none;min-width:210px;max-width:290px;" +
       "background:var(--paper,#fff);color:var(--ink,#1c1b19);border:1px solid var(--rule,#e7e4dd);" +
       "border-radius:12px;box-shadow:var(--shadow,0 10px 30px rgba(0,0,0,.18));padding:.4rem;font-size:.9rem;";
     document.body.appendChild(pop);
-    var IB = "display:block;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;line-height:1.35";
-    var HR = '<div style="height:1px;background:var(--rule,#e7e4dd);margin:.3rem .2rem"></div>';
+
+    const IB = "display:block;width:100%;text-align:left;padding:.5rem .6rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;line-height:1.35";
 
     function renderPop() {
-      var bm = getBM(), code = getCode();
-      var h = '<button data-act="save" style="' + IB + '">📌&nbsp;&nbsp;Salva qui</button>';
+      const bm = getBM();
+      let html = '<button data-act="save" style="' + IB + '">📌&nbsp;&nbsp;Salva qui</button>';
       if (bm) {
-        h += HR;
-        h += '<button data-act="go" style="' + IB + '">↪&nbsp;&nbsp;Riprendi da qui<br><span style="color:var(--ink-soft,#6b6862);font-size:.82em">' +
+        html += '<div style="height:1px;background:var(--rule,#e7e4dd);margin:.3rem .2rem"></div>';
+        html += '<button data-act="go" style="' + IB + '">↪&nbsp;&nbsp;Riprendi da qui' +
+          '<br><span style="color:var(--ink-soft,#6b6862);font-size:.82em">' +
           (bm.chapText || "") + (bm.sectionLabel ? " · " + bm.sectionLabel : "") + '</span></button>';
-        h += '<button data-act="del" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">🗑&nbsp;&nbsp;Rimuovi</button>';
-      }
-      h += HR;
-      if (code) {
-        h += '<div style="padding:.35rem .6rem;font-size:.8em;color:var(--ink-soft,#6b6862)">🔗 Sync attivo · codice ' + (code.length > 10 ? code.slice(0, 6) + "…" : code) + '</div>';
-        h += '<button data-act="syncnow" style="' + IB + ';font-size:.86em">🔄&nbsp;&nbsp;Sincronizza ora</button>';
-        h += '<button data-act="synccopy" style="' + IB + ';font-size:.86em">📋&nbsp;&nbsp;Copia codice</button>';
-        h += '<button data-act="syncoff" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">✖&nbsp;&nbsp;Disattiva sync</button>';
+        html += '<button data-act="del" style="' + IB + ';color:var(--ink-soft,#6b6862);font-size:.84em">🗑&nbsp;&nbsp;Rimuovi</button>';
       } else {
-        h += '<div style="padding:.35rem .6rem .1rem;font-size:.8em;color:var(--ink-soft,#6b6862)">Sincronizza tra telefono e PC:</div>';
-        h += '<button data-act="synccreate" style="' + IB + ';font-size:.86em">🔗&nbsp;&nbsp;Crea codice sync</button>';
-        h += '<button data-act="syncenter" style="' + IB + ';font-size:.86em">⌨&nbsp;&nbsp;Inserisci un codice</button>';
+        html += '<div style="padding:.3rem .6rem;color:var(--ink-soft,#6b6862);font-size:.82em">Nessun segnalibro ancora</div>';
       }
-      pop.innerHTML = h;
-    }
-    function positionPop() {
-      var r = btn.getBoundingClientRect(), w = pop.offsetWidth;
-      pop.style.top = (r.bottom + 8) + "px";
-      pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + "px";
-    }
-    function openPop(open) {
-      if (open) {
-        renderPop(); pop.style.display = "block"; positionPop();
-        if (getCode()) syncPull().then(function (ch) { if (pop.style.display === "block") { renderPop(); positionPop(); } if (ch) refreshBtn(); });
-      } else { pop.style.display = "none"; }
+      pop.innerHTML = html;
     }
 
-    /* ---- toast ---- */
-    var toastEl = null, toastT = null;
+    function openPop(open) {
+      if (open) {
+        renderPop();
+        pop.style.display = "block";
+        const r = btn.getBoundingClientRect();
+        const w = pop.offsetWidth;
+        pop.style.top = (r.bottom + 8) + "px";
+        pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + "px";
+      } else {
+        pop.style.display = "none";
+      }
+    }
+
+    /* toast */
+    let toastEl = null, toastT = null;
     function toast(msg) {
       if (!toastEl) {
         toastEl = document.createElement("div");
         toastEl.style.cssText = "position:fixed;z-index:1300;left:50%;bottom:26px;transform:translateX(-50%);" +
           "background:var(--ink,#1c1b19);color:var(--paper,#faf9f6);padding:.55rem 1.05rem;border-radius:999px;" +
-          "font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;max-width:82vw;text-align:center;";
+          "font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;";
         document.body.appendChild(toastEl);
       }
-      toastEl.textContent = msg; toastEl.style.opacity = "1";
-      clearTimeout(toastT); toastT = setTimeout(function () { toastEl.style.opacity = "0"; }, 2400);
-    }
-    function copyText(t) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(t).then(function () { toast("📋 Codice copiato"); }, function () { window.prompt("Copia il codice di sincronizzazione:", t); });
-      } else { window.prompt("Copia il codice di sincronizzazione:", t); }
+      toastEl.textContent = msg;
+      toastEl.style.opacity = "1";
+      clearTimeout(toastT);
+      toastT = setTimeout(function () { toastEl.style.opacity = "0"; }, 1700);
     }
 
     btn.addEventListener("click", function (e) { e.stopPropagation(); openPop(pop.style.display !== "block"); });
     document.addEventListener("click", function (e) { if (e.target !== btn && !pop.contains(e.target)) openPop(false); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") openPop(false); });
-
     pop.addEventListener("click", function (e) {
-      var b = e.target.closest("button[data-act]"); if (!b) return;
-      var act = b.dataset.act;
-      if (act === "save") {
-        saveHere(); refreshBtn(); openPop(false);
-        if (getCode()) { toast("📌 Salvato · sincronizzo…"); syncPush().then(function (ok) { toast(ok ? "🔗 Sincronizzato" : "⚠ Salvato in locale (sync non riuscito)"); }); }
-        else toast("📌 Segnalibro salvato");
-      } else if (act === "go") {
-        openPop(false); goToBM();
-      } else if (act === "del") {
-        removeHere(); refreshBtn(); openPop(false);
-        if (getCode()) { toast("sincronizzo…"); syncPush().then(function (ok) { toast(ok ? "🔗 Rimosso e sincronizzato" : "⚠ Rimosso in locale"); }); }
-        else toast("Segnalibro rimosso");
-      } else if (act === "syncnow") {
-        openPop(false); toast("🔄 Sincronizzo…");
-        syncPull().then(function (ch) { refreshBtn(); toast(ch ? "🔗 Aggiornato dall'altro dispositivo" : "🔗 Già aggiornato"); });
-      } else if (act === "synccopy") {
-        copyText(getCode()); openPop(false);
-      } else if (act === "syncoff") {
-        setCode(""); openPop(false); toast("Sync disattivato");
-      } else if (act === "synccreate") {
-        openPop(false); toast("Creo il codice…");
-        remoteCreate({ v: 1, books: { }, updatedAt: Date.now() }).then(function (id) {
-          if (!id) { toast("⚠ Errore: serve connessione, riprova"); return; }
-          setCode(id);
-          syncPush().then(function () {
-            window.prompt("✅ Sync attivato! Questo è il tuo CODICE. Copialo e, sull'altro dispositivo, apri 🔖 → «Inserisci un codice»:", id);
-            toast("🔗 Sync attivato");
-          });
-        });
-      } else if (act === "syncenter") {
-        openPop(false);
-        var c = window.prompt("Incolla qui il codice di sincronizzazione (creato sull'altro dispositivo):", "");
-        if (!c) return; c = c.trim(); if (!c) return;
-        setCode(c); toast("🔄 Sincronizzo…");
-        syncPull().then(function (ch) { refreshBtn(); toast(ch ? "🔗 Sincronizzato" : "🔗 Sync attivato (nessun segnalibro remoto)"); });
-      }
+      const b = e.target.closest("button[data-act]");
+      if (!b) return;
+      const act = b.dataset.act;
+      if (act === "save") { saveHere(); refreshBtn(); openPop(false); toast("📌 Segnalibro salvato"); }
+      else if (act === "go") { openPop(false); goToBM(); }
+      else if (act === "del") { clearBM(); refreshBtn(); openPop(false); toast("Segnalibro rimosso"); }
     });
 
-    /* aggiorna quando torni sulla scheda/finestra (es. dopo aver modificato sull'altro dispositivo) */
-    function pullOnFocus() {
-      if (!getCode()) return;
-      syncPull().then(function (ch) { if (ch) { refreshBtn(); if (pop.style.display === "block") { renderPop(); positionPop(); } } });
-    }
-    window.addEventListener("focus", pullOnFocus);
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) pullOnFocus(); });
-
     refreshBtn();
-    if (getCode()) syncPull().then(function (ch) { if (ch) refreshBtn(); });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
