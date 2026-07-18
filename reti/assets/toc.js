@@ -232,7 +232,7 @@ const TOC = [
     n: 15,
     titolo: "La sicurezza in rete",
     file: "cap15-sicurezza.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Di chi (non) fidarsi" },
       { id: "s15-2", n: "15.2", t: "Gli attacchi comuni" },

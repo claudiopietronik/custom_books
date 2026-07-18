@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · La sicurezza in rete — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>La sicurezza in rete</h1>
+    <p class="standfirst">
+      Lungo tutto il libro è tornata una parola scomoda: <b>fiducia</b>. ARP si fida, BGP si fida, la posta si
+      fida — e ogni fiducia mal riposta è una porta aperta. Internet è nato tra pochi ricercatori che si
+      conoscevano; oggi è un mondo dove <mark>tra te e ogni server c'è una rete di sconosciuti, e qualcuno di loro
+      ha cattive intenzioni</mark>. Questo capitolo mette insieme le difese: chi ti minaccia e come, cosa fa
+      davvero un <b>firewall</b>, come una <b>VPN</b> ti protegge sulle reti ostili, e le poche <b>abitudini</b>
+      che contano più di qualsiasi tecnologia. Non per farti paura, ma per darti il controllo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il modello di fiducia e le sue crepe (§15.1), gli <b>attacchi</b> più comuni (§15.2), il <b>firewall</b> che
+      filtra il traffico (§15.3), la <b>VPN</b> che crea un tunnel sicuro (§15.4), e le <b>buone pratiche</b>
+      personali che fanno la differenza (§15.5). Nel laboratorio (§15.6) guardi il firewall del tuo PC.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: sei tu il perimetro</div>
+    <p style="margin-bottom:0">
+      La sicurezza non è (solo) roba da esperti: <mark>le difese più efficaci sono comportamenti tuoi</mark> —
+      password uniche, aggiornamenti, un minimo di sospetto. Capire i meccanismi ti fa distinguere una minaccia
+      reale da un allarmismo, e proteggere te e la tua rete senza diventare paranoico. Ed è indispensabile prima di
+      esporre qualsiasi cosa online (i prossimi libri): un server mal protetto viene trovato e attaccato dai bot in
+      <em>minuti</em>. Sapere cosa chiudere e cosa aprire è la differenza tra un servizio e un incidente.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Di chi (non) fidarsi</h2>
+
+  <p class="lead">
+    Il principio guida della sicurezza moderna è cupo ma sano: <b>non fidarsi per default</b>. Ogni rete che non
+    controlli va considerata potenzialmente ostile, e ogni difesa va costruita di conseguenza.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La rete è ostile fino a prova contraria</div>
+    <p style="margin-bottom:0">
+      Tra il tuo dispositivo e un server passano il WiFi (magari pubblico), il router di casa, l'operatore, decine
+      di reti sconosciute. <mark>Uno qualsiasi di questi punti potrebbe spiare o manomettere il traffico non
+      protetto.</mark> La risposta non è «spegnere internet», ma proteggere ciò che conta a prescindere dalla rete
+      sottostante: <b>cifrare</b> (HTTPS, Cap. 12; VPN, §15.4), <b>autenticare</b> (certificati, chiavi SSH), e
+      <b>limitare</b> ciò che è raggiungibile (firewall, §15.3). È l'approccio detto «zero trust»: non fidarti
+      della rete, fidati solo di ciò che hai verificato crittograficamente.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Gli attacchi comuni</h2>
+
+  <p class="lead">
+    Non serve conoscerli tutti, ma riconoscere le grandi categorie ti fa capire <b>contro cosa</b> ti difendi — e
+    perché le difese sono fatte così.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le minacce che incontrerai <span class="tag">e la difesa principale di ognuna</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Intercettazione</b> (sniffing / man-in-the-middle)</dt>
+        <dd>qualcuno sulla rete <b>legge o altera</b> il traffico (il classico WiFi pubblico ostile, o l'ARP
+            spoofing del Cap. 4). <mark>Difesa: cifratura</mark> (HTTPS, VPN): anche se ti spiano, vedono solo dati
+            illeggibili.</dd>
+        <dt><b>Phishing</b> e ingegneria sociale</dt>
+        <dd>non attaccano la macchina, <b>ingannano te</b>: una email/sito che finge di essere fidato per rubarti
+            le credenziali. <mark>Difesa: sospetto + verifica</mark> (l'indirizzo è davvero quello? — Cap. 14) e
+            l'autenticazione a due fattori (§15.5).</dd>
+        <dt><b>Forza bruta</b> sulle password</dt>
+        <dd>bot che provano milioni di password su login esposti (SSH, pannelli, account). <mark>Difesa: password
+            lunghe e uniche, chiavi SSH, 2FA</mark>, e non esporre servizi inutili (§15.3).</dd>
+        <dt><b>DDoS</b> (negazione del servizio)</dt>
+        <dd>sommergere un server di richieste finché non crolla. <mark>Difesa: CDN e servizi anti-DDoS</mark> che
+            assorbono l'ondata (Cap. 13).</dd>
+        <dt><b>Malware</b></dt>
+        <dd>software malevolo che entra da un allegato, un download, una falla non aggiornata. <mark>Difesa:
+            aggiornamenti, prudenza, backup</mark>.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Il firewall</h2>
+
+  <p class="lead">
+    La prima linea di difesa strutturale. Un <b>firewall</b> è un filtro che decide <b>quale traffico può passare</b>
+    e quale no, in base a regole. È il buttafuori all'ingresso della rete.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Regole: cosa passa, cosa no</div>
+    <p style="margin-bottom:0">
+      Il firewall esamina ogni pacchetto e applica regole basate su <b>IP, porta e direzione</b>: «permetti le
+      connessioni in uscita», «permetti in ingresso solo sulla porta 443 (web) e 22 (SSH)», «<b>blocca tutto il
+      resto</b>». Il principio d'oro è <mark>«nega per default, permetti solo il necessario»</mark>: si parte
+      chiudendo tutto e si aprono solo le porte dei servizi che devono davvero essere raggiungibili. Ricordi il NAT
+      del router di casa (Cap. 8)? Fa già una forma base di firewall (blocca le connessioni in ingresso non
+      richieste). Su un server, il firewall è esplicito e va configurato con cura.
+    </p>
+  </div>
+
+  <div class="widget" id="w-fw">
+    <div class="w-head">
+      <span>Il firewall: nega per default, permetti il necessario</span>
+      <span class="hint">arrivano connessioni su varie porte</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wfw-svg" viewBox="0 0 560 300" role="img" aria-label="Un firewall lascia passare le connessioni verso le porte permesse (443, 22) e blocca tutte le altre"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wfw-go">▶ manda una raffica di connessioni</button>
+    </div>
+    <div class="w-readout" id="wfw-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>La VPN</h2>
+
+  <p class="lead">
+    Come proteggersi su una rete di cui non ci si fida — il WiFi dell'aeroporto, dell'hotel, del bar? Con una
+    <b>VPN</b>: un <b>tunnel cifrato</b> che avvolge <em>tutto</em> il tuo traffico e lo fa uscire altrove.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Un tunnel blindato dentro la rete ostile</div>
+    <p style="margin-bottom:0">
+      Una <b>VPN</b> (Virtual Private Network) crea un collegamento cifrato tra il tuo dispositivo e un server VPN
+      fidato: tutto il tuo traffico entra nel tunnel, esce dal server VPN e prosegue da lì. <mark>Chi controlla la
+      rete locale (il WiFi del bar) vede solo un flusso cifrato e indecifrabile diretto al server VPN</mark>: non
+      quali siti visiti, non i tuoi dati. Due usi principali: <b>proteggersi su reti pubbliche</b> (il traffico è
+      illeggibile a chi origlia), e <b>accedere da remoto a una rete privata</b> come se fossi lì dentro (entrare
+      nella rete aziendale, o nella rete di casa senza aprire porte — ricordi il Cap. 8?).
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: la VPN sposta la fiducia, non la elimina</div>
+    <p style="margin-bottom:0">
+      Con una VPN <b>tutto il tuo traffico passa dal fornitore VPN</b>: smetti di doverti fidare del WiFi del bar,
+      ma <b>devi fidarti della VPN</b>. <mark>Con un provider poco serio (o «gratis») potresti aver solo cambiato
+      spione</mark>. E ricordati: se un sito è già in HTTPS (quasi tutti), i tuoi dati sono <em>già</em> cifrati
+      end-to-end — la VPN aggiunge protezione sul «con chi parli» e sulla rete locale, ma non è una bacchetta
+      magica di anonimato assoluto, come a volte la pubblicità lascia intendere. Strumento utile, con aspettative
+      corrette.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Buone pratiche personali</h2>
+
+  <p class="lead">
+    La verità scomoda: la maggior parte delle violazioni non sfrutta hacking sofisticati, ma <b>password deboli,
+    software non aggiornato e disattenzione</b>. Poche abitudini ti proteggono più di qualsiasi gadget.
+  </p>
+
+  <div class="box chiave" style="border-left-color:var(--violet)">
+    <div class="box-title" style="color:var(--violet)"><span class="ico">🧠</span> Le cinque abitudini che contano davvero</div>
+    <ol style="margin-bottom:0">
+      <li><b>Password uniche e lunghe</b>, una diversa per ogni servizio, con un <b>password manager</b> che se le
+          ricorda per te. <mark>Il singolo intervento più efficace</mark>: così una fuga di dati da un sito non
+          compromette tutti gli altri.</li>
+      <li><b>Autenticazione a due fattori (2FA)</b> ovunque possibile: anche se ti rubano la password, senza il
+          secondo fattore non entrano.</li>
+      <li><b>Aggiorna</b> sistema e app: gli aggiornamenti chiudono le falle che i malware sfruttano. «Rimanda
+          sempre» è un rischio reale.</li>
+      <li><b>Backup</b> dei dati importanti: l'unica difesa davvero efficace contro ransomware e guasti. Meglio se
+          automatici e in due posti.</li>
+      <li><b>Un sano sospetto</b>: link e allegati inattesi, richieste urgenti, «hai vinto», mittenti che non
+          combaciano. <mark>La truffa fa leva sulla fretta</mark>: rallenta e verifica.</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Laboratorio: il tuo firewall</h2>
+
+  <p class="lead">
+    Diamo un'occhiata al firewall che hai già — quello di Windows — e alle porte in ascolto sul tuo PC, cioè le
+    «porte» che un servizio ha aperto e che potrebbero essere raggiungibili.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Stato del firewall e porte in ascolto <span class="tag">cosa è esposto</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">netsh</span> <span class="ar">advfirewall</span> <span class="ar">show</span> <span class="ar">allprofiles</span> <span class="ar">state</span>   <span class="c">il firewall è attivo?</span>
+<span class="p">C:\&gt; </span><span class="cmd">netstat</span> <span class="fl">-an</span> <span class="fl">|</span> <span class="cmd">findstr</span> <span class="ar">LISTENING</span>            <span class="c">porte in ascolto</span></pre>
+    </div>
+    <div class="f-note">
+      Il primo comando conferma che il firewall è <b>ON</b> per tutti i profili (dev'esserlo!). Il secondo elenca
+      le porte in <b>LISTENING</b>: programmi in ascolto di connessioni.
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output (estratto)</div>
+        <pre><span class="out">  TCP    <span class="hl">127.0.0.1</span>:5432     0.0.0.0:0    LISTENING   <span class="c">← solo locale (127.x): non raggiungibile da fuori, ok</span>
+  TCP    <span class="hl">0.0.0.0</span>:445       0.0.0.0:0    LISTENING   <span class="c">← in ascolto su tutte le interfacce: valuta se serve</span></span></pre>
+      </div>
+      Distinzione chiave: <code>127.0.0.1</code> (o <code>::1</code>) significa «<b>solo il computer stesso</b>» —
+      quel servizio non è raggiungibile dalla rete, è sicuro. <code>0.0.0.0</code> significa «<b>tutte le
+      interfacce</b>» — potenzialmente esposto (protetto solo dal firewall). <mark>Regola: meno cose in ascolto su
+      0.0.0.0, meglio è</mark>. Su un server userai lo stesso ragionamento con il firewall di Linux (es.
+      <code>ufw</code>): lo vedremo nel libro dedicato. Il principio non cambia: chiudi tutto, apri il minimo.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li><b>Non fidarti della rete</b> per default: proteggi cifrando, autenticando, limitando ciò che è
+          raggiungibile («zero trust») (§15.1).</li>
+      <li>Attacchi tipici: intercettazione (→ cifratura), phishing (→ sospetto + 2FA), forza bruta (→ password
+          forti/chiavi), DDoS (→ CDN), malware (→ aggiornamenti) (§15.2).</li>
+      <li>Il <b>firewall</b> filtra il traffico: «<b>nega per default, apri il necessario</b>» (§15.3). La <b>VPN</b>
+          crea un tunnel cifrato su reti ostili — ma sposta la fiducia sul provider (§15.4).</li>
+      <li>Le difese più forti sono <b>abitudini</b>: password uniche + manager, 2FA, aggiornamenti, backup,
+          sospetto (§15.5). E sai controllare firewall e porte in ascolto (§15.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ci siamo: hai attraversato tutta la pila, dal bit sul filo alla busta cifrata, dalla LAN di casa alle dorsali
+    del mondo, e sai come difenderti lungo il cammino. È il momento di rimettere insieme <b>tutti</b> i pezzi in un
+    unico grande racconto. Nel <strong>Capitolo 16</strong>, il gran finale, rispondiamo per esteso alla domanda da
+    cui siamo partiti — <b>cosa succede, esattamente, quando premi Invio?</b> — seguendo un singolo click dal tuo
+    dito fino alla pagina che compare, toccando ogni concetto di questo libro al posto giusto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Sei su un WiFi pubblico sconosciuto. Quali due difese proteggono i tuoi dati anche se qualcuno sulla rete sta
+      spiando? Perché funzionano?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Qual è il principio d'oro di configurazione di un firewall? Applicalo a un server che deve solo ospitare un
+      sito web e permettere l'amministrazione via SSH: quali porte apri?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Una VPN ti rende «anonimo e sicuro al 100%»? Cosa protegge davvero, e quale nuova fiducia introduce?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Elenca le porte in <code>LISTENING</code> sul tuo PC. Quante sono su <code>127.0.0.1</code> (solo
+      locali) e quante su <code>0.0.0.0</code> (tutte le interfacce)? Perché la distinzione conta?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-8"><span class="secnum">Sezione 15.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      <b>HTTPS</b> (usa solo siti col lucchetto): i dati sono cifrati end-to-end, chi spia vede solo traffico
+      illeggibile. E una <b>VPN</b>: incapsula tutto il traffico in un tunnel cifrato verso un server fidato, così
+      la rete locale non vede nulla di utile. Entrambe rendono inutile l'intercettazione perché ciò che passa è
+      cifrato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      «<b>Nega per default, permetti solo il necessario</b>». Per quel server apri solo: <b>443</b> (HTTPS, il
+      sito), eventualmente <b>80</b> (HTTP, per il redirect a HTTPS) e <b>22</b> (SSH, l'amministrazione). Tutto il
+      resto <b>chiuso</b>. Meglio ancora: limitare l'accesso SSH ai soli IP fidati.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      <b>No.</b> La VPN protegge il traffico <b>sulla rete locale ostile</b> (chi origlia il WiFi non vede nulla) e
+      nasconde con chi parli al tuo operatore, ma <b>sposta la fiducia sul provider VPN</b>, che vede tutto il tuo
+      traffico. Non dà anonimato assoluto, e per i siti HTTPS i dati erano già cifrati. Utile, ma con aspettative
+      realistiche.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      Risposte personali. Le porte su <code>127.0.0.1</code> sono <b>solo locali</b>: servizi accessibili unicamente
+      dal PC stesso, non dalla rete — non espongono nulla. Quelle su <code>0.0.0.0</code> sono in ascolto su
+      <b>tutte le interfacce</b>: potenzialmente raggiungibili dalla rete e protette solo dal firewall. La
+      distinzione dice cosa è realmente esposto: meno servizi su 0.0.0.0, minore la superficie d'attacco.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.3 — firewall: consente le porte permesse, blocca il resto
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wfw-svg');
+  if (!svg) return;
+  const out = document.getElementById('wfw-out');
+  const bGo = document.getElementById('wfw-go');
+
+  const allow = { 443: 'HTTPS', 22: 'SSH', 80: 'HTTP' };
+  const pool = [443, 22, 3389, 23, 80, 445, 21, 8080];
+  let packets = [];   // {port, y, x, state:'fly'|'pass'|'drop', t}
+  let last = null, running = false, passed = 0, blocked = 0;
+
+  bGo.addEventListener('click', () => {
+    packets = [];
+    for (let i = 0; i < 7; i++) { const port = pool[Math.floor((i * 3 + 1) % pool.length)]; packets.push({ port, y: 1.6 - i * 0.5, x: -4.5, state: 'fly', t: i * 0.25 }); }
+    passed = 0; blocked = 0; running = true; last = null; requestAnimationFrame(frame);
+  });
+
+  const FW = -0.2;
+  function frame(now) {
+    if (!running) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    let active = false;
+    for (const pk of packets) {
+      pk.t -= dt; if (pk.t > 0) { active = true; continue; }
+      if (pk.state === 'fly') {
+        pk.x += dt * 2.4;
+        if (pk.x >= FW) {
+          if (allow[pk.port]) { pk.state = 'pass'; passed++; }
+          else { pk.state = 'drop'; blocked++; pk.x = FW; }
+        }
+        active = true;
+      } else if (pk.state === 'pass') { pk.x += dt * 2.4; if (pk.x < 4.6) active = true; }
+      else if (pk.state === 'drop') { pk.dy = (pk.dy || 0) - dt * 4; pk.fade = (pk.fade || 1) - dt * 1.2; if (pk.fade > 0) active = true; }
+    }
+    draw();
+    if (active) requestAnimationFrame(frame); else { running = false; draw(); }
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.2, ymax: 2.2 });
+    // muro firewall
+    p.rect(FW - 0.18, -2.1, FW + 0.18, 2.1, { fill: 'color-mix(in srgb,var(--warm) 22%,transparent)', color: 'var(--warm)', width: 2 });
+    p.text(FW, 2.15, '🧱 FIREWALL', { size: 11, anchor: 'middle', color: 'var(--warm)', bold: true });
+    p.text(FW, -2.15, 'consenti: 443·80·22', { size: 9, anchor: 'middle', dy: 12, color: 'var(--ink-faint)' });
+    p.text(4.4, 2.15, '🖥 server', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    // pacchetti
+    for (const pk of packets) {
+      if (pk.t > 0) continue;
+      const col = pk.state === 'drop' ? 'var(--warm)' : (allow[pk.port] ? 'var(--green)' : 'var(--accent)');
+      const yy = pk.y + (pk.dy || 0);
+      const op = pk.fade != null ? Math.max(0, pk.fade) : 1;
+      p.rect(pk.x - 0.28, yy - 0.16, pk.x + 0.28, yy + 0.16, { fill: col, color: 'none', opacity: op });
+      p.text(pk.x, yy, ':' + pk.port, { size: 9, anchor: 'middle', dy: 3, color: 'var(--paper)', bold: true });
+      if (pk.state === 'drop' && op > 0.3) p.text(pk.x, yy + 0.42, '✖', { size: 12, anchor: 'middle', color: 'var(--warm)' });
+    }
+    out.innerHTML = `
+      <div class="big"><b style="color:var(--green)">Passate: ${passed}</b> &nbsp; · &nbsp; <b style="color:var(--warm)">Bloccate: ${blocked}</b></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        Solo le connessioni verso le <b>porte consentite</b> (443, 80, 22) attraversano il firewall; tutte le altre
+        (3389, 23, 445, 21…) vengono <mark>scartate</mark>. È il principio «nega per default, apri il necessario» (§15.3).
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
