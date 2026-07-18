@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · UDP e TCP — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>UDP e TCP</h1>
+    <p class="standfirst">
+      Finora la rete ha solo <em>lanciato</em> pacchetti: spedisci e speri. Ma internet perde pacchetti, li mescola,
+      li duplica. Come si costruisce, sopra un fondamento così inaffidabile, una conversazione <b>completa, in
+      ordine e senza errori</b> — come il download di un file che dev'essere perfetto al byte? È il compito del
+      <b>livello di trasporto</b>, e la risposta è uno dei capolavori dell'ingegneria: <b>TCP</b>, che costruisce
+      affidabilità sopra il caos. Il suo gemello opposto, <b>UDP</b>, fa la scelta contraria — niente garanzie,
+      massima velocità — ed è perfetto per altro. <mark>Capire quando serve l'uno e quando l'altro spiega perché
+      una videochiamata «salta» ma non si blocca, e un download non salta mai un byte.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il livello di trasporto e le <b>porte</b> (§9.1), <b>UDP</b> veloce e senza garanzie (§9.2), <b>TCP</b>
+      affidabile (§9.3), l'<b>handshake a tre vie</b> con cui una connessione TCP si apre (§9.4), e come TCP
+      regola la velocità con <b>controllo di flusso e di congestione</b> (§9.5). Nel laboratorio (§9.6) guardi le
+      connessioni attive del tuo PC.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la scelta che spiega tutto</div>
+    <p style="margin-bottom:0">
+      TCP e UDP sono la ragione per cui certe app sono fatte come sono. <mark>Il web, le mail, i download usano
+      TCP (nessun byte perso); le videochiamate, i giochi online, lo streaming live usano UDP (meglio un fotogramma
+      saltato che un blocco)</mark>. Capire questo bivio — affidabilità vs velocità — è fondamentale per ogni
+      libro che verrà: quando programmerai un server (FastAPI) o configurerai un firewall, ragionerai in
+      «porte TCP» e «porte UDP» tutto il tempo. È il concetto che collega le reti alla programmazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>Il livello di trasporto e le porte</h2>
+
+  <p class="lead">
+    L'IP porta il pacchetto fino al <b>computer</b> giusto. Ma su quel computer girano decine di programmi — quale
+    deve ricevere i dati, il browser o la mail? A rispondere è il livello di trasporto, con le <b>porte</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'IP è il palazzo, la porta è l'interno</div>
+    <p style="margin-bottom:0">
+      Se l'indirizzo IP è il <b>palazzo</b> (identifica il computer), la <b>porta</b> è il numero di
+      <b>interno/appartamento</b>: identifica il <em>programma</em> dentro quel computer. Ogni connessione è
+      individuata da quattro cose: <b>IP+porta sorgente</b> e <b>IP+porta destinazione</b>. Così il computer sa
+      esattamente a quale programma consegnare ogni pacchetto. <mark>Alcune porte sono «famose»</mark> (well-known):
+      <b>80</b> = HTTP, <b>443</b> = HTTPS, <b>53</b> = DNS, <b>22</b> = SSH, <b>25</b> = email. Quando scrivi
+      <code>https://sito</code>, il browser sa che deve bussare alla porta 443 di quel server. Le porte sono i
+      «citofoni» standardizzati dei servizi di internet.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>UDP: veloce e spensierato</h2>
+
+  <p class="lead">
+    Il più semplice dei due. <b>UDP</b> aggiunge appena le porte e poco altro: prende i dati, li imbusta, li
+    spedisce. <b>Nessuna garanzia</b> che arrivino, che siano in ordine, che non si perdano. E va benissimo così.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> «Spedisci e non pensarci»</div>
+    <p style="margin-bottom:0">
+      UDP è come <b>lanciare cartoline</b>: le spedisci una dopo l'altra, senza conferma. Alcune possono perdersi,
+      arrivare in disordine, e tu non lo saprai. In cambio: <b>zero attese, zero cerimonie, minima latenza</b>.
+      Perfetto quando <mark>i dati «vecchi» non servono più</mark>: in una videochiamata, un fotogramma perso è
+      irrilevante — ritrasmetterlo arriverebbe troppo tardi, meglio proseguire col prossimo. Lo usano
+      videochiamate, giochi online, streaming live, e — sorpresa — anche il DNS (una domanda-risposta veloce, se
+      si perde si riprova). È la scelta di chi preferisce <b>essere puntuale che completo</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>TCP: affidabile per contratto</h2>
+
+  <p class="lead">
+    Il capolavoro. <b>TCP</b> prende la stessa rete inaffidabile e ci costruisce sopra un canale che <b>garantisce
+    la consegna</b>: tutti i dati, in ordine, senza errori, senza duplicati. Come? Con conferme e ritrasmissioni.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> I trucchi dell'affidabilità</div>
+    <ul style="margin-bottom:0">
+      <li><b>Numeri di sequenza</b>: ogni pezzo di dati è numerato, così il ricevitore può <b>rimetterli in
+          ordine</b> anche se arrivano scombinati, e accorgersi se ne manca uno.</li>
+      <li><b>Conferme (ACK)</b>: il ricevitore dice «<em>ho ricevuto fino al byte N</em>». Il mittente sa così
+          cosa è arrivato.</li>
+      <li><b>Ritrasmissione</b>: se una conferma non arriva entro un certo tempo, il mittente <mark>rispedisce</mark>
+          il pezzo. Nulla va perso davvero: al massimo, arriva un po' dopo.</li>
+      <li><b>Controllo d'errore</b>: un checksum scarta i dati corrotti (che verranno ritrasmessi).</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Una telefonata», non «cartoline»</div>
+    <p style="margin-bottom:0">
+      Se UDP è lanciare cartoline, TCP è una <b>telefonata</b>: prima si stabilisce la linea («pronto?»
+      «pronto!»), poi si conversa con conferme continue («mi senti?» «sì, dimmi»), e alla fine si saluta e si
+      riaggancia. Questa cura costa <b>un po' di ritardo e di lavoro</b>, ma dà una garanzia totale.
+      <mark>Ogni volta che scarichi un file, apri una pagina, mandi una mail, dietro c'è TCP</mark> che veglia
+      perché non manchi e non si corrompa neanche un byte. È l'infrastruttura invisibile dell'affidabilità di
+      internet.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>L'handshake a tre vie</h2>
+
+  <p class="lead">
+    Prima di scambiare dati, due computer TCP si <b>stringono la mano</b> in tre passi, per accordarsi di essere
+    entrambi pronti e sincronizzare i numeri di sequenza. È l'inizio di ogni connessione TCP.
+  </p>
+
+  <div class="widget" id="w-hand">
+    <div class="w-head">
+      <span>L'handshake a tre vie (e la ritrasmissione)</span>
+      <span class="hint">apri la connessione, poi manda dati con o senza perdita</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wh-svg" viewBox="0 0 560 320" role="img" aria-label="Il client e il server si scambiano SYN, SYN-ACK e ACK per aprire la connessione, poi dati e conferme; se un dato si perde, viene ritrasmesso"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wh-open">1 · apri connessione</button>
+      <button class="w-btn" id="wh-data">2 · invia dati</button>
+      <label style="font-size:.85rem; color:var(--ink-soft)"><input type="checkbox" id="wh-loss"> simula perdita</label>
+    </div>
+    <div class="w-readout" id="wh-out"></div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I tre passi <span class="tag">SYN · SYN-ACK · ACK</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1. <b>SYN</b> (il client bussa)</dt>
+        <dd>«<em>Voglio aprire una connessione, il mio numero di partenza è X</em>». SYN = synchronize.</dd>
+        <dt>2. <b>SYN-ACK</b> (il server risponde)</dt>
+        <dd>«<em>Va bene, ricevuto il tuo X; il mio numero di partenza è Y</em>». Accetta e propone il suo.</dd>
+        <dt>3. <b>ACK</b> (il client conferma)</dt>
+        <dd>«<em>Perfetto, ricevuto Y. Iniziamo.</em>» Ora entrambi sanno di essere connessi e sincronizzati: la
+            conversazione può cominciare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questo triplo saluto costa <b>un giro di andata-e-ritorno</b> prima ancora di inviare un solo dato utile: è
+      un pezzo della latenza che senti aprendo una pagina (per HTTPS se ne aggiunge un altro, TLS — Cap. 12). Per
+      questo il web moderno lavora tanto per <mark>ridurre o riusare gli handshake</mark> (connessioni
+      persistenti, Cap. 13). La chiusura è simile e ordinata (con messaggi «FIN»): TCP saluta prima di riagganciare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Controllo di flusso e congestione</h2>
+
+  <p class="lead">
+    TCP non spara i dati a manetta: <b>regola la velocità</b> di continuo, per non sommergere il ricevitore né
+    intasare la rete. È un adattamento intelligente, momento per momento.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Due freni diversi</div>
+    <ul style="margin-bottom:0">
+      <li><b>Controllo di flusso</b>: protegge il <b>ricevitore</b>. Se chi riceve è lento (buffer pieno), dice al
+          mittente «rallenta, non ce la faccio». Evita di sommergere un capo più debole.</li>
+      <li><b>Controllo di congestione</b>: protegge la <b>rete</b>. TCP parte piano, poi <b>accelera</b> finché
+          tutto va bene; appena vede segni di intasamento (pacchetti persi), <mark>rallenta bruscamente</mark> e
+          ricomincia a salire con prudenza. È il motivo per cui un download «prende velocità» nei primi secondi.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché la rete non collassa</div>
+    <p style="margin-bottom:0">
+      Il controllo di congestione è un piccolo miracolo <b>collettivo</b>: milioni di connessioni TCP, ognuna che
+      «tasta» la rete e si autolimita quando percepisce intasamento, insieme <mark>evitano che internet crolli
+      sotto il proprio traffico</mark>. Nessun regista centrale: solo tante connessioni educate che rallentano
+      spontaneamente. È lo stesso spirito del routing (decisioni locali, ordine globale) applicato alla velocità.
+      Senza questo, la rete andrebbe in tilt al primo picco di traffico.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Laboratorio: connessioni e porte aperte</h2>
+
+  <p class="lead">
+    Vediamo le connessioni TCP <b>reali</b> del tuo PC in questo istante: chi sta parlando con chi, su quali
+    porte. Il comando <code>netstat</code> apre una finestra sul traffico vivo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>netstat</code> <span class="tag">«quali connessioni ho aperte?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">netstat</span> <span class="fl">-n</span>    <span class="c">(-n = mostra numeri, senza risolvere i nomi)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">netstat</span> — statistiche di rete</dt>
+        <dd>elenca tutte le connessioni: indirizzo <b>locale</b> (tuo IP:porta), indirizzo <b>remoto</b>
+            (server IP:porta), e lo <b>stato</b>.</dd>
+        <dt><span class="fl">-n</span></dt>
+        <dd>mostra IP e porte in numeri, senza tradurli in nomi: più veloce e chiaro. Prova
+            <code>netstat -b</code> (da amministratore) per vedere <em>quale programma</em> ha aperto ogni
+            connessione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <div class="term" style="margin:0 auto">
+        <div class="t-head">Output (estratto)</div>
+        <pre><span class="out">  Proto  Indirizzo locale      Indirizzo remoto       Stato
+  TCP    192.168.1.42:52840    142.250.180.14:<span class="hl">443</span>    <span class="hl">ESTABLISHED</span>   <span class="c">← HTTPS aperto (una pagina)</span>
+  TCP    192.168.1.42:52855    140.82.121.4:443       ESTABLISHED   <span class="c">← un altro sito</span>
+  TCP    192.168.1.42:52901    17.253.144.10:443      TIME_WAIT     <span class="c">← appena chiusa</span></span></pre>
+      </div>
+      Leggi la porta remota <b>443</b>: sono connessioni <b>HTTPS</b> (web cifrato). Lo stato
+      <b>ESTABLISHED</b> = handshake completato, connessione attiva; <b>TIME_WAIT</b> = da poco chiusa, TCP
+      aspetta un attimo prima di liberarla del tutto. <mark>Apri un sito e rifai <code>netstat</code></mark>:
+      vedrai comparire nuove righe verso la porta 443 — le connessioni TCP che il browser ha appena aperto, in
+      diretta.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>L'IP porta al computer, la <b>porta</b> al programma (80=HTTP, 443=HTTPS, 53=DNS, 22=SSH). Una
+          connessione = 4 elementi: IP+porta sorgente e destinazione (§9.1).</li>
+      <li><b>UDP</b>: veloce, senza garanzie — per videochiamate, giochi, streaming, DNS (§9.2). <b>TCP</b>:
+          affidabile con numeri di sequenza, ACK e ritrasmissioni — per web, mail, download (§9.3).</li>
+      <li>Ogni connessione TCP inizia con l'<b>handshake a tre vie</b> (SYN · SYN-ACK · ACK), che costa un
+          round-trip di latenza (§9.4).</li>
+      <li>TCP <b>regola la velocità</b>: controllo di flusso (protegge il ricevitore) e di congestione (protegge
+          la rete, evita il collasso) (§9.5). E ora vedi le tue connessioni con <code>netstat</code> (§9.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo canali affidabili e veloci tra programmi in tutto il mondo. Ma finora abbiamo sempre usato
+    <b>indirizzi numerici</b>, mentre tu digiti <code>wikipedia.org</code>, non <code>185.15.59.224</code>. Chi
+    traduce i nomi comodi per gli umani negli indirizzi che la rete capisce? È il servizio più silenzioso e più
+    indispensabile di internet, un gigantesco elenco telefonico distribuito su tutto il pianeta. Nel
+    <strong>Capitolo 10</strong> conosciamo il <b>DNS</b> — e capiamo perché, quando «internet non va», spesso il
+    vero colpevole è proprio lui.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Una videochiamata e il download di un PDF: quale usa UDP e quale TCP? Motiva in una riga ciascuno.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Descrivi i tre messaggi dell'handshake TCP e cosa «dice» ognuno. Perché serve, invece di iniziare subito a
+      mandare dati?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Durante un download, un pacchetto si perde per strada. Cosa succede con TCP? E se fosse stato UDP?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Esegui <code>netstat -n</code>. Quante connessioni verso la porta <b>443</b> vedi? Cosa significa
+      lo stato <code>ESTABLISHED</code>? Apri un sito e osserva cosa cambia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-8"><span class="secnum">Sezione 9.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      La <b>videochiamata → UDP</b>: conta la puntualità, un fotogramma perso è meglio scartarlo che aspettarlo
+      (arriverebbe tardi). Il <b>download → TCP</b>: il file deve essere perfetto al byte, quindi serve la
+      garanzia di consegna completa e ordinata.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      <b>SYN</b> (client: «apro, il mio numero è X») → <b>SYN-ACK</b> (server: «ok X, il mio è Y») → <b>ACK</b>
+      (client: «ok Y, via»). Serve perché entrambi devono <b>confermare di essere pronti</b> e <b>sincronizzare i
+      numeri di sequenza</b>: senza, non potrebbero riordinare i dati né accorgersi delle perdite.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      Con <b>TCP</b>: la conferma di quel pezzo non arriva, scatta un timeout e il mittente lo <b>ritrasmette</b>;
+      il ricevitore lo rimette al posto giusto grazie ai numeri di sequenza — nessun dato perso, solo un
+      microritardo. Con <b>UDP</b>: il pacchetto è semplicemente <b>perso</b>, nessuno se ne accorge né lo
+      recupera (e per una videochiamata va bene così).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      Risposte personali: navigando ne vedrai parecchie verso la 443 (ogni sito apre più connessioni HTTPS).
+      <code>ESTABLISHED</code> significa <b>handshake completato e connessione attiva</b>. Aprendo un sito
+      compaiono nuove righe (nuove connessioni TCP del browser); chiudendolo, alcune passano a
+      <code>TIME_WAIT</code> e poi spariscono.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.4 — handshake a tre vie + dati con ritrasmissione
+   Diagramma a sequenza: client (sx) e server (dx), messaggi che scendono.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wh-svg');
+  if (!svg) return;
+  const out = document.getElementById('wh-out');
+  const bOpen = document.getElementById('wh-open');
+  const bData = document.getElementById('wh-data');
+  const cbLoss = document.getElementById('wh-loss');
+
+  const CX = -3.2, SX = 3.2;              // colonne client/server
+  let msgs = [];                          // {label,color,fromClient,y0, lost?}
+  let established = false;
+  let anim = null, last = null, yCursor = 1.7;
+
+  function reset() { msgs = []; established = false; yCursor = 1.7; anim = null; draw('Premi «apri connessione» per l\'handshake a tre vie.'); }
+
+  bOpen.addEventListener('click', () => {
+    reset();
+    queue([
+      { label: 'SYN', color: 'var(--accent)', fromClient: true },
+      { label: 'SYN-ACK', color: 'var(--green)', fromClient: false },
+      { label: 'ACK', color: 'var(--accent)', fromClient: true }
+    ], () => { established = true; draw('✅ <b style="color:var(--green)">Connessione aperta</b>. Ora premi «invia dati».'); });
+  });
+
+  bData.addEventListener('click', () => {
+    if (!established) { draw('⚠ Prima apri la connessione (handshake).'); return; }
+    const lose = cbLoss.checked;
+    if (lose) {
+      queue([
+        { label: 'DATI (seq 1)', color: 'var(--warm)', fromClient: true, lost: true },
+        { label: '⏱ timeout: nessun ACK', color: 'var(--ink-soft)', fromClient: true, note: true },
+        { label: 'DATI (seq 1) — ritrasmesso', color: 'var(--accent)', fromClient: true },
+        { label: 'ACK (ho ricevuto 1)', color: 'var(--green)', fromClient: false }
+      ], () => draw('🔁 Il dato perso è stato <b>ritrasmesso</b> e confermato: con TCP nulla si perde davvero (§9.3).'));
+    } else {
+      queue([
+        { label: 'DATI (seq 1)', color: 'var(--accent)', fromClient: true },
+        { label: 'ACK (ho ricevuto 1)', color: 'var(--green)', fromClient: false }
+      ], () => draw('✅ Dato consegnato e <b>confermato</b> con un ACK.'));
+    }
+  });
+
+  function queue(list, done) {
+    let i = 0;
+    function next() {
+      if (i >= list.length) { if (done) done(); return; }
+      const m = list[i++];
+      m.y0 = yCursor; yCursor -= 0.52;
+      if (yCursor < -1.9) { yCursor = 1.7; msgs = []; }   // riparti dall'alto se pieno
+      msgs.push(m);
+      anim = { m, t: 0, cb: next };
+      last = null; requestAnimationFrame(step);
+    }
+    next();
+  }
+
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.5;
+    draw();
+    if (anim.t >= 1) { const cb = anim.cb; anim = null; draw(); if (cb) setTimeout(cb, 180); return; }
+    requestAnimationFrame(step);
+  }
+
+  function draw(msg) {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.2, ymax: 2.2 });
+    // linee di vita
+    p.line(CX, 1.9, CX, -2.1, { color: 'var(--ink-faint)', width: 1.5 });
+    p.line(SX, 1.9, SX, -2.1, { color: 'var(--ink-faint)', width: 1.5 });
+    p.text(CX, 2.05, '💻 client', { size: 12, anchor: 'middle', color: 'var(--accent)', bold: true });
+    p.text(SX, 2.05, '🗄 server', { size: 12, anchor: 'middle', color: 'var(--warm)', bold: true });
+
+    // messaggi già completati
+    for (const m of msgs) {
+      if (anim && anim.m === m) continue;
+      drawMsg(p, m, 1);
+    }
+    if (anim) drawMsg(p, anim.m, anim.t);
+
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">' + (msg || '') + '</div>';
+  }
+
+  function drawMsg(p, m, prog) {
+    const y = m.y0;
+    if (m.note) { p.text(0, y, m.label, { size: 10, anchor: 'middle', color: 'var(--ink-soft)', italic: true }); return; }
+    const x0 = m.fromClient ? CX : SX;
+    const x1 = m.fromClient ? SX : CX;
+    const target = m.lost ? 0 : 1;                  // se perso, si ferma a metà
+    const f = Math.min(prog, target);
+    const xEnd = x0 + (x1 - x0) * (m.lost ? 0.55 * (prog) : f);
+    p.line(x0, y, xEnd, y - (m.fromClient ? 0.14 : -0.14) * f, { color: m.color, width: 2.4 });
+    // pallino/freccia in testa
+    p.dot(xEnd, y - (m.fromClient ? 0.14 : -0.14) * f, { color: m.color, r: 4 });
+    p.text(x0 + (x1 - x0) * 0.5, y, m.label, { size: 10.5, anchor: 'middle', dy: -6, color: m.color, bold: true });
+    if (m.lost && prog > 0.5) p.text(xEnd + 0.2, y, '✖ perso', { size: 10, anchor: 'start', color: 'var(--warm)', bold: true });
+  }
+
+  reset();
+})();
+</script>
+</body>
+</html>

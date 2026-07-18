@@ -138,7 +138,7 @@ const TOC = [
     n: 9,
     titolo: "UDP e TCP",
     file: "cap09-udp-tcp.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Il livello di trasporto e le porte" },
       { id: "s9-2", n: "9.2", t: "UDP: veloce e spensierato" },
