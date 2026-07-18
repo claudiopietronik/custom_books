@@ -123,7 +123,7 @@ const TOC = [
     n: 8,
     titolo: "La rete di casa",
     file: "cap08-rete-di-casa.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Il router domestico (tuttofare)" },
       { id: "s8-2", n: "8.2", t: "DHCP: indirizzi automatici" },

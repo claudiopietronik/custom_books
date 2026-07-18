@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · La rete di casa — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>La rete di casa</h1>
+    <p class="standfirst">
+      La scatola più sottovalutata che possiedi. Quel «modem» con le lucine che lampeggiano non è un aggeggio
+      qualsiasi: è <b>router, switch, access point WiFi, server DHCP e firewall</b> tutto in uno, e fa un lavoro
+      di traduzione continuo che permette a decine di dispositivi di casa di condividere una <b>sola</b>
+      connessione. In questo capitolo apriamo quella scatola e capiamo i suoi tre trucchi: come distribuisce gli
+      indirizzi (<b>DHCP</b>), come fa uscire tutti da un solo IP pubblico (<b>NAT</b>), e come — quando serve —
+      far entrare il mondo verso un dispositivo di casa (<b>port forwarding</b>). <mark>È il capitolo che ti fa
+      diventare padrone della tua rete.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>router domestico tuttofare</b> (§8.1), <b>DHCP</b> che assegna gli indirizzi automaticamente (§8.2),
+      il <b>NAT</b> che fa uscire tutti da un IP solo (§8.3) e il <b>port forwarding</b> per aprire una porta
+      verso l'interno (§8.4). Nel laboratorio (§8.5) entriamo nel pannello del tuo router.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la tua rete, prendine il controllo</div>
+    <p style="margin-bottom:0">
+      Capire il router di casa risolve una montagna di problemi concreti: <mark>perché la telecamera non si vede
+      da fuori, come dare a un dispositivo sempre lo stesso indirizzo, come esporre un piccolo server, perché il
+      WiFi degli ospiti va tenuto separato</mark>. Ed è il ponte diretto verso i libri su server e deploy: quando
+      metterai online un tuo servizio (su un Raspberry in casa o su un VPS Hetzner), NAT e port forwarding saranno
+      i primi concetti che incontrerai. Padroneggiarli qui, in piccolo, ti prepara al grande.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Il router domestico (tuttofare)</h2>
+
+  <p class="lead">
+    Quella singola scatola contiene, in realtà, <b>cinque dispositivi</b> in uno. Conoscerne i ruoli spiega
+    perché fa così tante cose diverse.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Cinque mestieri in una scatola</div>
+    <ul style="margin-bottom:0">
+      <li><b>Modem</b>: converte il segnale della linea (fibra/rame) in dati digitali. È il ponte con l'operatore.</li>
+      <li><b>Router</b>: collega la tua rete (privata) a internet, instradando i pacchetti «dentro↔fuori» (Cap. 7).</li>
+      <li><b>Switch</b>: le porte Ethernet sul retro; smista il traffico cablato in casa (Cap. 4).</li>
+      <li><b>Access point</b>: crea il WiFi (Cap. 5).</li>
+      <li><b>Server DHCP + firewall</b>: assegna gli indirizzi ai dispositivi (§8.2) e fa da barriera verso
+          l'esterno (Cap. 15).</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il router ha due «facce»</div>
+    <p style="margin-bottom:0">
+      La cosa da capire: il router sta <b>a cavallo di due reti</b>. Verso l'<b>interno</b> ha un indirizzo
+      privato (di solito <code>192.168.1.1</code>): è il gateway che tutti i dispositivi di casa usano per uscire.
+      Verso l'<b>esterno</b> ha l'indirizzo <b>pubblico</b> assegnato dall'operatore: è come lo vede internet.
+      <mark>Tutto il suo lavoro consiste nel fare da traduttore e portinaio tra queste due facce</mark> — ed è
+      esattamente ciò che fanno DHCP (verso l'interno) e NAT (nel passaggio interno↔esterno).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>DHCP: indirizzi automatici</h2>
+
+  <p class="lead">
+    Come fa un dispositivo appena collegato a ottenere un IP, senza che tu configuri nulla? Glielo <b>assegna il
+    router</b>, al volo, con un protocollo automatico: <b>DHCP</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> «Benvenuto, ecco il tuo indirizzo»</div>
+    <p style="margin-bottom:0">
+      Quando accendi il telefono e ti colleghi al WiFi, parte un piccolo dialogo (in gergo «DORA»): il dispositivo
+      <b>grida</b> «c'è un server DHCP? Mi serve un indirizzo!»; il router <b>offre</b> un IP libero dal suo
+      intervallo (es. <code>192.168.1.20</code>); il dispositivo lo <b>richiede</b>; il router <b>conferma</b>.
+      In un attimo, senza che tu faccia nulla, il dispositivo ha IP, maschera, gateway e DNS. <mark>Il DHCP è il
+      «receptionist» della rete</mark>: dà a ogni nuovo arrivato tutto il necessario per muoversi. L'assegnazione
+      ha una scadenza (un «lease»): dopo un po', l'indirizzo va rinnovato o torna disponibile.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> IP fisso «buono»: la prenotazione</div>
+    <p style="margin-bottom:0">
+      Con DHCP l'indirizzo di un dispositivo può <b>cambiare</b> nel tempo — fastidioso per una stampante o un
+      server di casa che vuoi raggiungere sempre allo stesso indirizzo. La soluzione elegante non è disattivare il
+      DHCP, ma la <b>prenotazione DHCP</b> (o «IP statico»): dici al router «al dispositivo con <em>questo</em>
+      MAC, dai <em>sempre</em> <code>192.168.1.50</code>». <mark>Così il comodo automatismo resta, ma quel
+      dispositivo ha un indirizzo stabile.</mark> È il modo giusto per fissare gli IP di stampanti, NAS,
+      telecamere, mini-server.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Il NAT</h2>
+
+  <p class="lead">
+    Ecco la magia che risolve la scarsità di indirizzi: come fanno <b>venti dispositivi</b> di casa, ognuno col
+    suo IP privato, a uscire su internet condividendo un <b>solo</b> IP pubblico? Con il <b>NAT</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il traduttore di indirizzi</div>
+    <p style="margin-bottom:0">
+      NAT (Network Address Translation) fa questo: quando un pacchetto esce da casa, il router <b>riscrive
+      l'indirizzo mittente</b>, sostituendo l'IP privato (es. <code>192.168.1.42</code>) con il proprio IP
+      pubblico. Verso internet, sembra che <b>tutto</b> il traffico venga da un solo indirizzo — quello del router.
+      Ma allora, quando la risposta torna, <mark>come fa il router a sapere a quale dei venti dispositivi
+      consegnarla?</mark> Tiene una <b>tabella di traduzione</b> che annota, per ogni connessione uscente, «questo
+      dispositivo privato, su questa porta, sta parlando con quel server»: al ritorno, legge la tabella e consegna
+      al mittente giusto. È un portinaio con un registro meticoloso.
+    </p>
+  </div>
+
+  <div class="widget" id="w-nat">
+    <div class="w-head">
+      <span>Il NAT: tutti fuori da un IP solo</span>
+      <span class="hint">manda i dispositivi su internet e guarda la tabella</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wnat-svg" viewBox="0 0 560 320" role="img" aria-label="Il router riscrive l'indirizzo privato dei dispositivi col proprio IP pubblico e tiene una tabella per riconsegnare le risposte al mittente giusto"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wnat-a">💻 PC naviga</button>
+      <button class="w-btn" id="wnat-b">📱 telefono naviga</button>
+      <button class="w-btn" id="wnat-reset">reset</button>
+    </div>
+    <div class="w-readout" id="wnat-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il NAT è anche un mezzo scudo</div>
+    <p style="margin-bottom:0">
+      Effetto collaterale prezioso: dall'esterno, i dispositivi di casa sono <b>invisibili</b>. Un attaccante su
+      internet vede solo l'IP pubblico del router, non i singoli dispositivi privati, e <mark>non può iniziare una
+      connessione verso l'interno</mark> — perché il router, non trovando una voce nella tabella per quel traffico
+      «non richiesto», lo scarta. Ecco perché il NAT funziona anche da barriera di base (non è un vero firewall,
+      ma aiuta). Il rovescio della medaglia è nella prossima sezione: e se <em>volessi</em> davvero far entrare il
+      mondo verso un dispositivo di casa?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Port forwarding</h2>
+
+  <p class="lead">
+    Il NAT blocca le connessioni in ingresso — comodo per la sicurezza, scomodo se vuoi <b>esporre</b> qualcosa:
+    una telecamera, un server di gioco, un sito su un mini-computer di casa. Il <b>port forwarding</b> apre una
+    porta precisa verso un dispositivo preciso.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Una regola: «bussate qui → mando lì»</div>
+    <p style="margin-bottom:0">
+      Configuri sul router una regola del tipo: «<b>tutto ciò che arriva dall'esterno sulla porta 8080, mandalo al
+      dispositivo <code>192.168.1.50</code> sulla porta 80</b>». Da quel momento, chi contatta il tuo IP pubblico
+      su quella porta viene <b>inoltrato</b> al dispositivo interno scelto. <mark>È l'unica «apertura» controllata
+      nel muro del NAT</mark>: una porta specifica verso un dispositivo specifico, il resto resta chiuso. È così
+      che si rende raggiungibile da internet un servizio ospitato in casa (concetto che ritroverai identico
+      esponendo un servizio su un server, nel libro sul deploy).
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: ogni porta aperta è un rischio</div>
+    <p style="margin-bottom:0">
+      Aprire una porta significa <b>esporre un dispositivo di casa a tutta internet</b> — inclusi i bot che
+      scansionano il mondo 24 ore su 24 in cerca di bersagli. <mark>Non aprire mai porte «a caso», e mai verso
+      dispositivi non aggiornati o con password deboli</mark> (le telecamere IP economiche sono un classico
+      bersaglio). Alternative più sicure, che vedremo: una <b>VPN</b> per entrare in casa come se fossi lì
+      (Cap. 15), o servizi «tunnel» che espongono senza aprire porte. Regola d'oro: apri solo ciò che ti serve
+      davvero, e tieni aggiornato ciò che esponi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Laboratorio: dentro il tuo router</h2>
+
+  <p class="lead">
+    Entriamo nel pannello di amministrazione del tuo router e vediamo dal vivo DHCP e i dispositivi connessi.
+    Nessun comando: basta il browser.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Accedere al router <span class="tag">l'indirizzo è il tuo gateway</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale — trova l'indirizzo del router</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ipconfig</span> <span class="fl">|</span> <span class="cmd">findstr</span> <span class="ar">Gateway</span>
+<span class="out">   Gateway predefinito . . . : <span class="hl">192.168.1.1</span></span></pre>
+    </div>
+    <div class="f-note">
+      Copia quell'indirizzo (<code>192.168.1.1</code>) nella barra del browser: <code>http://192.168.1.1</code>.
+      Ti apparirà la pagina di login del router. La password è spesso stampata su un'etichetta sotto la scatola
+      (e <mark>andrebbe cambiata subito</mark> se è quella di fabbrica). Dentro, cerca sezioni tipo:
+      <ul style="margin:.5rem 0 0">
+        <li><b>Dispositivi connessi / DHCP</b>: l'elenco di tutto ciò che è in casa, con IP e MAC. Riconoscili uno
+            per uno — è sorprendente quanti aggeggi hai in rete.</li>
+        <li><b>Prenotazione / IP statico</b>: per dare a un dispositivo sempre lo stesso IP (§8.2).</li>
+        <li><b>WiFi</b>: canale (metti 1/6/11!), banda, sicurezza (WPA3), e la <b>rete ospiti</b> — separata dalla
+            tua, ottima per gli amici e i dispositivi IoT poco fidati.</li>
+        <li><b>Port forwarding / NAT</b>: le regole di apertura (lascialo vuoto se non ti serve).</li>
+      </ul>
+      <mark>Esplora senza paura, ma cambia una cosa alla volta e annota com'era</mark>: è il modo migliore per
+      imparare come è fatta, davvero, la tua rete.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>Il router di casa è <b>cinque dispositivi in uno</b> (modem, router, switch, AP, DHCP+firewall) a
+          cavallo di due reti: privata dentro, pubblica fuori (§8.1).</li>
+      <li><b>DHCP</b> assegna automaticamente gli indirizzi ai nuovi arrivati; la <b>prenotazione</b> dà a un
+          dispositivo sempre lo stesso IP (§8.2).</li>
+      <li><b>NAT</b>: il router riscrive l'IP privato col suo pubblico e usa una <b>tabella</b> per riconsegnare
+          le risposte — tutti escono da un IP solo, e i dispositivi interni restano invisibili (§8.3).</li>
+      <li><b>Port forwarding</b>: apre una porta specifica verso un dispositivo interno per esporlo — potente ma
+          rischioso, apri solo il necessario (§8.4). E ora sai entrare nel pannello del router (§8.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo completato il viaggio «basso» della pila: dal bit sul filo (Cap. 3) fino alla tua casa che esce su
+    internet da un solo indirizzo. I pacchetti ora sanno arrivare ovunque. Ma finora abbiamo trattato la consegna
+    come un lancio: spedisci e speri. Chi garantisce che i dati arrivino <b>tutti</b>, <b>in ordine</b> e
+    <b>integri</b>, sopra una rete che perde e mescola pacchetti? Saliamo al <b>livello di trasporto</b>. Nel
+    <strong>Capitolo 9</strong> conosciamo i due grandi protagonisti — <b>UDP</b>, veloce e spensierato, e
+    <b>TCP</b>, affidabile per contratto — e il famoso <b>handshake a tre vie</b> con cui due computer si stringono
+    la mano prima di parlare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Colleghi un nuovo tablet al WiFi e naviga subito, senza che tu configuri nulla. Chi gli ha dato l'indirizzo,
+      e come, in quattro passi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Vuoi che la tua stampante di rete abbia <b>sempre</b> lo stesso IP. Qual è il modo giusto per ottenerlo senza
+      rinunciare al DHCP?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Venti dispositivi di casa navigano insieme, tutti con lo stesso IP pubblico. Quando arriva la risposta per il
+      tuo PC, come fa il router a non consegnarla per errore al telefono? Cosa consulta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Un amico ti dice: «apri la porta 3389 verso il tuo PC così ci accedo da fuori». Perché è una richiesta da
+      valutare con molta prudenza? Quale alternativa più sicura conosci?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      Il <b>server DHCP del router</b>, col dialogo in quattro passi: il tablet <b>scopre</b> («c'è un DHCP?»), il
+      router <b>offre</b> un IP libero, il tablet lo <b>richiede</b>, il router <b>conferma</b> (assegnando IP,
+      maschera, gateway e DNS). Tutto in una frazione di secondo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      La <b>prenotazione DHCP</b>: nel router, associ il <b>MAC</b> della stampante a un IP fisso (es.
+      <code>192.168.1.50</code>). Il DHCP continua a funzionare per tutti, ma a quel MAC darà sempre quell'indirizzo.
+      Meglio che impostare un IP statico «a mano» sulla stampante, che rischia conflitti con l'intervallo DHCP.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      Consulta la sua <b>tabella NAT</b>: quando il PC ha iniziato la connessione, il router ha annotato «IP
+      privato del PC + porta ↔ connessione verso quel server». Al ritorno, abbina la risposta a quella voce e la
+      consegna al PC. La porta usata nella traduzione è la chiave che distingue PC e telefono.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      Perché aprire la 3389 (desktop remoto) espone il PC a <b>tutta internet</b>: i bot cercano proprio quella
+      porta e provano password all'infinito — è un vettore d'attacco classico. Alternativa più sicura: una
+      <b>VPN</b> (Cap. 15), che ti fa «entrare in casa» in modo cifrato e autenticato senza aprire porte verso il
+      mondo. Se proprio devi aprire, usa password fortissime e limita gli IP ammessi.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.3 — il NAT: due dispositivi privati escono da un IP pubblico
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wnat-svg');
+  if (!svg) return;
+  const out = document.getElementById('wnat-out');
+  const bA = document.getElementById('wnat-a');
+  const bB = document.getElementById('wnat-b');
+  const bR = document.getElementById('wnat-reset');
+
+  const PC = [-4.2, 1.2], PH = [-4.2, -1.2], R = [-0.3, 0], SRV = [4.2, 0];
+  const dev = { PC: { pos: PC, ip: '192.168.1.42', emo: '💻', col: 'var(--accent)' }, PH: { pos: PH, ip: '192.168.1.28', emo: '📱', col: 'var(--green)' } };
+  const PUB = '93.44.128.17';
+  let table = [];       // {who, priv, port}
+  let anim = null, last = null, portSeq = 51000;
+
+  bA.addEventListener('click', () => launch('PC'));
+  bB.addEventListener('click', () => launch('PH'));
+  bR.addEventListener('click', () => { table = []; anim = null; draw(); });
+
+  function launch(who) {
+    if (anim) return;
+    const port = portSeq++;
+    table.push({ who, priv: dev[who].ip, port });
+    if (table.length > 4) table.shift();
+    anim = { who, port, t: 0, phase: 'out' };
+    last = null; requestAnimationFrame(step);
+  }
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.5;
+    if (anim.t >= 1) {
+      if (anim.phase === 'out') { anim.phase = 'back'; anim.t = 0; last = null; }
+      else { anim = null; draw(); return; }
+    }
+    draw(); requestAnimationFrame(step);
+  }
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.4, ymax: 2.4, iso: true });
+    // linee
+    p.line(PC[0], PC[1], R[0], R[1], { color: 'var(--ink-faint)', width: 2 });
+    p.line(PH[0], PH[1], R[0], R[1], { color: 'var(--ink-faint)', width: 2 });
+    p.line(R[0], R[1], SRV[0], SRV[1], { color: 'var(--ink-faint)', width: 2 });
+    // confine casa/internet
+    p.line(1.4, -2.2, 1.4, 2.2, { color: 'var(--ink-faint)', width: 1, dash: '3 4' });
+    p.text(-1.8, 2.15, '🏠 casa (privato)', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    p.text(3.2, 2.15, '🌐 internet (pubblico)', { size: 10, anchor: 'middle', color: 'var(--ink-faint)' });
+    // dispositivi
+    for (const k in dev) { const d = dev[k]; p.text(d.pos[0], d.pos[1], d.emo, { size: 20, anchor: 'middle', dy: 7 }); p.text(d.pos[0], d.pos[1] - 0.5, d.ip, { size: 9, anchor: 'middle', color: 'var(--ink-faint)' }); }
+    // router (NAT)
+    p.rect(R[0] - 0.75, R[1] - 0.55, R[0] + 0.75, R[1] + 0.55, { fill: 'color-mix(in srgb,var(--violet) 16%,transparent)', color: 'var(--violet)', width: 2 });
+    p.text(R[0], R[1] + 0.15, 'NAT', { size: 12, anchor: 'middle', color: 'var(--violet)', bold: true });
+    p.text(R[0], R[1] - 0.25, PUB, { size: 8.5, anchor: 'middle', color: 'var(--ink-soft)' });
+    // server
+    p.text(SRV[0], SRV[1], '🗄', { size: 20, anchor: 'middle', dy: 7 });
+    p.text(SRV[0], SRV[1] - 0.5, 'server', { size: 9, anchor: 'middle', color: 'var(--ink-faint)' });
+
+    if (anim) {
+      const d = dev[anim.who];
+      let pos, label, col = d.col;
+      if (anim.phase === 'out') {
+        if (anim.t < 0.5) { pos = lerp(d.pos, R, anim.t * 2); label = 'da ' + d.ip; }
+        else { pos = lerp(R, SRV, (anim.t - 0.5) * 2); label = 'da ' + PUB + ':' + anim.port; col = 'var(--violet)'; }
+      } else {
+        if (anim.t < 0.5) { pos = lerp(SRV, R, anim.t * 2); label = 'a ' + PUB + ':' + anim.port; col = 'var(--violet)'; }
+        else { pos = lerp(R, d.pos, (anim.t - 0.5) * 2); label = 'a ' + d.ip; }
+      }
+      p.rect(pos[0] - 0.16, pos[1] - 0.12, pos[0] + 0.16, pos[1] + 0.12, { fill: col, color: 'none' });
+      p.text(pos[0], pos[1] + 0.4, label, { size: 9, anchor: 'middle', color: 'var(--ink-soft)' });
+    }
+
+    const rows = table.map(r => `<b style="color:${dev[r.who].col}">${r.priv}</b> ⇄ ${PUB}:<b>${r.port}</b>`).join('<br>') || '<span style="color:var(--ink-faint)">vuota</span>';
+    out.innerHTML = `
+      <div class="big">Tabella NAT del router</div>
+      <div style="margin:.3rem 0; font-family:var(--mono); font-size:.82rem; text-align:left">${rows}</div>
+      <div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Uscendo, il router sostituisce l'IP privato col suo <b>pubblico</b> (${PUB}) e annota la <b>porta</b>. Al ritorno legge la porta nella tabella e riconsegna al mittente giusto: <mark>tutti escono da un IP solo</mark> (§8.3).</div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

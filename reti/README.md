@@ -31,7 +31,7 @@ Contenuto originale scritto ex novo.
 - [x] 5 — Il WiFi
 - [x] 6 — L'indirizzo IP
 - [x] 7 — Il routing
-- [ ] 8 — La rete di casa
+- [x] 8 — La rete di casa
 - [ ] 9 — UDP e TCP
 - [ ] 10 — Il DNS
 - [ ] 11 — HTTP
