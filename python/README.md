@@ -19,7 +19,7 @@ Contenuto originale scritto ex novo.
 - [x] 6 — Dizionari e insiemi
 - [x] 7 — Prendere decisioni
 - [x] 8 — I cicli
-- [ ] 9 — Le funzioni
+- [x] 9 — Le funzioni
 - [ ] 10 — Moduli, pacchetti e ambienti
 - [ ] 11 — Errori ed eccezioni
 - [ ] 12 — File e dati
