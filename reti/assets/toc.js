@@ -107,7 +107,7 @@ const TOC = [
     n: 7,
     titolo: "Il routing",
     file: "cap07-routing.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Il problema: trovare la strada" },
       { id: "s7-2", n: "7.2", t: "Il router e la tabella di routing" },

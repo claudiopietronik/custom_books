@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Il routing — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Il routing</h1>
+    <p class="standfirst">
+      Ecco il miracolo quotidiano di internet: un pacchetto parte da casa tua e, attraversando <b>decine di reti
+      sconosciute</b> gestite da aziende diverse in continenti diversi, arriva esattamente a quel server — in
+      millisecondi, senza che nessuno possieda una mappa completa del percorso. Come? Con una regola tanto
+      semplice quanto potente: <mark>ogni router prende una sola decisione locale — «per andare là, il prossimo
+      salto è di qui» — e la somma di milioni di queste microdecisioni forma la rotta.</mark> Nessun regista,
+      nessuna mappa globale: solo tanti cartelli stradali che collaborano. È l'idea che fa funzionare internet su
+      scala planetaria.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema di trovare la strada senza una mappa unica (§7.1), il <b>router</b> e la sua <b>tabella di
+      routing</b> (§7.2), il principio <b>salto dopo salto</b> (§7.3), il campo <b>TTL</b> e il trucco di
+      <b>traceroute</b> (§7.4), e come le grandi reti degli operatori si accordano tra loro con <b>BGP</b> (§7.5).
+      Nel laboratorio (§7.6) tracci il percorso reale dei tuoi pacchetti.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire dove «si rompe» internet</div>
+    <p style="margin-bottom:0">
+      Quando un sito è irraggiungibile o lentissimo, spesso il problema è <b>lungo il percorso</b> — un router
+      congestionato, una rotta sbagliata, un tratto internazionale lento. <mark>Saper leggere un traceroute ti
+      dice <em>dove</em> si inceppa il viaggio</mark>: è colpa tua, del tuo operatore, o di un nodo a metà
+      dell'oceano? È anche la base per capire perché esistono le CDN (Cap. 13), come funziona una VPN (Cap. 15) e
+      cosa succede «tra» i provider quando un pezzo di internet va giù.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Il problema: trovare la strada</h2>
+
+  <p class="lead">
+    Internet è fatto di centinaia di migliaia di reti collegate in modo caotico. Non esiste una «mappa di
+    internet», e nessun router conosce l'intero percorso verso una destinazione. Eppure i pacchetti arrivano.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'analogia: chiedere la strada, cartello dopo cartello</div>
+    <p style="margin-bottom:0">
+      Immagina di guidare verso una città lontana senza navigatore. A ogni incrocio non ti serve conoscere
+      l'intero tragitto: ti basta un <b>cartello</b> che dica «<em>Napoli → di qua</em>». Segui quel cartello,
+      arrivi all'incrocio dopo, leggi il prossimo cartello, e così via. <mark>Nessun incrocio conosce tutta la
+      strada, ma ognuno sa la direzione giusta per il prossimo passo</mark> — e questo basta per arrivare. Il
+      routing è esattamente questo: i router sono gli incroci, le tabelle di routing sono i cartelli, e il
+      pacchetto è la tua auto che segue le indicazioni una alla volta. La magia è che i cartelli sono tenuti
+      aggiornati automaticamente (§7.5).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Il router e la tabella di routing</h2>
+
+  <p class="lead">
+    Il <b>router</b> è il dispositivo che collega reti diverse e decide dove mandare ogni pacchetto. Il suo
+    cervello è la <b>tabella di routing</b>: la lista dei «cartelli».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una tabella di routing <span class="tag">«per questa destinazione → vai di qui»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Tabella (semplificata)</div>
+      <pre><span class="out">Destinazione        Prossimo salto     Interfaccia
+<span class="hl">192.168.1.0/24</span>      (rete locale)      eth0        <span class="c">← "i vicini di casa": consegna diretta</span>
+10.8.0.0/16         192.168.1.9        eth0        <span class="c">← una rete specifica via un altro router</span>
+<span class="hl">0.0.0.0/0</span>           192.168.1.1        eth0        <span class="c">← "tutto il resto" → il gateway</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>ogni riga è un <b>cartello</b></dt>
+        <dd>«per i pacchetti destinati a <em>questa</em> rete, il prossimo salto è <em>quel</em> router, su
+            <em>quella</em> interfaccia». Il router confronta l'IP di destinazione del pacchetto con le righe e
+            sceglie quella che combacia.</dd>
+        <dt>la regola <b>più specifica vince</b></dt>
+        <dd>se più righe combaciano, vince quella col prefisso <b>più lungo</b> (più preciso). <code>10.8.0.0/16</code>
+            batte <code>0.0.0.0/0</code> per un pacchetto verso <code>10.8.x.x</code>, perché è più specifica. È
+            il «longest prefix match».</dd>
+        <dt>la <b>rotta di default</b> <code>0.0.0.0/0</code></dt>
+        <dd>il jolly: «<mark>tutto ciò che non so gestire, mandalo al gateway</mark>». Nel tuo PC di casa la
+            tabella è quasi tutta qui: i vicini li consegni diretti, tutto il resto (= internet) lo passi al
+            router. È la riga che spedisce il mondo intero verso <code>192.168.1.1</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      I router «di frontiera» degli operatori hanno tabelle enormi — oltre <b>900.000 rotte</b>, l'intera «mappa»
+      dei prefissi di internet — aggiornate di continuo. Il tuo PC, invece, ne ha una manciata: sa consegnare in
+      casa e sa «tutto il resto → gateway». La stessa idea, a due scale diversissime.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Salto dopo salto (hop by hop)</h2>
+
+  <p class="lead">
+    Il pacchetto non riceve mai l'intero itinerario. Viaggia <b>di router in router</b>, e a ogni tappa la
+    decisione ricomincia da zero, guardando solo «qual è il prossimo salto verso la destinazione».
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Cosa fa un router a ogni pacchetto</div>
+    <ol style="margin-bottom:0">
+      <li><b>Riceve</b> il frame, ne estrae il pacchetto IP, legge l'<b>IP di destinazione</b>.</li>
+      <li><b>Cerca</b> nella tabella la rotta che combacia (la più specifica).</li>
+      <li><b>Inoltra</b> il pacchetto al prossimo salto, reimbustandolo in un <b>nuovo frame</b> (con nuovi MAC:
+          quello suo e quello del prossimo router). <mark>L'IP di partenza e destinazione non cambiano mai; i MAC
+          cambiano a ogni salto.</mark></li>
+    </ol>
+  </div>
+
+  <div class="widget" id="w-route">
+    <div class="w-head">
+      <span>Routing hop-by-hop: dal mittente alla destinazione</span>
+      <span class="hint">manda il pacchetto e osserva le decisioni locali</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wrt-svg" viewBox="0 0 560 320" role="img" aria-label="Un pacchetto attraversa una rete di router: a ogni nodo si sceglie il prossimo salto verso la destinazione, e il TTL diminuisce di uno a ogni tappa"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wrt-go">invia pacchetto</button>
+      <label style="font-size:.85rem; color:var(--ink-soft)">TTL iniziale</label>
+      <input type="range" id="wrt-ttl" min="2" max="9" step="1" value="9" style="width:120px">
+    </div>
+    <div class="w-readout" id="wrt-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché così, e non con un percorso «deciso all'inizio»?</div>
+    <p style="margin-bottom:0">
+      Perché è <b>robusto</b>. Se un router lungo il cammino si guasta o si intasa, i pacchetti successivi possono
+      prendere <b>un'altra strada</b> automaticamente: nessun itinerario fisso da ricalcolare, ogni router decide
+      col meglio che sa <em>in quel momento</em>. <mark>È lo stesso motivo per cui la commutazione di pacchetto ha
+      vinto (Cap. 1)</mark>: decisioni locali, indipendenti, resistenti ai guasti. Il prezzo è che due pacchetti
+      della stessa connessione possono seguire vie diverse e arrivare in disordine — ma a rimettere ordine ci
+      pensa TCP (Cap. 9).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>TTL e traceroute</h2>
+
+  <p class="lead">
+    E se, per un errore nelle tabelle, un pacchetto girasse in tondo per sempre tra due router? Per evitarlo, ogni
+    pacchetto ha una «data di scadenza» in salti: il <b>TTL</b>. Ed è proprio grazie a questo che possiamo
+    spiare il percorso.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il TTL: un contadore di salti</div>
+    <p style="margin-bottom:0">
+      Ogni pacchetto IP porta un campo <b>TTL</b> (Time To Live), un numero (es. 64). <b>Ogni router che lo
+      inoltra lo diminuisce di 1.</b> Se il TTL arriva a <b>zero</b>, il router <mark>butta il pacchetto e manda
+      indietro al mittente un avviso</mark> («ICMP: tempo scaduto»). Serve a impedire che pacchetti «persi» in un
+      loop intasino la rete per sempre: dopo un tot di salti, muoiono. Un limite di sicurezza semplice ed elegante.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il trucco geniale di traceroute</div>
+    <p style="margin-bottom:0">
+      <code>traceroute</code> (o <code>tracert</code>) abusa del TTL in modo brillante. Manda un pacchetto con
+      <b>TTL = 1</b>: il <em>primo</em> router lo azzera e risponde «scaduto» — così si rivela. Poi uno con
+      <b>TTL = 2</b>: muore al <em>secondo</em> router, che si rivela. Poi TTL = 3, 4, 5… <mark>Aumentando il TTL
+      di uno alla volta, costringe ogni router del percorso, in ordine, a farsi vivo</mark>. Ecco come fa a
+      elencarti tutte le tappe: non chiede la mappa a nessuno, la ricostruisce facendo «scadere» i pacchetti a
+      distanze crescenti. Elegante e furbo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Internet tra provider: cenni di BGP</h2>
+
+  <p class="lead">
+    Dentro la rete di un operatore, le rotte si organizzano da sole. Ma <b>tra</b> operatori diversi — Telecom,
+    Vodafone, Google, un'università — chi decide come i loro «continenti» di rete si collegano? Un protocollo che
+    è, di fatto, la colla politica di internet: <b>BGP</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Internet è una rete di reti (autonome)</div>
+    <p style="margin-bottom:0">
+      Internet è diviso in migliaia di <b>Sistemi Autonomi</b> (AS): grandi reti gestite da un'unica
+      organizzazione (un operatore, un colosso del web, un provider cloud). <b>BGP</b> (Border Gateway Protocol) è
+      il linguaggio con cui gli AS si <b>annunciano a vicenda</b> quali reti sanno raggiungere: «io so arrivare a
+      questi prefissi, passa da me». Ogni AS impara così, dai vicini, come raggiungere il resto del mondo, e
+      sceglie le rotte anche in base ad <b>accordi commerciali</b> (chi paga chi, chi si scambia traffico gratis).
+      <mark>BGP è più diplomazia che tecnica</mark>: instrada seguendo non solo la via più breve, ma anche i
+      contratti tra aziende.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: BGP si fida, e a volte va giù</div>
+    <p style="margin-bottom:0">
+      Come ARP in piccolo, BGP nacque fidandosi degli annunci altrui. Un errore (o un abuso) in un annuncio BGP
+      può <b>dirottare o cancellare</b> pezzi di internet: è successo che intere nazioni o servizi giganti
+      sparissero per ore perché un AS ha annunciato rotte sbagliate. <mark>Molti dei più grandi «blackout» di
+      internet nascono da un errore BGP</mark>, non da un cavo tranciato. È il punto più fragile e più
+      affascinante dell'architettura: internet regge su un accordo di reciproca fiducia tra le sue grandi reti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Laboratorio: tracciare i tuoi pacchetti</h2>
+
+  <p class="lead">
+    Mettiamo in pratica tutto: con <code>tracert</code> vediamo il percorso reale, hop per hop, verso una
+    destinazione lontana — e impariamo a leggerlo come un racconto di viaggio.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Leggere un <code>tracert</code> come una storia <span class="tag">ogni riga è un router</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">tracert</span> <span class="ar">bbc.co.uk</span>   <span class="c">(un sito lontano: si vede l'uscita dall'Italia)</span></pre>
+    </div>
+    <div class="f-note">
+      <div class="term" style="margin:0 auto">
+        <div class="t-head">Output (commentato)</div>
+        <pre><span class="out">  1     1 ms   <span class="hl">192.168.1.1</span>              <span class="c">← casa tua (il gateway)</span>
+  2    11 ms   10.20.30.1               <span class="c">← primo nodo dell'operatore</span>
+  4    16 ms   151.6.x.x  (milano)      <span class="c">← ancora in Italia</span>
+  7    38 ms   xe-0.london.level3.net   <span class="c">← ⚡ il salto: siamo a Londra!</span>
+  9    41 ms   <span class="hl">151.101.0.81</span>            <span class="c">← arrivato al server</span>
+
+Traccia completata.</span></pre>
+      </div>
+      Il racconto: parti da <b>casa</b> (hop 1), sali dall'<b>operatore</b>, resti in <b>Italia</b> per qualche
+      hop (tempi ~10–20 ms), poi <mark>un salto netto dei tempi</mark> (da ~16 a ~38 ms) segna il tratto
+      internazionale — spesso i nomi lo confermano (<code>london</code>, <code>fra</code>, <code>ams</code>). Se
+      il viaggio si <b>ferma</b> a un certo hop (tutti <code>*</code> da lì in poi), il problema è <b>lì</b>: quel
+      router o quel tratto. È così che capisci se un guasto è vicino (colpa tua/operatore) o lontano
+      (irraggiungibile per tutti).
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li>Nessuna mappa globale: il routing funziona con <b>decisioni locali</b> — ogni router sa solo il
+          <b>prossimo salto</b> verso una destinazione (§7.1).</li>
+      <li>Il cervello del router è la <b>tabella di routing</b>: righe «destinazione → prossimo salto», vince la
+          <b>più specifica</b>, e la <b>default</b> <code>0.0.0.0/0</code> gestisce «tutto il resto» (§7.2).</li>
+      <li><b>Hop by hop</b>: l'IP sorgente/destinazione resta fisso, i <b>MAC cambiano a ogni salto</b>; robusto
+          contro i guasti (§7.3). Il <b>TTL</b> impedisce i loop e permette a <b>traceroute</b> di rivelare il
+          percorso (§7.4).</li>
+      <li>Tra operatori, <b>BGP</b> annuncia le rotte tra Sistemi Autonomi, mezza tecnica e mezza diplomazia — e
+          i suoi errori causano grandi blackout (§7.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sappiamo come un pacchetto attraversa il mondo. Ma manca ancora un pezzo vicinissimo a noi: come fa la tua
+    <b>casa intera</b> — decine di dispositivi con indirizzi privati — a uscire su internet da un <b>solo</b>
+    indirizzo pubblico? E come fa la risposta a tornare al dispositivo giusto? Dietro c'è la scatola più
+    sottovalutata che possiedi — il <b>router di casa</b> — con i suoi trucchi: DHCP, NAT, port forwarding. Nel
+    <strong>Capitolo 8</strong> apriamo quella scatola e capiamo, finalmente, cosa fa davvero.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Cosa fa la rotta di default <code>0.0.0.0/0</code>? Perché nel tuo PC di casa è la riga «più importante»
+      per navigare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Un pacchetto viaggia da Milano a Tokyo passando per 12 router. Quali indirizzi (IP e MAC) cambiano lungo il
+      percorso e quali restano fissi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Spiega il trucco con cui <code>traceroute</code> scopre, in ordine, tutti i router del percorso. Che ruolo
+      ha il TTL?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Fai <code>tracert bbc.co.uk</code> (o un sito estero). A che hop i tempi «saltano» di colpo? Cosa
+      significa? E se compaiono solo <code>*</code> da un certo punto?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      La default è il jolly «<b>tutto ciò che non so gestire → mandalo al gateway</b>». Nel PC di casa, a parte i
+      vicini della LAN, <b>ogni</b> destinazione internet cade qui: senza questa riga, il PC saprebbe parlare solo
+      coi dispositivi locali e non navigherebbe affatto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      Restano <b>fissi</b> l'IP sorgente (Milano) e l'IP destinazione (Tokyo): identificano i due capi per tutto
+      il viaggio. Cambiano a <b>ogni salto</b> i due indirizzi <b>MAC</b> (mittente e destinatario del frame),
+      perché ogni tratto è una consegna locale da un router al successivo. E cala il <b>TTL</b>, di 1 per hop.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      Manda pacchetti con TTL crescente: TTL 1 muore al 1° router (che si rivela), TTL 2 al 2°, e così via.
+      Ogni router che azzera il TTL rimanda al mittente un «tempo scaduto», svelando il proprio indirizzo. Così
+      traceroute ricostruisce l'elenco ordinato degli hop <b>senza conoscere in anticipo il percorso</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      Il salto dei tempi (es. da ~16 a ~40 ms) segna in genere un <b>tratto internazionale lungo</b> (l'uscita
+      dal Paese): la distanza fisica costa latenza. Se da un hop in poi ci sono solo <code>*</code>, i pacchetti
+      <b>non passano oltre</b> quel punto (o quel router non risponde ma inoltra): se il sito è irraggiungibile, è
+      lì che si interrompe il viaggio — il problema è in quel tratto, non da te.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.3 — routing hop-by-hop su una piccola rete di router
+   Il pacchetto va da S a D scegliendo, a ogni nodo, il vicino più vicino a D.
+   TTL cala a ogni salto; se arriva a 0, il pacchetto muore.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wrt-svg');
+  if (!svg) return;
+  const out = document.getElementById('wrt-out');
+  const bGo = document.getElementById('wrt-go');
+  const sTtl = document.getElementById('wrt-ttl');
+
+  // nodi (router) con posizioni; S = sorgente, D = destinazione
+  const N = {
+    S: [-4, 0], A: [-2.2, 1.4], B: [-2.2, -1.4], C: [0, 1.5], E: [0, -1.4],
+    F: [2.1, 0.6], G: [2.1, -1.2], D: [4, 0]
+  };
+  const adj = {
+    S: ['A', 'B'], A: ['S', 'C', 'E'], B: ['S', 'E', 'C'], C: ['A', 'B', 'F'],
+    E: ['A', 'B', 'G'], F: ['C', 'G', 'D'], G: ['E', 'F', 'D'], D: ['F', 'G']
+  };
+  function dist(u, v) { return Math.hypot(N[u][0] - N[v][0], N[u][1] - N[v][1]); }
+  // rotta "greedy verso D": ad ogni nodo scegli il vicino che riduce di più la distanza da D
+  function nextHop(u, prev) {
+    let best = null, bd = Infinity;
+    for (const w of adj[u]) { if (w === prev) continue; const d = dist(w, 'D'); if (d < bd) { bd = d; best = w; } }
+    return best;
+  }
+
+  let path = ['S'], idx = 0, ttl0 = 9, ttl = 9, anim = null, last = null, dead = false;
+
+  bGo.addEventListener('click', () => {
+    ttl0 = +sTtl.value; ttl = ttl0; dead = false;
+    // costruisci il percorso greedy
+    path = ['S']; let prev = null, cur = 'S', guard = 0;
+    while (cur !== 'D' && guard++ < 20) { const nx = nextHop(cur, prev); if (!nx) break; prev = cur; cur = nx; path.push(cur); }
+    idx = 0; anim = { t: 0 }; last = null; requestAnimationFrame(step);
+  });
+
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.6;
+    if (anim.t >= 1) {
+      anim.t = 0; idx++;
+      if (idx > 0 && path[idx] !== undefined && path[idx] !== 'S') ttl--;   // ogni router inoltrato: -1
+      if (path[idx] === 'D') { anim = null; draw(); finish(true); return; }
+      if (ttl <= 0) { dead = true; anim = null; draw(); finish(false); return; }
+      if (idx >= path.length - 1 && path[path.length - 1] !== 'D') { anim = null; draw(); finish(false); return; }
+    }
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  function finish(ok) {
+    if (ok) out.innerHTML = readout('✅ <b style="color:var(--green)">Arrivato a D</b> in ' + (path.length - 1) + ' salti. TTL residuo: ' + ttl + '.');
+    else out.innerHTML = readout('💀 <b style="color:var(--warm)">TTL esaurito</b>: il pacchetto è stato scartato prima di arrivare. Aumenta il TTL iniziale e riprova.');
+  }
+  function readout(msg) {
+    return '<div class="big">' + msg + '</div><div style="margin-top:.35rem;color:var(--ink-soft);font-size:.92rem;text-align:left">A ogni router la decisione riparte da zero: «qual è il prossimo salto verso D?». Nessuno conosce l\'intero percorso; il <b>TTL</b> cala di 1 a ogni hop e a zero uccide i pacchetti persi (§7.3–7.4).</div>';
+  }
+
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.4, ymax: 2.4, iso: true });
+    // archi
+    const seen = new Set();
+    for (const u in adj) for (const v of adj[u]) { const k = [u, v].sort().join(); if (seen.has(k)) continue; seen.add(k); p.line(N[u][0], N[u][1], N[v][0], N[v][1], { color: 'var(--ink-faint)', width: 1.3 }); }
+    // percorso già fatto, evidenziato
+    for (let i = 0; i < Math.min(idx, path.length - 1); i++) p.line(N[path[i]][0], N[path[i]][1], N[path[i + 1]][0], N[path[i + 1]][1], { color: 'var(--accent)', width: 3 });
+    // nodi
+    for (const k in N) {
+      const isSD = (k === 'S' || k === 'D');
+      p.dot(N[k][0], N[k][1], { color: k === 'S' ? 'var(--green)' : k === 'D' ? 'var(--warm)' : 'var(--ink-soft)', r: isSD ? 15 : 11 });
+      p.text(N[k][0], N[k][1], k === 'S' ? 'S' : k === 'D' ? 'D' : k, { size: isSD ? 13 : 11, anchor: 'middle', dy: 4, color: 'var(--paper)', bold: true });
+    }
+    // pacchetto in volo
+    if (anim && path[idx] && path[idx + 1]) {
+      const pos = lerp(N[path[idx]], N[path[idx + 1]], anim.t);
+      p.rect(pos[0] - 0.16, pos[1] - 0.13, pos[0] + 0.16, pos[1] + 0.13, { fill: dead ? 'var(--warm)' : 'var(--accent)', color: 'none' });
+      p.text(pos[0], pos[1] + 0.4, 'TTL ' + ttl, { size: 11, anchor: 'middle', color: 'var(--ink-soft)', bold: true });
+    }
+    if (!anim && idx === 0) out.innerHTML = readout('Premi «invia pacchetto»: partirà da <b style="color:var(--green)">S</b> verso <b style="color:var(--warm)">D</b>.');
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
