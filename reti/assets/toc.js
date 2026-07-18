@@ -154,7 +154,7 @@ const TOC = [
     n: 10,
     titolo: "Il DNS",
     file: "cap10-dns.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Dai nomi agli indirizzi" },
       { id: "s10-2", n: "10.2", t: "La gerarchia: root, TLD, autoritativi" },

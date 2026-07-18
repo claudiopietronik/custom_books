@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Il DNS — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Il DNS</h1>
+    <p class="standfirst">
+      Tu digiti <code>wikipedia.org</code>; la rete conosce solo <code>185.15.59.224</code>. In mezzo c'è il
+      servizio più silenzioso e più indispensabile di internet: il <b>DNS</b>, un gigantesco <b>elenco telefonico
+      distribuito</b> su tutto il pianeta, che traduce i nomi comodi per gli umani negli indirizzi che i computer
+      capiscono. Funziona così bene che non ci pensi mai — finché non si rompe: <mark>e allora «internet non va»,
+      anche se la linea è perfetta.</mark> In questo capitolo scopriamo come una domanda apparentemente banale
+      («che indirizzo ha questo nome?») venga risolta da una gerarchia mondiale di server in pochi millisecondi.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché servono i nomi (§10.1), la <b>gerarchia</b> del DNS — root, TLD, autoritativi (§10.2), la
+      <b>risoluzione passo per passo</b> (§10.3), i <b>tipi di record</b> (A, AAAA, CNAME, MX…) (§10.4), e
+      <b>cache e TTL</b> che rendono tutto veloce (§10.5). Nel laboratorio (§10.6) interroghi il DNS a mano.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: metà dei problemi «di rete» sono DNS</div>
+    <p style="margin-bottom:0">
+      C'è un detto tra i tecnici: «<em>non è mai il DNS… era il DNS</em>». <mark>Una quantità sorprendente di
+      malfunzionamenti — siti che non aprono, mail che non partono, app che «non si connettono» — nasce da problemi
+      DNS</mark>, non dalla connessione. Capirlo ti permette di diagnosticare al volo (il sito è giù, o è solo il
+      nome che non si risolve?), e sarà essenziale nei libri su server e deploy: quando pubblicherai un sito,
+      «puntare il dominio» significa configurare record DNS. È un tassello che userai per sempre.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Dai nomi agli indirizzi</h2>
+
+  <p class="lead">
+    Gli indirizzi IP sono perfetti per le macchine e orribili per gli umani: nessuno ricorda
+    <code>185.15.59.224</code>. Il DNS è lo strato di <b>nomi</b> che ci rende internet usabile — e fa molto più
+    che «tradurre».
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Nomi al posto di numeri</div>
+    <p style="margin-bottom:0">
+      Il DNS (Domain Name System) associa <b>nomi</b> (<code>wikipedia.org</code>) a <b>indirizzi</b>
+      (<code>185.15.59.224</code>). Ma il vero vantaggio non è solo la memorabilità: è la <b>libertà di cambiare
+      l'indirizzo senza cambiare il nome</b>. Un sito può spostarsi su un altro server (nuovo IP) e tu continui a
+      usare lo stesso nome: <mark>basta aggiornare il DNS, e tutto il mondo segue</mark>. È lo stesso motivo per
+      cui salvi un contatto per nome e non per numero: se l'amico cambia numero, aggiorni la rubrica una volta e
+      continui a chiamarlo «Marco». Il DNS è la rubrica di internet, condivisa da tutti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>La gerarchia: root, TLD, autoritativi</h2>
+
+  <p class="lead">
+    Nessun singolo elenco potrebbe contenere <b>tutti</b> i nomi del mondo. Il DNS è quindi <b>distribuito e
+    gerarchico</b>, come un indirizzo letto al contrario: da destra (il generale) a sinistra (il particolare).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un nome si legge da destra a sinistra <span class="tag">dal generale al particolare</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:1.05rem; text-align:center">
+        www . <span style="color:var(--green)">wikipedia</span> . <span style="color:var(--warm)">org</span> . <span style="color:var(--accent)">(root)</span>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span style="color:var(--accent)">la <b>root</b></span> (il punto finale, invisibile)</dt>
+        <dd>la cima della gerarchia. I <b>server root</b> non conoscono i singoli siti, ma sanno <b>chi gestisce
+            ogni estensione</b> (.org, .it, .com…). Sono pochi, coordinati a livello mondiale, la base di tutto.</dd>
+        <dt><span style="color:var(--warm)">il <b>TLD</b></span> (.org, .it, .com)</dt>
+        <dd>Top-Level Domain: il «dominio di primo livello». Il server del TLD <code>.org</code> non conosce i
+            contenuti di wikipedia, ma sa <b>chi è responsabile</b> del dominio <code>wikipedia.org</code>.</dd>
+        <dt><span style="color:var(--green)">l'<b>autoritativo</b></span> (di wikipedia.org)</dt>
+        <dd>il server che ha <b>la risposta vera e definitiva</b> per quel dominio: «<code>wikipedia.org</code> sta
+            a <code>185.15.59.224</code>». È gestito da chi possiede il dominio. <mark>Qui finisce la caccia</mark>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La delega gerarchica è ciò che rende il DNS <b>scalabile all'infinito</b>: nessuno deve conoscere tutto,
+      ognuno conosce solo «il pezzo sotto di sé» e a chi chiedere per il resto. Aggiungere un nuovo dominio non
+      richiede di avvisare il mondo: basta registrarlo presso il TLD giusto.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>La risoluzione, passo per passo</h2>
+
+  <p class="lead">
+    Vediamo come, in pratica, un nome diventa un indirizzo. Il lavoro lo fa un <b>resolver</b> (di solito quello
+    del tuo operatore, o uno pubblico come <code>1.1.1.1</code>) che interroga la gerarchia per te.
+  </p>
+
+  <div class="widget" id="w-dns">
+    <div class="w-head">
+      <span>La risoluzione DNS, passo per passo</span>
+      <span class="hint">avvia la ricerca di www.wikipedia.org</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wd-svg" viewBox="0 0 560 320" role="img" aria-label="Il resolver interroga in sequenza il server root, il server del TLD .org e il server autoritativo di wikipedia, ottenendo infine l'indirizzo IP"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wd-go">▶ risolvi il nome</button>
+      <button class="w-btn" id="wd-cache">▶ di nuovo (dalla cache)</button>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Tre domande e sei arrivato</div>
+    <p style="margin-bottom:0">
+      Il resolver chiede alla <b>root</b>: «chi gestisce .org?» → «quel server TLD». Chiede al <b>TLD .org</b>:
+      «chi gestisce wikipedia.org?» → «quel server autoritativo». Chiede all'<b>autoritativo</b>: «che indirizzo
+      ha www.wikipedia.org?» → «185.15.59.224». Fatto: il resolver restituisce l'IP al tuo browser.
+      <mark>Tre rimbalzi, e da un nome sei arrivato a un numero</mark> — di solito in poche decine di
+      millisecondi, e come vedremo (§10.5) spesso in molto meno, grazie alla cache.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>I record: A, AAAA, CNAME, MX…</h2>
+
+  <p class="lead">
+    Il DNS non memorizza solo «nome → IPv4»: conserva vari <b>tipi di record</b>, ognuno con uno scopo. Conoscere
+    i principali ti servirà ogni volta che configurerai un dominio.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I record DNS più importanti <span class="tag">ognuno risponde a una domanda diversa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>A</b> — nome → indirizzo IPv4</dt>
+        <dd>il record base: <code>wikipedia.org → 185.15.59.224</code>. Il più comune.</dd>
+        <dt><b>AAAA</b> — nome → indirizzo IPv6</dt>
+        <dd>come l'A, ma per gli indirizzi IPv6 (Cap. 6). Un dominio moderno ha spesso entrambi.</dd>
+        <dt><b>CNAME</b> — nome → un altro nome (alias)</dt>
+        <dd>«<code>www.sito.it</code> è un alias di <code>sito.it</code>»: punta a un altro nome invece che a un
+            IP. Comodissimo per far seguire più nomi allo stesso posto senza ripetere l'indirizzo.</dd>
+        <dt><b>MX</b> — dove va la posta del dominio</dt>
+        <dd>Mail eXchanger: dice <b>quale server riceve le email</b> per quel dominio. <mark>Ecco perché web e
+            posta di uno stesso dominio possono stare su server diversi</mark>: lo decidono record diversi
+            (A/CNAME per il web, MX per la mail — Cap. 14).</dd>
+        <dt><b>TXT, NS</b> — testo e delega</dt>
+        <dd><b>NS</b> indica i server autoritativi del dominio; <b>TXT</b> contiene testo libero, usato per
+            verifiche di proprietà e sicurezza della posta (SPF/DKIM, Cap. 14).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Cache e TTL</h2>
+
+  <p class="lead">
+    Se ogni click richiedesse tre rimbalzi fino ai server autoritativi, internet sarebbe lento e quei server
+    sommersi. La soluzione è la <b>cache</b>: ricordare le risposte per un po'. Il «per quanto» lo dice il
+    <b>TTL</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Ricordare per non richiedere</div>
+    <p style="margin-bottom:0">
+      Ogni risposta DNS arriva con un <b>TTL</b> (Time To Live): quanti secondi la si può <b>tenere in cache</b>
+      prima di richiederla. Il tuo resolver, il tuo router e persino il tuo PC conservano le risposte recenti:
+      così la seconda volta che apri lo stesso sito, l'indirizzo si trova <b>già pronto</b>, in un lampo, senza
+      disturbare la gerarchia. <mark>La cache è ciò che rende il DNS velocissimo il 99% delle volte</mark>: la
+      caccia completa (§10.3) avviene solo la prima volta, o quando il TTL è scaduto.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: «ma io ho cambiato il DNS!»</div>
+    <p style="margin-bottom:0">
+      La cache ha un rovescio: quando <b>cambi</b> l'indirizzo di un dominio (sposti un sito su un nuovo server),
+      il mondo <b>non lo vede subito</b>. Fino alla scadenza del TTL, chi ha in cache il vecchio valore continua a
+      usarlo: la modifica «si propaga» gradualmente (può volerci da minuti a ore). <mark>È il classico «ho
+      aggiornato il DNS ma vedo ancora il vecchio sito»</mark>: non è un errore, è la cache che deve scadere.
+      Trucco del mestiere: abbassare il TTL <em>prima</em> di un cambio previsto, per farlo propagare in fretta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Laboratorio: interrogare il DNS</h2>
+
+  <p class="lead">
+    Interroghiamo il DNS <b>a mano</b>, come fa il browser dietro le quinte, con <code>nslookup</code>. Vedrai i
+    nomi diventare indirizzi sotto i tuoi occhi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>nslookup</code> <span class="tag">«che indirizzo ha questo nome?»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">nslookup</span> <span class="ar">wikipedia.org</span></pre>
+    </div>
+    <div class="f-note">
+      <div class="term" style="margin:0 auto">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Server:  UnKnown
+Address:  <span class="hl">192.168.1.1</span>            <span class="c">← il resolver usato (qui il router)</span>
+
+Risposta non autoritativa:      <span class="c">← "non autoritativa" = arriva dalla cache</span>
+Nome:    wikipedia.org
+Address:  <span class="hl">185.15.59.224</span></span></pre>
+      </div>
+      «Non autoritativa» significa che la risposta arriva da una <b>cache</b>, non direttamente dal server padrone
+      del dominio: normale e veloce. Prova a chiedere tipi di record specifici:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Terminale</div>
+        <pre><span class="p">C:\&gt; </span><span class="cmd">nslookup</span> <span class="fl">-type=MX</span> <span class="ar">gmail.com</span>      <span class="c">i server di posta</span>
+<span class="p">C:\&gt; </span><span class="cmd">nslookup</span> <span class="ar">google.com</span> <span class="ar">1.1.1.1</span>       <span class="c">chiedi a un resolver preciso</span></pre>
+      </div>
+      <mark>Con <code>-type=MX</code> scopri chi gestisce la posta di un dominio</mark> (per gmail.com vedrai i
+      server di Google); aggiungendo <code>1.1.1.1</code> chiedi a un resolver specifico invece che a quello di
+      default. Hai appena parlato la lingua del DNS in prima persona.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>DNS</b> traduce nomi ⇄ indirizzi e ti lascia <b>cambiare l'IP senza cambiare il nome</b> (§10.1).</li>
+      <li>È <b>gerarchico</b>: root → TLD (.org, .it) → autoritativo; si legge da destra a sinistra, ognuno sa
+          solo «il pezzo sotto» (§10.2). La risoluzione sono ~3 domande fino all'autoritativo (§10.3).</li>
+      <li>Vari <b>record</b>: A (IPv4), AAAA (IPv6), CNAME (alias), MX (posta), NS/TXT — per questo web e mail di
+          un dominio possono stare altrove (§10.4).</li>
+      <li>La <b>cache + TTL</b> rende tutto velocissimo, ma i cambi <b>si propagano lentamente</b> (finché il TTL
+          non scade) (§10.5). E ora sai interrogare il DNS con <code>nslookup</code> (§10.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora abbiamo davvero tutti i pezzi del trasporto: un nome risolto in indirizzo (DNS), una connessione affidabile
+    aperta (TCP) verso la porta giusta (443). È il momento di salire all'ultimo livello, quello che tocchi ogni
+    giorno: il <b>linguaggio con cui il browser e il server si parlano</b>. Cosa dice, esattamente, il browser
+    quando chiede una pagina? E cosa risponde il server? Nel <strong>Capitolo 11</strong> smontiamo
+    <b>HTTP</b> — richieste, risposte, metodi, codici di stato — il protocollo del web, che presto scriverai a mano
+    con <code>curl</code>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Oltre alla memorabilità, qual è il grande vantaggio di usare nomi invece di indirizzi? Fai un esempio
+      concreto (un sito che cambia server).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Metti in ordine i server interrogati per risolvere <code>www.esempio.it</code>: autoritativo, root, TLD .it.
+      Cosa sa (e cosa non sa) ciascuno?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Hai spostato il tuo sito su un nuovo server e aggiornato il record A, ma da casa vedi ancora il vecchio.
+      Perché? Cosa devi solo… aspettare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) <code>nslookup</code> del tuo sito preferito: che IP ha? Poi <code>nslookup -type=MX gmail.com</code>:
+      chi gestisce la posta di Gmail?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-8"><span class="secnum">Sezione 10.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Il vantaggio è <b>disaccoppiare il nome dall'indirizzo</b>: puoi spostare un sito su un nuovo server (nuovo
+      IP) e, aggiornando solo il record DNS, tutti continuano a raggiungerlo con lo stesso nome. Esempio: un blog
+      che migra a un hosting diverso resta <code>ilmioblog.it</code> per i lettori, pur avendo cambiato IP.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      Ordine: <b>root</b> → <b>TLD .it</b> → <b>autoritativo</b>. La root sa solo chi gestisce <code>.it</code>;
+      il TLD .it sa solo chi è autoritativo per <code>esempio.it</code>; l'<b>autoritativo</b> ha la risposta
+      vera (l'IP di <code>www.esempio.it</code>). Ognuno delega al livello sotto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      Perché il vecchio valore è ancora in <b>cache</b> (nel tuo PC, router o resolver) e resta valido fino alla
+      scadenza del <b>TTL</b>. Non è un errore: la modifica <b>si propaga</b> man mano che le cache scadono. Basta
+      aspettare (o svuotare la cache DNS locale). Per il futuro: abbassa il TTL prima di un cambio.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      Risposte personali. Per <code>gmail.com</code> i record MX puntano ai server di posta di Google (nomi tipo
+      <code>…google.com</code> / <code>googlemail.com</code>): è lì che va recapitata la posta del dominio, a
+      prescindere da dove sta il sito web.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.3 — risoluzione DNS passo per passo (resolver ↔ gerarchia)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wd-svg');
+  if (!svg) return;
+  const out = document.getElementById('wd-out');
+  const bGo = document.getElementById('wd-go');
+  const bCache = document.getElementById('wd-cache');
+
+  const YOU = [-4, 1.6], RES = [-4, -1.4];
+  const ROOT = [0, 1.7], TLD = [2.6, 0.2], AUTH = [3.6, -1.6];
+  const steps = [
+    { to: ROOT, q: 'chi gestisce .org?', a: '→ chiedi al TLD .org', col: 'var(--accent)' },
+    { to: TLD, q: 'chi gestisce wikipedia.org?', a: '→ chiedi all\'autoritativo', col: 'var(--warm)' },
+    { to: AUTH, q: 'IP di www.wikipedia.org?', a: '→ 185.15.59.224 ✓', col: 'var(--green)' }
+  ];
+  let idx = -1, anim = null, last = null, phase = 'q', cached = false;
+
+  bGo.addEventListener('click', () => { cached = false; idx = 0; phase = 'q'; anim = { t: 0 }; last = null; requestAnimationFrame(step); });
+  bCache.addEventListener('click', () => { cached = true; idx = 99; anim = null; draw(); out.innerHTML = readout('⚡ <b style="color:var(--green)">Dalla cache</b>: l\'indirizzo era già memorizzato (TTL non scaduto). Nessun rimbalzo: risposta immediata (§10.5).'); });
+
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.5;
+    if (anim.t >= 1) {
+      if (phase === 'q') { phase = 'a'; anim.t = 0; last = null; }
+      else { idx++; phase = 'q'; anim.t = 0; last = null; if (idx >= steps.length) { anim = null; draw(); out.innerHTML = readout('✅ Nome risolto in <b>185.15.59.224</b> dopo 3 domande. La prossima volta sarà istantaneo (cache).'); return; } }
+    }
+    draw(); requestAnimationFrame(step);
+  }
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+
+  function readout(msg) {
+    return '<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">' + msg + '</div>';
+  }
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.4, ymax: 2.4, iso: true });
+    // nodi gerarchia
+    const nodes = [[YOU, '💻 tu', 'var(--ink-soft)'], [RES, '🔎 resolver', 'var(--accent)'], [ROOT, '🌐 root', 'var(--accent)'], [TLD, '🗂 TLD .org', 'var(--warm)'], [AUTH, '🏛 autoritativo\nwikipedia.org', 'var(--green)']];
+    // linea tu-resolver
+    p.line(YOU[0], YOU[1], RES[0], RES[1], { color: 'var(--ink-faint)', width: 1.5, dash: '3 3' });
+    for (const [pos, label, col] of nodes) {
+      p.dot(pos[0], pos[1], { color: col, r: 13 });
+      const lines = label.split('\n');
+      lines.forEach((ln, i) => p.text(pos[0], pos[1] - 0.42 - i * 0.32, ln, { size: 10, anchor: 'middle', color: 'var(--ink-faint)' }));
+    }
+    // step corrente
+    if (idx >= 0 && idx < steps.length && anim) {
+      const s = steps[idx];
+      const seg = phase === 'q' ? lerp(RES, s.to, anim.t) : lerp(s.to, RES, anim.t);
+      p.line(RES[0], RES[1], s.to[0], s.to[1], { color: s.col, width: 1.5, dash: '4 4' });
+      p.rect(seg[0] - 0.14, seg[1] - 0.1, seg[0] + 0.14, seg[1] + 0.1, { fill: phase === 'q' ? s.col : 'var(--green)', color: 'none' });
+      out.innerHTML = readout('<b>Passo ' + (idx + 1) + '/3</b> — ' + (phase === 'q'
+        ? 'il resolver chiede: «<b>' + s.q + '</b>»'
+        : 'risposta: <b>' + s.a + '</b>'));
+    } else if (idx < 0) {
+      out.innerHTML = readout('Premi «risolvi il nome»: il resolver interrogherà root → TLD → autoritativo per trovare l\'IP di www.wikipedia.org.');
+    }
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
