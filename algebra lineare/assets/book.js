@@ -388,3 +388,25 @@ const W = {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fixBar);
   else fixBar();
 })();
+
+/* ============================================================================
+   Fix layout barra (mobile) — iniettato via JS per bypassare la cache della CSS.
+   - forza la topbar fixed (regge anche con CSS vecchia in cache)
+   - niente scroll orizzontale (il pulsante segnalibro non finisce fuori schermo)
+   - su schermi stretti nasconde le frecce ‹ › (ridondanti: c'è la nav a fondo pagina)
+   ========================================================================= */
+(function () {
+  if (window.__barCSS) return;
+  window.__barCSS = true;
+  var css =
+    ".topbar{position:fixed !important;top:0;left:0;right:0;z-index:200;max-width:100%}" +
+    "body{padding-top:var(--nav-h,56px)}" +
+    "html,body{overflow-x:hidden;max-width:100%}" +
+    ".topbar .brand{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".topbar .spacer{min-width:.25rem}" +
+    "@media (max-width:640px){.topbar a.nav-btn.icon{display:none}.topbar{gap:.35rem;padding:0 .6rem}}";
+  var s = document.createElement("style");
+  s.id = "__barFixStyle";
+  s.textContent = css;
+  (document.head || document.documentElement).appendChild(s);
+})();
