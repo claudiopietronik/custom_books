@@ -21,7 +21,7 @@ Contenuto originale scritto ex novo.
 - [x] 8 — I cicli
 - [x] 9 — Le funzioni
 - [x] 10 — Moduli, pacchetti e ambienti
-- [ ] 11 — Errori ed eccezioni
+- [x] 11 — Errori ed eccezioni
 - [ ] 12 — File e dati
 - [ ] 13 — Programmazione a oggetti
 - [ ] 14 — Il Python elegante

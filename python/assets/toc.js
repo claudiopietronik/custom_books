@@ -173,7 +173,7 @@ const TOC = [
     n: 11,
     titolo: "Errori ed eccezioni",
     file: "cap11-errori-eccezioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Errori di sintassi vs a runtime" },
       { id: "s11-2", n: "11.2", t: "Leggere un traceback" },
