@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Il modello a livelli — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>Il modello a livelli</h1>
+    <p class="standfirst">
+      Come fanno un telefono cinese, un router svedese e un server americano — costruiti da aziende che non si
+      sono mai parlate — a capirsi alla perfezione? Grazie a un'idea di ingegneria tanto semplice quanto potente:
+      <mark>dividere il problema in strati, e far parlare ogni strato solo col suo pari dall'altra parte.</mark>
+      Il tuo browser «parla» col browser-server come se fossero connessi direttamente, e non deve sapere nulla di
+      cavi, WiFi o router: se ne occupano gli strati sotto. È il <b>modello a livelli</b>, la spina dorsale
+      concettuale di tutta internet — e una lezione di progettazione che vale ben oltre le reti.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché conviene dividere in strati (§2.1), i <b>quattro livelli</b> con cui funziona internet — il modello
+      <b>TCP/IP</b> (§2.2), il meccanismo che li fa cooperare, l'<b>incapsulamento</b> (§2.3), e il più
+      dettagliato modello di riferimento a <b>sette livelli, OSI</b>, di cui sentirai sempre parlare (§2.4).
+      Nel laboratorio (§2.5) «vediamo» i livelli in azione con un comando.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la mappa di tutto il libro</div>
+    <p style="margin-bottom:0">
+      Questo capitolo è la <b>tabella dei contenuti nascosta</b> di tutto ciò che segue. Ogni prossimo capitolo
+      è, in fondo, uno strato di questa pila: il cavo e il WiFi (livello fisico, Cap. 3–5), gli indirizzi IP e il
+      routing (livello di rete, Cap. 6–8), TCP e UDP (livello di trasporto, Cap. 9), HTTP e DNS (livello
+      applicativo, Cap. 10–11). <mark>Capire la pila ora significa avere una mappa mentale su cui appendere ogni
+      concetto futuro</mark> — e non perdersi mai nel «ma questo a che livello succede?».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Perché a strati</h2>
+
+  <p class="lead">
+    Far comunicare due computer è un problema enorme: onde radio, tensioni sui cavi, indirizzi, percorsi, errori,
+    ordine dei dati, significato dei dati… Affrontarlo tutto insieme sarebbe follia. La soluzione: <b>spezzarlo in
+    strati</b>, ognuno con un compito preciso.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'analogia: spedire una lettera</div>
+    <p style="margin-bottom:0">
+      Quando spedisci una lettera pensi solo al <b>contenuto</b> e al destinatario. Non ti importa <em>come</em>
+      viaggerà: se in furgone, treno o aereo, per quale strada, con quali smistamenti. Tu scrivi, imbusti,
+      indirizzi; le poste si occupano del trasporto; i corrieri dei mezzi. <mark>Ogni livello si fida di quello
+      sotto e offre un servizio a quello sopra.</mark> E il destinatario legge il contenuto senza sapere nulla del
+      viaggio: il tuo «livello contenuto» ha parlato col suo «livello contenuto», anche se in mezzo c'erano aerei
+      e camion. Le reti funzionano esattamente così.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le tre regole d'oro degli strati</div>
+    <ul style="margin-bottom:0">
+      <li><b>Ogni strato ha un solo compito.</b> Uno muove bit sul cavo, uno trova la strada, uno garantisce
+          l'ordine, uno dà significato. Nessuno fa il lavoro di un altro.</li>
+      <li><b>Ogni strato parla col suo pari</b> dall'altra parte (comunicazione «orizzontale»), usando i servizi
+          dello strato sotto (comunicazione «verticale»). Il tuo TCP dialoga col TCP del server; il tuo IP con
+          l'IP del server; e così via.</li>
+      <li><b>Le interfacce tra strati sono fisse; l'interno è libero.</b> <mark>Puoi cambiare il WiFi con la fibra
+          senza toccare il browser</mark> — perché il livello sopra chiede sempre la stessa cosa («consegna questi
+          byte»), e non gli importa come. È questa la vera magia: strati intercambiabili.</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--violet)">
+    <div class="box-title" style="color:var(--violet)"><span class="ico">🧠</span> Da ricordare: perché è geniale</div>
+    <p style="margin-bottom:0">
+      La stratificazione ha reso possibile internet come <b>impresa collettiva</b>: migliaia di aziende hanno
+      costruito pezzi diversi (schede di rete, router, browser, sistemi operativi) che <b>funzionano insieme
+      senza accordarsi</b>, perché tutti rispettano le stesse interfacce tra strati. È lo stesso principio che fa
+      girare un'app Windows su hardware di mille produttori diversi. Dividere per strati con interfacce chiare è,
+      forse, l'idea più importante di tutta l'ingegneria dei sistemi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>I livelli di internet (TCP/IP)</h2>
+
+  <p class="lead">
+    Internet, in pratica, usa <b>quattro strati</b>. Si chiama modello <b>TCP/IP</b> (dai due protocolli più
+    importanti) ed è quello reale, quello che gira davvero sulla tua macchina in questo momento.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La pila TCP/IP <span class="tag">dall'alto (significato) al basso (fili)</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:.9rem; line-height:2; text-align:left; max-width:34rem; margin:0 auto">
+        <div style="background:color-mix(in srgb,var(--accent) 16%,transparent); border-radius:8px; padding:.3rem .8rem; margin:.25rem 0">4 · <b>Applicazione</b> &nbsp;— HTTP, DNS, SMTP &nbsp;<span style="color:var(--ink-faint)">(il significato)</span></div>
+        <div style="background:color-mix(in srgb,var(--green) 16%,transparent); border-radius:8px; padding:.3rem .8rem; margin:.25rem 0">3 · <b>Trasporto</b> &nbsp;&nbsp;&nbsp;&nbsp;— TCP, UDP &nbsp;<span style="color:var(--ink-faint)">(ordine e affidabilità, porte)</span></div>
+        <div style="background:color-mix(in srgb,var(--warm) 16%,transparent); border-radius:8px; padding:.3rem .8rem; margin:.25rem 0">2 · <b>Rete</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;— IP &nbsp;<span style="color:var(--ink-faint)">(indirizzi e percorso, da un capo all'altro)</span></div>
+        <div style="background:color-mix(in srgb,var(--gold) 22%,transparent); border-radius:8px; padding:.3rem .8rem; margin:.25rem 0">1 · <b>Collegamento</b> — Ethernet, WiFi &nbsp;<span style="color:var(--ink-faint)">(il salto fisico successivo)</span></div>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>4 · <b>Applicazione</b> — il significato</dt>
+        <dd>qui vivono i programmi che usi: il web (HTTP), i nomi (DNS), la posta (SMTP). È l'unico strato di cui
+            di solito ti accorgi. <mark>Dà un senso ai byte</mark>: «questa è una pagina», «questo è un errore
+            404». Capitoli 10–14.</dd>
+        <dt>3 · <b>Trasporto</b> — ordine e affidabilità</dt>
+        <dd>prende il flusso dell'applicazione e lo consegna <b>completo e in ordine</b> (TCP) o veloce e senza
+            garanzie (UDP). Introduce le <b>porte</b>, che dicono <em>a quale programma</em> consegnare (il
+            browser? la mail?). Capitolo 9.</dd>
+        <dt>2 · <b>Rete</b> — indirizzi e percorso</dt>
+        <dd>il livello di <b>IP</b>: dà a ogni host un indirizzo globale e instrada i pacchetti attraverso il
+            mondo, da un capo all'altro, saltando di router in router. È il collante di internet. Capitoli 6–8.</dd>
+        <dt>1 · <b>Collegamento</b> — il salto successivo</dt>
+        <dd>muove i bit sul <b>singolo tratto</b> fisico: dal tuo PC al router (WiFi), da un router al successivo
+            (fibra). Non conosce il mondo, solo «il prossimo passo». Capitoli 3–5.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Regola pratica per orientarsi: <mark>più sali, più sei vicino all'<b>umano</b> (significato); più scendi,
+      più sei vicino alla <b>fisica</b> (elettroni e onde)</mark>. Un dato che parte da te scende tutta la pila
+      (dal significato ai fili), viaggia, e risale la pila dall'altra parte (dai fili al significato).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>L'incapsulamento</h2>
+
+  <p class="lead">
+    Ecco il meccanismo concreto che fa cooperare gli strati. Mentre i tuoi dati scendono la pila, ogni strato
+    <b>aggiunge la propria intestazione</b> davanti — come mettere una busta dentro una busta dentro una busta.
+    Si chiama <b>incapsulamento</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La busta dentro la busta</div>
+    <p>
+      Immagina di spedire un regalo. Lo metti in una scatola (con un bigliettino), la scatola in un pacco (con
+      l'indirizzo), il pacco in un container (con la destinazione del porto). Ogni «involucro» aggiunge
+      informazioni <b>per il livello che lo gestirà</b>, senza toccare il contenuto dentro. In rete è identico:
+    </p>
+    <ul style="margin-bottom:0">
+      <li>l'<b>applicazione</b> produce i dati (es. «GET /index.html»);</li>
+      <li>il <b>trasporto</b> ci mette davanti la sua intestazione (numeri di porta, di sequenza) → nasce un
+          <b>segmento</b> TCP;</li>
+      <li>la <b>rete</b> aggiunge la sua (IP mittente e destinatario) → nasce un <b>pacchetto</b> IP;</li>
+      <li>il <b>collegamento</b> aggiunge la sua (indirizzi MAC) e spesso una coda di controllo → nasce un
+          <b>frame</b>, pronto a diventare bit sul cavo.</li>
+    </ul>
+  </div>
+
+  <div class="widget" id="w-encap">
+    <div class="w-head">
+      <span>Incapsulamento: la busta dentro la busta</span>
+      <span class="hint">scendi la pila, poi risali</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wen-svg" viewBox="0 0 560 300" role="img" aria-label="I dati dell'applicazione vengono avvolti, strato dopo strato, dalle intestazioni di trasporto, rete e collegamento; all'arrivo gli involucri vengono tolti nell'ordine inverso"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.7rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wen-down">▼ aggiungi intestazione</button>
+      <button class="w-btn" id="wen-up">▲ togli intestazione</button>
+    </div>
+    <div class="w-readout" id="wen-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> All'arrivo: si scarta al contrario</div>
+    <p style="margin-bottom:0">
+      Sul computer di destinazione avviene il <b>de-incapsulamento</b>: il frame arriva, il livello collegamento
+      legge <em>la sua</em> intestazione e la toglie, passando il pacchetto sopra; la rete legge la sua e la
+      toglie; il trasporto lo stesso; e infine l'applicazione riceve esattamente i dati di partenza, puliti.
+      <mark>Ogni strato apre solo la «sua» busta e ignora il resto.</mark> È la simmetria perfetta della pila:
+      si avvolge scendendo, si scarta risalendo. Il widget qui sopra lo mostra passo passo.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola: le intestazioni «costano»</div>
+    <p style="margin-bottom:0">
+      Ogni involucro aggiunge byte che <b>non sono i tuoi dati</b>: è l'<b>overhead</b>. Spedire un solo byte
+      utile può voler dire mandarne una quarantina di intestazioni (TCP+IP+Ethernet). Per questo la rete lavora
+      meglio con pacchetti <b>grandi</b> (l'overhead si «spalma»), e per questo esiste un limite di dimensione del
+      frame (l'<b>MTU</b>, ~1500 byte per Ethernet) che incontreremo di nuovo. <mark>Nessuna astrazione è
+      gratis</mark>: la comodità degli strati si paga in byte di intestazione. Un compromesso quasi sempre
+      vantaggioso, ma buono da sapere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>Il modello OSI (e perché se ne parla)</h2>
+
+  <p class="lead">
+    Accanto ai 4 livelli «reali» del TCP/IP, esiste un modello <b>didattico e di riferimento</b> a <b>7 livelli</b>,
+    chiamato <b>OSI</b>. Non descrive esattamente internet, ma è il vocabolario comune con cui tutti nel settore si
+    capiscono: sentirai dire «è un problema di livello 3» o «un firewall di livello 7».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I 7 livelli OSI <span class="tag">e come mappano sui 4 del TCP/IP</span></div>
+    <div class="f-body">
+      <div style="font-family:var(--mono); font-size:.86rem; line-height:1.9; text-align:left; max-width:36rem; margin:0 auto">
+        <div><b>7 · Applicazione</b> &nbsp;<span style="color:var(--ink-faint)">— HTTP, DNS &nbsp;⎫</span></div>
+        <div><b>6 · Presentazione</b> <span style="color:var(--ink-faint)">— cifratura, formati &nbsp;⎬ = «Applicazione» in TCP/IP</span></div>
+        <div><b>5 · Sessione</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--ink-faint)">— dialoghi &nbsp;⎭</span></div>
+        <div><b>4 · Trasporto</b> &nbsp;&nbsp;&nbsp;<span style="color:var(--ink-faint)">— TCP, UDP &nbsp;= «Trasporto»</span></div>
+        <div><b>3 · Rete</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--ink-faint)">— IP, router &nbsp;= «Rete»</span></div>
+        <div><b>2 · Collegamento</b> <span style="color:var(--ink-faint)">— Ethernet, WiFi, MAC &nbsp;⎫</span></div>
+        <div><b>1 · Fisico</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--ink-faint)">— cavi, onde, bit &nbsp;⎬ = «Collegamento»</span></div>
+      </div>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>perché due modelli?</dt>
+        <dd>OSI (anni '80) fu progettato «a tavolino» come standard ideale a 7 livelli; TCP/IP nacque prima, dal
+            basso, dai sistemi che <em>funzionavano davvero</em>, e vinse. <mark>OSI resta come linguaggio e mappa
+            mentale</mark>: più dettagliato, ottimo per ragionare e per classificare gli apparati.</dd>
+        <dt>i «numeri» che sentirai</dt>
+        <dd>«switch di <b>livello 2</b>» (lavora sui MAC, Cap. 4); «router di <b>livello 3</b>» (lavora su IP,
+            Cap. 7); «bilanciatore di <b>livello 4</b>» (guarda le porte); «firewall di <b>livello 7</b>» (capisce
+            l'HTTP). Quando qualcuno dice «L7», intende: ragiona sul <em>contenuto applicativo</em>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve imparare OSI a memoria (un aiuto mnemonico inglese famoso: «<em>All People Seem To Need Data
+      Processing</em>», dai livelli 7→1). L'importante è il concetto: <mark>ogni funzione di rete «vive» a un
+      livello preciso</mark>, e sapere quale ti fa capire subito di cosa si sta parlando.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>Laboratorio: guardare i livelli</h2>
+
+  <p class="lead">
+    Un solo comando, <code>tracert</code>, ti fa <b>vedere il livello di rete al lavoro</b>: elenca i router
+    (livello 3) che i tuoi pacchetti attraversano per raggiungere una destinazione. È come chiedere alla rete di
+    mostrarti le tappe del viaggio.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>tracert</code> <span class="tag">«mostrami le tappe fino a lì»</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">tracert</span> <span class="fl">-d</span> <span class="ar">google.com</span>   <span class="c">(su Mac/Linux: traceroute google.com)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">tracert</span> — traccia il percorso</dt>
+        <dd>manda pacchetti «a scadenza crescente» per farsi rivelare, uno alla volta, ogni router sul cammino
+            (il trucco esatto — il campo TTL — lo sveliamo nel Capitolo 7). Il risultato è la <b>lista ordinata
+            degli hop</b>, cioè dei salti di livello 3.</dd>
+        <dt><span class="fl">-d</span> — non risolvere i nomi</dt>
+        <dd>dice «mostrami solo gli indirizzi IP, non perdere tempo a tradurli in nomi». Rende il risultato più
+            veloce e pulito. Togli <span class="fl">-d</span> e vedrai anche i nomi dei router (spesso rivelano
+            città e operatori: <code>mil</code>, <code>fra</code>…).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Output atteso (accorciato):
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Traccia instradamento verso google.com su un massimo di 30 punti di passaggio
+
+  1     2 ms     1 ms     1 ms  <span class="hl">192.168.1.1</span>      <span class="c">← il tuo router di casa</span>
+  2    12 ms    11 ms    12 ms  10.20.0.1        <span class="c">← primo nodo dell'operatore</span>
+  3    14 ms    13 ms    14 ms  151.6.x.x        <span class="c">← rete dell'operatore</span>
+  5    16 ms    15 ms    16 ms  72.14.x.x        <span class="c">← si entra nella rete di Google</span>
+  8    17 ms    16 ms    17 ms  <span class="hl">142.250.180.142</span> <span class="c">← arrivato</span>
+
+Traccia completata.</span></pre>
+      </div>
+      Leggi la storia del viaggio: il <b>primo hop è sempre il tuo router</b> (192.168.1.1, livello 3 in casa);
+      poi si sale verso l'operatore; i tempi <b>crescono</b> man mano che ci si allontana. <mark>Ogni riga è un
+      router che ha instradato i tuoi pacchetti</mark> — il livello di Rete, reso visibile. Un asterisco
+      <code>*</code> significa «questo hop non ha voluto rispondere» (normale: alcuni router restano zitti).
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li><b>A strati</b> perché il problema è troppo grande: ogni strato ha un compito, parla col suo pari, usa
+          i servizi di quello sotto, e si può sostituire senza toccare gli altri (§2.1).</li>
+      <li>La pila reale è <b>TCP/IP a 4 livelli</b>: Applicazione (significato) → Trasporto (ordine/porte) → Rete
+          (indirizzi/percorso) → Collegamento (il salto fisico). <mark>Su si va verso l'umano, giù verso i
+          fili</mark> (§2.2).</li>
+      <li><b>Incapsulamento</b>: scendendo, ogni strato aggiunge la sua intestazione (busta dentro busta);
+          all'arrivo si scarta al contrario. Comodo, ma con un costo in <b>overhead</b> (§2.3).</li>
+      <li><b>OSI a 7 livelli</b> è il vocabolario comune: «L2 = switch/MAC, L3 = router/IP, L7 = HTTP». Non a
+          memoria, ma sappi collocare le cose (§2.4). E con <code>tracert</code> hai visto il livello 3 dal
+          vivo (§2.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora hai la mappa: quattro strati, dal significato ai fili. Nei prossimi capitoli li percorriamo <b>dal basso
+    verso l'alto</b>, partendo dal fondamento più concreto — quello che i modelli danno per scontato ma senza cui
+    nulla esiste: i <b>bit che diventano segnali fisici</b>. Nel <strong>Capitolo 3</strong> entriamo nel
+    <b>livello fisico</b>: come uno zero e un uno viaggiano davvero dentro un filo di rame, dentro un lampo di
+    luce in una fibra, dentro un'onda radio — e cosa significano, per la tua connessione, le parole <b>banda</b>
+    e <b>latenza</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      A quale dei quattro livelli TCP/IP appartiene ciascuno? (a) l'indirizzo IP del server; (b) il fatto che una
+      pagina è «HTML»; (c) il segnale WiFi tra PC e router; (d) la garanzia che i dati arrivino in ordine.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Spiega con l'analogia postale perché puoi passare dal WiFi al cavo Ethernet <b>senza cambiare browser</b>.
+      Quali livelli cambiano e quali no?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Metti in ordine gli involucri che avvolgono i dati mentre <b>scendono</b> la pila, e di' come si chiama
+      l'unità dopo ogni livello (dati → segmento → … → …).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Esegui <code>tracert -d wikipedia.org</code>. Quanti hop servono? Qual è il primo? A che punto i
+      tempi «saltano» di colpo (probabilmente è l'uscita dall'Italia)?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      (a) <b>Rete</b> (IP è il livello degli indirizzi). &nbsp; (b) <b>Applicazione</b> (il significato dei dati).
+      &nbsp; (c) <b>Collegamento</b> (il salto fisico PC↔router). &nbsp; (d) <b>Trasporto</b> (TCP garantisce
+      ordine e completezza).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      Cambiare WiFi↔Ethernet tocca <b>solo il livello 1 (collegamento)</b> — il «mezzo di trasporto» della
+      lettera. I livelli sopra (IP, TCP, HTTP) chiedono sempre la stessa cosa a quello sotto («consegna questi
+      byte al prossimo hop») e <mark>non sanno né vogliono sapere</mark> se sotto ci sono onde o rame. Come
+      spedire la stessa busta in treno anziché in aereo: mittente, destinatario e contenuto non cambiano.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      <b>dati</b> (applicazione) → +intestazione trasporto = <b>segmento</b> → +intestazione rete = <b>pacchetto</b>
+      → +intestazione collegamento = <b>frame</b> → bit sul mezzo. All'arrivo, in ordine inverso, ogni strato
+      toglie la propria intestazione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      Tipicamente 8–15 hop; il <b>primo è sempre il tuo router</b> (192.168.x.1). Il «salto» dei tempi (es. da
+      ~15 ms a ~35 ms) segna spesso un tratto lungo — l'uscita dall'Italia verso un datacenter europeo. Se vedi
+      <code>*</code>, quel router non risponde al ping: normale, non è un guasto.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.3 — incapsulamento (stepper: avvolgi scendendo, scarta risalendo)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wen-svg');
+  if (!svg) return;
+  const out = document.getElementById('wen-out');
+  const bDown = document.getElementById('wen-down');
+  const bUp = document.getElementById('wen-up');
+
+  // livello 0 = solo dati; poi +trasporto, +rete, +collegamento
+  const layers = [
+    { name: 'Dati (applicazione)', tag: 'GET /index.html', col: 'var(--accent)', unit: 'dati' },
+    { name: 'Intestazione Trasporto (TCP)', tag: 'porta 443 · seq', col: 'var(--green)', unit: 'segmento' },
+    { name: 'Intestazione Rete (IP)', tag: 'IP mitt. → IP dest.', col: 'var(--warm)', unit: 'pacchetto' },
+    { name: 'Intestazione Collegamento (Ethernet)', tag: 'MAC · … · coda', col: 'var(--gold)', unit: 'frame' }
+  ];
+  let step = 0;  // 0..3 = quanti involucri sono presenti (0 = solo dati)
+
+  bDown.addEventListener('click', () => { if (step < layers.length - 1) { step++; draw(); } });
+  bUp.addEventListener('click', () => { if (step > 0) { step--; draw(); } });
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.6, ymax: 2.6 });
+    // disegna gli involucri dal più esterno (collegamento) al più interno (dati)
+    for (let i = step; i >= 0; i--) {
+      const w = 1.2 + i * 1.15;      // semi-larghezza
+      const h = 0.55 + i * 0.5;      // semi-altezza
+      const L = layers[i];
+      const outer = (i === step);
+      p.rect(-w, -h, w, h, { fill: outer ? 'color-mix(in srgb,' + L.col + ' 16%,transparent)' : 'none', color: L.col, width: 2 });
+      // etichetta dell'intestazione appena sopra il bordo alto di questo involucro (tranne i dati, i=0)
+      if (i > 0) p.text(-w + 0.05, h - 0.02, '⟨ ' + L.tag + ' ⟩', { color: L.col, size: 10.5, anchor: 'start', dy: 13 });
+    }
+    // i dati al centro
+    p.text(0, 0, layers[0].tag, { color: 'var(--accent)', size: 13, anchor: 'middle', dy: 5, bold: true });
+
+    const cur = layers[step];
+    out.innerHTML = `
+      <div class="big">Unità corrente: <b style="color:${cur.col}">${cur.unit.toUpperCase()}</b>
+        &nbsp;<span style="color:var(--ink-faint)">(${step === 0 ? 'nessun involucro: solo i dati' : step + ' intestazion' + (step === 1 ? 'e' : 'i') + ' aggiunte'})</span></div>
+      <div style="margin-top:.35rem; color:var(--ink-soft); font-size:.92rem; text-align:left">
+        ${step < layers.length - 1
+          ? 'Premi <b>▼ aggiungi intestazione</b> per scendere di un livello: lo strato successivo avvolge tutto ciò che c\'è con la propria intestazione — ' + layers[step + 1].name + '.'
+          : 'È un <b>frame</b> completo, pronto a diventare bit sul cavo. All\'arrivo si <b>scarta al contrario</b>: premi <b>▲ togli intestazione</b> per risalire la pila.'}
+      </div>`;
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

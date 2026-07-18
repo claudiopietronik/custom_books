@@ -25,7 +25,7 @@ Contenuto originale scritto ex novo.
 ## Stato
 
 - [x] 1 — Cos'è una rete
-- [ ] 2 — Il modello a livelli
+- [x] 2 — Il modello a livelli
 - [ ] 3 — Il livello fisico
 - [ ] 4 — Ethernet e la LAN
 - [ ] 5 — Il WiFi

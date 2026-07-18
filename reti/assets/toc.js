@@ -28,7 +28,7 @@ const TOC = [
     n: 2,
     titolo: "Il modello a livelli",
     file: "cap02-modello-a-livelli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Perché a strati" },
       { id: "s2-2", n: "2.2", t: "I livelli di internet (TCP/IP)" },
