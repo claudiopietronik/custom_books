@@ -37,7 +37,7 @@ Contenuto originale scritto ex novo.
 - [x] 11 — HTTP
 - [x] 12 — HTTPS e TLS
 - [x] 13 — Il web veloce
-- [ ] 14 — Email e altri protocolli
+- [x] 14 — Email e altri protocolli
 - [ ] 15 — La sicurezza in rete
 - [ ] 16 — Il viaggio completo di un click
 

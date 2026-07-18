@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Email e altri protocolli — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Email e altri protocolli</h1>
+    <p class="standfirst">
+      Il web non è internet: è solo il servizio più visibile. Sopra la stessa pila vivono decine di altri
+      protocolli, e due meritano un capitolo. La <b>posta elettronica</b>, più vecchia del web, con
+      un'architettura affascinante e un difetto di nascita che spiega perché lo spam è così difficile da
+      sconfiggere. E <b>SSH</b>, la porta d'accesso sicura per <b>comandare un computer a distanza</b> come se ci
+      fossi seduto davanti — lo strumento che userai in ogni singolo giorno dei libri su server, deploy e cloud.
+      <mark>Capire come funziona la posta ti rende un utente più consapevole; padroneggiare SSH ti apre le porte
+      di ogni macchina del mondo.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Come viaggia una email — il protocollo <b>SMTP</b> (§14.1), come la si legge — <b>IMAP e POP</b> (§14.2), la
+      lotta allo <b>spam</b> e l'autenticazione del mittente (SPF, DKIM) (§14.3), e <b>SSH</b>, il terminale remoto
+      sicuro (§14.4). Nel laboratorio (§14.5) leggi gli header nascosti di una email vera.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: consapevolezza e superpoteri</div>
+    <p style="margin-bottom:0">
+      La posta: capirla ti fa riconoscere una email falsa da una vera (il phishing sfrutta proprio l'ingenuità del
+      sistema) e configurare correttamente un dominio. <mark>SSH è ancora più importante per il seguito</mark>:
+      ogni server che affitterai (un VPS Hetzner, un'istanza AWS) lo gestirai via SSH, digitando comandi in un
+      terminale remoto. È il ponte concreto tra questo libro e tutta l'informatica pratica che verrà: senza SSH non
+      si amministra nulla.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Come viaggia una email (SMTP)</h2>
+
+  <p class="lead">
+    Inviare una email non è come aprire una pagina: è un <b>sistema a staffetta</b> tra server di posta, che si
+    passano il messaggio finché non arriva nella casella giusta. Il protocollo che «spinge» la posta si chiama
+    <b>SMTP</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La staffetta della posta</div>
+    <p style="margin-bottom:0">
+      Quando invii una mail a <code>anna@esempio.it</code>: il tuo client la consegna al <b>tuo server di posta</b>
+      (via SMTP); il tuo server chiede al DNS «<b>chi riceve la posta per esempio.it?</b>» e ottiene il record
+      <b>MX</b> (Cap. 10); quindi <b>consegna il messaggio al server di posta di Anna</b> (di nuovo SMTP), che lo
+      deposita nella sua casella. <mark>SMTP è il protocollo del «passaggio in avanti»</mark>: sposta la posta da
+      un server all'altro fino a destinazione. È lo stesso meccanismo a staffetta del sistema postale reale — un
+      ufficio la passa al successivo — e per questo la mail può attraversare provider diversi senza problemi.
+    </p>
+  </div>
+
+  <div class="widget" id="w-mail">
+    <div class="w-head">
+      <span>Il viaggio di una email</span>
+      <span class="hint">invia un messaggio e segui la staffetta</span>
+    </div>
+    <div class="w-stage">
+      <svg id="wm-svg" viewBox="0 0 560 300" role="img" aria-label="La mail passa dal client al server del mittente, che trova via DNS MX il server del destinatario, gli consegna il messaggio con SMTP, e il destinatario lo legge con IMAP"></svg>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wm-go">✉ invia la mail</button>
+    </div>
+    <div class="w-readout" id="wm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Leggere la posta: IMAP e POP</h2>
+
+  <p class="lead">
+    SMTP <b>consegna</b> la posta al server del destinatario, ma non la <b>legge</b>. Per scaricare e leggere i
+    messaggi dalla propria casella servono altri due protocolli: <b>IMAP</b> e <b>POP</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Due filosofie per leggere</div>
+    <ul style="margin-bottom:0">
+      <li><b>IMAP</b> (il moderno): i messaggi <b>restano sul server</b>, il client ne mostra una copia
+          sincronizzata. Leggi la stessa casella, allineata, da telefono, PC e web: cancelli su uno, sparisce
+          ovunque. <mark>È lo standard di oggi</mark>, perché usiamo più dispositivi.</li>
+      <li><b>POP</b> (il vecchio): <b>scarica</b> i messaggi sul dispositivo e (di solito) li <b>toglie</b> dal
+          server. Pensato per un solo computer, un'epoca fa. Oggi quasi in disuso.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il quadro completo: spingere e tirare</div>
+    <p style="margin-bottom:0">
+      Riassumendo la divisione dei compiti: <b>SMTP spinge</b> la posta <em>tra</em> i server (l'invio e la
+      staffetta), <b>IMAP/POP tirano</b> la posta <em>dal tuo</em> server alla tua app (la lettura). <mark>Un
+      protocollo per mandare, uno per ricevere</mark> — non a caso configurando un client di posta «a mano» ti
+      chiede sempre due server: uno «in uscita» (SMTP) e uno «in entrata» (IMAP). Ora sai perché.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Spam e autenticazione (SPF, DKIM)</h2>
+
+  <p class="lead">
+    La posta ha un difetto di nascita: come ARP e BGP, è nata <b>fidandosi</b>. Chiunque può dichiarare di essere
+    chiunque — ed è la radice dello spam e del phishing. Le difese moderne cercano di rattoppare questa ingenuità.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il peccato originale: il mittente si può mentire</div>
+    <p style="margin-bottom:0">
+      SMTP, di per sé, <b>non verifica chi sei</b>: puoi scrivere nel campo «Da:» qualsiasi indirizzo, anche quello
+      della banca o di un amico. <mark>È esattamente questo che sfruttano phishing e spam</mark>: email che
+      <em>sembrano</em> arrivare da un mittente fidato ma non è vero. Il problema è strutturale — un'eredità di
+      quando internet era un piccolo club di persone fidate.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le difese: far «firmare» il dominio</div>
+    <ul style="margin-bottom:0">
+      <li><b>SPF</b>: un record DNS (Cap. 10) che dichiara <b>quali server sono autorizzati</b> a mandare posta per
+          un dominio. Il ricevente controlla: «questa mail per esempio.it viene davvero da un server autorizzato?».</li>
+      <li><b>DKIM</b>: il server mittente <b>firma</b> crittograficamente le sue email; il ricevente verifica la
+          firma con una chiave pubblica nel DNS. Prova che il messaggio <b>è autentico e non alterato</b>.</li>
+      <li><b>DMARC</b>: la regia che dice ai riceventi <b>cosa fare</b> se SPF/DKIM falliscono (rifiuta, metti in
+          spam…).</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché ti riguarda</div>
+    <p style="margin-bottom:0">
+      <mark>Se un domani manderai email da un tuo dominio</mark> (newsletter, notifiche di un'app), <b>dovrai</b>
+      configurare SPF e DKIM, altrimenti i tuoi messaggi finiranno nello spam: i grandi provider oggi diffidano di
+      chi non li ha. È un altro caso in cui capire la rete si traduce in una competenza pratica del deploy. E come
+      utente: questi controlli sono il motivo per cui molto phishing viene intercettato — ma non tutto, quindi
+      resta sempre il buon senso.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>SSH: il terminale remoto</h2>
+
+  <p class="lead">
+    Cambiamo argomento verso lo strumento più importante di tutto il seguito. <b>SSH</b> (Secure Shell) ti permette
+    di <b>comandare un computer a distanza</b> — un server in un datacenter, ovunque nel mondo — con un terminale
+    sicuro, come se ci fossi davanti.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Un terminale, ma là</div>
+    <p style="margin-bottom:0">
+      Con SSH apri una <b>sessione cifrata</b> (porta 22) verso una macchina remota e ci digiti comandi: crei
+      cartelle, installi programmi, avvii servizi — tutto <em>là</em>, sul server, mentre tu sei a casa.
+      <mark>È così che si amministra ogni server del mondo</mark>: nessuno «va fisicamente» dal server, ci si
+      collega in SSH. Tutta la connessione è cifrata (come HTTPS, Cap. 12), quindi comandi e password viaggiano al
+      sicuro anche su reti ostili. La forma tipica del comando è disarmante:
+    </p>
+    <div class="term" style="margin:.9rem auto 0">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">ssh</span> <span class="ar">utente@203.0.113.5</span>    <span class="c">← «entra come 'utente' in quella macchina»</span></pre>
+    </div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Le chiavi SSH: meglio delle password</div>
+    <p style="margin-bottom:0">
+      SSH può autenticarti con una password, ma il modo giusto sono le <b>chiavi SSH</b>: una coppia
+      pubblica/privata (la stessa idea della crittografia asimmetrica, Cap. 12). Metti la tua chiave <b>pubblica</b>
+      sul server e tieni la <b>privata</b> sul tuo PC: <mark>entri senza digitare password, e in modo molto più
+      sicuro</mark> (nessuna password da indovinare o rubare). È la prima cosa che si configura su un server nuovo,
+      e la vedremo passo passo nel libro sui server. SSH porta con sé anche <b>SCP/SFTP</b> per copiare file in
+      modo sicuro sulla macchina remota.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: gli header di una email vera</h2>
+
+  <p class="lead">
+    Ogni email che ricevi porta con sé degli <b>header nascosti</b> che raccontano tutto il suo viaggio: da dove è
+    partita, per quali server è passata, se ha superato i controlli anti-spam. Impariamo a leggerli.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Mostra l'originale del messaggio <span class="tag">nel tuo client di posta</span></div>
+    <div class="f-note" style="margin-top:0">
+      In Gmail: apri una mail → menu «⋮» → <b>«Mostra originale»</b>. In altri client cerca «Sorgente» o «Header
+      completi». Vedrai qualcosa come:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Header (estratto)</div>
+        <pre><span class="out"><span class="fl">From:</span> "La Banca" &lt;info@banca.it&gt;
+<span class="fl">Received:</span> from mail.banca.it (<span class="hl">193.x.x.x</span>) by ...   <span class="c">← la staffetta SMTP, dal basso in alto</span>
+<span class="fl">SPF:</span>   <span class="hl">PASS</span>   <span class="c">← il mittente era autorizzato ✓</span>
+<span class="fl">DKIM:</span>  <span class="hl">PASS</span>   <span class="c">← firma valida, non alterata ✓</span></span></pre>
+      </div>
+      Cose da leggere: i <code>Received:</code> raccontano <b>a ritroso</b> i server attraversati (l'ultimo in cima
+      è quello che te l'ha consegnata); <mark><code>SPF</code> e <code>DKIM</code> con <b>PASS</b> dicono che il
+      mittente è autentico</mark>. Se vedi <code>FAIL</code> o un <code>From:</code> che non combacia coi
+      <code>Received:</code>, insospettisciti: è la firma tipica del <b>phishing</b>. Hai appena imparato a fare la
+      «perizia» di una email — una difesa concreta contro le truffe.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li><b>SMTP</b> spinge la posta <em>tra</em> i server, a staffetta, trovando il destinatario col record
+          <b>MX</b> del DNS (§14.1). <b>IMAP</b> (moderno, tutto sul server) e <b>POP</b> (vecchio, scarica)
+          servono a <em>leggere</em> (§14.2).</li>
+      <li>La posta è nata <b>fidandosi</b>: il mittente si può falsificare (spam, phishing). Difese: <b>SPF</b>
+          (server autorizzati), <b>DKIM</b> (firma), <b>DMARC</b> (regia) (§14.3).</li>
+      <li><b>SSH</b>: terminale <b>cifrato</b> per comandare un server da remoto (porta 22); meglio con <b>chiavi</b>
+          che con password. È lo strumento chiave di tutti i libri su server e cloud (§14.4).</li>
+      <li>Gli <b>header</b> di una email raccontano il suo viaggio e l'esito di SPF/DKIM: saperli leggere smaschera
+          il phishing (§14.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo esplorato la rete in lungo e in largo. Ma lungo il percorso è emersa una parola ricorrente e
+    inquietante: la fiducia. ARP si fida, BGP si fida, la posta si fida — e ogni fiducia mal riposta è una porta
+    aperta. Prima di tirare le somme, dedichiamo un capitolo intero a <b>difenderci</b>: chi ci minaccia, con quali
+    attacchi, e con quali strumenti proteggerci. Nel <strong>Capitolo 15</strong> parliamo di <b>sicurezza in
+    rete</b> — firewall, VPN, gli attacchi più comuni e le buone abitudini che fanno la differenza.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Descrivi la «staffetta» di una email da te ad <code>anna@esempio.it</code>. Che ruolo ha il record MX del DNS
+      in questo viaggio?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Perché configurando un client di posta ti chiede <b>due</b> server (uno in uscita, uno in entrata)? Quali
+      protocolli sono, e a cosa serve ognuno?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Qual è il «difetto di nascita» di SMTP che rende possibile il phishing? Come cercano di rimediare SPF e DKIM?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve SSH? Perché è preferibile usare le <b>chiavi</b> invece della password? (Pratico) Apri una tua
+      email e trova gli esiti SPF/DKIM nell'«originale».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Il tuo client consegna la mail al <b>tuo server</b> (SMTP); questo interroga il DNS per il record <b>MX</b> di
+      <code>esempio.it</code> — «chi riceve la posta di questo dominio?» — e ottiene il server di Anna; quindi gli
+      <b>consegna</b> il messaggio (SMTP), che finisce nella casella di Anna. L'MX è ciò che permette di <b>trovare
+      il server di posta giusto</b> per il dominio del destinatario.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Perché mandare e ricevere sono compiti separati: il server <b>in uscita è SMTP</b> (spinge la posta verso i
+      server di destinazione), quello <b>in entrata è IMAP</b> (o POP), che serve a <b>leggere</b> i messaggi dalla
+      tua casella. Uno per inviare, uno per ricevere.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      SMTP <b>non verifica il mittente</b>: il campo «Da:» si può falsificare liberamente, ed è ciò che sfrutta il
+      phishing. <b>SPF</b> dichiara (nel DNS) quali server sono autorizzati a spedire per un dominio; <b>DKIM</b>
+      fa firmare crittograficamente le email e ne fa verificare la firma. Insieme provano che il mittente è
+      autentico e il messaggio non alterato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      SSH serve a <b>comandare una macchina remota</b> tramite un terminale cifrato (porta 22). Le <b>chiavi</b>
+      sono preferibili perché non c'è una password da indovinare o rubare: entri con una coppia pubblica/privata,
+      più sicura e comoda. Nell'originale di una mail, cerca le righe <code>SPF</code>/<code>DKIM</code>: un
+      <b>PASS</b> indica mittente autentico.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.1 — il viaggio di una email (SMTP staffetta + DNS MX + IMAP)
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('wm-svg');
+  if (!svg) return;
+  const out = document.getElementById('wm-out');
+  const bGo = document.getElementById('wm-go');
+
+  const YOU = [-4.3, 1.2], S1 = [-1.6, 1.2], DNS = [-1.6, -1.4], S2 = [2.2, 1.2], ANNA = [4.3, 1.2];
+  const steps = [
+    { from: YOU, to: S1, col: 'var(--accent)', label: 'SMTP: consegno al mio server', note: 'Il tuo client passa la mail al <b>tuo server di posta</b> (SMTP).' },
+    { from: S1, to: DNS, col: 'var(--warm)', label: 'DNS: chi riceve per esempio.it?', note: 'Il tuo server chiede al DNS il record <b>MX</b> del dominio di Anna (Cap. 10).' },
+    { from: S1, to: S2, col: 'var(--accent)', label: 'SMTP: consegno al server di Anna', note: 'Con l\'MX trovato, il tuo server <b>consegna</b> il messaggio al server di Anna (SMTP).' },
+    { from: ANNA, to: S2, col: 'var(--green)', label: 'IMAP: Anna legge la posta', note: 'Anna <b>scarica/legge</b> il messaggio dalla sua casella con <b>IMAP</b> (§14.2).' }
+  ];
+  let idx = -1, anim = null, last = null;
+  bGo.addEventListener('click', () => { idx = 0; anim = { t: 0 }; last = null; requestAnimationFrame(step); });
+
+  function step(now) {
+    if (!anim) return;
+    if (last === null) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    anim.t += dt * 1.3;
+    if (anim.t >= 1) { idx++; if (idx >= steps.length) { anim = null; draw(); out.innerHTML = msg('✅ Consegnata e letta. La posta è una <b>staffetta SMTP</b> tra server (trovati via MX), poi <b>IMAP</b> per leggere.'); return; } anim.t = 0; last = null; }
+    draw(); requestAnimationFrame(step);
+  }
+  function lerp(a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
+  function msg(s) { return '<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">' + s + '</div>'; }
+
+  function draw() {
+    svg.innerHTML = '';
+    const p = new Plot(svg, { xmin: -5, xmax: 5, ymin: -2.2, ymax: 2.2, iso: true });
+    const nodes = [[YOU, '🧑 tu', 'var(--ink-soft)'], [S1, '📮 tuo server', 'var(--accent)'], [DNS, '🗂 DNS (MX)', 'var(--warm)'], [S2, '📥 server Anna', 'var(--accent)'], [ANNA, '🧑 Anna', 'var(--ink-soft)']];
+    for (const [pos, label, col] of nodes) { p.dot(pos[0], pos[1], { color: col, r: 12 }); p.text(pos[0], pos[1] - 0.42, label, { size: 9.5, anchor: 'middle', color: 'var(--ink-faint)' }); }
+    if (idx >= 0 && idx < steps.length && anim) {
+      const s = steps[idx];
+      p.line(s.from[0], s.from[1], s.to[0], s.to[1], { color: s.col, width: 1.5, dash: '4 4' });
+      const pos = lerp(s.from, s.to, anim.t);
+      p.rect(pos[0] - 0.16, pos[1] - 0.12, pos[0] + 0.16, pos[1] + 0.12, { fill: s.col, color: 'none' });
+      out.innerHTML = msg('<b>Passo ' + (idx + 1) + '/4</b> — ' + s.note);
+    } else if (idx < 0) {
+      out.innerHTML = msg('Premi «invia la mail»: seguirai la staffetta SMTP, la ricerca DNS del server di Anna, e la lettura via IMAP.');
+    }
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

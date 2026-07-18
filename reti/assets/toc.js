@@ -217,7 +217,7 @@ const TOC = [
     n: 14,
     titolo: "Email e altri protocolli",
     file: "cap14-email-altri-protocolli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Come viaggia una email (SMTP)" },
       { id: "s14-2", n: "14.2", t: "Leggere la posta: IMAP e POP" },
