@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · HTTP — Reti e Internet</title>
+<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⇄</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>HTTP</h1>
+    <p class="standfirst">
+      Eccoci al livello che tocchi ogni secondo: il <b>linguaggio del web</b>. Ogni pagina che apri, ogni immagine
+      che carica, ogni «mi piace» che clicchi è, sotto sotto, una conversazione in <b>HTTP</b> — un dialogo di una
+      semplicità sorprendente: il browser fa una <b>richiesta</b> («dammi questa pagina»), il server dà una
+      <b>risposta</b> («eccola», oppure «non c'è», «non ti è permesso», «mi sono rotto»). <mark>La cosa
+      straordinaria è che è tutto <b>testo leggibile</b></mark>: alla fine del capitolo scriverai richieste HTTP a
+      mano e capirai davvero cosa succede quando premi Invio nella barra degli indirizzi.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      HTTP come protocollo richiesta-risposta (§11.1), l'<b>anatomia di una richiesta</b> (§11.2) e di una
+      <b>risposta</b> con i <b>codici di stato</b> (§11.3), i <b>metodi</b> GET/POST/… (§11.4), <b>header e
+      cookie</b> (§11.5). Nel laboratorio (§11.6) parli HTTP a mano con <code>curl</code>.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è il ponte con la programmazione</div>
+    <p style="margin-bottom:0">
+      HTTP è il confine dove le reti incontrano lo sviluppo web. <mark>Ogni sito, ogni app, ogni API parla
+      HTTP</mark>: quando costruirai un backend (FastAPI), riceverai richieste HTTP e manderai risposte con questi
+      stessi codici di stato; quando qualcosa non funziona, leggere un 404, un 500 o un 301 ti dice
+      immediatamente <em>di chi</em> è la colpa e <em>cosa</em> è successo. Capire HTTP qui significa avere in mano
+      il vocabolario di tutti i libri di programmazione web che verranno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Il protocollo del web</h2>
+
+  <p class="lead">
+    HTTP (HyperText Transfer Protocol) è il protocollo di livello applicativo del web. Gira sopra TCP (Cap. 9):
+    prima si apre una connessione affidabile alla porta 80 (o 443 per HTTPS), poi si dialoga in HTTP.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Domanda, risposta, e poi silenzio</div>
+    <p style="margin-bottom:0">
+      Il modello è elementare: il client manda <b>una richiesta</b>, il server manda <b>una risposta</b>, e la
+      transazione è finita. Ogni richiesta è <b>indipendente</b>: HTTP di base è <b>«senza stato»</b> (stateless),
+      cioè il server non ricorda nulla della richiesta precedente. <mark>Questa semplicità è la sua forza</mark>:
+      rende il web scalabile a miliardi di richieste. Ma pone anche un problema — se il server non ricorda nulla,
+      come fa a tenerti «loggato» tra una pagina e l'altra? La risposta sono i cookie (§11.5). Per ora tieni la
+      base: HTTP = una domanda, una risposta, entrambe in testo semplice.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>Anatomia di una richiesta</h2>
+
+  <p class="lead">
+    Vediamo com'è fatta, <b>letteralmente</b>, una richiesta HTTP. È testo, poche righe, con una struttura fissa
+    che una volta capita non dimentichi più.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una richiesta HTTP <span class="tag">riga di richiesta + header + (corpo)</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">GET di una pagina</div>
+      <pre><span class="cmd">GET</span> <span class="ar">/wiki/Pagina_principale</span> <span class="fl">HTTP/1.1</span>
+<span class="fl">Host:</span> it.wikipedia.org
+<span class="fl">User-Agent:</span> Mozilla/5.0 (Windows…)
+<span class="fl">Accept:</span> text/html
+<span class="c">(riga vuota = fine degli header; una GET non ha corpo)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>riga di richiesta</b> (la prima)</dt>
+        <dd><b>metodo</b> (GET), <b>percorso</b> della risorsa (/wiki/…), <b>versione</b> (HTTP/1.1). È il cuore:
+            «<em>voglio fare GET su questa risorsa</em>».</dd>
+        <dt>gli <b>header</b> (le righe successive)</dt>
+        <dd>coppie «Nome: valore» che danno contesto. <code>Host</code> dice <b>quale sito</b> (un server può
+            ospitarne molti!); <code>User-Agent</code> dice che browser sei; <code>Accept</code> che formati
+            gradisci. <mark>Sono le «istruzioni a margine» della richiesta</mark>.</dd>
+        <dt>il <b>corpo</b> (opzionale)</dt>
+        <dd>i dati che spedisci al server (assente in una GET; presente in una POST, quando invii un modulo — §11.4).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Anatomia di una risposta (status code)</h2>
+
+  <p class="lead">
+    La risposta ha la stessa struttura, ma inizia con la cosa più importante di tutto HTTP: il <b>codice di
+    stato</b>, tre cifre che riassumono l'esito. Impararne le famiglie ti fa capire al volo qualsiasi problema web.
+  </p>
+
+  <div class="widget" id="w-http">
+    <div class="w-head">
+      <span>Richiesta → risposta: esploratore dei codici di stato</span>
+      <span class="hint">scegli uno scenario e leggi la risposta del server</span>
+    </div>
+    <div class="w-stage" style="min-height:220px">
+      <div id="whp-view" style="font-family:var(--mono); font-size:.8rem; text-align:left; padding:1rem; line-height:1.6"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-sc="200">pagina esiste</button>
+      <button class="w-btn" data-sc="301">pagina spostata</button>
+      <button class="w-btn" data-sc="404">pagina inesistente</button>
+      <button class="w-btn" data-sc="401">senza login</button>
+      <button class="w-btn" data-sc="500">server rotto</button>
+    </div>
+    <div class="w-readout" id="whp-out"></div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le cinque famiglie di codici <span class="tag">la prima cifra dice tutto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b style="color:var(--green)">2xx — successo</b></dt>
+        <dd><b>200 OK</b>: tutto bene, ecco quel che hai chiesto. La risposta «normale».</dd>
+        <dt><b style="color:var(--accent)">3xx — redirezione</b></dt>
+        <dd><b>301/302</b>: «la risorsa è altrove, vai qui». Il browser segue automaticamente. Usato quando un
+            sito si sposta o forza HTTPS.</dd>
+        <dt><b style="color:var(--warm)">4xx — errore del client</b></dt>
+        <dd>hai sbagliato <em>tu</em>: <b>404</b> (non esiste), <b>401/403</b> (non autorizzato/vietato), <b>400</b>
+            (richiesta malformata). <mark>La colpa è della richiesta</mark>.</dd>
+        <dt><b style="color:var(--warm)">5xx — errore del server</b></dt>
+        <dd>ha sbagliato <em>il server</em>: <b>500</b> (errore interno), <b>502/503</b> (server non
+            raggiungibile/sovraccarico). <mark>La colpa è dall'altra parte</mark>.</dd>
+        <dt><b>1xx — informativi</b></dt>
+        <dd>rari, messaggi intermedi. Puoi ignorarli per ora.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Regola d'oro da ricordare per sempre: <mark><b>4xx = colpa tua (o della richiesta), 5xx = colpa del
+      server</b></mark>. Solo questa distinzione ti fa capire subito, davanti a un errore, da che parte guardare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>I metodi: GET, POST e gli altri</h2>
+
+  <p class="lead">
+    Il <b>metodo</b> dice <b>che tipo di azione</b> vuoi fare sulla risorsa. Sono pochi e con significati precisi —
+    e sono la base di come funzionano le <b>API</b> che programmerai.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I metodi HTTP principali <span class="tag">il "verbo" della richiesta</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>GET</b> — leggere</dt>
+        <dd>chiedi una risorsa <b>senza modificarla</b>: una pagina, un'immagine, dei dati. È «sicuro» (non cambia
+            nulla sul server) e ripetibile. Il 99% della navigazione è fatto di GET.</dd>
+        <dt><b>POST</b> — creare/inviare</dt>
+        <dd>mandi dati al server <b>nel corpo</b> per creare qualcosa o eseguire un'azione: inviare un modulo,
+            pubblicare un commento, fare login. <mark>Non è ripetibile a cuor leggero</mark> (rifare una POST può
+            creare un doppione — ecco l'avviso «non ricaricare la pagina» dopo un pagamento).</dd>
+        <dt><b>PUT / PATCH</b> — aggiornare</dt>
+        <dd>modificano una risorsa esistente (PUT la sostituisce, PATCH la corregge in parte).</dd>
+        <dt><b>DELETE</b> — cancellare</dt>
+        <dd>elimina una risorsa. Il nome dice tutto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questi «verbi» sono le fondamenta delle <b>API REST</b>, lo stile con cui web e app si scambiano dati:
+      <code>GET /utenti/5</code> (leggi l'utente 5), <code>POST /utenti</code> (creane uno nuovo),
+      <code>DELETE /utenti/5</code> (cancellalo). <mark>Quando costruirai un backend con FastAPI, scriverai
+      esattamente funzioni per questi metodi</mark>. HTTP è il ponte diretto verso la programmazione web.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Header e cookie</h2>
+
+  <p class="lead">
+    Gli <b>header</b> sono le tante «etichette» che accompagnano richieste e risposte. Tra questi, uno risolve il
+    problema che avevamo lasciato aperto: come fa un protocollo «senza memoria» a tenerti loggato?
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il cookie: la memoria del web</div>
+    <p style="margin-bottom:0">
+      HTTP è senza stato, ma il web ha bisogno di ricordare (chi sei, cosa hai nel carrello). Il trucco: al primo
+      accesso il server ti manda un <b>cookie</b> (un header <code>Set-Cookie</code> con un codice), e il browser
+      lo <b>rimanda a ogni richiesta successiva</b>. Così il server, pur non «ricordando» nulla di suo, ti
+      riconosce perché <mark>gli riporti tu stesso il biglietto che ti ha dato</mark>. È come il numeretto del
+      guardaroba: il guardarobiere non ti ricorda, ma il tuo numero identifica la tua giacca. I cookie sono ciò
+      che tiene in piedi login, carrelli e preferenze — e, nel bene e nel male, anche il tracciamento pubblicitario.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Header che incontrerai spesso</div>
+    <p style="margin-bottom:0">
+      <code>Content-Type</code> (che formato è la risposta: HTML? JSON? immagine?), <code>Content-Length</code>
+      (quanto è grande), <code>Cache-Control</code> (per quanto conservarla — Cap. 13), <code>Location</code>
+      (dove reindirizzare, nei 3xx), <code>Authorization</code> (le credenziali). <mark>Gli header sono il modo in
+      cui client e server si accordano sui dettagli</mark> senza sporcare i dati veri. Li vedrai tutti, dal vivo,
+      nel laboratorio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Laboratorio: parlare HTTP con curl</h2>
+
+  <p class="lead">
+    Basta guardare: adesso <b>parli tu</b> HTTP, a mano, con <code>curl</code> — lo strumento con cui si fanno
+    richieste HTTP dal terminale. È il modo migliore per vedere richieste e risposte nude e crude.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il comando <code>curl -i</code> <span class="tag">mostrami header e risposta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">C:\&gt; </span><span class="cmd">curl</span> <span class="fl">-i</span> <span class="ar">https://example.com</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">curl</span> — un browser da riga di comando</dt>
+        <dd>fa una richiesta HTTP e stampa la risposta. Senza fronzoli: niente rendering, solo il testo grezzo del
+            protocollo.</dd>
+        <dt><span class="fl">-i</span> — includi gli header</dt>
+        <dd>mostra anche la <b>riga di stato</b> e gli <b>header</b> della risposta, non solo il contenuto. Perfetto
+            per vedere il codice e i metadati. (<code>curl -I</code> maiuscola: <em>solo</em> gli header.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <div class="term" style="margin:0 auto">
+        <div class="t-head">Output</div>
+        <pre><span class="out"><span class="hl">HTTP/1.1 200 OK</span>              <span class="c">← la riga di stato: codice 200</span>
+Content-Type: text/html         <span class="c">← è HTML</span>
+Content-Length: 1256
+Cache-Control: max-age=604800
+
+&lt;!doctype html&gt;                 <span class="c">← poi il corpo: la pagina vera</span>
+&lt;html&gt; …</span></pre>
+      </div>
+      Prove da fare: <code>curl -I https://google.com</code> (vedrai un <b>301</b> che reindirizza a
+      <code>www</code>!); <code>curl https://api.github.com</code> (una <b>API</b> che risponde in JSON, non in
+      HTML); <code>curl -i https://example.com/nonesiste</code> (un bel <b>404</b>). <mark>Cambia l'URL e osserva i
+      codici di stato cambiare</mark>: stai parlando la lingua nativa del web, quella che scriverai tu stesso lato
+      server nei prossimi libri.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>HTTP è <b>richiesta → risposta</b> in testo, su TCP, ed è <b>senza stato</b> (§11.1).</li>
+      <li>Richiesta = <b>riga</b> (metodo + percorso + versione) + <b>header</b> + (corpo) (§11.2). Risposta =
+          <b>codice di stato</b> + header + corpo (§11.3).</li>
+      <li>Codici: <b>2xx</b> ok, <b>3xx</b> redirect, <b>4xx colpa tua</b>, <b>5xx colpa del server</b> (§11.3).
+          Metodi: <b>GET</b> leggi, <b>POST</b> crea/invia, <b>PUT/PATCH</b> aggiorna, <b>DELETE</b> cancella — la
+          base delle API (§11.4).</li>
+      <li>I <b>cookie</b> danno «memoria» a un protocollo senza stato (login, carrello) (§11.5). E ora parli HTTP
+          a mano con <code>curl</code> (§11.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai come il web chiede e risponde — ma tutto, finora, viaggia <b>in chiaro</b>: chiunque sulla rete (il WiFi
+    del bar, il tuo operatore, un malintenzionato) potrebbe leggere le tue richieste HTTP, password comprese. È
+    inaccettabile. Serve una busta blindata attorno a HTTP: cifratura, autenticazione, garanzia di parlare
+    davvero col sito giusto. Nel <strong>Capitolo 12</strong> aggiungiamo la <b>S</b> di sicurezza — <b>HTTPS</b> e
+    il protocollo <b>TLS</b> — e capiamo cosa c'è davvero dietro quel lucchetto nella barra degli indirizzi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Per ciascuno, di' se è colpa del client o del server, e cosa significa: <b>404</b>, <b>500</b>, <b>301</b>,
+      <b>200</b>, <b>403</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Quale metodo useresti per: (a) leggere il profilo dell'utente 7; (b) creare un nuovo commento; (c) cancellare
+      una foto; (d) aprire la home di un sito?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      HTTP è «senza stato»: come fa allora un sito a tenerti loggato mentre navighi tra le pagine? Spiega con
+      l'analogia del guardaroba.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Esegui <code>curl -I https://google.com</code>: che codice ricevi e perché? Poi <code>curl -i
+      https://example.com/xyz</code>: che codice, e di chi è la «colpa»?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-8"><span class="secnum">Sezione 11.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      <b>404</b> client (risorsa non esistente); <b>500</b> server (errore interno); <b>301</b> redirezione
+      (risorsa spostata, il browser segue); <b>200</b> successo; <b>403</b> client (vietato, non hai i permessi).
+      Regola: 4xx = lato client, 5xx = lato server.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      (a) <b>GET</b> <code>/utenti/7</code> (leggere); (b) <b>POST</b> <code>/commenti</code> (creare); (c)
+      <b>DELETE</b> <code>/foto/…</code> (cancellare); (d) <b>GET</b> <code>/</code> (leggere la home).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      Con i <b>cookie</b>: dopo il login il server manda un cookie (un codice) che il browser <b>rispedisce a ogni
+      richiesta</b>. Il server non «ricorda» te, ma riconosce il cookie che gli riporti — come il guardarobiere che
+      non ricorda te ma identifica la tua giacca dal numeretto che gli mostri.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      <code>curl -I https://google.com</code> dà tipicamente un <b>301</b> (Google reindirizza alla versione
+      <code>www</code> / canonica: la risorsa è «altrove»). <code>curl -i https://example.com/xyz</code> dà un
+      <b>404</b>: la pagina non esiste, ed è un errore <b>4xx</b> → lato client/richiesta (hai chiesto qualcosa che
+      non c'è).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.3 — esploratore richiesta/risposta con codici di stato (HTML)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('whp-view');
+  if (!view) return;
+  const out = document.getElementById('whp-out');
+  const btns = document.querySelectorAll('#w-http .w-btn');
+
+  const REQ = {
+    '200': ['GET', '/wiki/Gatto'], '301': ['GET', '/wiki/gatto'],
+    '404': ['GET', '/wiki/Gattttto'], '401': ['GET', '/account/impostazioni'],
+    '500': ['GET', '/wiki/Gatto']
+  };
+  const RESP = {
+    '200': { code: '200 OK', col: 'var(--green)', hdr: ['Content-Type: text/html', 'Content-Length: 48211'], body: '<!doctype html> … la pagina! …', note: '<b style="color:var(--green)">2xx successo</b>: tutto bene, ecco la pagina richiesta.' },
+    '301': { code: '301 Moved Permanently', col: 'var(--accent)', hdr: ['Location: /wiki/Gatto'], body: '(il browser segue e rifà GET su /wiki/Gatto)', note: '<b style="color:var(--accent)">3xx redirezione</b>: la risorsa è altrove (qui: maiuscola diversa). L\'header <code>Location</code> dice dove; il browser ci va da solo.' },
+    '404': { code: '404 Not Found', col: 'var(--warm)', hdr: ['Content-Type: text/html'], body: '<h1>Pagina non trovata</h1>', note: '<b style="color:var(--warm)">4xx colpa del client</b>: hai chiesto una risorsa che non esiste. La richiesta è sbagliata, non il server.' },
+    '401': { code: '401 Unauthorized', col: 'var(--warm)', hdr: ['WWW-Authenticate: cookie/login'], body: '{ "errore": "devi effettuare il login" }', note: '<b style="color:var(--warm)">4xx colpa del client</b>: risorsa protetta, servono credenziali. Dopo il login (cookie) la stessa richiesta darebbe 200.' },
+    '500': { code: '500 Internal Server Error', col: 'var(--warm)', hdr: ['Content-Type: text/html'], body: '<h1>Qualcosa è andato storto</h1>', note: '<b style="color:var(--warm)">5xx colpa del server</b>: la richiesta era valida, ma il server si è rotto elaborandola. Non c\'è nulla che tu possa correggere lato tuo.' }
+  };
+
+  function esc(s) { return s.replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function show(sc) {
+    const [m, path] = REQ[sc], r = RESP[sc];
+    view.innerHTML =
+      '<div style="color:var(--ink-soft); margin-bottom:.2rem">▶ RICHIESTA</div>' +
+      '<div><span style="color:var(--accent); font-weight:700">' + m + '</span> ' + path + ' HTTP/1.1</div>' +
+      '<div style="color:var(--ink-soft)">Host: it.wikipedia.org</div>' +
+      '<div style="border-top:1px dashed var(--rule); margin:.7rem 0"></div>' +
+      '<div style="color:var(--ink-soft); margin-bottom:.2rem">◀ RISPOSTA</div>' +
+      '<div>HTTP/1.1 <span style="color:' + r.col + '; font-weight:800; font-size:1.05em">' + r.code + '</span></div>' +
+      r.hdr.map(h => '<div style="color:var(--ink-soft)">' + esc(h) + '</div>').join('') +
+      '<div style="margin-top:.4rem">' + esc(r.body) + '</div>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.95rem; text-align:left">' + r.note + '</div>';
+    btns.forEach(b => b.style.outline = b.dataset.sc === sc ? '2px solid ' + r.col : 'none');
+  }
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.sc)));
+  show('200');
+})();
+</script>
+</body>
+</html>

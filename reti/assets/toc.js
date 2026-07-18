@@ -170,7 +170,7 @@ const TOC = [
     n: 11,
     titolo: "HTTP",
     file: "cap11-http.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Il protocollo del web" },
       { id: "s11-2", n: "11.2", t: "Anatomia di una richiesta" },
