@@ -135,7 +135,7 @@ const TOC = [
     n: 9,
     titolo: "Layout con Flexbox",
     file: "cap09-flexbox.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Il problema del layout" },
       { id: "s9-2", n: "9.2", t: "display: flex" },

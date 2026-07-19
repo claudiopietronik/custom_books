@@ -19,7 +19,7 @@ Contenuto originale scritto ex novo.
 - [x] 6 — CSS: dare stile
 - [x] 7 — I selettori
 - [x] 8 — Il box model
-- [ ] 9 — Layout con Flexbox
+- [x] 9 — Layout con Flexbox
 - [ ] 10 — Responsive: ogni schermo
 - [ ] 11 — JavaScript: le basi
 - [ ] 12 — Il DOM: la pagina come oggetti
