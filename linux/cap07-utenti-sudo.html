@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Utenti e sudo — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Utenti e sudo</h1>
+    <p class="standfirst">
+      Nel capitolo scorso hai visto che i file appartengono a utenti e hanno permessi. Ma c'è un utente speciale, al di
+      sopra di tutti, che può fare <b>qualsiasi cosa</b>: l'amministratore, chiamato <b>root</b>. Root può leggere e
+      modificare ogni file, installare software, cambiare le configurazioni di sistema, creare altri utenti. È
+      onnipotente — e proprio per questo <b>pericoloso</b>: un errore da root può distruggere il sistema. La soluzione
+      elegante che Linux adotta è non lavorare <em>mai</em> come root, ma «prendere in prestito» i suoi poteri solo per
+      il singolo comando che lo richiede, con <code>sudo</code>. In questo capitolo capiamo la gerarchia degli utenti
+      e cos'è root (§7.1), come usare <code>sudo</code> in sicurezza (§7.2), come gestire utenti e gruppi (§7.3), e il
+      principio d'oro della sicurezza — <b>il minimo privilegio</b> (§7.4). <mark>È il capitolo che ti insegna a usare
+      il «potere» quando serve, senza farti male.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>root</b> e gli utenti normali (§7.1), <b>sudo</b> per i poteri temporanei (§7.2), gestire <b>utenti e
+      gruppi</b> (§7.3), il <b>minimo privilegio</b> (§7.4). Nel laboratorio (§7.5) usi sudo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: potere e responsabilità</div>
+    <p style="margin-bottom:0">
+      Tante operazioni di sistema (installare programmi, configurare servizi, gestire altri utenti) richiedono i poteri
+      di amministratore. <mark>Saper usare <code>sudo</code> in modo corretto e sicuro è indispensabile</mark> per
+      amministrare qualsiasi sistema Linux, dal tuo PC a un server (l'hai già incontrato nel libro «Backend», nel
+      deploy). E capire <em>perché</em> non si lavora sempre da root ti protegge dagli errori più gravi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>root e gli utenti normali</h2>
+
+  <p class="lead">
+    In Linux ci sono due «livelli» di utente: gli utenti <b>normali</b> (come te, con permessi limitati ai propri
+    file) e l'utente <b>root</b> (l'amministratore, che può tutto). La distinzione è alla base della sicurezza del
+    sistema.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Utente normale vs root <span class="tag">limitato vs onnipotente</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>l'<b>utente normale</b> (tu)</dt>
+        <dd>può gestire i <b>propri</b> file (nella sua home), eseguire programmi, ma <b>non</b> toccare il sistema:
+            non può installare software per tutti, modificare le configurazioni globali, o toccare i file altrui.
+            <mark>I suoi errori restano circoscritti.</mark></dd>
+        <dt>l'utente <b>root</b> (l'amministratore)</dt>
+        <dd>può fare <b>tutto</b>: leggere/modificare ogni file, installare software, gestire utenti, cambiare il
+            sistema. <mark>Nessun permesso lo ferma.</mark> Il suo nome è «root» perché sta alla radice del controllo.</dd>
+        <dt>il segnale nel prompt</dt>
+        <dd>ricordi dal Cap. 2? Un prompt che finisce con <code>$</code> = utente normale; con <code>#</code> = sei
+            root. <mark>Il <code>#</code> è un promemoria visivo: «attenzione, hai pieni poteri»</mark>.</dd>
+        <dt>perché non lavorare da root</dt>
+        <dd><mark>da root, un comando sbagliato non ha protezioni</mark>: un <code>rm</code> nel posto sbagliato può
+            cancellare file di sistema e rendere il computer inutilizzabile. Da utente normale, lo stesso errore
+            fallirebbe con «Permission denied» — il sistema ti salva.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per questo la pratica moderna è <b>non accedere mai direttamente come root</b> per il lavoro quotidiano. Si
+      lavora come utente normale — protetti — e si «diventa» root solo per il singolo comando che lo richiede, con
+      <code>sudo</code> (prossima sezione). <mark>È la differenza tra tenere sempre in mano un coltello affilato e
+      prenderlo solo quando devi tagliare qualcosa.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>sudo: poteri temporanei</h2>
+
+  <p class="lead">
+    <code>sudo</code> («superuser do») è il comando che esegue <b>un</b> comando con i poteri di root, chiedendoti la
+    tua password. È il modo pulito e sicuro di fare operazioni da amministratore, quando servono.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — sudo in azione</div>
+    <pre><span class="c"># senza sudo: un'operazione di sistema fallisce</span>
+<span class="p">$</span> <span class="cmd">apt</span> <span class="ar">install</span> <span class="ar">htop</span>
+<span class="out">E: Could not open lock file ... (Permission denied)</span>
+
+<span class="c"># con sudo: esegui lo stesso comando con i poteri di root</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">install</span> <span class="ar">htop</span>
+<span class="out">[sudo] password for anna: </span>          <span class="c"># chiede la TUA password</span>
+<span class="out">... htop installato con successo</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Come funziona sudo <span class="tag">un comando, poteri di root</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">sudo comando</span></dt>
+        <dd>esegue <b>quel singolo comando</b> con i poteri di root, poi torni a essere te stesso. <mark>I poteri sono
+            temporanei</mark>: valgono solo per quel comando, non per la sessione.</dd>
+        <dt>chiede la <b>tua</b> password</dt>
+        <dd>non la password di root, ma la <b>tua</b> (per confermare che sei davvero tu). <mark>Non vedi i caratteri
+            mentre digiti</mark>: è normale, per sicurezza — scrivi e premi Invio. La ricorda per qualche minuto, così
+            non te la richiede a ogni comando.</dd>
+        <dt>chi può usare sudo</dt>
+        <dd>solo gli utenti <b>autorizzati</b> (di solito il primo utente creato, membro del gruppo <code>sudo</code>).
+            <mark>Non chiunque può fare sudo</mark>: è un privilegio concesso.</dd>
+        <dt>quando serve</dt>
+        <dd>installare/rimuovere software, modificare file di sistema (in <code>/etc</code>), gestire servizi e utenti,
+            usare <code>chown</code> (Cap. 6). <mark>Regola: se un comando tocca «il sistema» e non i tuoi file, serve
+            sudo.</mark></dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> sudo è potere: pensa prima di premere Invio</div>
+      <p style="margin-bottom:0">
+        Con <code>sudo</code> i «freni» dei permessi sono disattivati per quel comando: <mark>un errore può danneggiare
+        il sistema</mark>. Il famigerato <code>sudo rm -rf /</code> cancellerebbe l'intero sistema (i moderni Linux lo
+        bloccano, ma il concetto resta). Regola d'oro: <b>usa <code>sudo</code> solo quando sai <em>perché</em> ti
+        serve</b>, e rileggi il comando prima di eseguirlo. Non prendere l'abitudine di «mettere sudo davanti a tutto»
+        per far sparire gli errori: se un comando fallisce senza sudo, chiediti prima se <em>doveva</em> davvero girare
+        da amministratore.
+      </p>
+    </div>
+  </div>
+
+  <div class="widget" id="w-sudo">
+    <div class="w-head">
+      <span>Serve sudo? Provalo</span>
+      <span class="hint">alcuni comandi toccano il sistema</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:500px; margin:0 auto; display:flex; align-items:center; gap:.6rem; justify-content:center; margin-bottom:.8rem; flex-wrap:wrap">
+        <label style="font-size:.9rem; color:var(--ink-soft)"><input type="checkbox" id="su-toggle"> usa <b>sudo</b></label>
+      </div>
+      <div class="term" style="margin:0 auto; max-width:100%"><pre id="su-term" style="margin:0; min-height:70px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-cmd="ls ~/documenti">ls ~/documenti</button>
+      <button class="btn" data-cmd="apt install htop">apt install htop</button>
+      <button class="btn" data-cmd="nano /etc/hosts">nano /etc/hosts</button>
+      <button class="btn" data-cmd="touch ~/nota.txt">touch ~/nota.txt</button>
+    </div>
+    <div class="w-readout" id="su-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Gestire utenti e gruppi</h2>
+
+  <p class="lead">
+    Su un sistema con più persone (o un server), si creano e gestiscono utenti e gruppi. Sono operazioni da
+    amministratore (quindi con <code>sudo</code>); vediamo le principali, senza entrare troppo nel dettaglio.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — gestione utenti (con sudo)</div>
+    <pre><span class="c"># crea un nuovo utente (e la sua home)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">adduser</span> <span class="ar">luca</span>
+
+<span class="c"># aggiungi un utente a un gruppo (es. sudo, per dargli poteri di admin)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">usermod</span> <span class="fl">-aG</span> <span class="ar">sudo luca</span>
+
+<span class="c"># chi sono io e a quali gruppi appartengo?</span>
+<span class="p">$</span> <span class="cmd">whoami</span>
+<span class="out">anna</span>
+<span class="p">$</span> <span class="cmd">groups</span>
+<span class="out">anna sudo sviluppo</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I comandi principali <span class="tag">adduser · usermod · groups</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">sudo adduser nome</span></dt>
+        <dd>crea un nuovo utente con la sua cartella home e chiede di impostare una password. <mark>Il modo standard
+            di aggiungere una persona</mark> al sistema.</dd>
+        <dt><span class="mono">sudo usermod -aG gruppo utente</span></dt>
+        <dd>aggiunge un utente a un <b>gruppo</b> (<code>-aG</code> = «append to Group»). <mark>Aggiungere qualcuno al
+            gruppo <code>sudo</code></mark> gli dà i poteri di amministratore. I gruppi servono a condividere permessi
+            (Cap. 6).</dd>
+        <dt><span class="mono">whoami</span> · <span class="mono">groups</span></dt>
+        <dd><code>whoami</code> dice chi sei; <code>groups</code> elenca i gruppi a cui appartieni. <mark>Utile per
+            capire cosa puoi fare</mark>: se sei nel gruppo <code>sudo</code>, puoi usare sudo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve memorizzare tutto: <mark>l'importante è capire il modello</mark> — ci sono utenti, ogni utente sta in
+      uno o più gruppi, e i gruppi (insieme ai permessi del Cap. 6) determinano chi accede a cosa. Su un server, ad
+      esempio, potresti creare un utente apposito per far girare un'applicazione (senza poteri di admin), seguendo il
+      principio del minimo privilegio (§7.4). Sono operazioni che ritroverai amministrando sistemi reali.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Il principio del minimo privilegio</h2>
+
+  <p class="lead">
+    C'è un'idea di sicurezza che attraversa tutto questo capitolo e vale la pena esplicitare, perché guida ogni buona
+    pratica su Linux (e non solo): il <b>principio del minimo privilegio</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🛡</span> Solo i poteri necessari, solo quando servono</div>
+    <p style="margin-bottom:0">
+      Il principio dice: <mark>ogni utente (e ogni programma) dovrebbe avere <b>solo</b> i permessi strettamente
+      necessari per il suo compito, e nulla di più</mark>. Da qui discendono tutte le pratiche viste: non lavorare da
+      root (usi <code>sudo</code> solo per i singoli comandi che lo richiedono); dare a un'applicazione un utente
+      dedicato con permessi limitati; concedere i poteri di admin solo a chi serve. <b>Perché?</b> Perché meno potere è
+      in circolazione, meno danni può fare un errore o un attacco. Se un programma con permessi minimi viene bucato, il
+      danno è contenuto; se aveva i poteri di root, il disastro è totale. <mark>È lo stesso principio della sicurezza
+      del libro «Backend»</mark> (non fidarsi, limitare gli accessi): meno privilegi = meno superficie di rischio.
+    </p>
+  </div>
+
+  <div class="box viola">
+    <div class="box-title"><span class="ico">💜</span> Da ricordare: la disciplina del sudo</div>
+    <p style="margin-bottom:0">
+      In pratica, il minimo privilegio si traduce in un'abitudine semplice: <mark>lavora sempre come utente normale, e
+      usa <code>sudo</code> solo per i comandi che davvero lo richiedono</mark>, dopo aver capito perché. Resisti alla
+      tentazione di «diventare root e restarci» per comodità: è comodo finché non fai l'errore che cancella tutto. La
+      protezione dei permessi (Cap. 6) e la disciplina del sudo sono i tuoi angeli custodi — non disattivarli per
+      pigrizia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Laboratorio: usare sudo</h2>
+
+  <p class="lead">
+    Vediamo <code>sudo</code> all'opera e la differenza tra ciò che puoi fare come utente normale e ciò che richiede i
+    poteri di admin.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — utente normale vs sudo</div>
+    <pre><span class="c"># chi sei e a quali gruppi appartieni</span>
+<span class="p">$</span> <span class="cmd">whoami</span>
+<span class="out">anna</span>
+<span class="p">$</span> <span class="cmd">groups</span>          <span class="c"># se vedi "sudo", puoi usare sudo</span>
+
+<span class="c"># operazione sui TUOI file: nessun sudo necessario</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">~/prova.txt</span>          <span class="c"># funziona: è casa tua</span>
+
+<span class="c"># operazione sul SISTEMA: senza sudo fallisce...</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">/etc/prova.txt</span>
+<span class="out">touch: cannot touch '/etc/prova.txt': Permission denied</span>
+
+<span class="c"># ...con sudo funziona (ma chiediti: mi serve DAVVERO scrivere in /etc?)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">touch</span> <span class="ar">/etc/prova.txt</span>
+<span class="out">[sudo] password for anna:</span>          <span class="c"># la tua password (non si vede)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai visto la linea di confine: <mark>sui <b>tuoi</b> file (la home) agisci liberamente; per toccare il
+      <b>sistema</b> (<code>/etc</code>, installazioni…) serve <code>sudo</code></mark>. E hai visto che «Permission
+      denied» non è un ostacolo da aggirare a caso con sudo, ma un segnale da capire: <em>doveva</em> quel comando
+      girare da amministratore? Questa consapevolezza — usare il potere solo quando serve — è ciò che distingue chi
+      amministra bene un sistema. Con la comprensione di utenti, permessi e sudo, hai le basi della «gestione» di
+      Linux. Nel prossimo capitolo torniamo all'uso quotidiano con un tema affascinante: i <b>processi</b>, cioè i
+      programmi in esecuzione, e come vederli e controllarli.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>root</b> è l'amministratore onnipotente (può tutto); gli <b>utenti normali</b> gestiscono solo i propri
+          file. Prompt: <code>$</code> = normale, <code>#</code> = root (§7.1).</li>
+      <li><b>sudo</b> esegue <b>un</b> comando con poteri di root, chiedendo la <b>tua</b> password. Poteri temporanei,
+          solo per quel comando. Non lavorare mai stabilmente da root (§7.2).</li>
+      <li>Gestione: <code>sudo adduser</code>, <code>sudo usermod -aG</code>; <code>whoami</code>/<code>groups</code>
+          per sapere chi sei e cosa puoi (§7.3).</li>
+      <li><b>Minimo privilegio</b>: solo i poteri necessari, solo quando servono. Meno potere in giro = meno danni
+          possibili. Usa sudo con consapevolezza (§7.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai chi comanda nel sistema e come usare i poteri con cautela. Torniamo ora all'azione quotidiana: quando lanci un
+    programma, questo diventa un <b>processo</b> in esecuzione. Come vedere quali processi girano, quanto consumano, e
+    come fermarne uno che si è bloccato? Nel <strong>Capitolo 8</strong> impariamo a gestire i processi con
+    <code>ps</code>, <code>top</code> e <code>kill</code> — strumenti essenziali quando un programma «impazzisce» o vuoi
+    capire cosa sta occupando il tuo sistema.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Chi è l'utente <b>root</b> e in cosa si distingue da un utente normale? Come capisci, dal prompt, se stai
+      operando come root?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>sudo</code>? Di quale password ti chiede: la tua o quella di root? Per quanto «durano» i poteri che
+      concede?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Per ciascuna operazione, di' se serve <code>sudo</code>: (a) creare un file nella tua home; (b) installare un
+      programma con <code>apt</code>; (c) modificare un file in <code>/etc</code>; (d) elencare i tuoi documenti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Con parole tue, cos'è il <b>principio del minimo privilegio</b>? Perché è meglio usare <code>sudo</code> solo per
+      i singoli comandi invece di lavorare sempre come root?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      <b>root</b> è l'utente amministratore, che può fare <b>qualsiasi cosa</b> sul sistema: leggere/modificare ogni
+      file, installare software, gestire utenti, cambiare configurazioni — nessun permesso lo ferma. Un utente
+      <b>normale</b>, invece, gestisce solo i propri file e non può toccare il sistema. Dal prompt lo capisci dal
+      simbolo finale: <code>$</code> = utente normale, <code>#</code> = root (pieni poteri).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      <code>sudo</code> esegue <b>un singolo comando</b> con i poteri di root. Ti chiede la <b>tua</b> password (non
+      quella di root), per confermare la tua identità. I poteri sono <b>temporanei</b>: valgono solo per quel comando,
+      dopodiché torni a essere un utente normale (sudo ricorda la password per qualche minuto, per non richiederla a
+      ogni comando ravvicinato).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      (a) creare un file nella tua home: <b>no sudo</b> (sono i tuoi file). (b) installare con <code>apt</code>: <b>sì
+      sudo</b> (modifica il sistema per tutti). (c) modificare un file in <code>/etc</code>: <b>sì sudo</b> (file di
+      sistema). (d) elencare i tuoi documenti: <b>no sudo</b> (sono tuoi). Regola: serve sudo quando l'operazione tocca
+      «il sistema» o file di altri, non i tuoi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      Il <b>principio del minimo privilegio</b> dice che ogni utente e programma dovrebbe avere <b>solo</b> i permessi
+      strettamente necessari al proprio compito, e nulla di più. È meglio usare <code>sudo</code> solo per i singoli
+      comandi che lo richiedono, invece di lavorare sempre come root, perché così <b>si limitano i danni</b>: la
+      maggior parte del tempo operi senza poteri speciali (quindi un errore è circoscritto), e attivi il «potere» solo
+      per l'istante necessario, con piena consapevolezza. Meno privilegi in circolazione = meno danni possibili da
+      errori o attacchi.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.2 — "serve sudo?": prova comandi con/senza sudo, vedi cosa succede
+   ========================================================================= */
+(function () {
+  const term = document.getElementById('su-term');
+  if (!term) return;
+  const toggle = document.getElementById('su-toggle');
+  const out = document.getElementById('su-out');
+
+  // needsSudo: true se il comando tocca il sistema
+  const CMDS = {
+    'ls ~/documenti': { sudo: false, ok: 'lettera.txt  cv.pdf', why: 'Leggere i tuoi file NON richiede sudo: sono nella tua home.' },
+    'apt install htop': { sudo: true, ok: '... htop installato', why: 'Installare software modifica il sistema per tutti: richiede sudo.' },
+    'nano /etc/hosts': { sudo: true, ok: '(apre l\'editor sul file di sistema)', why: 'I file in /etc sono di sistema: modificarli richiede sudo.' },
+    'touch ~/nota.txt': { sudo: false, ok: '(file creato)', why: 'Creare un file nella tua home NON richiede sudo: è casa tua.' }
+  };
+  let current = 'ls ~/documenti';
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const info = CMDS[current];
+    const withSudo = toggle.checked;
+    const prefix = withSudo ? 'sudo ' : '';
+    let body, note, col;
+    if (info.sudo && !withSudo) {
+      body = '<span class="out" style="color:#e0654f">Permission denied</span>';
+      note = '⚠ Questo comando tocca il <b>sistema</b> ma non hai usato sudo → <b>Permission denied</b>. Attiva «usa sudo» e riprova.';
+      col = 'var(--warm)';
+    } else if (info.sudo && withSudo) {
+      body = '<span class="out">[sudo] password for anna:</span>\n<span class="out">' + esc(info.ok) + '</span>';
+      note = '✅ Con <b>sudo</b> il comando gira con poteri di root e funziona. ' + info.why;
+      col = 'var(--green)';
+    } else if (!info.sudo && withSudo) {
+      body = '<span class="out">[sudo] password for anna:</span>\n<span class="out">' + esc(info.ok) + '</span>';
+      note = '🤔 Funziona, ma <b>sudo era inutile</b> qui: ' + info.why + ' Non mettere sudo «per abitudine».';
+      col = 'var(--ink-soft)';
+    } else {
+      body = '<span class="out">' + esc(info.ok) + '</span>';
+      note = '✅ Funziona senza sudo. ' + info.why;
+      col = 'var(--green)';
+    }
+    term.innerHTML = '<span class="p">$</span> <span class="cmd">' + esc(prefix + current) + '</span>\n' + body;
+    out.innerHTML = '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + note + '</div>';
+  }
+
+  document.querySelectorAll('#w-sudo .btn[data-cmd]').forEach(function (b) {
+    b.addEventListener('click', function () { current = b.getAttribute('data-cmd'); render(); });
+  });
+  toggle.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>

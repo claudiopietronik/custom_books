@@ -104,7 +104,7 @@ const TOC = [
     n: 7,
     titolo: "Utenti e sudo",
     file: "cap07-utenti-sudo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "root e gli utenti normali" },
       { id: "s7-2", n: "7.2", t: "sudo: poteri temporanei" },
