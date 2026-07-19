@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · File e storage con MinIO — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>File e storage con MinIO</h1>
+    <p class="standfirst">
+      Un'immagine del profilo, un allegato PDF, un video, un documento: prima o poi ogni backend deve gestire
+      <b>file</b> caricati dagli utenti. E qui si nasconde una domanda importante, con una risposta forse
+      controintuitiva: <b>dove</b> li mettiamo? Non nel database (vedremo perché è una cattiva idea), e nemmeno
+      «sparsi» sul disco del server. La soluzione professionale è lo <b>storage di oggetti</b>: un servizio
+      specializzato nel conservare file, a cui si accede tramite un'API standard chiamata <b>S3</b>. E per averlo
+      «in casa», sul nostro server, useremo <b>MinIO</b>, un software open source compatibile con S3. In questo
+      capitolo capisci perché i file non vanno nel database (§14.1), cos'è l'object storage (§14.2), cos'è MinIO
+      (§14.3) e come caricare e scaricare file (§14.4). <mark>È l'ultima capacità applicativa del nostro backend prima
+      di impacchettarlo e metterlo online.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché i file <b>non</b> nel database (§14.1), l'<b>object storage</b> e lo standard <b>S3</b> (§14.2),
+      <b>MinIO</b> come S3 «in casa» (§14.3), <b>caricare e scaricare</b> file da FastAPI (§14.4). Nel laboratorio
+      (§14.5) gestisci l'upload di un'immagine.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: i file sono ovunque</div>
+    <p style="margin-bottom:0">
+      Avatar, foto, documenti, backup: quasi ogni app gestisce file. <mark>Farlo nel modo giusto — separando i file
+      dal database — è una scelta architetturale che influenza prestazioni, costi e scalabilità.</mark> E imparare
+      l'<b>API S3</b> è particolarmente prezioso: è lo stesso standard usato da Amazon S3 e da innumerevoli servizi
+      cloud, quindi ciò che impari qui con MinIO vale identico «lassù», nel cloud.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Perché non i file nel database</h2>
+
+  <p class="lead">
+    Sarebbe tecnicamente possibile salvare un file (i suoi byte) dentro una colonna del database. Ma è quasi sempre
+    una <b>cattiva idea</b>, per ragioni concrete.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Perché i file stanno fuori dal database <span class="tag">prestazioni · costi · ruoli</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>appesantiscono</b> il database</dt>
+        <dd>i database sono ottimizzati per dati <b>strutturati</b> e piccoli (numeri, testo), non per grossi blocchi
+            binari. Riempirli di immagini li rende <b>lenti</b> e i backup enormi.</dd>
+        <dt><b>costano</b> di più e scalano peggio</dt>
+        <dd>lo spazio del database è prezioso e costoso; lo storage di file è economico e pensato per crescere
+            enormemente. <mark>Mescolarli spreca risorse.</mark></dd>
+        <dt><b>ruoli diversi</b></dt>
+        <dd>servire un'immagine a migliaia di utenti è un lavoro da server di file / CDN, non da database. Tenerli
+            separati permette a ciascuno di fare bene il proprio mestiere.</dd>
+        <dt>la regola pratica</dt>
+        <dd><mark>nel database salvi solo un <b>riferimento</b> al file</mark> (il suo nome/chiave o URL); il file
+            <b>vero</b> vive nello storage di oggetti. Così la riga <code>utente</code> ha un campo
+            <code>avatar_url</code>, non i megabyte dell'immagine.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa separazione — <b>metadati nel database, file nello storage</b> — è uno dei pattern architetturali più
+      importanti del backend. <mark>Il database dice «l'avatar di Anna è il file <code>avatars/anna.jpg</code>»; lo
+      storage custodisce quel file.</mark> Quando servi il profilo, restituisci l'URL; il browser scarica l'immagine
+      direttamente dallo storage. Semplice, veloce, scalabile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>L'object storage (S3)</h2>
+
+  <p class="lead">
+    Lo <b>storage di oggetti</b> (object storage) è un tipo di archivio pensato apposta per conservare file («oggetti»)
+    in grande quantità. Il modello reso famoso da Amazon <b>S3</b> è diventato lo standard di fatto, imitato da tutti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il vocabolario dell'object storage <span class="tag">bucket · object · key</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>oggetto</b> (object)</dt>
+        <dd>un singolo file, con i suoi dati e alcuni metadati (tipo, dimensione…). L'unità base dello storage.</dd>
+        <dt><b>bucket</b> (secchio)</dt>
+        <dd>un «contenitore» di oggetti, come una cartella di primo livello. Organizzi i file in bucket (es. un bucket
+            <code>avatar</code>, uno <code>documenti</code>). <mark>Ogni bucket ha un nome unico.</mark></dd>
+        <dt><b>chiave</b> (key)</dt>
+        <dd>il «nome» univoco di un oggetto dentro il bucket, spesso con una struttura a percorso:
+            <code>utenti/42/avatar.jpg</code>. <mark>Bucket + key identificano un file in modo univoco</mark> — è ciò
+            che salvi nel database.</dd>
+        <dt>l'<b>API S3</b></dt>
+        <dd>un insieme standard di operazioni: <code>put_object</code> (carica), <code>get_object</code> (scarica),
+            <code>delete_object</code> (cancella), <code>list_objects</code> (elenca). <mark>Uno standard universale</mark>:
+            impararlo una volta serve con S3, MinIO e decine di altri servizi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché è così diffuso? Perché l'object storage è <b>economico</b>, <b>enormemente scalabile</b> (miliardi di
+      file), <b>affidabile</b> (i dati sono replicati) e accessibile via <b>HTTP</b> (ogni oggetto può avere un URL).
+      <mark>È il modo standard di conservare file nel cloud</mark>, da Netflix alle piccole startup. Noi lo useremo in
+      versione «self-hosted» con MinIO — stessa API, sul nostro server.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>MinIO: S3 in casa</h2>
+
+  <p class="lead">
+    <b>MinIO</b> è un software open source che fornisce uno storage di oggetti <b>compatibile con l'API S3</b>, ma che
+    puoi far girare sul <b>tuo</b> server (o sul tuo computer). In pratica: tutta la comodità di S3, senza dipendere da
+    un provider cloud e senza costi per il traffico.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🪣</span> Perché MinIO</div>
+    <p style="margin-bottom:.6rem">
+      MinIO parla la <b>stessa API di Amazon S3</b>: il codice che scrivi per MinIO funziona identico con S3 (e
+      viceversa) cambiando solo l'indirizzo. Questo dà due vantaggi: <b>(1)</b> sviluppi e testi <b>in locale</b> con
+      MinIO, gratis; <b>(2)</b> se un domani vuoi passare al cloud, non riscrivi nulla. Lo avvii facilmente con Docker
+      (Cap. 15):
+    </p>
+    <div class="term" style="margin:.4rem auto 0">
+      <div class="t-head">terminale — MinIO in un container</div>
+      <pre><span class="p">$</span> <span class="cmd">docker</span> <span class="ar">run</span> <span class="fl">-p</span> <span class="ar">9000:9000</span> <span class="fl">-p</span> <span class="ar">9001:9001</span> \
+       <span class="fl">-e</span> <span class="ar">MINIO_ROOT_USER=admin</span> \
+       <span class="fl">-e</span> <span class="ar">MINIO_ROOT_PASSWORD=segreta123</span> \
+       <span class="ar">minio/minio</span> <span class="cmd">server</span> <span class="ar">/data</span> <span class="fl">--console-address</span> <span class="ar">":9001"</span>
+<span class="out">... API su :9000 · console web su :9001</span></pre>
+    </div>
+    <p style="margin:.7rem 0 0">
+      La porta <b>9000</b> è l'API (per il codice), la <b>9001</b> è una comoda <b>console web</b> dove vedere e
+      gestire bucket e file dal browser. <mark>User e password root vanno tenuti come segreti</mark> (variabili
+      d'ambiente, Cap. 9), come sempre.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Caricare e scaricare file</h2>
+
+  <p class="lead">
+    Da FastAPI, ricevi il file caricato dall'utente e lo passi allo storage. Servono due pezzi: FastAPI per
+    <b>ricevere</b> il file (<code>UploadFile</code>), e un client S3 (per Python, <code>boto3</code> o
+    <code>minio</code>) per <b>metterlo</b> nello storage.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py — endpoint di upload</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, UploadFile, Depends
+
+<span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/utenti/{id}/avatar"</span>)
+<span class="kw">def</span> <span class="fn">carica_avatar</span>(id: <span class="ty">int</span>, file: UploadFile, db: Session <span class="op">=</span> <span class="fn">Depends</span>(get_db)):
+    key <span class="op">=</span> <span class="st">f"avatar/{id}/{file.filename}"</span>            <span class="cm"># la "chiave" nello storage</span>
+
+    <span class="cm"># carica il file nel bucket "media" via client S3 (MinIO)</span>
+    s3.<span class="fn">put_object</span>(<span class="st">"media"</span>, key, file.file, length<span class="op">=</span><span class="op">-</span><span class="nm">1</span>, part_size<span class="op">=</span><span class="nm">10</span><span class="op">*</span><span class="nm">1024</span><span class="op">*</span><span class="nm">1024</span>)
+
+    <span class="cm"># nel DATABASE salva SOLO il riferimento (la key), non il file!</span>
+    utente <span class="op">=</span> db.<span class="fn">query</span>(Utente).<span class="fn">get</span>(id)
+    utente.avatar_key <span class="op">=</span> key
+    db.<span class="fn">commit</span>()
+    <span class="kw">return</span> {<span class="st">"avatar"</span>: key}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">L'anatomia dell'upload <span class="tag">UploadFile · put_object · salva la key</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">file: UploadFile</span></dt>
+        <dd>il modo di FastAPI per ricevere un file caricato. Ti dà <code>file.filename</code> (il nome) e
+            <code>file.file</code> (i dati). <mark>FastAPI gestisce lo streaming</mark>, così anche file grandi non
+            saturano la memoria.</dd>
+        <dt>la <span class="mono">key</span></dt>
+        <dd>costruisci un nome univoco per l'oggetto, spesso includendo l'id utente per organizzare:
+            <code>avatar/42/foto.jpg</code>.</dd>
+        <dt><span class="mono">s3.put_object("media", key, ...)</span></dt>
+        <dd>carica i dati nel bucket <code>media</code> con quella key. È l'operazione S3 «metti un oggetto». Il file
+            ora vive nello storage.</dd>
+        <dt><span class="mono">utente.avatar_key = key; db.commit()</span></dt>
+        <dd>nel database salvi <b>solo la key</b> (il riferimento), non il file. <mark>È il pattern del §14.1
+            realizzato</mark>: metadati nel DB, file nello storage.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per <b>scaricare/servire</b> il file, hai due strade: leggerlo dallo storage e restituirlo (<code>get_object</code>),
+      oppure — meglio per file pubblici — generare un <b>URL</b> che punta direttamente allo storage e darlo al
+      client, che scarica da lì senza passare dal tuo server. <mark>Quest'ultima è la via scalabile</mark>: il tuo
+      backend non fa da «tramite» per ogni download, alleggerendosi. Per i file privati si usano URL temporanei
+      firmati (presigned URL), che scadono dopo un po'.
+    </div>
+  </div>
+
+  <div class="widget" id="w-store">
+    <div class="w-head">
+      <span>Upload: file nello storage, key nel database</span>
+      <span class="hint">carica e osserva la separazione</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:stretch">
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🪣 bucket «media» (MinIO)</div>
+        <ul id="st-bucket" style="list-style:none; padding:0; margin:0; text-align:left"></ul>
+        <div id="st-bvuoto" style="color:var(--ink-soft); font-size:.85rem; padding:.4rem 0">Vuoto. Carica un file.</div>
+      </div>
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🗄️ tabella «utenti» (database)</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="st-db" style="margin:0; font-size:12px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-file="🖼 foto.jpg">carica foto.jpg (Anna)</button>
+      <button class="btn" data-file="📄 cv.pdf">carica cv.pdf (Luca)</button>
+      <button class="btn ghost" data-file="reset">reset</button>
+    </div>
+    <div class="w-readout" id="st-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: upload di un'immagine</h2>
+
+  <p class="lead">
+    Ecco i passi concreti per far funzionare l'upload dal vivo. Il codice è quello del §14.4; qui il contorno per
+    provarlo davvero con MinIO.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — prepara MinIO e il client</div>
+    <pre><span class="c"># 1) avvia MinIO (vedi §14.3), poi installa i client Python:</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">minio</span> <span class="ar">python-multipart</span>
+<span class="c">#   'minio' = client S3 ; 'python-multipart' = serve a FastAPI per i file</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">storage.py — configura il client MinIO</div>
+    <pre><span class="kw">from</span> minio <span class="kw">import</span> Minio
+
+s3 <span class="op">=</span> <span class="fn">Minio</span>(
+    <span class="st">"localhost:9000"</span>,               <span class="cm"># l'API di MinIO (§14.3)</span>
+    access_key<span class="op">=</span><span class="st">"admin"</span>,
+    secret_key<span class="op">=</span><span class="st">"segreta123"</span>,
+    secure<span class="op">=</span><span class="kw">False</span>,                    <span class="cm"># True se HTTPS (in produzione, Cap. 17)</span>
+)
+
+<span class="cm"># crea il bucket "media" se non esiste (una volta)</span>
+<span class="kw">if</span> <span class="kw">not</span> s3.<span class="fn">bucket_exists</span>(<span class="st">"media"</span>):
+    s3.<span class="fn">make_bucket</span>(<span class="st">"media"</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il giro completo</div>
+    <p style="margin-bottom:0">
+      Con MinIO avviato, il client configurato e l'endpoint del §14.4, puoi caricare un'immagine — dal
+      <code>/docs</code> di FastAPI (il campo «file» appare da solo grazie a <code>UploadFile</code>) o con
+      <code>curl -F "file=@foto.jpg" .../utenti/1/avatar</code>. <mark>Il file finisce nel bucket <code>media</code> di
+      MinIO</mark> (lo vedi nella console web su <code>:9001</code>), e nel database la riga dell'utente ottiene la
+      sua <code>avatar_key</code>. Hai realizzato la separazione «file nello storage, riferimento nel database» — il
+      modo professionale di gestire i file. Sperimenta anche cancellazione (<code>remove_object</code>) e download.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li>I <b>file non vanno nel database</b> (lo appesantiscono e costano): nel DB salvi solo un <b>riferimento</b>
+          (la key/URL), il file vive nello storage (§14.1).</li>
+      <li>L'<b>object storage</b> conserva file come <b>oggetti</b> in <b>bucket</b>, identificati da una <b>key</b>;
+          l'<b>API S3</b> (put/get/delete_object) è lo standard universale (§14.2).</li>
+      <li><b>MinIO</b> è uno storage S3-compatibile self-hosted: sviluppi in locale e, volendo, passi al cloud senza
+          cambiare codice (§14.3).</li>
+      <li>In FastAPI ricevi il file con <code>UploadFile</code>, lo carichi con <code>put_object</code>, e salvi solo
+          la <b>key</b> nel database (§14.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con questo, il nostro backend è <b>completo dal punto di vista funzionale</b>: API validate, database persistente
+    con relazioni, autenticazione sicura, gestione dei file. Ma vive ancora solo sul <em>tuo</em> computer, con pezzi
+    (app, database, MinIO) avviati a mano. Per renderlo <b>affidabile, riproducibile e pronto per la produzione</b>,
+    dobbiamo impacchettarlo. Nel <strong>Capitolo 15</strong> entra in scena <b>Docker</b>: la tecnologia che chiude
+    ogni componente in un «contenitore» portabile, e che risolve una volta per tutte il famigerato «sul mio computer
+    funzionava».
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Elenca due motivi per cui è meglio <b>non</b> salvare i file (es. immagini) direttamente nel database. Cosa si
+      salva nel database, allora?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Definisci, nell'object storage, i termini <b>bucket</b>, <b>oggetto</b> e <b>key</b>. Cosa identifica in modo
+      univoco un file?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Cos'è MinIO e qual è il vantaggio del fatto che sia «compatibile con l'API S3»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      Nell'endpoint di upload, quale riga carica il file nello storage e quale salva il riferimento nel database?
+      Perché sono due operazioni separate?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Due motivi: <b>(1)</b> i file grossi <b>appesantiscono</b> il database, rendendolo lento e gonfiando i backup
+      (i database sono ottimizzati per dati piccoli e strutturati); <b>(2)</b> lo <b>spazio del database costa</b> di
+      più e scala peggio rispetto allo storage di oggetti, pensato per crescere. Nel database si salva solo un
+      <b>riferimento</b> al file — la sua key (o URL) — mentre il file vero vive nello storage.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Un <b>oggetto</b> è un singolo file conservato nello storage. Un <b>bucket</b> è un contenitore di oggetti (come
+      una cartella di primo livello). La <b>key</b> è il nome univoco di un oggetto dentro il bucket (es.
+      <code>avatar/42/foto.jpg</code>). Un file è identificato in modo univoco dalla combinazione <b>bucket +
+      key</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      MinIO è un software open source di <b>storage di oggetti</b> che puoi far girare sul tuo server. Essendo
+      <b>compatibile con l'API S3</b>, il codice scritto per MinIO funziona <b>identico</b> con Amazon S3 (e altri
+      servizi S3-compatibili) cambiando solo l'indirizzo: puoi sviluppare in locale gratis con MinIO e, se serve,
+      passare al cloud senza riscrivere nulla. Impari uno standard, non uno strumento singolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      La riga <code>s3.put_object("media", key, ...)</code> carica il file nello <b>storage</b>; la riga
+      <code>utente.avatar_key = key; db.commit()</code> salva il <b>riferimento</b> nel database. Sono separate perché
+      i due sistemi hanno ruoli diversi: lo storage custodisce i byte del file, il database custodisce i metadati e i
+      collegamenti. Il file «vero» sta nello storage; il database sa solo <em>dove</em> trovarlo — la separazione che
+      rende il sistema efficiente e scalabile.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.4 — upload: il file va nel bucket, solo la key nel database
+   ========================================================================= */
+(function () {
+  const bucket = document.getElementById('st-bucket');
+  if (!bucket) return;
+  const bvuoto = document.getElementById('st-bvuoto');
+  const dbEl = document.getElementById('st-db');
+  const out = document.getElementById('st-out');
+
+  const utenti = { 1: { nome: 'Anna', avatar_key: null }, 2: { nome: 'Luca', avatar_key: null } };
+  const oggetti = [];   // {key, label}
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function drawBucket() {
+    bvuoto.style.display = oggetti.length ? 'none' : 'block';
+    bucket.innerHTML = oggetti.map(function (o) {
+      return '<li style="padding:.45rem .6rem; margin-bottom:.35rem; border:1px solid var(--green); border-radius:7px; background:color-mix(in srgb, var(--green) 8%, transparent)">' +
+        '<div>' + esc(o.label) + '</div><div style="font-family:var(--mono); font-size:.76rem; color:var(--ink-soft)">key: ' + esc(o.key) + '</div></li>';
+    }).join('');
+  }
+  function drawDb() {
+    let s = ' <span class="hl">id</span> | nome | avatar_key\n----+------+-----------------------\n';
+    s += Object.keys(utenti).map(function (id) {
+      const u = utenti[id];
+      const k = u.avatar_key ? '<span class="st">' + esc(u.avatar_key) + '</span>' : '<span class="out">NULL</span>';
+      return '  <span class="nm">' + id + '</span> | ' + (u.nome + '    ').slice(0,4) + ' | ' + k;
+    }).join('\n');
+    dbEl.innerHTML = s;
+  }
+
+  function carica(id, label) {
+    const filename = label.replace(/^\S+\s/, '');
+    const key = 'avatar/' + id + '/' + filename;
+    oggetti.push({ key: key, label: label });
+    utenti[id].avatar_key = key;
+    drawBucket(); drawDb();
+    out.innerHTML = '<div style="color:var(--green); font-size:.92rem; text-align:left">✅ <b>Caricato</b>: il file «' + esc(label) +
+      '» è finito nel <b>bucket</b> con key <code>' + esc(key) + '</code>. Nel <b>database</b> è stata salvata <b>solo la key</b> (colonna avatar_key), non il file. È la separazione file/metadati.</div>';
+  }
+
+  document.querySelectorAll('#w-store .btn[data-file]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const v = b.getAttribute('data-file');
+      if (v === 'reset') {
+        oggetti.length = 0; utenti[1].avatar_key = null; utenti[2].avatar_key = null;
+        drawBucket(); drawDb(); out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Reset: bucket vuoto, key azzerate.</div>';
+        return;
+      }
+      carica(v.indexOf('foto') >= 0 ? 1 : 2, v);
+    });
+  });
+
+  drawBucket(); drawDb();
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Carica un file: guarda dove finisce. Il <b>file</b> va nel <b>bucket</b> (a sinistra); nel <b>database</b> (a destra) si salva <b>solo la key</b> che lo indirizza. Mai il file dentro il database.</div>';
+})();
+</script>
+</body>
+</html>

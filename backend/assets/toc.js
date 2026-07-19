@@ -212,7 +212,7 @@ const TOC = [
     n: 14,
     titolo: "File e storage con MinIO",
     file: "cap14-minio-storage.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Perché non i file nel database" },
       { id: "s14-2", n: "14.2", t: "L'object storage (S3)" },
