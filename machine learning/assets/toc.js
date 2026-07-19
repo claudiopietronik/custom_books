@@ -180,7 +180,7 @@ const TOC = [
     n: 12,
     titolo: "Alberi di decisione",
     file: "cap12-alberi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Dividere lo spazio (CART)" },
       { id: "s12-2", n: "12.2", t: "Impurità: Gini ed entropia" },

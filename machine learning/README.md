@@ -24,7 +24,7 @@ usano Python/scikit-learn.
 - [x] 9 — Naive Bayes e k-NN
 - [x] 10 — Support Vector Machines
 - [x] 11 — Metodi kernel e Gaussian Processes
-- [ ] 12 — Alberi di decisione
+- [x] 12 — Alberi di decisione
 - [ ] 13 — Bagging e Random Forests
 - [ ] 14 — Boosting: AdaBoost e Gradient Boosting
 - [ ] 15 — Clustering: k-means e gerarchico

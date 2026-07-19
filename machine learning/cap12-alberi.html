@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Alberi di decisione — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Alberi di decisione</h1>
+    <p class="standfirst">
+      Cambiamo completamente famiglia di modelli. Finora i nostri classificatori ragionavano per <b>distanze</b> e
+      <b>rette</b>: nuvole, margini, somiglianze. Gli <b>alberi di decisione</b> ragionano in un modo del tutto diverso
+      e straordinariamente umano: per <b>domande</b>. <mark>«L'età è maggiore di 40? Sì → il colesterolo supera 200? No
+      → allora prevedo: sano.»</mark> Esattamente come nel gioco delle venti domande, o come un medico che restringe la
+      diagnosi con una serie di controlli. Il risultato è un modello che si legge come un <b>diagramma di flusso</b>:
+      trasparente, spiegabile, capace di gestire numeri e categorie insieme. In questo capitolo li costruiamo da zero:
+      come un albero <b>divide lo spazio</b> in rettangoli (§12.1), come misura quanto una domanda è «buona» con
+      l'<b>impurità</b> — Gini ed entropia (§12.2), come si costruisce l'albero passo dopo passo (§12.3), e il loro
+      grande difetto, l'overfitting, con il rimedio del <b>pruning</b> (§12.4). Come sempre, ogni concetto sviscerato
+      con pazienza. Gli alberi, da soli, sono modelli modesti — ma sono il <b>mattone</b> di alcuni dei modelli più
+      vincenti in assoluto, i prossimi due capitoli.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Dividere lo spazio</b> con CART (§12.1), l'<b>impurità</b>: Gini ed entropia (§12.2), <b>costruire l'albero</b>
+      (§12.3), <b>pruning</b> e overfitting (§12.4). Nel laboratorio (§12.5) fai crescere un albero e guardalo
+      partizionare il piano.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: leggibili e fondamentali</div>
+    <p style="margin-bottom:0">
+      Un albero di decisione è forse il modello più <b>interpretabile</b> che esista: puoi seguire con il dito il
+      percorso di una decisione e spiegarla a chiunque. Questo lo rende prezioso dove serve trasparenza (finanza,
+      medicina, decisioni con impatto legale). E soprattutto, <mark>gli alberi sono il componente base di Random Forest
+      e Gradient Boosting</mark> (cap. 13–14), i re indiscussi dei dati «a tabella». Capirli bene qui è indispensabile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Dividere lo spazio (CART)</h2>
+
+  <p class="lead">
+    Vediamo cosa fa geometricamente un albero. È l'immagine chiave da tenere in mente per tutto il capitolo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Tagli dritti, un pezzo alla volta</div>
+    <p style="margin-bottom:0">
+      Ogni «domanda» di un albero ha la forma «<b>la caratteristica $x_j$ è maggiore di una soglia $s$?</b>» — per
+      esempio «età > 40?». Geometricamente, una domanda del genere <mark>taglia lo spazio con una linea <b>dritta e
+      allineata agli assi</b></mark> (verticale o orizzontale): da un lato chi ha età > 40, dall'altro chi no. La
+      domanda successiva taglia ancora uno dei due pezzi, e così via. Il risultato: <mark>lo spazio viene diviso in tanti
+      <b>rettangoli</b></mark> (in più dimensioni: «scatole»), e a ogni rettangolo l'albero assegna una previsione
+      (la classe più diffusa lì dentro, o un valore medio per la regressione). Questo schema — tagli dritti, ripetuti,
+      su una caratteristica alla volta — è l'algoritmo <b>CART</b> («Classification And Regression Trees»), il più usato.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché «albero»?</div>
+    <p style="margin-bottom:0">
+      Perché la sequenza di domande si disegna come un albero capovolto: in cima la prima domanda (la <b>radice</b>),
+      che si dirama in due a seconda della risposta (sì/no); ogni ramo porta a un'altra domanda (un <b>nodo</b>), fino
+      alle <b>foglie</b> in fondo, dove non ci sono più domande e c'è la previsione. <mark>Seguire una previsione =
+      scendere dall'alto verso una foglia, rispondendo alle domande lungo il cammino.</mark> Ogni foglia corrisponde a
+      uno dei rettangoli del §12.1. È letteralmente un diagramma di flusso appreso dai dati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Impurità: Gini ed entropia</h2>
+
+  <p class="lead">
+    Domanda cruciale: tra le mille domande possibili («età > 40?», «età > 41?», «colesterolo > 180?»…), come fa
+    l'albero a scegliere <b>la migliore</b> a ogni passo? Gli serve un modo per misurare quanto una domanda «mette
+    ordine». Quel modo si chiama <b>impurità</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'impurità: quanto un gruppo è «mescolato»</div>
+    <p style="margin-bottom:0">
+      L'<b>impurità</b> misura quanto un gruppo di punti è <b>mescolato</b> tra classi diverse. <mark>Un gruppo tutto di
+      una classe è <b>puro</b> (impurità 0): l'ideale.</mark> Un gruppo metà e metà è massimamente <b>impuro</b>
+      (impurità massima): il peggio, perché non sa dire nulla. L'idea dell'albero è semplice: <mark>una buona domanda è
+      quella che, dividendo in due, produce due gruppi <b>più puri</b> di quello di partenza</mark> — che «separa» le
+      classi. A ogni passo, l'albero prova tutte le domande possibili e sceglie quella che riduce di più l'impurità
+      totale. Ci sono due modi popolari di misurare l'impurità: Gini ed entropia.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">L'indice di Gini <span class="tag">la probabilità di sbagliare a indovinare</span></div>
+    <p style="text-align:center; font-size:1.15rem; margin:.5rem 0 1rem">$$ \text{Gini} = 1 - \sum_{k} p_k^2 $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$p_k$ — la frazione del gruppo che appartiene alla classe $k$</dt>
+        <dd>se in un nodo ci sono 8 punti «sani» e 2 «malati» su 10, allora $p_{\text{sano}}=0{,}8$ e
+            $p_{\text{malato}}=0{,}2$. <mark>Sono le «proporzioni» delle classi nel gruppo.</mark></dd>
+        <dt>$\sum_k p_k^2$ — la «probabilità di azzeccare a caso»</dt>
+        <dd>elevo al quadrato ogni proporzione e le sommo. Intuizione: $\sum_k p_k^2$ è la probabilità che, pescando due
+            punti a caso dal gruppo, siano della stessa classe — cioè quanto il gruppo è «concorde». <mark>Se il gruppo
+            è puro (una sola classe, $p=1$), la somma fa $1^2=1$</mark>; se è molto mescolato, la somma è più piccola.</dd>
+        <dt>$1 - \sum_k p_k^2$ — l'impurità vera e propria</dt>
+        <dd>facendo $1$ meno quella «concordia», otteniamo la <b>discordia</b>: quanto il gruppo è mescolato.
+            <mark>Gruppo puro → Gini $=1-1=0$</mark> (nessuna impurità); gruppo 50/50 (due classi) → Gini
+            $=1-(0{,}5^2+0{,}5^2)=1-0{,}5=0{,}5$ (impurità massima). Più il numero è basso, più il gruppo è «in ordine».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'<b>entropia</b> è un'altra misura di impurità, che viene dalla teoria dell'informazione e ha uno spirito
+      identico (misura il «disordine»/sorpresa del gruppo): 0 se puro, massima se mescolato. <mark>In pratica Gini ed
+      entropia danno alberi quasi identici</mark>; Gini è un pelo più veloce da calcolare, ed è il default di
+      scikit-learn. Non serve scegliere con angoscia: fanno lo stesso lavoro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Costruire l'albero</h2>
+
+  <p class="lead">
+    Ora abbiamo tutti i pezzi. Mettiamoli insieme: l'algoritmo che costruisce l'albero è una ricetta semplice e
+    ripetitiva («ingorda», si dice), che si capisce benissimo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La ricetta «greedy»: dividi e ripeti</div>
+    <ol style="margin:0">
+      <li style="margin-bottom:.4rem"><b>Parti</b> da tutti i dati nella radice.</li>
+      <li style="margin-bottom:.4rem"><b>Prova ogni domanda possibile</b> (ogni caratteristica, ogni soglia sensata) e
+          calcola di quanto ciascuna <b>riduce l'impurità</b> (Gini) dei due gruppi risultanti.</li>
+      <li style="margin-bottom:.4rem"><b>Scegli la domanda migliore</b> — quella che riduce di più l'impurità — e dividi
+          il nodo in due figli.</li>
+      <li style="margin-bottom:.4rem"><b>Ripeti</b> la stessa procedura su ciascun figlio, e sui loro figli, e così via.</li>
+      <li><b>Fermati</b> quando un gruppo è puro (tutti della stessa classe), o troppo piccolo, o hai raggiunto una
+          profondità massima. Quel nodo diventa una <b>foglia</b> con la sua previsione.</li>
+    </ol>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Ingorda»: la scelta migliore <em>ora</em></div>
+    <p style="margin-bottom:0">
+      Questa ricetta si dice <b>greedy</b> («ingorda») perché a ogni passo prende la domanda che sembra migliore
+      <b>in quel momento</b>, senza preoccuparsi se un'altra scelta, magari meno buona subito, porterebbe a un albero
+      migliore dopo. <mark>Non cerca l'albero perfetto in assoluto</mark> (sarebbe troppo costoso: le combinazioni sono
+      astronomiche), ma un buon albero costruito un passo alla volta. È un compromesso pragmatico che funziona bene
+      nella pratica — e lo ritroverai in molti algoritmi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Pruning e overfitting</h2>
+
+  <p class="lead">
+    Gli alberi hanno un tallone d'Achille grande come una casa, e va capito bene perché è la ragione per cui, da soli,
+    si usano poco — e perché servono gli ensemble dei prossimi capitoli.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Un albero lasciato crescere overfitta, sempre</div>
+    <p style="margin-bottom:0">
+      Se lasci un albero crescere <b>senza limiti</b>, continuerà a dividere finché ogni foglia contiene un solo punto:
+      a quel punto classifica <b>perfettamente</b> tutti i dati di allenamento… imparandoli a memoria, rumore compreso.
+      <mark>È overfitting allo stato puro</mark>: accuratezza del 100% sui dati visti, ma pessima su quelli nuovi, perché
+      l'albero ha costruito un rettangolino su misura attorno a ogni singolo punto. Inoltre gli alberi sono
+      <b>instabili</b>: cambiando pochi dati, l'albero può risultare completamente diverso. Un albero profondo è il
+      ritratto della varianza alta del capitolo 3.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I rimedi: tenere l'albero «piccolo» <span class="tag">controllare la complessità</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>pre-pruning</b> — fermarsi in tempo</dt>
+        <dd>si mettono limiti <b>durante</b> la crescita: profondità massima (<code>max_depth</code>), numero minimo di
+            punti per poter dividere un nodo, o per formare una foglia. <mark>L'albero si ferma prima di diventare
+            un'accozzaglia di rettangolini.</mark></dd>
+        <dt><b>post-pruning</b> — potare dopo</dt>
+        <dd>si lascia crescere l'albero, poi si <b>tagliano</b> (in inglese «to prune» = potare) i rami che aiutano poco
+            su dati nuovi, sostituendoli con una foglia. Come un giardiniere che pota una pianta troppo folta per farla
+            crescere più sana.</dd>
+        <dt>la manopola, di nuovo bias-varianza</dt>
+        <dd>albero <b>profondo</b> = flessibile ma overfitta (varianza alta); albero <b>corto</b> = semplice ma può
+            underfittare (bias alto). <mark>La profondità giusta si sceglie con la validazione</mark> (cap. 3), come
+            ogni altra manopola di complessità incontrata finora.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      C'è però una soluzione molto più elegante del potare un singolo albero, e cambia tutto: invece di un albero solo,
+      <mark>usarne <b>tanti</b> e farli votare insieme.</mark> Un albero instabile diventa, in gruppo, incredibilmente
+      robusto. È l'idea degli <b>ensemble</b>, e sarà la protagonista dei prossimi due capitoli. Tieni a mente il
+      difetto degli alberi: è proprio ciò che gli ensemble curano.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget fai crescere un albero regolando la <b>profondità massima</b>: guardalo tagliare il piano in rettangoli
+    sempre più piccoli, e osserva l'accuratezza salire… fino a overfittare. È tutto il capitolo in un'immagine.
+  </p>
+
+  <div class="widget" id="w-tree">
+    <div class="w-head">
+      <span>L'albero partiziona il piano</span>
+      <span class="hint">più profondità = più rettangoli</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="tr-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>profondità massima <input type="range" id="tr-d" min="1" max="7" step="1" value="2"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="tr-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">albero.py</div>
+    <pre><span class="kw">from</span> sklearn.tree <span class="kw">import</span> DecisionTreeClassifier, plot_tree
+
+<span class="cm"># max_depth limita la crescita: è il freno all'overfitting (pre-pruning)</span>
+albero <span class="op">=</span> <span class="fn">DecisionTreeClassifier</span>(
+    max_depth<span class="op">=</span><span class="nm">3</span>,           <span class="cm"># profondità massima</span>
+    min_samples_leaf<span class="op">=</span><span class="nm">5</span>,    <span class="cm"># almeno 5 punti per foglia</span>
+    criterion<span class="op">=</span><span class="st">"gini"</span>       <span class="cm"># o "entropy": danno alberi quasi identici</span>
+)
+albero.<span class="fn">fit</span>(X, y)
+<span class="bi">print</span>(albero.<span class="fn">predict</span>(X_nuovi))
+
+<span class="cm"># il bello: si può DISEGNARE e leggere come un diagramma di flusso</span>
+<span class="fn">plot_tree</span>(albero, feature_names<span class="op">=</span>nomi, filled<span class="op">=</span><span class="kw">True</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: a profondità 1–2 l'albero taglia il piano in pochi grandi rettangoli (semplice, forse underfitting);
+      aumentandola, i rettangoli si moltiplicano e si rimpiccioliscono per catturare ogni punto — l'accuratezza sul
+      training sale verso il 100%, ma nascono <b>rettangolini sospetti</b> attorno ai singoli punti: overfitting.
+      Nel codice: <code>max_depth</code> e <code>min_samples_leaf</code> sono i freni (pre-pruning), e
+      <code>plot_tree</code> disegna l'albero leggibile. Hai capito gli alberi: domande, impurità, crescita greedy,
+      overfitting. Ora la mossa geniale: nel prossimo capitolo prendiamo <b>tanti</b> alberi e li facciamo votare
+      insieme — nasce la <b>Random Forest</b>, e la fragilità del singolo albero svanisce.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>albero di decisione</b> classifica con una sequenza di domande «$x_j > s$?», tagliando lo spazio in
+          <b>rettangoli</b> allineati agli assi (algoritmo CART). Si legge come un diagramma di flusso (§12.1).</li>
+      <li>Sceglie la domanda migliore minimizzando l'<b>impurità</b> (Gini $=1-\sum p_k^2$, o entropia): una buona
+          domanda rende i due gruppi più <b>puri</b> (§12.2).</li>
+      <li>Si costruisce con una ricetta <b>greedy</b>: prova tutte le domande, prendi la migliore ora, ripeti sui figli,
+          fermati su nodi puri/piccoli (§12.3).</li>
+      <li>Lasciato crescere, un albero <b>overfitta</b> sempre (memorizza il rumore) ed è instabile. Rimedi:
+          <b>pruning</b> (limitare/potare); la profondità si sceglie in validazione. Meglio ancora: gli <b>ensemble</b>
+          (§12.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Un albero da solo è un modello onesto ma fragile: trasparente e veloce, ma incline a overfittare e instabile. La sua
+    forza vera emerge quando smette di lavorare da solo. Nel <strong>Capitolo 13</strong> scopriamo un'idea semplice e
+    rivoluzionaria: allenare <b>tanti</b> alberi diversi e far <b>votare la media</b> delle loro opinioni. Come una
+    folla di esperti imperfetti che, messi insieme, diventano straordinariamente accurati — è il <b>bagging</b>, e la
+    sua incarnazione più celebre, la <b>Random Forest</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Che forma ha, geometricamente, la regione decisionale di un albero? Perché i suoi confini sono sempre «a gradini»
+      allineati agli assi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Cos'è l'«impurità» di un nodo? Calcola l'indice di Gini di un nodo con 6 punti di classe A e 6 di classe B, e di
+      un nodo con 10 punti tutti di classe A. Commenta i due risultati.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Descrivi a parole la ricetta «greedy» che costruisce un albero. Perché si chiama così, e cosa <b>non</b> garantisce?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Cosa succede se si lascia crescere un albero senza limiti? Spiega perché è un caso da manuale di overfitting, e
+      indica due rimedi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.5</div>
+    <p style="margin-bottom:0">
+      Un albero molto profondo e uno molto corto: collega ciascuno a «bias alto» o «varianza alta», motivando.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      La regione decisionale di un albero è fatta di <b>rettangoli</b> (in più dimensioni, «scatole») allineati agli
+      assi, ciascuno con una previsione. I confini sono «a gradini» allineati agli assi perché ogni domanda dell'albero
+      ha la forma «$x_j > s$?», cioè taglia lo spazio con una linea <b>dritta perpendicolare a un asse</b>; componendo
+      tanti di questi tagli si ottengono solo bordi orizzontali e verticali, mai diagonali o curvi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      L'impurità misura quanto un nodo è <b>mescolato</b> tra classi. Nodo 6 A / 6 B: $p_A=p_B=0{,}5$, quindi
+      Gini $=1-(0{,}5^2+0{,}5^2)=1-0{,}5=\mathbf{0{,}5}$ (impurità <b>massima</b>: gruppo perfettamente mescolato).
+      Nodo 10 A: $p_A=1$, quindi Gini $=1-1^2=\mathbf{0}$ (impurità <b>nulla</b>: gruppo puro). Confermano l'intuizione:
+      più il gruppo è di una sola classe, più l'impurità è bassa.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      La ricetta: parti da tutti i dati; prova tutte le domande possibili e scegli quella che riduce di più l'impurità;
+      dividi il nodo in due figli; ripeti la stessa cosa su ciascun figlio; fermati quando un nodo è puro, troppo
+      piccolo o hai raggiunto la profondità massima (diventa una foglia). Si chiama «greedy» (ingorda) perché a ogni
+      passo prende la scelta migliore <b>sul momento</b>. Non garantisce di trovare l'albero <b>ottimo in assoluto</b>
+      (una scelta localmente peggiore potrebbe portare a un albero complessivamente migliore), ma è pragmatica e
+      funziona bene.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      Senza limiti, l'albero continua a dividere finché ogni foglia contiene un solo punto: classifica al 100% i dati di
+      allenamento imparandoli a memoria, rumore incluso. È overfitting da manuale perché costruisce un rettangolino su
+      misura attorno a ogni singolo punto, catturando il rumore invece dello schema vero: ottimo sul training, pessimo
+      su dati nuovi. Due rimedi: il <b>pre-pruning</b> (limitare durante la crescita: profondità massima, minimo di
+      punti per foglia) e il <b>post-pruning</b> (far crescere e poi potare i rami inutili).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.5</div>
+    <p style="margin-bottom:0">
+      Un albero molto <b>profondo</b> = <b>varianza alta</b>: è flessibilissimo, si adatta a ogni punto (rumore
+      compreso) ed è instabile (cambia molto se cambiano pochi dati) — overfitting. Un albero molto <b>corto</b> =
+      <b>bias alto</b>: è troppo semplice, con pochi tagli grossolani non riesce a catturare la vera struttura dei dati
+      — underfitting. La profondità giusta bilancia i due e si sceglie in validazione.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.5 — albero CART su dati 2D: partiziona il piano in rettangoli.
+   Split axis-aligned scelto per minima impurità di Gini. Slider max_depth.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('tr-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('tr-out');
+  const sD = document.getElementById('tr-d');
+
+  // dati 2D con separazione non lineare (un tris di zone)
+  const PTS = [];
+  function add(list,c){ list.forEach(function(p){ PTS.push({x:p[0],y:p[1],c:c}); }); }
+  add([[1.5,1.5],[2.2,2.0],[1.8,2.6],[2.6,1.4],[1.2,2.2],[2.9,2.4],[2.0,1.1],[3.2,1.8],
+       [6.5,6.4],[7.2,7.0],[6.8,5.8],[7.6,6.6],[6.2,7.2],[7.9,7.4],[7.0,6.0],[6.6,7.6]],0);
+  add([[6.5,1.6],[7.2,2.2],[6.8,1.2],[7.6,2.6],[6.2,2.0],[7.9,1.5],[7.0,2.8],[6.6,1.0],
+       [1.5,6.5],[2.2,7.1],[1.8,5.9],[2.6,6.7],[1.2,7.3],[2.9,6.1],[2.0,7.6],[3.2,6.3]],1);
+  const XMIN=0, XMAX=9, YMIN=0, YMAX=9;
+
+  function gini(pts){ if(!pts.length) return 0; let a=0; pts.forEach(function(p){ if(p.c===0)a++; });
+    const p0=a/pts.length, p1=1-p0; return 1-(p0*p0+p1*p1); }
+  function majority(pts){ let a=0; pts.forEach(function(p){ if(p.c===0)a++; }); return a>=pts.length-a?0:1; }
+
+  function bestSplit(pts){
+    let best=null, bestScore=gini(pts), N=pts.length;
+    ['x','y'].forEach(function(ax){
+      const vals=pts.map(function(p){return p[ax];}).sort(function(a,b){return a-b;});
+      for(let i=0;i<vals.length-1;i++){
+        const s=(vals[i]+vals[i+1])/2;
+        const L=pts.filter(function(p){return p[ax]<=s;});
+        const R=pts.filter(function(p){return p[ax]>s;});
+        if(!L.length||!R.length) continue;
+        const score=(L.length*gini(L)+R.length*gini(R))/N;
+        if(score<bestScore-1e-9){ bestScore=score; best={ax:ax,s:s,L:L,R:R}; }
+      }
+    });
+    return best;
+  }
+
+  const leaves=[], splits=[];
+  function build(pts, box, depth){
+    if(depth<=0 || gini(pts)<1e-9 || pts.length<4){ leaves.push({box:box, c:majority(pts)}); return; }
+    const sp=bestSplit(pts);
+    if(!sp){ leaves.push({box:box, c:majority(pts)}); return; }
+    if(sp.ax==='x'){
+      splits.push({x1:sp.s,y1:box.y0,x2:sp.s,y2:box.y1});
+      build(sp.L, {x0:box.x0,x1:sp.s,y0:box.y0,y1:box.y1}, depth-1);
+      build(sp.R, {x0:sp.s,x1:box.x1,y0:box.y0,y1:box.y1}, depth-1);
+    } else {
+      splits.push({x1:box.x0,y1:sp.s,x2:box.x1,y2:sp.s});
+      build(sp.L, {x0:box.x0,x1:box.x1,y0:box.y0,y1:sp.s}, depth-1);
+      build(sp.R, {x0:box.x0,x1:box.x1,y0:sp.s,y1:box.y1}, depth-1);
+    }
+  }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const D=+sD.value;
+    leaves.length=0; splits.length=0;
+    build(PTS, {x0:XMIN,x1:XMAX,y0:YMIN,y1:YMAX}, D);
+
+    p.clear();
+    // riempi i rettangoli-foglia col colore della classe (tenue)
+    leaves.forEach(function(lf){
+      const col = lf.c===0 ? 'rgba(90,120,220,0.14)' : 'rgba(230,150,60,0.16)';
+      p.poly([[lf.box.x0,lf.box.y0],[lf.box.x1,lf.box.y0],[lf.box.x1,lf.box.y1],[lf.box.x0,lf.box.y1]],
+             { color:'none', fill:col, width:0, close:true });
+    });
+    p.grid(1,1); p.axes({ numbers:false });
+    // linee di taglio
+    splits.forEach(function(s){ p.line(s.x1,s.y1,s.x2,s.y2,{ color:'var(--ink-soft)', width:1.4 }); });
+    // punti
+    PTS.forEach(function(pt){ p.dot(pt.x,pt.y,{ color: pt.c===0?'var(--accent)':'var(--warm)', r:4.2, stroke:'#fff', sw:1 }); });
+
+    // accuratezza sul training
+    let ok=0; PTS.forEach(function(pt){
+      const lf=leaves.find(function(l){ return pt.x>=l.box.x0&&pt.x<=l.box.x1&&pt.y>=l.box.y0&&pt.y<=l.box.y1; });
+      if(lf&&lf.c===pt.c) ok++;
+    });
+    const acc=Math.round(100*ok/PTS.length);
+    let note;
+    if(D<=2) note='Pochi tagli, pochi grandi rettangoli: albero <b>semplice</b>, forse troppo (underfitting).';
+    else if(D>=6) note='Tanti tagli: nascono <b>rettangolini</b> su misura attorno ai punti → <b>overfitting</b>. 100% sul training, ma poco affidabile sui dati nuovi.';
+    else note='Buon equilibrio: l\'albero cattura le quattro zone senza esagerare.';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">Profondità <b>'+D+'</b> → <b>'+leaves.length+'</b> foglie (rettangoli), '+
+      'accuratezza sul training <b>'+acc+'%</b>. '+note+'</div>';
+  }
+  sD.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>
