@@ -13,7 +13,7 @@ Motore condiviso in `assets/` (toc.js, book.js, plot.js, style.css). Tema smeral
 - [x] 1 — L'ecosistema scientifico di Python
 - [x] 2 — NumPy: l'array n-dimensionale
 - [x] 3 — NumPy: vettorizzazione e broadcasting
-- [ ] 4 — pandas: Series e DataFrame
+- [x] 4 — pandas: Series e DataFrame
 - [ ] 5 — pandas: selezionare e filtrare
 - [ ] 6 — pandas: pulire i dati
 - [ ] 7 — pandas: raggruppare e combinare

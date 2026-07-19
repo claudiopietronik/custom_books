@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · pandas: Series e DataFrame — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>pandas: Series e DataFrame</h1>
+    <p class="standfirst">
+      NumPy è potente ma «anonimo»: i suoi array sono numeri senza nome. I dati veri, però, hanno <b>etichette</b> —
+      una colonna si chiama «età», una riga è il cliente numero 42 — e mescolano numeri, testo, date, buchi. Serve una
+      struttura più umana, ed è <b>pandas</b>: il livello sopra NumPy pensato per i <b>dati a tabella</b>. <mark>Se NumPy
+      è il motore, pandas è il foglio di calcolo programmabile</mark> — con la potenza di Python al posto del mouse.
+      È lo strumento su cui il data scientist passa la maggior parte delle giornate. In questo capitolo conosciamo i suoi
+      due oggetti fondamentali: la <b>Series</b>, una colonna con etichette (§4.1), e il <b>DataFrame</b>, la tabella
+      intera (§4.2). Impariamo a <b>caricare</b> dati da file (§4.3), a <b>ispezionarli</b> con i tre comandi che
+      userai per primi su ogni dataset (§4.4), e a capire il ruolo di <b>indice e colonne</b> (§4.5). Da qui parte tutto
+      il lavoro sui dati reali.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>Series</b> (§4.1), il <b>DataFrame</b> (§4.2), <b>caricare i dati</b> da CSV/Excel (§4.3),
+      <b>ispezionare</b> con head/info/describe (§4.4), <b>indice e colonne</b> (§4.5). Nel laboratorio (§4.6) carichi e
+      ispezioni un dataset vero.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il foglio di calcolo dei programmatori</div>
+    <p style="margin-bottom:0">
+      Quasi ogni progetto di data science comincia con «carica i dati in un DataFrame». <mark>pandas è il tuo banco da
+      lavoro</mark>: qui i dati grezzi diventano puliti, esplorabili, pronti per i grafici e i modelli. Padroneggiare la
+      Series e il DataFrame — cosa sono, come si leggono, come si ispezionano — è la competenza più usata in assoluto
+      del mestiere. Tutto il resto del libro parte da tabelle come queste.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>La Series</h2>
+
+  <p class="lead">
+    Cominciamo dal mattone: la <b>Series</b>. È una singola colonna di dati, ma con una marcia in più rispetto a un
+    array — ogni valore ha un'<b>etichetta</b> (l'indice).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una colonna con etichette <span class="tag">valori + indice</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">series.py</div>
+      <pre><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>
+
+<span class="nm">voti</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">Series</span>([<span class="nm">28</span>, <span class="nm">30</span>, <span class="nm">18</span>, <span class="nm">25</span>],
+                 <span class="nm">index</span><span class="op">=</span>[<span class="st">"Mat"</span>, <span class="st">"Fis"</span>, <span class="st">"Chi"</span>, <span class="st">"Inf"</span>])
+<span class="bi">print</span>(<span class="nm">voti</span>)
+<span class="cm"># Mat    28</span>
+<span class="cm"># Fis    30</span>
+<span class="cm"># Chi    18</span>
+<span class="cm"># Inf    25</span>
+<span class="cm"># dtype: int64</span>
+
+<span class="nm">voti</span>[<span class="st">"Fis"</span>]        <span class="cm"># 30    accedi per ETICHETTA, non solo per posizione</span>
+<span class="nm">voti</span><span class="op">.</span><span class="fn">mean</span>()        <span class="cm"># 25.25   i metodi di NumPy funzionano anche qui</span>
+<span class="nm">voti</span>[<span class="nm">voti</span> <span class="op">&gt;</span> <span class="nm">24</span>]    <span class="cm"># filtra con maschere, come in NumPy</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>i <b>valori</b></dt>
+        <dd>sono un array NumPy sotto (Series = array + etichette): <mark>eredita la vettorizzazione, le maschere, i
+            metodi (<code>mean</code>, <code>sum</code>…)</mark> che già conosci.</dd>
+        <dt>l'<b>indice</b> (le etichette)</dt>
+        <dd>ogni valore ha un'etichetta. Di default sono i numeri 0, 1, 2…, ma possono essere nomi
+            (<code>"Mat"</code>, <code>"Fis"</code>) o date. <mark>Accedi per etichetta: <code>voti["Fis"]</code></mark> —
+            molto più leggibile di ricordare la posizione.</dd>
+        <dt>il <b>dtype</b></dt>
+        <dd>come in NumPy, tutti i valori hanno un tipo (<code>int64</code>, <code>float64</code>,
+            <code>object</code> per il testo…). pandas lo sceglie in automatico dai dati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Pensa alla Series come a <b>una colonna di un foglio di calcolo con le intestazioni di riga</b>. Da sola serve
+      poco; ma affianca più Series con lo stesso indice e ottieni una tabella — il DataFrame.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>Il DataFrame</h2>
+
+  <p class="lead">
+    Il <b>DataFrame</b> è il protagonista assoluto di pandas: una <b>tabella</b> con righe e colonne etichettate. È
+    fatto di più Series (le colonne) che condividono lo stesso indice (le righe).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una tabella etichettata <span class="tag">colonne = Series affiancate</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">dataframe.py</div>
+      <pre><span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">DataFrame</span>({
+    <span class="st">"nome"</span>:  [<span class="st">"Anna"</span>, <span class="st">"Bruno"</span>, <span class="st">"Carla"</span>],
+    <span class="st">"eta"</span>:   [<span class="nm">25</span>, <span class="nm">31</span>, <span class="nm">28</span>],
+    <span class="st">"citta"</span>: [<span class="st">"Roma"</span>, <span class="st">"Milano"</span>, <span class="st">"Roma"</span>],
+})
+<span class="bi">print</span>(<span class="nm">df</span>)
+<span class="cm">#     nome  eta   citta</span>
+<span class="cm"># 0   Anna   25    Roma</span>
+<span class="cm"># 1  Bruno   31  Milano</span>
+<span class="cm"># 2  Carla   28    Roma</span>
+
+<span class="nm">df</span>[<span class="st">"eta"</span>]        <span class="cm"># una colonna → è una Series</span>
+<span class="nm">df</span>[[<span class="st">"nome"</span>, <span class="st">"eta"</span>]]   <span class="cm"># più colonne → un DataFrame più piccolo</span>
+<span class="nm">df</span><span class="op">.</span><span class="nm">shape</span>          <span class="cm"># (3, 3)   righe, colonne (come NumPy)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>si crea da un <b>dizionario</b></dt>
+        <dd>il modo più comune «a mano»: chiavi = <b>nomi delle colonne</b>, valori = liste (le colonne). <mark>Ogni
+            colonna è una Series; la tabella le tiene allineate sullo stesso indice di riga.</mark></dd>
+        <dt>selezionare <b>una colonna</b>: <span class="mono">df["eta"]</span></dt>
+        <dd>restituisce una <b>Series</b>. È l'operazione che farai più spesso.</dd>
+        <dt>selezionare <b>più colonne</b>: <span class="mono">df[["nome", "eta"]]</span></dt>
+        <dd>con una <b>lista</b> di nomi (doppie parentesi quadre!) ottieni un DataFrame ridotto. <mark>Le doppie
+            parentesi confondono all'inizio: sono la lista dentro la selezione.</mark></dd>
+        <dt><span class="mono">df.shape</span>, <span class="mono">df.columns</span></dt>
+        <dd><code>shape</code> dà (righe, colonne); <code>columns</code> elenca i nomi delle colonne. Le prime cose che
+            guardi su una tabella nuova.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quasi tutto in pandas gira attorno a questa idea: <mark>un DataFrame è una tabella; selezioni colonne con
+      <code>df["nome"]</code>, righe con maschere e con <code>loc/iloc</code> (Cap. 5); i metodi lavorano su colonne
+      intere</mark>, in stile vettorizzato ereditato da NumPy. Nella pratica non lo creerai a mano: lo caricherai da un
+      file.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Caricare i dati (CSV, Excel…)</h2>
+
+  <p class="lead">
+    Nella vita reale i dati stanno in <b>file</b>: fogli CSV esportati da un gestionale, tabelle Excel, database. pandas
+    li carica in un DataFrame con una sola riga, ed è quasi sempre la prima riga di ogni analisi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Leggere e scrivere dati <span class="tag">read_… e to_…</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">caricare.py</div>
+      <pre><span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">read_csv</span>(<span class="st">"dati.csv"</span>)        <span class="cm"># il caso più comune: un file CSV</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">read_excel</span>(<span class="st">"dati.xlsx"</span>)     <span class="cm"># un foglio Excel</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">read_csv</span>(<span class="st">"https://.../dati.csv"</span>)  <span class="cm"># anche direttamente da un URL!</span>
+
+<span class="cm"># opzioni utili di read_csv (spesso servono):</span>
+<span class="nm">pd</span><span class="op">.</span><span class="fn">read_csv</span>(<span class="st">"dati.csv"</span>,
+            <span class="nm">sep</span><span class="op">=</span><span class="st">";"</span>,            <span class="cm"># separatore ; invece di , (comune in Italia)</span>
+            <span class="nm">decimal</span><span class="op">=</span><span class="st">","</span>,        <span class="cm"># virgola come separatore decimale</span>
+            <span class="nm">parse_dates</span><span class="op">=</span>[<span class="st">"data"</span>])  <span class="cm"># leggi la colonna "data" come date</span>
+
+<span class="nm">df</span><span class="op">.</span><span class="fn">to_csv</span>(<span class="st">"pulito.csv"</span>, <span class="nm">index</span><span class="op">=</span><span class="kw">False</span>)   <span class="cm"># salvare (senza la colonna indice)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">read_csv</span> — il cavallo di battaglia</dt>
+        <dd>legge un file <b>CSV</b> («comma-separated values», valori separati da virgola): il formato universale dei
+            dati a tabella. <mark>Funziona anche con un <b>URL</b></mark>: comodissimo per i dataset pubblici.</dd>
+        <dt>le <b>opzioni</b> che salvano la giornata</dt>
+        <dd>i CSV «italiani» spesso usano <code>;</code> come separatore e <code>,</code> come decimale: gli argomenti
+            <code>sep</code> e <code>decimal</code> lo gestiscono. <code>parse_dates</code> riconosce le colonne di date
+            (Cap. 8). <mark>Se una tabella caricata sembra «tutta in una colonna» o coi numeri storti, il problema è quasi
+            sempre qui.</mark></dd>
+        <dt>salvare: <span class="mono">to_csv</span>, <span class="mono">to_excel</span></dt>
+        <dd>l'inverso: scrivi il DataFrame su file. <code>index=False</code> evita di salvare anche la colonna
+            dell'indice, di solito indesiderata.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Ispezionare: head, info, describe</h2>
+
+  <p class="lead">
+    Appena caricato un dataset (magari con migliaia di righe), <b>non</b> lo stampi tutto: lo <b>ispezioni</b> con tre
+    comandi che diventeranno un riflesso automatico. Sono i primi tre gesti su ogni tabella nuova.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre comandi da fare sempre per primi <span class="tag">head · info · describe</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">df.head()</span> — dai un'occhiata</dt>
+        <dd>mostra le <b>prime 5 righe</b> (o <code>df.head(10)</code> per dieci): per <b>vedere</b> com'è fatta la
+            tabella, che colonne ha, che aspetto hanno i valori. <code>df.tail()</code> mostra le ultime.</dd>
+        <dt><span class="mono">df.info()</span> — la radiografia</dt>
+        <dd>elenca le <b>colonne</b>, il loro <b>tipo</b> (numerico, testo, data) e <b>quanti valori non-nulli</b>
+            hanno. <mark>È come scopri subito i <b>valori mancanti</b></mark> (una colonna con meno valori del totale ha
+            dei buchi) e i tipi sbagliati (un numero letto come testo). Fondamentale.</dd>
+        <dt><span class="mono">df.describe()</span> — le statistiche al volo</dt>
+        <dd>per le colonne numeriche, dà media, deviazione, minimo, massimo e i quartili. <mark>Un colpo d'occhio su
+            scala e distribuzione</mark> di ogni colonna: scopri subito valori assurdi (un'età di 200, un prezzo
+            negativo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questi tre — più <code>df.shape</code> e <code>df.columns</code> — sono il rito di benvenuto a ogni dataset:
+      <mark>«quanto è grande? che colonne? che tipi? ci sono buchi? che valori?»</mark>. Nel widget qui sotto vedi cosa
+      restituisce ciascuno su una tabella d'esempio.
+    </div>
+  </div>
+
+  <div class="widget" id="w-insp">
+    <div class="w-head">
+      <span>I comandi di ispezione su un DataFrame</span>
+      <span class="hint">scegli un comando, vedi cosa restituisce</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem; overflow-x:auto">
+      <div id="in-view" style="font-family:var(--mono); font-size:.8rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.4rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn on" data-v="0">df</button>
+      <button class="w-btn" data-v="1">df.head(2)</button>
+      <button class="w-btn" data-v="2">df.info()</button>
+      <button class="w-btn" data-v="3">df.describe()</button>
+    </div>
+    <div class="w-readout" id="in-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>Indice e colonne</h2>
+
+  <p class="lead">
+    Ogni DataFrame ha due «etichettature»: l'<b>indice</b> (i nomi delle righe) e le <b>colonne</b> (i nomi delle
+    colonne). Capirle evita confusione e sblocca operazioni potenti.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'indice: il «nome» di ogni riga</div>
+    <p style="margin-bottom:.5rem">
+      Di default l'indice è <code>0, 1, 2, …</code> (come le righe di un foglio). Ma spesso conviene usare come indice
+      una colonna significativa — un codice cliente, una data — così puoi accedere alle righe <b>per nome</b>.
+    </p>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">indice.py</div>
+      <pre><span class="nm">df</span><span class="op">.</span><span class="nm">columns</span>                 <span class="cm"># i nomi delle colonne</span>
+<span class="nm">df</span><span class="op">.</span><span class="nm">index</span>                   <span class="cm"># le etichette delle righe</span>
+
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span><span class="op">.</span><span class="fn">set_index</span>(<span class="st">"nome"</span>)   <span class="cm"># usa "nome" come indice di riga</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">reset_index</span>()            <span class="cm"># torna all'indice numerico 0,1,2...</span>
+
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span><span class="op">.</span><span class="fn">rename</span>(<span class="nm">columns</span><span class="op">=</span>{<span class="st">"eta"</span>: <span class="st">"anni"</span>})   <span class="cm"># rinomina una colonna</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      <mark>L'indice non è «solo numeri»: è un vero sistema di etichette</mark> che permette allineamenti automatici
+      (quando combini due DataFrame, pandas allinea per indice) e accessi per nome (Cap. 5, con <code>loc</code>). Per
+      ora tieni a mente: <code>set_index</code> promuove una colonna a indice, <code>reset_index</code> fa il contrario,
+      <code>rename</code> cambia i nomi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Carichiamo un piccolo dataset e facciamo il «rito di benvenuto»: guardarlo, radiografarlo, riassumerlo. È
+    esattamente ciò che farai all'inizio di ogni progetto, che il file abbia 10 righe o 10 milioni.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">esplora.py</div>
+    <pre><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>
+
+<span class="cm"># in un progetto vero: df = pd.read_csv("clienti.csv")</span>
+<span class="cm"># qui costruiamo un DataFrame d'esempio a mano</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">DataFrame</span>({
+    <span class="st">"nome"</span>:   [<span class="st">"Anna"</span>, <span class="st">"Bruno"</span>, <span class="st">"Carla"</span>, <span class="st">"Dino"</span>, <span class="st">"Ester"</span>],
+    <span class="st">"eta"</span>:    [<span class="nm">25</span>, <span class="nm">31</span>, <span class="nm">28</span>, <span class="nm">42</span>, <span class="nm">35</span>],
+    <span class="st">"citta"</span>:  [<span class="st">"Roma"</span>, <span class="st">"Milano"</span>, <span class="st">"Roma"</span>, <span class="st">"Torino"</span>, <span class="st">"Milano"</span>],
+    <span class="st">"spesa"</span>:  [<span class="nm">120.5</span>, <span class="nm">89.0</span>, <span class="nm">210.0</span>, <span class="nm">45.5</span>, <span class="nm">175.0</span>],
+})
+
+<span class="bi">print</span>(<span class="nm">df</span><span class="op">.</span><span class="nm">shape</span>)          <span class="cm"># quanto è grande</span>
+<span class="bi">print</span>(<span class="nm">df</span><span class="op">.</span><span class="fn">head</span>(<span class="nm">3</span>))         <span class="cm"># le prime 3 righe</span>
+<span class="bi">print</span>(<span class="nm">df</span>[<span class="st">"spesa"</span>]<span class="op">.</span><span class="fn">mean</span>())  <span class="cm"># spesa media (metodo su una colonna)</span>
+<span class="bi">print</span>(<span class="nm">df</span><span class="op">.</span><span class="fn">describe</span>())        <span class="cm"># statistiche delle colonne numeriche</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">(5, 4)
+    nome  eta  citta  spesa
+0   Anna   25   Roma  120.5
+1  Bruno   31 Milano   89.0
+2  Carla   28   Roma  210.0
+128.0
+             eta       spesa
+count   5.000000    5.000000
+mean   32.200000  128.000000
+std     6.610598   64.239...
+min    25.000000   45.500000
+...     ...        ...</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      In pochi comandi hai «conosciuto» il dataset: <code>shape</code> dice 5 righe × 4 colonne; <code>head(3)</code> ti
+      fa <b>vedere</b> i dati; <code>df["spesa"].mean()</code> calcola la media di una colonna (128,0); e
+      <code>describe()</code> riassume le colonne numeriche (nota: <mark>ignora le colonne di testo come «nome» e
+      «citta», e mostra solo le numeriche</mark>). Da qui in poi lavorerai su questa tabella: selezionare, filtrare,
+      pulire, raggruppare — i prossimi capitoli. <mark>Ogni analisi comincia proprio così.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li>La <b>Series</b> è una colonna con etichette (indice): è un array NumPy + etichette, quindi eredita
+          vettorizzazione, metodi e maschere (§4.1).</li>
+      <li>Il <b>DataFrame</b> è una tabella (colonne = Series affiancate sullo stesso indice). Selezioni una colonna con
+          <code>df["col"]</code> (Series), più colonne con <code>df[["a","b"]]</code> (§4.2).</li>
+      <li>Si carica da file con <code>pd.read_csv</code> / <code>read_excel</code> (anche da URL); attenzione a
+          <code>sep</code>/<code>decimal</code> per i CSV «italiani» (§4.3).</li>
+      <li>Il rito di benvenuto a ogni dataset: <code>shape</code>, <code>head()</code>, <code>info()</code> (tipi e
+          valori mancanti!), <code>describe()</code> (statistiche) (§4.4). L'<b>indice</b> etichetta le righe;
+          <code>set_index</code>/<code>reset_index</code>/<code>rename</code> lo gestiscono (§4.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sai portare i dati dentro pandas e farti un'idea di com'è fatta la tabella. Il passo successivo è il più
+    frequente di tutti: <b>selezionare</b> esattamente le righe e le colonne che ti servono — un cliente, i maggiorenni
+    di Milano, solo due colonne. Nel <strong>Capitolo 5</strong> impariamo a <b>selezionare e filtrare</b> con
+    precisione: la differenza fondamentale tra <code>loc</code> (per etichetta) e <code>iloc</code> (per posizione), le
+    maschere booleane sui DataFrame, e le scorciatoie come <code>query</code>. È la cassetta degli attrezzi con cui
+    «interroghi» una tabella.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra una Series e un DataFrame? In che senso una colonna di un DataFrame «è» una Series?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Dato un DataFrame <code>df</code> con colonne <code>nome</code>, <code>eta</code>, <code>citta</code>, scrivi come
+      ottenere: (a) solo la colonna <code>eta</code>; (b) le colonne <code>nome</code> ed <code>eta</code> insieme.
+      Cosa cambia nel risultato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Carichi un CSV italiano e la tabella risulta «tutta in una colonna», con i numeri trattati come testo. Quali due
+      opzioni di <code>read_csv</code> probabilmente ti servono, e perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Hai appena caricato un dataset sconosciuto. Quali comandi usi, e in che ordine, per capire quanto è grande, che
+      colonne ha, se ci sono valori mancanti e che valori contengono le colonne numeriche?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.5</div>
+    <p style="margin-bottom:0">
+      A cosa serve <code>df.set_index("id_cliente")</code>? E <code>df.describe()</code> perché non mostra la colonna
+      <code>citta</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">Sezione 4.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      Una <b>Series</b> è una singola colonna di dati con etichette (un array + un indice); un <b>DataFrame</b> è una
+      tabella con più colonne, tutte allineate sullo stesso indice di riga. Una colonna di un DataFrame «è» una Series
+      perché, quando la selezioni con <code>df["col"]</code>, ottieni esattamente quell'oggetto: i suoi valori con
+      l'indice delle righe del DataFrame.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>df["eta"]</code> → restituisce una <b>Series</b> (una sola colonna). (b) <code>df[["nome", "eta"]]</code>
+      (doppie parentesi, cioè una <b>lista</b> di nomi) → restituisce un <b>DataFrame</b> con due colonne. La differenza:
+      selezionare una colonna con parentesi singole dà una Series, selezionarne una o più con una lista dà sempre un
+      DataFrame.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      Probabilmente serve <code>sep=";"</code> (i CSV italiani usano spesso il punto e virgola come separatore, non la
+      virgola: se pandas non lo sa, mette tutto in un'unica colonna) e <code>decimal=","</code> (in Italia il separatore
+      decimale è la virgola: senza questa opzione, «120,5» viene letto come testo invece che come numero). Con
+      <code>pd.read_csv("dati.csv", sep=";", decimal=",")</code> la tabella si carica correttamente.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      Nell'ordine: <code>df.shape</code> (quante righe e colonne), <code>df.head()</code> (per <b>vedere</b> i dati e le
+      colonne), <code>df.info()</code> (i tipi di ogni colonna e il numero di valori non-nulli, da cui si scoprono i
+      <b>valori mancanti</b>), <code>df.describe()</code> (media, min, max, quartili delle colonne numeriche, per
+      cogliere scala e valori anomali).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.5</div>
+    <p style="margin-bottom:0">
+      <code>df.set_index("id_cliente")</code> usa la colonna <code>id_cliente</code> come <b>indice di riga</b>: da quel
+      momento puoi identificare e accedere alle righe tramite il codice cliente (invece del numero di posizione), e gli
+      allineamenti tra tabelle avvengono su quel codice. <code>df.describe()</code> non mostra <code>citta</code> perché
+      di default riassume solo le colonne <b>numeriche</b>: media, quartili ecc. non hanno senso per il testo (per quelle
+      esiste <code>df.describe(include="object")</code>, che dà conteggi e valori più frequenti).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.4 — ispezione di un DataFrame: df / head / info / describe.
+   Rende una tabella HTML e simula gli output. Solo HTML/JS.
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('in-view');
+  if (!view) return;
+  const out = document.getElementById('in-out');
+  const btns = document.querySelectorAll('#w-insp .w-btn');
+
+  const COLS = ['nome', 'eta', 'citta', 'spesa'];
+  const ROWS = [
+    ['Anna', 25, 'Roma', 120.5],
+    ['Bruno', 31, 'Milano', 89.0],
+    ['Carla', 28, 'Roma', 210.0],
+    ['Dino', 42, 'Torino', 45.5],
+    ['Ester', 35, 'Milano', 175.0]
+  ];
+
+  function table(rows, n) {
+    const shown = n ? rows.slice(0, n) : rows;
+    let h = '<table style="border-collapse:collapse; font-size:.8rem"><tr><th style="padding:.2rem .5rem; color:var(--ink-faint)"></th>';
+    COLS.forEach(function (c) { h += '<th style="padding:.2rem .6rem; text-align:right; color:var(--accent)">' + c + '</th>'; });
+    h += '</tr>';
+    shown.forEach(function (r, i) {
+      h += '<tr><td style="padding:.15rem .5rem; color:var(--ink-faint)">' + i + '</td>';
+      r.forEach(function (v) { h += '<td style="padding:.15rem .6rem; text-align:right">' + v + '</td>'; });
+      h += '</tr>';
+    });
+    return h + '</table>';
+  }
+
+  function views(i) {
+    if (i === 0) {
+      view.innerHTML = table(ROWS);
+      out.innerHTML = '<div style="text-align:left; font-size:.92rem"><code>df</code> — l\'intera tabella: 5 righe, 4 colonne. L\'indice (0-4) è a sinistra.</div>';
+    } else if (i === 1) {
+      view.innerHTML = table(ROWS, 2);
+      out.innerHTML = '<div style="text-align:left; font-size:.92rem"><code>df.head(2)</code> — solo le prime 2 righe, per <b>dare un\'occhiata</b> senza stampare tutto.</div>';
+    } else if (i === 2) {
+      view.innerHTML =
+        '&lt;class \'pandas.core.frame.DataFrame\'&gt;<br>RangeIndex: 5 entries, 0 to 4<br>' +
+        'Data columns (total 4 columns):<br>' +
+        '&nbsp;#&nbsp;&nbsp;Column&nbsp;&nbsp;Non-Null&nbsp;&nbsp;Dtype<br>' +
+        '&nbsp;0&nbsp;&nbsp;nome&nbsp;&nbsp;&nbsp;&nbsp;5 non-null&nbsp;&nbsp;object<br>' +
+        '&nbsp;1&nbsp;&nbsp;eta&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5 non-null&nbsp;&nbsp;int64<br>' +
+        '&nbsp;2&nbsp;&nbsp;citta&nbsp;&nbsp;&nbsp;5 non-null&nbsp;&nbsp;object<br>' +
+        '&nbsp;3&nbsp;&nbsp;spesa&nbsp;&nbsp;&nbsp;5 non-null&nbsp;&nbsp;float64';
+      out.innerHTML = '<div style="text-align:left; font-size:.92rem"><code>df.info()</code> — tipi e conteggi: qui <b>5 non-null</b> ovunque = <b>nessun valore mancante</b>. <code>object</code> = testo, <code>int64</code>/<code>float64</code> = numeri.</div>';
+    } else {
+      view.innerHTML =
+        '<table style="border-collapse:collapse; font-size:.8rem">' +
+        '<tr><th style="padding:.2rem .6rem"></th><th style="padding:.2rem .8rem; color:var(--accent)">eta</th><th style="padding:.2rem .8rem; color:var(--accent)">spesa</th></tr>' +
+        '<tr><td style="color:var(--ink-faint); padding:.15rem .6rem">count</td><td style="text-align:right; padding:.15rem .8rem">5.00</td><td style="text-align:right; padding:.15rem .8rem">5.00</td></tr>' +
+        '<tr><td style="color:var(--ink-faint); padding:.15rem .6rem">mean</td><td style="text-align:right; padding:.15rem .8rem">32.20</td><td style="text-align:right; padding:.15rem .8rem">128.00</td></tr>' +
+        '<tr><td style="color:var(--ink-faint); padding:.15rem .6rem">std</td><td style="text-align:right; padding:.15rem .8rem">6.61</td><td style="text-align:right; padding:.15rem .8rem">64.24</td></tr>' +
+        '<tr><td style="color:var(--ink-faint); padding:.15rem .6rem">min</td><td style="text-align:right; padding:.15rem .8rem">25.00</td><td style="text-align:right; padding:.15rem .8rem">45.50</td></tr>' +
+        '<tr><td style="color:var(--ink-faint); padding:.15rem .6rem">max</td><td style="text-align:right; padding:.15rem .8rem">42.00</td><td style="text-align:right; padding:.15rem .8rem">210.00</td></tr>' +
+        '</table>';
+      out.innerHTML = '<div style="text-align:left; font-size:.92rem"><code>df.describe()</code> — statistiche delle sole colonne <b>numeriche</b> (eta, spesa). Le colonne di testo (nome, citta) sono ignorate.</div>';
+    }
+    btns.forEach(function (b, k) { b.classList.toggle('on', k === i); });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { views(+b.getAttribute('data-v')); });
+  });
+  views(0);
+})();
+</script>
+</body>
+</html>
