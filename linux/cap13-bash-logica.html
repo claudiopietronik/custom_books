@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Bash scripting: logica — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Bash scripting: logica</h1>
+    <p class="standfirst">
+      I tuoi script sanno eseguire comandi e usare variabili, ma finora vanno «dritti», dall'alto in basso, sempre
+      uguali. Per renderli davvero utili serve dar loro la capacità di <b>ragionare</b>: <b>decidere</b> cosa fare in
+      base a una condizione («se il file esiste, aggiornalo; altrimenti crealo») e <b>ripetere</b> un'azione più volte
+      («per ogni file nella cartella, comprimilo»). Sono le stesse due idee di ogni linguaggio di programmazione —
+      condizioni e cicli — che se hai fatto Python o C++ già conosci; qui le vediamo nella sintassi di bash, che ha le
+      sue peculiarità (a volte un po' bizzarre, ma con uno schema regolare). Con queste, uno script smette di essere
+      una lista di comandi e diventa un <b>piccolo programma intelligente</b>. In questo capitolo: le <b>condizioni</b>
+      con <code>if</code> (§13.1), i cicli <b>for</b> (§13.2) e <b>while</b> (§13.3), e come combinarli in logica utile
+      (§13.4). <mark>È il capitolo che sblocca il vero potere dell'automazione: script che si adattano e ripetono.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>condizioni</b> con <code>if</code> e <code>test</code> (§13.1), il ciclo <b>for</b> (§13.2), il ciclo
+      <b>while</b> (§13.3), combinare la <b>logica</b> (§13.4). Nel laboratorio (§13.5) scrivi uno script utile.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: script che si adattano</div>
+    <p style="margin-bottom:0">
+      Uno script che fa sempre la stessa cosa, ciecamente, è fragile. <mark>Con condizioni e cicli, i tuoi script si
+      adattano</mark>: controllano se qualcosa esiste, reagiscono agli errori, elaborano tanti file uno per uno. È ciò
+      che serve per l'automazione vera — un backup che verifica, una pulizia che scorre tutti i file, un controllo che
+      decide. Le fondamenta di ogni script utile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Condizioni: if, test</h2>
+
+  <p class="lead">
+    L'<code>if</code> permette allo script di <b>scegliere</b>: esegue un blocco di comandi <b>solo se</b> una
+    condizione è vera. La sintassi di bash è un po' particolare, ma segue uno schema fisso.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">controlla.sh — un if</div>
+    <pre><span class="cm">#!/bin/bash</span>
+FILE<span class="op">=</span><span class="st">"dati.txt"</span>
+
+<span class="kw">if</span> [ <span class="fl">-f</span> <span class="rs">"$FILE"</span> ]; <span class="kw">then</span>          <span class="cm"># se il file esiste...</span>
+    <span class="bi">echo</span> <span class="st">"Il file esiste!"</span>
+<span class="kw">else</span>                              <span class="cm"># ...altrimenti</span>
+    <span class="bi">echo</span> <span class="st">"Il file non c'è."</span>
+<span class="kw">fi</span>                                <span class="cm"># fine dell'if (fi = if al contrario!)</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di un if <span class="tag">if [ condizione ]; then ... else ... fi</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">if [ condizione ]; then</span></dt>
+        <dd>«se la condizione è vera, allora…». <mark>Attenzione agli <b>spazi</b> dentro le parentesi quadre</mark>:
+            <code>[ -f "$FILE" ]</code> con spazi attorno (è una trappola classica). Le <code>[ ]</code> sono in realtà
+            il comando <code>test</code> travestito.</dd>
+        <dt><span class="mono">else</span> e <span class="mono">fi</span></dt>
+        <dd><code>else</code> = «altrimenti» (facoltativo); <code>fi</code> <b>chiude</b> l'if (è «if» scritto al
+            contrario — una peculiarità di bash!). <mark>Ogni if va chiuso con <code>fi</code>.</mark></dd>
+        <dt>i <b>test</b> più comuni</dt>
+        <dd><code>-f file</code> (il file esiste?), <code>-d cartella</code> (la cartella esiste?), <code>-z "$VAR"</code>
+            (la variabile è vuota?). Per i numeri: <code>-eq</code> (uguale), <code>-gt</code> (maggiore),
+            <code>-lt</code> (minore). <mark>Per il testo: <code>=</code> (uguale), <code>!=</code> (diverso)</mark>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La sintassi di bash per le condizioni è famosa per le sue stranezze: le <b>parentesi quadre con gli spazi</b>, il
+      <code>fi</code> per chiudere, i test con lettere (<code>-gt</code> invece di <code>&gt;</code>). <mark>Non è la
+      più elegante, ma ha uno schema regolare</mark> che, una volta imparato, si ripete uguale. Un consiglio: metti
+      sempre le variabili tra <b>virgolette</b> nei test (<code>"$FILE"</code>) — evita errori quando la variabile è
+      vuota o contiene spazi. Prova le condizioni nel widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-if">
+    <div class="w-head">
+      <span>Un if dal vivo</span>
+      <span class="hint">cambia il valore, guarda quale ramo scatta</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:220px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">controlla_eta.sh</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="if-code" style="margin:0; font-size:12px"></pre></div>
+        <div style="margin-top:.6rem; display:flex; align-items:center; gap:.5rem">
+          <label style="font-size:.85rem; color:var(--ink-soft)">ETA=</label>
+          <input type="range" id="if-eta" min="0" max="100" value="20" style="flex:1">
+          <span id="if-etav" style="font-family:var(--mono); min-width:34px; text-align:right">20</span>
+        </div>
+      </div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">output</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="if-out-term" style="margin:0; min-height:60px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="if-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Cicli: for</h2>
+
+  <p class="lead">
+    Il ciclo <code>for</code> ripete un blocco di comandi <b>per ogni elemento</b> di una lista. È perfetto per
+    elaborare tanti file, o ripetere un'azione un numero noto di volte.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">esempi di for</div>
+    <pre><span class="cm">#!/bin/bash</span>
+<span class="cm"># per ogni parola nella lista</span>
+<span class="kw">for</span> FRUTTO <span class="kw">in</span> mela pera kiwi; <span class="kw">do</span>
+    <span class="bi">echo</span> <span class="st">"Mi piace la </span><span class="rs">$FRUTTO</span><span class="st">"</span>
+<span class="kw">done</span>
+
+<span class="cm"># per ogni file .txt della cartella (con i jolly del Cap. 4!)</span>
+<span class="kw">for</span> FILE <span class="kw">in</span> *.txt; <span class="kw">do</span>
+    <span class="bi">echo</span> <span class="st">"Elaboro </span><span class="rs">$FILE</span><span class="st">"</span>
+<span class="kw">done</span>
+
+<span class="cm"># per un intervallo di numeri</span>
+<span class="kw">for</span> N <span class="kw">in</span> {1..5}; <span class="kw">do</span>
+    <span class="bi">echo</span> <span class="st">"Giro numero </span><span class="rs">$N</span><span class="st">"</span>
+<span class="kw">done</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il ciclo for <span class="tag">for X in lista; do ... done</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">for X in lista; do ... done</span></dt>
+        <dd>ripete il blocco (tra <code>do</code> e <code>done</code>) una volta <b>per ogni elemento</b> della lista,
+            mettendolo di volta in volta nella variabile <code>X</code>. <mark><code>done</code> chiude il ciclo</mark>
+            (come <code>fi</code> per l'if).</dd>
+        <dt>la lista: parole, file, numeri</dt>
+        <dd>può essere un elenco di parole (<code>mela pera kiwi</code>), un pattern di file coi jolly
+            (<code>*.txt</code>), o un intervallo (<code>{1..5}</code>). <mark>Il caso più potente: iterare sui
+            file</mark> di una cartella.</dd>
+        <dt>l'uso killer: elaborare tanti file</dt>
+        <dd><code>for FILE in *.log; do ...; done</code> = «fai qualcosa a <b>ogni</b> file .log». <mark>Ecco perché lo
+            scripting fa risparmiare tempo</mark>: un'azione ripetuta su cento file, scritta una volta.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il ciclo <code>for</code> è dove lo scripting mostra i muscoli: <mark>ciò che faresti a mano su un file, lo fai
+      automaticamente su <b>tutti</b></mark>. «Rinomina tutte le foto», «comprimi tutti i log vecchi», «controlla ogni
+      cartella» — tutto diventa un <code>for</code> di poche righe. Combinato coi jolly (Cap. 4) e coi comandi che già
+      conosci, è uno strumento enorme. Nota i «chiuditori» di bash: <code>if</code>→<code>fi</code>,
+      <code>for</code>→<code>done</code>: ogni blocco ha il suo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Cicli: while</h2>
+
+  <p class="lead">
+    Il ciclo <code>while</code> ripete un blocco <b>finché</b> una condizione resta vera. Si usa quando non sai in
+    anticipo quante ripetizioni serviranno (a differenza del <code>for</code>, che scorre una lista definita).
+  </p>
+
+  <div class="term">
+    <div class="t-head file">conta.sh — un while</div>
+    <pre><span class="cm">#!/bin/bash</span>
+N<span class="op">=</span><span class="nm">1</span>
+<span class="kw">while</span> [ <span class="rs">$N</span> <span class="fl">-le</span> <span class="nm">3</span> ]; <span class="kw">do</span>       <span class="cm"># finché N è &lt;= 3</span>
+    <span class="bi">echo</span> <span class="st">"Conteggio: </span><span class="rs">$N</span><span class="st">"</span>
+    N<span class="op">=</span><span class="rs">$((</span><span class="rs">N + 1</span><span class="rs">))</span>            <span class="cm"># $(( )) fa i calcoli: aumenta N di 1</span>
+<span class="kw">done</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il ciclo while <span class="tag">while [ condizione ]; do ... done</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">while [ condizione ]; do ... done</span></dt>
+        <dd>ripete il blocco <b>finché</b> la condizione è vera; appena diventa falsa, si ferma. <mark>Usa gli stessi
+            test dell'<code>if</code></mark> (<code>-le</code>, <code>-gt</code>…).</dd>
+        <dt>attenzione: aggiorna la condizione!</dt>
+        <dd>dentro il ciclo devi <b>modificare</b> qualcosa che alla fine renda la condizione falsa (qui, incrementi
+            <code>N</code>). <mark>Se dimentichi, il ciclo va <b>all'infinito</b></mark> (loop infinito): un errore
+            classico. Si interrompe con <code>Ctrl+C</code>.</dd>
+        <dt>i calcoli: <span class="mono">$(( ))</span></dt>
+        <dd>per fare aritmetica in bash si usa <code>$(( espressione ))</code>: <code>$((N + 1))</code> = «N più 1».
+            <mark>Necessario perché bash tratta tutto come testo</mark> di default; le doppie parentesi dicono «questo è
+            un calcolo».</dd>
+        <dt>for vs while</dt>
+        <dd><b>for</b> quando sai <b>su cosa</b> iterare (una lista, dei file); <b>while</b> quando ripeti <b>finché</b>
+            una condizione regge (numero di giri non noto in anticipo). <mark>Due strumenti per due situazioni.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il <code>while</code> è meno usato del <code>for</code> nell'automazione quotidiana (di solito iteri su file, e lì
+      il <code>for</code> è naturale), ma è indispensabile quando la fine dipende da una condizione: «finché il server
+      non risponde, riprova», «finché ci sono righe da leggere». <mark>Ricorda l'incremento</mark> per non cadere nel
+      loop infinito — l'errore più comune con while.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>Mettere insieme la logica</h2>
+
+  <p class="lead">
+    La vera potenza emerge <b>combinando</b> condizioni e cicli: uno script che scorre dei file e, per ciascuno,
+    decide cosa fare. È lo schema di quasi ogni script di automazione utile.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">organizza.sh — for + if insieme</div>
+    <pre><span class="cm">#!/bin/bash</span>
+<span class="cm"># per ogni file nella cartella corrente...</span>
+<span class="kw">for</span> FILE <span class="kw">in</span> *; <span class="kw">do</span>
+    <span class="kw">if</span> [ <span class="fl">-d</span> <span class="rs">"$FILE"</span> ]; <span class="kw">then</span>            <span class="cm"># ...se è una cartella</span>
+        <span class="bi">echo</span> <span class="st">"[CARTELLA] </span><span class="rs">$FILE</span><span class="st">"</span>
+    <span class="kw">else</span>                                <span class="cm"># ...altrimenti è un file</span>
+        <span class="bi">echo</span> <span class="st">"[file]     </span><span class="rs">$FILE</span><span class="st">"</span>
+    <span class="kw">fi</span>
+<span class="kw">done</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔗</span> Lo schema «scorri e decidi»</div>
+    <p style="margin-bottom:0">
+      Guarda il pattern: un <b>ciclo</b> (<code>for</code>) scorre gli elementi, e dentro un <b>if</b> decide cosa fare
+      per ciascuno. <mark>Questo «scorri e decidi» è la struttura di innumerevoli script</mark>: «per ogni file, se è
+      vecchio comprimilo»; «per ogni utente, se è inattivo avvisa»; «per ogni server, se non risponde segnala». È la
+      stessa logica dei programmi in Python/C++ (cicli + condizioni), applicata ai file e ai comandi del sistema. Con
+      questi due mattoni — <code>for</code> e <code>if</code> — più i comandi che già conosci, puoi automatizzare quasi
+      qualsiasi compito ripetitivo. Nel prossimo capitolo (e nel progetto finale) vedrai script sempre più completi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Laboratorio: uno script utile</h2>
+
+  <p class="lead">
+    Scriviamo uno script che fa qualcosa di concreto: conta i file <code>.txt</code> in una cartella e avvisa se non
+    ce ne sono. Unisce variabili, comandi, condizioni.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">conta-txt.sh</div>
+    <pre><span class="cm">#!/bin/bash</span>
+<span class="cm"># conta i file .txt (con la sostituzione di comando del Cap. 12)</span>
+CONTA<span class="op">=</span><span class="rs">$(</span><span class="cmd">ls</span> *.txt <span class="nm">2</span>&gt;/dev/null | <span class="cmd">wc</span> <span class="fl">-l</span><span class="rs">)</span>
+
+<span class="kw">if</span> [ <span class="rs">"$CONTA"</span> <span class="fl">-eq</span> <span class="nm">0</span> ]; <span class="kw">then</span>
+    <span class="bi">echo</span> <span class="st">"Nessun file .txt qui."</span>
+<span class="kw">else</span>
+    <span class="bi">echo</span> <span class="st">"Ci sono </span><span class="rs">$CONTA</span><span class="st"> file .txt:"</span>
+    <span class="kw">for</span> F <span class="kw">in</span> *.txt; <span class="kw">do</span>
+        <span class="bi">echo</span> <span class="st">"  - </span><span class="rs">$F</span><span class="st">"</span>
+    <span class="kw">done</span>
+<span class="kw">fi</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — eseguirlo</div>
+    <pre><span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">conta-txt.sh</span>
+<span class="p">$</span> <span class="cmd">./conta-txt.sh</span>
+<span class="out">Ci sono 3 file .txt:
+  - note.txt
+  - todo.txt
+  - lista.txt</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai costruito</div>
+    <p style="margin-bottom:0">
+      Uno script che <b>ragiona</b>: conta i file (con <code>$(...)</code> e la pipe), <b>decide</b> con un
+      <code>if</code> (nessuno? mostra un avviso; altrimenti…), e <b>scorre</b> con un <code>for</code> per elencarli.
+      <mark>Hai unito tutto il libro</mark>: comandi, pipe, variabili, condizioni, cicli. (La <code>2&gt;/dev/null</code>
+      è un trucco: manda gli eventuali errori «nel nulla», per non sporcare l'output — usa la redirezione del canale
+      errore del Cap. 9.) Questo è uno script vero, utile, che potresti tenere e riusare. Nel prossimo capitolo
+      impariamo a rendere gli script ancora più comodi (alias, variabili d'ambiente) e — la ciliegina — a farli girare
+      <b>da soli</b> a orari prestabiliti, con <code>cron</code>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li><b>if</b>: <code>if [ condizione ]; then ... else ... fi</code>. Spazi dentro le <code>[ ]</code>!
+          Test: <code>-f</code> (file), <code>-d</code> (cartella), <code>-eq/-gt/-lt</code> (numeri) (§13.1).</li>
+      <li><b>for</b>: <code>for X in lista; do ... done</code>. Itera su parole, file (<code>*.txt</code>), numeri
+          (<code>{1..5}</code>). L'uso killer: elaborare tanti file (§13.2).</li>
+      <li><b>while</b>: <code>while [ cond ]; do ... done</code>, finché la condizione regge. Ricorda l'incremento (loop
+          infinito!). Calcoli con <code>$(( ))</code> (§13.3).</li>
+      <li>Lo schema <b>«scorri e decidi»</b> (for + if) è la base di quasi ogni script di automazione (§13.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    I tuoi script ora ragionano e ripetono: sono piccoli programmi a tutti gli effetti. Manca l'ultimo tocco per
+    renderli davvero comodi e autonomi: <b>integrarli</b> nel tuo ambiente (alias per richiamarli al volo, variabili
+    d'ambiente) e — soprattutto — <b>schedularli</b> perché girino da soli, magari ogni notte, senza che tu debba
+    lanciarli. Nel <strong>Capitolo 14</strong> vediamo l'automazione «ambientale»: <code>.bashrc</code>, alias,
+    variabili d'ambiente e <code>cron</code>, lo schedulatore che fa lavorare Linux mentre dormi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      Scrivi un <code>if</code> in bash che stampa «esiste» se una cartella di nome <code>backup</code> esiste, e
+      «manca» altrimenti. (Suggerimento: il test per una cartella è <code>-d</code>.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Cosa fa questo ciclo? <code>for F in *.jpg; do echo "$F"; done</code>. In quale situazione è particolarmente
+      utile?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un ciclo <code>for</code> e un ciclo <code>while</code>? Qual è il rischio tipico di un
+      <code>while</code> scritto male?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Nella sintassi di bash, con cosa si chiudono un <code>if</code> e un <code>for</code>? (Due parole diverse.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">bash</div>
+      <pre><span class="kw">if</span> [ <span class="fl">-d</span> <span class="st">"backup"</span> ]; <span class="kw">then</span>
+    <span class="bi">echo</span> <span class="st">"esiste"</span>
+<span class="kw">else</span>
+    <span class="bi">echo</span> <span class="st">"manca"</span>
+<span class="kw">fi</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Nota gli spazi dentro le <code>[ ]</code> e il <code>fi</code> che chiude l'if.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Il ciclo scorre <b>tutti i file <code>.jpg</code></b> della cartella corrente (il jolly <code>*.jpg</code> li
+      seleziona) e, per ciascuno, stampa il suo nome (<code>echo "$F"</code>). È particolarmente utile quando devi fare
+      la <b>stessa operazione su molti file</b>: qui solo li elenca, ma potresti ridimensionarli, spostarli,
+      rinominarli — l'azione su <em>un</em> file, applicata automaticamente a <em>tutti</em>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      Il <code>for</code> ripete il blocco <b>per ogni elemento di una lista</b> definita (parole, file, numeri): sai
+      «su cosa» iterare. Il <code>while</code> ripete <b>finché una condizione è vera</b>: non sai in anticipo quante
+      ripetizioni serviranno. Il rischio tipico di un <code>while</code> scritto male è il <b>loop infinito</b>: se
+      dentro il ciclo non modifichi nulla che renda la condizione falsa, il ciclo non finisce mai (si interrompe solo
+      con <code>Ctrl+C</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Un <code>if</code> si chiude con <b><code>fi</code></b> («if» scritto al contrario); un <code>for</code> (come
+      pure un <code>while</code>) si chiude con <b><code>done</code></b>. Ogni blocco di controllo in bash ha il suo
+      «chiuditore»: dimenticarlo è un errore di sintassi comune.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.1 — un if dal vivo: cambia ETA, guarda quale ramo (minorenne/maggiorenne) scatta
+   ========================================================================= */
+(function () {
+  const codeEl = document.getElementById('if-code');
+  if (!codeEl) return;
+  const etaEl = document.getElementById('if-eta');
+  const etavEl = document.getElementById('if-etav');
+  const term = document.getElementById('if-out-term');
+  const out = document.getElementById('if-out');
+
+  function render() {
+    const eta = +etaEl.value;
+    etavEl.textContent = eta;
+    const maggiorenne = eta >= 18;
+    // codice con il ramo attivo evidenziato
+    codeEl.innerHTML =
+      '<span class="cm">#!/bin/bash</span>\n' +
+      'ETA<span class="op">=</span><span class="nm">' + eta + '</span>\n' +
+      '<span class="kw">if</span> [ <span class="rs">$ETA</span> <span class="fl">-ge</span> <span class="nm">18</span> ]; <span class="kw">then</span>\n' +
+      '    <span style="' + (maggiorenne ? 'background:#ffd479; color:#12141d; border-radius:3px' : 'opacity:.4') + '"><span class="bi">echo</span> "Maggiorenne"</span>\n' +
+      '<span class="kw">else</span>\n' +
+      '    <span style="' + (!maggiorenne ? 'background:#ffd479; color:#12141d; border-radius:3px' : 'opacity:.4') + '"><span class="bi">echo</span> "Minorenne"</span>\n' +
+      '<span class="kw">fi</span>';
+    term.innerHTML = '<span class="p">$</span> <span class="cmd">./controlla_eta.sh</span>\n<span class="out">' + (maggiorenne ? 'Maggiorenne' : 'Minorenne') + '</span>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">ETA = <b>' + eta + '</b>: la condizione <code>[ $ETA -ge 18 ]</code> è <b>' + (maggiorenne ? 'vera' : 'falsa') + '</b>, quindi scatta il ramo <b>' + (maggiorenne ? '«then»' : '«else»') + '</b> (evidenziato). Sposta lo slider oltre/sotto i 18 e guarda il ramo cambiare.</div>';
+  }
+  etaEl.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

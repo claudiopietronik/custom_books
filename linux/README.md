@@ -24,7 +24,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 - [x] 10 — Editor di testo
 - [x] 11 — Installare software
 - [x] 12 — Bash scripting: le basi
-- [ ] 13 — Bash scripting: logica
+- [x] 13 — Bash scripting: logica
 - [ ] 14 — Automazione e ambiente
 - [ ] 15 — Sistema e rete da terminale
 - [ ] 16 — Un progetto completo

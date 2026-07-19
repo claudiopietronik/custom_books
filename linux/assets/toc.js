@@ -194,7 +194,7 @@ const TOC = [
     n: 13,
     titolo: "Bash scripting: logica",
     file: "cap13-bash-logica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Condizioni: if, test" },
       { id: "s13-2", n: "13.2", t: "Cicli: for" },
