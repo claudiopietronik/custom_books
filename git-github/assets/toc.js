@@ -208,7 +208,7 @@ const TOC = [
     n: 14,
     titolo: "Un flusso di lavoro completo",
     file: "cap14-workflow-completo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Mettere tutto insieme" },
       { id: "s14-2", n: "14.2", t: "Dal clone alla pull request" },

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Un flusso di lavoro completo — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14 · Il traguardo</div>
+    <h1>Un flusso di lavoro completo</h1>
+    <p class="standfirst">
+      Ci siamo: il gran finale. Hai imparato tutti i pezzi — commit, branch, merge, conflitti, remoto, push/pull, pull
+      request, buone pratiche. Ora li <b>mettiamo insieme</b> in un unico flusso di lavoro, quello che seguirai ogni
+      giorno da programmatore: dal <b>clone</b> di un progetto alla <b>pull request</b> unita, passando per branch,
+      commit e sincronizzazione. Non ci sono comandi nuovi da imparare — solo la sequenza completa, vista dall'alto,
+      così che diventi un automatismo. Vedremo il flusso passo per passo (§14.1-14.2), qualche accortezza per gestire
+      un progetto reale (§14.3), e le direzioni per continuare a crescere con Git (§14.4). <mark>Alla fine, avrai in
+      mano il modo in cui lavorano i team di software di tutto il mondo — e le fondamenta per approfondire quanto
+      vorrai. Questa è la fine del libro, e l'inizio dei progetti che costruirai.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Mettere tutto insieme (§14.1), il flusso <b>dal clone alla PR</b> (§14.2), gestire un <b>progetto reale</b>
+      (§14.3), <b>dove andare da qui</b> (§14.4). Nel laboratorio (§14.5) percorri il flusso completo, dall'inizio alla
+      fine.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal sapere i comandi al saper lavorare</div>
+    <p style="margin-bottom:0">
+      Conoscere i singoli comandi non basta: il valore sta nel <b>saperli comporre</b> nel flusso giusto, con
+      naturalezza. <mark>Questo capitolo trasforma le abilità in un'abitudine fluida</mark> — quella che ti farà sentire
+      a casa il primo giorno di lavoro, quando ti chiederanno di clonare il repo, aprire un branch e mandare una pull
+      request. È il ponte tra «ho studiato Git» e «so lavorare con Git».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Mettere tutto insieme</h2>
+
+  <p class="lead">
+    Facciamo il quadro d'insieme. Tutto ciò che hai imparato si compone in <b>un</b> flusso ricorrente. Ogni volta che
+    contribuisci a un progetto, ripeti (con piccole varianti) questa danza.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔁</span> Il flusso completo, in una vista</div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head">il ciclo professionale, dall'inizio alla fine</div>
+      <pre><span class="c"># UNA VOLTA: ottieni il progetto</span>
+git clone &lt;url&gt;                 <span class="c"># scarica il repo (Cap. 10)</span>
+
+<span class="c"># PER OGNI FUNZIONALITÀ / CORREZIONE:</span>
+git switch main
+git pull                        <span class="c"># parti dall'ultima versione (Cap. 11)</span>
+git switch -c mia-feature       <span class="c"># branch dedicato (Cap. 7)</span>
+
+<span class="c">  # ...lavora... poi, per ogni passo coerente:</span>
+git add .                       <span class="c"># prepara (Cap. 4)</span>
+git commit -m "Messaggio chiaro"<span class="c"># salva (Cap. 4, 13)</span>
+
+git push -u origin mia-feature  <span class="c"># manda il branch su GitHub (Cap. 10-11)</span>
+
+<span class="c"># SU GITHUB: apri la Pull Request -&gt; review -&gt; merge (Cap. 12)</span>
+
+<span class="c"># DOPO IL MERGE: torna pulito</span>
+git switch main
+git pull                        <span class="c"># allinea il locale</span>
+git branch -d mia-feature       <span class="c"># pulisci (Cap. 8)</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      <mark>Questa è la mappa completa</mark>: clone (una volta), poi il ciclo pull → branch → commit → push → PR →
+      merge → pull → pulizia, ripetuto per ogni pezzo di lavoro. Ogni riga l'hai imparata in un capitolo; qui vivono
+      tutte insieme. Rileggila: se riconosci ogni comando, hai finito Git.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Dal clone alla pull request</h2>
+
+  <p class="lead">
+    Ripercorriamo il flusso come una storia, dal punto di vista di chi si unisce a un progetto esistente. È
+    esattamente ciò che ti capiterà al lavoro o contribuendo a un progetto open source.
+  </p>
+
+  <div class="widget" id="w-flow">
+    <div class="w-head">
+      <span>Il flusso completo, passo per passo</span>
+      <span class="hint">segui la danza dall'inizio alla fine</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div id="fl-progress" style="height:6px; background:var(--paper-3); border-radius:3px; margin-bottom:1rem; overflow:hidden"><div id="fl-bar" style="height:100%; width:0; background:var(--accent); transition:width .3s"></div></div>
+      <div class="term" style="margin:0 auto; max-width:100%"><div class="t-head" id="fl-head">passo 1</div><pre id="fl-cmd" style="margin:0; min-height:56px"></pre></div>
+      <div id="fl-desc" style="margin-top:.7rem; text-align:center; color:var(--ink); font-size:.96rem; min-height:2.4em; display:flex; align-items:center; justify-content:center; padding:0 .5rem"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="fl-prev">◀ indietro</button>
+      <button class="btn" id="fl-next">avanti ▶</button>
+      <button class="btn ghost" id="fl-reset">da capo</button>
+    </div>
+    <div class="w-readout" id="fl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Gestire un progetto reale</h2>
+
+  <p class="lead">
+    Il flusso è sempre quello, ma nella pratica di un progetto vivo entrano in gioco alcune accortezze. Nessuna è
+    nuova: sono l'applicazione delle buone pratiche che già conosci.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Accortezze del mondo reale <span class="tag">le abitudini che fanno la differenza</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>pull spesso, branch di vita breve</b></dt>
+        <dd>allineati di frequente e chiudi i branch in fretta: meno divergenza, meno conflitti (Cap. 9, 11). Un branch
+            che vive un giorno è meglio di uno che vive un mese.</dd>
+        <dt><b>una PR = una cosa</b></dt>
+        <dd>mantieni le pull request <b>focalizzate</b> su una singola funzionalità o correzione. <mark>PR piccole si
+            revisionano meglio e più in fretta</mark> (Cap. 12-13).</dd>
+        <dt><b>main sempre sano</b></dt>
+        <dd>non pushare mai codice rotto o non revisionato in <code>main</code>: è la versione «buona» da cui tutti
+            partono. <mark>Tutto passa da branch e PR.</mark></dd>
+        <dt><b>leggi la storia, usa la rete di sicurezza</b></dt>
+        <dd><code>git log</code>/<code>git diff</code> per capire (Cap. 5); <code>restore</code>/<code>revert</code>
+            per rimediare (Cap. 6). <mark>Non aver paura: c'è quasi sempre una via di ritorno.</mark></dd>
+        <dt><b>niente segreti, mai</b></dt>
+        <dd>il <code>.gitignore</code> in ordine dal primo giorno; i segreti fuori dal repo (Cap. 13). La regola che
+            ti evita l'incidente più comune.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota che <mark>non c'è nulla di nuovo qui</mark>: gestire un progetto reale è «solo» applicare con costanza le
+      buone abitudini imparate. La differenza tra un principiante e un professionista con Git non sono comandi
+      esotici — sono queste accortezze, ripetute finché diventano automatiche. Le hai tutte: ora è questione di
+      pratica.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai le fondamenta solide — quelle che coprono il 95% dell'uso quotidiano di Git. Ecco le direzioni per crescere,
+    quando e se ti serviranno. Non tutte subito: sapere che esistono ti basta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La mappa dei prossimi passi <span class="tag">quando ti serviranno</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>comandi più avanzati</dt>
+        <dd><code>git stash</code> (metti da parte modifiche temporaneamente), <code>git rebase</code> (riorganizza la
+            storia — potente ma delicato), <code>git cherry-pick</code> (prendi una singola commit), i <b>tag</b> (per
+            marcare le versioni). <mark>Li incontrerai al bisogno</mark>; le basi che hai bastano per iniziare.</dd>
+        <dt>funzioni di GitHub</dt>
+        <dd>le <b>Issue</b> (per tracciare bug e attività), le <b>Actions</b> (automazione: test e deploy automatici —
+            la «CI/CD»), le <b>Projects</b> (bacheche di gestione), le <b>Releases</b>. <mark>GitHub è molto più di un
+            posto per il codice.</mark></dd>
+        <dt>flussi di lavoro strutturati</dt>
+        <dd>convenzioni di team come «GitHub Flow» o «Git Flow», che formalizzano come nascono branch e release. <mark>Ne
+            adotterai uno quando entrerai in un team</mark> che ne usa uno.</dd>
+        <dt>il consiglio più importante</dt>
+        <dd><mark>usa Git per <b>ogni</b> tuo progetto, da subito</mark>, anche quelli personali. Si impara usandolo:
+            ogni commit, ogni branch, ogni conflitto risolto è pratica. È così che diventa naturale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non lasciare che la lista ti intimidisca: <mark>ciò che hai imparato è la base solida su cui tutto il resto si
+      appoggia</mark>. Chi padroneggia commit, branch, merge, remoto e pull request sa già lavorare con Git in
+      qualsiasi team. Il resto sono raffinamenti che aggiungerai quando serviranno, un pezzo alla volta — proprio come
+      hai fatto in questo libro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: il progetto completo</h2>
+
+  <p class="lead">
+    Un ultimo esercizio che unisce tutto: simula un contributo completo a un progetto, dal clone alla pull request
+    unita. Fallo su un tuo repository GitHub (anche il <code>diario</code>): sarai proponente e revisore.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale + GitHub — il contributo completo</div>
+    <pre><span class="c"># 1) ottieni/aggiorna il progetto</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">clone</span> <span class="ar">&lt;url&gt;</span>   <span class="c"># (se nuovo) oppure: git switch main && git pull</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">progetto</span>
+
+<span class="c"># 2) crea un branch per la tua modifica</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">aggiungi-conclusioni</span>
+
+<span class="c"># 3) lavora con commit piccole e chiare</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"## Conclusioni"</span> &gt;&gt; <span class="ar">diario.md</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi la sezione conclusioni"</span>
+
+<span class="c"># 4) manda il branch e apri la Pull Request su GitHub</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">aggiungi-conclusioni</span>
+<span class="c">#    -> su github.com: Compare & pull request -> Create -> (review) -> Merge</span>
+
+<span class="c"># 5) allineati e pulisci</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span> && <span class="cmd">git</span> <span class="ar">pull</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">aggiungi-conclusioni</span>
+
+<span class="c"># fatto: hai contribuito con il flusso professionale completo. 🎉</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🏁</span> Ce l'hai fatta</div>
+    <p style="margin-bottom:0">
+      Fermati e guarda cosa sai fare, dal Capitolo 1 a qui: <b>versionare</b> un progetto (init, commit, storia),
+      <b>correggere</b> gli errori (restore, revert), lavorare con i <b>branch</b> e <b>unirli</b> (merge, conflitti),
+      portare tutto su <b>GitHub</b> (remoto, push/pull) e collaborare col flusso professionale a <b>pull request</b>,
+      tenendo il repository <b>pulito</b>. <mark>Hai imparato Git — non a memoria, ma capendo <em>come</em> e
+      <em>perché</em> funziona</mark>. È una competenza che userai ogni singolo giorno da programmatore, e che ti
+      accompagnerà per tutta la carriera. Ora la cosa migliore che puoi fare è la stessa di sempre: <b>usarla</b>.
+      Prendi un tuo progetto, mettilo su GitHub, e lavoraci con branch e commit. Ogni volta sarà più naturale.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>flusso completo</b>: clone (una volta) → per ogni lavoro: pull → branch → commit → push → PR → merge →
+          pull → pulizia (§14.1-14.2).</li>
+      <li>Nel mondo reale: pull spesso, branch brevi, PR focalizzate, <code>main</code> sempre sano, niente segreti,
+          usa la rete di sicurezza (§14.3).</li>
+      <li>Per crescere: <code>stash</code>, <code>rebase</code>, tag, Issue e Actions di GitHub, flussi strutturati —
+          al bisogno. Le basi coprono il 95% (§14.4).</li>
+      <li>Il consiglio: <b>usa Git per ogni progetto, da subito</b>. Si impara usandolo (§14.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Questo è il traguardo del libro — ma per te è un punto di partenza. Da qui, ogni progetto che aprirai, ogni team a
+    cui ti unirai, parlerà la lingua che ora conosci: commit, branch, pull request. <mark>Git ha smesso di essere una
+    scatola nera</mark>: è uno strumento che padroneggi, una rete di sicurezza che ti dà la libertà di sperimentare, e
+    la chiave per collaborare con chiunque, ovunque. Il modo migliore per continuare è lo stesso di sempre —
+    <b>costruire</b>, e versionare ciò che costruisci. Buon codice, e buoni commit. 🔀
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Scrivi, in ordine, la sequenza completa di comandi Git per contribuire a un progetto esistente su GitHub: dal
+      partire aggiornato fino al push del tuo branch (l'apertura e il merge della PR avvengono sul sito).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Perché è meglio mantenere le pull request <b>piccole e focalizzate</b> su una sola cosa?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Dopo che la tua pull request è stata unita su GitHub, quali due comandi esegui in locale per allinearti e fare
+      pulizia?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      Qual è, secondo il capitolo, il consiglio più importante per continuare a migliorare con Git dopo aver finito il
+      libro?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>                          <span class="c"># parti aggiornato</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">mia-feature</span>          <span class="c"># branch dedicato</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"..."</span>   <span class="c"># lavora e committa</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">mia-feature</span>     <span class="c"># manda il branch</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Poi, su GitHub, apri la pull request, ricevi la review e fai il merge.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Perché una PR piccola e focalizzata è <b>più facile e veloce da revisionare</b> (il revisore capisce subito lo
+      scopo e controlla meglio), genera <b>meno conflitti</b>, ed è più facile da <b>annullare</b> se qualcosa non va.
+      Una PR enorme che mescola più funzionalità è difficile da capire, lenta da revisionare e rischiosa da unire. Una
+      cosa per PR = collaborazione più fluida.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span> && <span class="cmd">git</span> <span class="ar">pull</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">nome-branch</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Torni su <code>main</code> e fai <code>pull</code> (per avere la tua modifica ormai
+      unita), poi cancelli il branch locale concluso.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      <b>Usare Git per ogni progetto, da subito</b> — anche quelli personali e piccoli. Si impara <b>usandolo</b>: ogni
+      commit, branch, merge e conflitto risolto è pratica reale che rende i concetti naturali. Nessuna quantità di
+      teoria sostituisce l'esperienza di versionare i propri progetti quotidianamente.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.2 — il flusso completo passo per passo (capstone)
+   ========================================================================= */
+(function () {
+  const cmdEl = document.getElementById('fl-cmd');
+  if (!cmdEl) return;
+  const headEl = document.getElementById('fl-head');
+  const descEl = document.getElementById('fl-desc');
+  const bar = document.getElementById('fl-bar');
+  const out = document.getElementById('fl-out');
+
+  const STEPS = [
+    { h: '1 · ottieni il progetto', c: '<span class="p">$</span> <span class="cmd">git clone</span> <span class="ar">&lt;url&gt;</span>', d: 'Cloni il repository da GitHub: hai una copia locale completa, con <code>origin</code> già collegato. (Cap. 10)' },
+    { h: '2 · parti aggiornato', c: '<span class="p">$</span> <span class="cmd">git switch</span> <span class="ar">main</span>\n<span class="p">$</span> <span class="cmd">git pull</span>', d: 'Ti assicuri di partire dall\'ultima versione di main, scaricando le novità dal remoto. (Cap. 11)' },
+    { h: '3 · crea un branch', c: '<span class="p">$</span> <span class="cmd">git switch</span> <span class="fl">-c</span> <span class="ar">mia-feature</span>', d: 'Apri un branch dedicato alla tua modifica: main resta intatto mentre lavori in isolamento. (Cap. 7)' },
+    { h: '4 · lavora e committa', c: '<span class="p">$</span> <span class="cmd">git add</span> <span class="ar">.</span>\n<span class="p">$</span> <span class="cmd">git commit</span> <span class="fl">-m</span> <span class="ar">"Messaggio chiaro"</span>', d: 'Fai il tuo lavoro con commit piccole e messaggi chiari — il ciclo del Cap. 4, curato come nel Cap. 13.' },
+    { h: '5 · manda il branch', c: '<span class="p">$</span> <span class="cmd">git push</span> <span class="fl">-u</span> <span class="ar">origin mia-feature</span>', d: 'Pushi il branch su GitHub: ora è visibile e pronto per essere proposto. (Cap. 11)' },
+    { h: '6 · apri la Pull Request', c: '<span class="out"># su github.com: "Compare & pull request" -> Create</span>', d: 'Su GitHub apri la PR: proponi di unire il tuo branch in main. Il team vede il diff e le commit. (Cap. 12)' },
+    { h: '7 · code review', c: '<span class="out"># i colleghi commentano, tu aggiorni (commit + push), poi approvano</span>', d: 'La review migliora il codice: commenti, modifiche, approvazione. La PR si aggiorna coi tuoi nuovi push. (Cap. 12)' },
+    { h: '8 · merge', c: '<span class="out"># su github.com: "Merge pull request" -> "Delete branch"</span>', d: 'Approvata, la PR viene unita in main (revisionata!) e il branch remoto cancellato. (Cap. 12)' },
+    { h: '9 · allinea e pulisci', c: '<span class="p">$</span> <span class="cmd">git switch</span> <span class="ar">main</span> <span class="cmd">&& git pull</span>\n<span class="p">$</span> <span class="cmd">git branch</span> <span class="fl">-d</span> <span class="ar">mia-feature</span>', d: 'Torni in locale, aggiorni main (con la tua modifica ormai unita) e cancelli il branch. Pronto per la prossima! 🎉' }
+  ];
+  let i = 0;
+
+  function draw() {
+    const s = STEPS[i];
+    headEl.textContent = s.h;
+    cmdEl.innerHTML = s.c;
+    descEl.innerHTML = s.d;
+    bar.style.width = ((i + 1) / STEPS.length * 100) + '%';
+    const last = i === STEPS.length - 1;
+    out.innerHTML = '<div style="color:' + (last ? 'var(--green)' : 'var(--ink-soft)') + '; font-size:.9rem; text-align:left">Passo <b>' + (i + 1) + '/' + STEPS.length + '</b>. ' +
+      (last ? 'Flusso completo! Questo è il ciclo che ripeterai per ogni contributo. Hai finito Git & GitHub. 🎉' : 'Usa «avanti» per seguire il flusso professionale dall\'inizio alla fine.') + '</div>';
+  }
+
+  document.getElementById('fl-next').addEventListener('click', function () { if (i < STEPS.length - 1) { i++; draw(); } });
+  document.getElementById('fl-prev').addEventListener('click', function () { if (i > 0) { i--; draw(); } });
+  document.getElementById('fl-reset').addEventListener('click', function () { i = 0; draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

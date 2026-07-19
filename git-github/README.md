@@ -25,4 +25,4 @@ nessun linguaggio di programmazione richiesto.
 - [x] 11 — Collaborare: push, pull, fetch
 - [x] 12 — Pull request e code review
 - [x] 13 — Ignorare file e buone pratiche
-- [ ] 14 — Un flusso di lavoro completo
+- [x] 14 — Un flusso di lavoro completo
