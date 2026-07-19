@@ -12,7 +12,7 @@ Contenuto originale scritto ex novo.
 ## Stato
 
 - [x] 1 — Il primo programma
-- [ ] 2 — Variabili e tipi
+- [x] 2 — Variabili e tipi
 - [ ] 3 — Operatori ed espressioni
 - [ ] 4 — Prendere decisioni
 - [ ] 5 — I cicli

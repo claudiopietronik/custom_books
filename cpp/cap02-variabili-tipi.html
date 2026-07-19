@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Variabili e tipi — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>Variabili e tipi</h1>
+    <p class="standfirst">
+      Qui il C++ mostra il suo carattere. In molti linguaggi una variabile può contenere «qualsiasi cosa»; in C++
+      ogni variabile ha un <b>tipo dichiarato</b> — un intero, un decimale, un carattere — deciso al momento della
+      dichiarazione e <b>immutabile</b>. È la <b>tipizzazione statica</b>, e il compilatore la fa rispettare con
+      rigore: è più «severa» all'inizio, ma cattura una montagna di errori <em>prima</em> che il programma giri, e
+      permette al C++ di essere velocissimo. In questo capitolo conosciamo i tipi fondamentali, impariamo a
+      dichiarare e inizializzare le variabili nel modo giusto, e leggiamo l'input dell'utente con <code>cin</code>.
+      <mark>Capire i tipi è capire la mentalità del C++: dì al compilatore esattamente cosa vuoi, e lui ti ripagherà
+      con velocità e sicurezza.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>tipizzazione statica</b> e perché conta (§2.1), i tipi fondamentali <b>int, double, char, bool</b>
+      (§2.2), come <b>dichiarare e inizializzare</b> (§2.3), le parole chiave <b>const</b> e <b>auto</b> (§2.4), e
+      leggere l'input con <b>cin</b> (§2.5). Nel laboratorio (§2.6) costruisci una calcolatrice.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la disciplina che protegge</div>
+    <p style="margin-bottom:0">
+      La tipizzazione statica è la caratteristica che più distingue il C++ da linguaggi come Python. <mark>Sembra
+      una scocciatura, è in realtà una rete di sicurezza</mark>: dichiarando i tipi, il compilatore trova al volo
+      errori (assegnare un testo a un numero, usare male una variabile) che altrove esploderebbero solo a runtime.
+      È anche il segreto delle prestazioni: sapendo in anticipo che <code>x</code> è un intero di 4 byte, il
+      compilatore genera codice macchina ottimale. Capire i tipi è il primo passo per pensare in C++.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Tipizzazione statica</h2>
+
+  <p class="lead">
+    In C++ dichiari il <b>tipo</b> di ogni variabile, e quel tipo <b>non cambia mai</b>. Il compilatore lo verifica
+    a ogni uso. È l'opposto dei linguaggi «dinamici», dove una variabile può cambiare natura al volo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Statico vs dinamico</div>
+    <p style="margin-bottom:0">
+      In un linguaggio <b>dinamico</b> (Python) puoi scrivere <code>x = 5</code> e poi <code>x = "ciao"</code>: la
+      stessa variabile cambia tipo, e nessuno controlla nulla finché il programma non gira. In C++, invece,
+      <b>dichiari</b> il tipo una volta: <code>int x = 5;</code> — e da quel momento <code>x</code> è <b>per sempre
+      un intero</b>. Provare a metterci del testo dà un <b>errore di compilazione</b>, subito. <mark>Il tipo è un
+      contratto che il compilatore fa rispettare</mark>: più rigore in cambio di più sicurezza e velocità. Non è
+      una limitazione fastidiosa: è ciò che rende il C++ affidabile su programmi enormi, dove un errore di tipo
+      scoperto tardi costerebbe carissimo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>int, double, char, bool</h2>
+
+  <p class="lead">
+    I quattro tipi fondamentali che userai di continuo. Ognuno rappresenta una categoria di dato e occupa una
+    quantità precisa di memoria — un dettaglio che in C++ conta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tipi base <span class="tag">interi, decimali, caratteri, verità</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="ty">int</span> — numeri interi</dt>
+        <dd>senza virgola: <code>42</code>, <code>-7</code>. Occupa di solito 4 byte, quindi ha un <b>intervallo
+            limitato</b> (circa ±2 miliardi). Per contare, indicizzare, quantità intere.</dd>
+        <dt><span class="ty">double</span> — numeri decimali</dt>
+        <dd>con la virgola (anzi, il <b>punto</b>): <code>3.14</code>, <code>-0.5</code>. «Double» = doppia
+            precisione, lo standard per i decimali. (Esiste <code>float</code>, meno preciso: usa <code>double</code>.)</dd>
+        <dt><span class="ty">char</span> — un singolo carattere</dt>
+        <dd>una sola lettera o simbolo, tra <b>apici singoli</b>: <code>'A'</code>, <code>'?'</code>. Occupa 1 byte.
+            <mark>Attento: <code>'A'</code> (apici, un char) è diverso da <code>"A"</code> (virgolette, un
+            testo)</mark>.</dd>
+        <dt><span class="ty">bool</span> — vero/falso</dt>
+        <dd>solo <code>true</code> o <code>false</code> (minuscoli). La base delle decisioni (Cap. 4).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché in C++ conta «quanti byte»? Perché il C++ ti fa lavorare <b>vicino alla memoria</b>: un <code>int</code>
+      ha un intervallo finito, e se lo superi vai in <b>overflow</b> (Cap. 3). <mark>Per il testo (più caratteri)
+      c'è il tipo <code>std::string</code></mark>, che vedremo nel Cap. 9 — un <code>char</code> da solo è un
+      singolo carattere. Per numeri interi più grandi c'è <code>long long</code>; per ora <code>int</code> e
+      <code>double</code> coprono quasi tutto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-types">
+    <div class="w-head">
+      <span>I tipi fondamentali: cosa contengono, quanto occupano</span>
+      <span class="hint">esplora i quattro tipi base</span>
+    </div>
+    <div class="w-stage" style="min-height:170px">
+      <div id="wty-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-t="0">int</button>
+      <button class="w-btn" data-t="1">double</button>
+      <button class="w-btn" data-t="2">char</button>
+      <button class="w-btn" data-t="3">bool</button>
+    </div>
+    <div class="w-readout" id="wty-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>Dichiarazione e inizializzazione</h2>
+
+  <p class="lead">
+    <b>Dichiarare</b> una variabile significa dire al compilatore il suo tipo e nome. <b>Inizializzarla</b>
+    significa darle un valore di partenza. In C++ è importante fare entrambe le cose — e farle bene.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dichiarare e dare un valore <span class="tag">tipo nome = valore;</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">eta</span> <span class="op">=</span> <span class="nm">25</span>;            <span class="cm">// dichiara un int di nome eta, valore 25</span>
+<span class="ty">double</span> <span class="nm">prezzo</span> <span class="op">=</span> <span class="nm">3.5</span>;     <span class="cm">// un double</span>
+<span class="ty">char</span> <span class="nm">voto</span> <span class="op">=</span> <span class="st">'A'</span>;         <span class="cm">// un char (apici singoli!)</span>
+<span class="ty">bool</span> <span class="nm">promosso</span> <span class="op">=</span> <span class="kw">true</span>;    <span class="cm">// un bool</span>
+
+<span class="ty">int</span> <span class="nm">contatore</span>;              <span class="cm">// DICHIARATO ma NON inizializzato: valore "spazzatura"!</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la struttura: <span class="mono">tipo nome = valore;</span></dt>
+        <dd>prima il <b>tipo</b>, poi il <b>nome</b>, poi <code>=</code> e il <b>valore</b>, e il <code>;</code>
+            finale. Da lì in poi usi <code>nome</code> come in ogni linguaggio.</dd>
+        <dt><mark>la trappola: variabili non inizializzate</mark></dt>
+        <dd>in C++, dichiarare <code>int contatore;</code> senza valore <b>non la mette a zero</b>: contiene un
+            valore <b>casuale</b> («spazzatura», ciò che c'era in quella cella di memoria)! Usarla così è un bug
+            classico e insidioso. <b>Regola d'oro: inizializza sempre</b> le variabili quando le dichiari.</dd>
+        <dt>lo stile moderno con le graffe</dt>
+        <dd>C++ moderno preferisce <code>int eta{25};</code> (inizializzazione con graffe): è più sicura, perché
+            impedisce conversioni pericolose. Entrambe le forme vanno bene; l'importante è <b>inizializzare</b>.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>const e auto</h2>
+
+  <p class="lead">
+    Due parole chiave molto usate: <code>const</code> per valori che <b>non devono cambiare</b>, e <code>auto</code>
+    per far <b>dedurre il tipo</b> al compilatore. Entrambe rendono il codice più sicuro e leggibile.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">const e auto <span class="tag">immutabile · tipo dedotto</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">const</span> <span class="ty">double</span> <span class="nm">PI</span> <span class="op">=</span> <span class="nm">3.14159</span>;   <span class="cm">// costante: non può essere modificata</span>
+<span class="cm">// PI = 4;   →  ERRORE di compilazione: PI è const!</span>
+
+<span class="kw">auto</span> <span class="nm">x</span> <span class="op">=</span> <span class="nm">42</span>;              <span class="cm">// auto: il compilatore deduce "int" dal valore</span>
+<span class="kw">auto</span> <span class="nm">nome</span> <span class="op">=</span> <span class="st">"Anna"</span>;         <span class="cm">// deduce il tipo testo</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="kw">const</span> — non toccare!</dt>
+        <dd>rende una variabile <b>immutabile</b>: tentare di cambiarla è un errore di compilazione. Usalo per
+            valori fissi (π, un'aliquota, una configurazione). <mark>Dichiarare <code>const</code> ciò che non deve
+            cambiare previene bug ed esprime l'intenzione</mark> — è considerato buono stile: «const per default».</dd>
+        <dt><span class="kw">auto</span> — deduci tu il tipo</dt>
+        <dd>chiedi al compilatore di <b>dedurre</b> il tipo dal valore iniziale. <code>auto x = 42;</code> rende
+            <code>x</code> un <code>int</code>. Non è «tipizzazione dinamica»: il tipo è comunque fisso e statico,
+            solo scritto <em>dal compilatore</em>. Utilissimo con tipi lunghi e complicati (li vedrai con la STL,
+            Cap. 13). Va sempre inizializzato (senza valore, non c'è nulla da dedurre).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>cin: leggere dall'utente</h2>
+
+  <p class="lead">
+    Speculare a <code>cout</code>: <code>std::cin</code> («character input») legge ciò che l'utente digita e lo
+    mette in una variabile. Usa l'operatore <code>&gt;&gt;</code>, che «estrae» dallo stream.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Leggere con <code>cin</code> <span class="tag">&gt;&gt; estrae nella variabile</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">eta.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">eta</span>;                          <span class="cm">// dichiaro la variabile che riceverà l'input</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Quanti anni hai? "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">eta</span>;                <span class="cm">// legge un intero e lo mette in eta</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Tra un anno ne avrai "</span> <span class="op">&lt;&lt;</span> <span class="nm">eta</span> <span class="op">+</span> <span class="nm">1</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::cin &gt;&gt; eta;</span></dt>
+        <dd>legge dall'input e lo <b>estrae</b> nella variabile <code>eta</code>. Nota la freccia opposta a
+            <code>cout</code>: <code>&gt;&gt;</code> «tira dentro» (dall'input alla variabile), <code>&lt;&lt;</code>
+            «spinge fuori» (dalla variabile allo schermo).</dd>
+        <dt>la <b>conversione è automatica</b> per tipo</dt>
+        <dd>bella comodità del C++: siccome <code>eta</code> è un <code>int</code>, <code>cin</code> legge
+            <b>direttamente un numero</b> — non serve convertire come in altri linguaggi. <mark>Il tipo della
+            variabile guida la lettura</mark>. Puoi anche leggere più valori: <code>cin &gt;&gt; a &gt;&gt; b;</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Attenzione: se l'utente scrive testo dove ti aspetti un numero, <code>cin</code> «fallisce» silenziosamente
+      (la variabile resta a un valore indefinito e le letture successive saltano). La gestione robusta dell'input
+      la vedremo con le eccezioni (Cap. 14). Per ora, dai per scontato input corretti. E per leggere <b>un'intera
+      riga</b> con spazi (non una sola parola) servirà <code>std::getline</code>, che incontreremo con le stringhe
+      (Cap. 9).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Laboratorio: una calcolatrice</h2>
+
+  <p class="lead">
+    Uniamo tipi, dichiarazioni, <code>cin</code> e <code>cout</code> in un programma utile: una calcolatrice che
+    chiede due numeri e mostra somma, differenza, prodotto e quoziente. Attenzione ai tipi!
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>calcolatrice.cpp</code> <span class="tag">leggi · calcola · stampa</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">calcolatrice.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">double</span> <span class="nm">a</span>, <span class="nm">b</span>;                    <span class="cm">// double per gestire anche i decimali</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Primo numero: "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">a</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Secondo numero: "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">b</span>;
+
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Somma:     "</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">+</span> <span class="nm">b</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Prodotto:  "</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">*</span> <span class="nm">b</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Quoziente: "</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">/</span> <span class="nm">b</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Esecuzione (dopo <code>g++ calcolatrice.cpp -o calc</code> e <code>./calc</code>):
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Terminale</div>
+        <pre><span class="out">Primo numero: </span><span class="hl">7</span>
+<span class="out">Secondo numero: </span><span class="hl">2</span>
+<span class="out">Somma:     9
+Prodotto:  14
+Quoziente: 3.5</span></pre>
+      </div>
+      <mark>Scelta di tipo cruciale</mark>: abbiamo usato <code>double</code>, non <code>int</code>. Se
+      <code>a</code> e <code>b</code> fossero <code>int</code>, <code>7 / 2</code> darebbe <b>3</b> (divisione
+      intera, i decimali scartati!) invece di 3.5. Il tipo determina il comportamento — lo approfondiremo nel
+      Capitolo 3. Prova a cambiare <code>double</code> in <code>int</code> e osserva il quoziente «tagliato»: è una
+      lezione che vale più di mille parole.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>Il C++ è a <b>tipizzazione statica</b>: ogni variabile ha un tipo <b>dichiarato e fisso</b>, controllato
+          dal compilatore — più sicurezza e velocità (§2.1).</li>
+      <li>Tipi base: <b>int</b> (interi), <b>double</b> (decimali col punto), <b>char</b> (un carattere, apici
+          singoli), <b>bool</b> (true/false) (§2.2).</li>
+      <li><code>tipo nome = valore;</code> per dichiarare e inizializzare. <mark>Inizializza SEMPRE</mark>: una
+          variabile non inizializzata contiene spazzatura (§2.3). <b>const</b> = immutabile, <b>auto</b> = tipo
+          dedotto (§2.4).</li>
+      <li><code>std::cin &gt;&gt; var;</code> legge l'input (converte in base al tipo della variabile) (§2.5). E la
+          scelta int vs double cambia i risultati (§2.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora i tuoi programmi ricordano dati con tipi precisi e dialogano con l'utente. Ma abbiamo appena intravisto un
+    dettaglio spinoso — <code>7 / 2</code> che fa 3 tra interi! — che merita attenzione. Come si comportano davvero
+    gli <b>operatori</b> del C++? Cosa succede se un <code>int</code> supera il suo limite? Come si convertono i
+    tipi tra loro? Nel <strong>Capitolo 3</strong> studiamo <b>operatori ed espressioni</b>: l'aritmetica e le sue
+    insidie (divisione intera, overflow), i confronti e gli operatori logici, e le regole di conversione — tutte
+    cose che in un linguaggio «vicino alla macchina» hanno conseguenze molto concrete.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra tipizzazione <b>statica</b> (C++) e <b>dinamica</b>? Cita un vantaggio della statica.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Quale tipo useresti per: (a) il numero di studenti; (b) il prezzo di un prodotto; (c) l'iniziale di un nome;
+      (d) se un utente è maggiorenne?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Perché è pericoloso scrivere <code>int contatore;</code> senza inizializzarlo e poi usarlo? Cosa contiene?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi <code>media.cpp</code>: chiede tre voti (<code>double</code>) con <code>cin</code> e stampa
+      la loro media. Compila ed esegui.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-8"><span class="secnum">Sezione 2.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      Nella <b>statica</b> (C++) il tipo di ogni variabile è dichiarato e fisso, controllato dal <b>compilatore</b>
+      prima dell'esecuzione; nella <b>dinamica</b> il tipo è associato al valore e può cambiare, controllato solo a
+      runtime. Vantaggio della statica: <b>gli errori di tipo si scoprono in compilazione</b> (prima di eseguire), e
+      il codice è più veloce.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>int</code> (numero intero); (b) <code>double</code> (prezzo con decimali); (c) <code>char</code> (un
+      solo carattere); (d) <code>bool</code> (vero/falso).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      Perché una variabile non inizializzata <b>non vale zero</b>: contiene un valore <b>casuale</b> (la
+      «spazzatura» che c'era in quella cella di memoria). Usarla porta a comportamenti imprevedibili e bug difficili
+      da trovare. Regola: inizializza sempre alla dichiarazione (es. <code>int contatore = 0;</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">media.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">double</span> <span class="nm">a</span>, <span class="nm">b</span>, <span class="nm">c</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Tre voti: "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">a</span> <span class="op">&gt;&gt;</span> <span class="nm">b</span> <span class="op">&gt;&gt;</span> <span class="nm">c</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Media: "</span> <span class="op">&lt;&lt;</span> (<span class="nm">a</span> <span class="op">+</span> <span class="nm">b</span> <span class="op">+</span> <span class="nm">c</span>) <span class="op">/</span> <span class="nm">3</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Le parentesi in <code>(a + b + c) / 3</code> sono essenziali: senza, per la
+      precedenza si dividerebbe solo <code>c</code> per 3 (Cap. 3).</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.2 — esploratore dei tipi fondamentali
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wty-view');
+  if (!view) return;
+  const out = document.getElementById('wty-out');
+  const btns = document.querySelectorAll('#w-types .w-btn');
+  const types = [
+    { name: 'int', ex: 'int eta = 25;', byte: 4, col: 'var(--accent)', desc: 'Numeri interi (senza virgola). ~4 byte → intervallo circa ±2 miliardi.', vals: '…, -1, 0, 1, 2, …, 42, …' },
+    { name: 'double', ex: 'double p = 3.5;', byte: 8, col: 'var(--green)', desc: 'Numeri decimali (col punto), doppia precisione. 8 byte.', vals: '3.14, -0.5, 2.0, 1e10, …' },
+    { name: 'char', ex: "char v = 'A';", byte: 1, col: 'var(--warm)', desc: "Un SINGOLO carattere, tra apici singoli. 1 byte. 'A' ≠ \"A\" (testo).", vals: "'A', 'z', '?', '5', ' '" },
+    { name: 'bool', ex: 'bool ok = true;', byte: 1, col: 'var(--violet)', desc: 'Solo due valori: true o false (minuscoli). La base delle decisioni.', vals: 'true, false' }
+  ];
+  function show(i) {
+    const t = types[i];
+    view.innerHTML = `
+      <div style="text-align:center">
+        <div style="font-family:var(--mono); font-size:1.3rem; color:${t.col}; font-weight:700">${t.name}</div>
+        <pre style="background:#14161c; color:#d6dae2; padding:.6rem 1rem; border-radius:9px; display:inline-block; margin:.6rem 0; font-family:var(--mono); font-size:.9rem">${t.ex}</pre>
+        <div style="display:flex; gap:1.2rem; justify-content:center; margin-top:.4rem; flex-wrap:wrap">
+          <div><div style="color:var(--ink-faint); font-size:.75rem">memoria</div><div style="font-family:var(--mono); font-weight:700; color:${t.col}">${t.byte} byte</div></div>
+          <div><div style="color:var(--ink-faint); font-size:.75rem">valori tipici</div><div style="font-family:var(--mono); font-size:.85rem; color:var(--ink-soft)">${t.vals}</div></div>
+        </div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + t.desc + '</div>';
+    btns.forEach((b, k) => b.style.outline = k === i ? '2px solid ' + t.col : 'none');
+  }
+  btns.forEach((b, i) => b.addEventListener('click', () => show(i)));
+  show(0);
+})();
+</script>
+</body>
+</html>

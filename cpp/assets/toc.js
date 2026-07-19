@@ -30,7 +30,7 @@ const TOC = [
     n: 2,
     titolo: "Variabili e tipi",
     file: "cap02-variabili-tipi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Tipizzazione statica" },
       { id: "s2-2", n: "2.2", t: "int, double, char, bool" },
