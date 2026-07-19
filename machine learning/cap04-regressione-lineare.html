@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Regressione lineare — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>Regressione lineare</h1>
+    <p class="standfirst">
+      È il momento di studiare a fondo il modello più importante di tutto il machine learning: la <b>regressione
+      lineare</b>. Nel Capitolo 2 abbiamo visto <em>cosa</em> cerca (la retta con l'errore quadratico più piccolo);
+      qui capiamo <em>com'è fatta</em> e — la parte più bella — <em>come si trova esattamente</em>. Non con tentativi,
+      ma con una formula precisa, che esiste e si può calcolare in un colpo solo. La costruiremo insieme, con la
+      massima delicatezza: partiremo dal caso più semplice (una sola caratteristica), useremo un pizzico di ragionamento
+      (l'idea che «al punto più basso di una valle, la pendenza è zero») per trovare la retta migliore, e poi
+      generalizzeremo. Vedrai che dietro la formula, apparentemente ostica, c'è un'idea semplice e luminosa. Infine
+      impareremo a <b>leggere</b> i numeri che il modello ci dà (i coefficienti), perché la regressione lineare non solo
+      prevede, ma <em>spiega</em>: ti dice quanto ogni caratteristica pesa. In questo capitolo: il modello lineare
+      (§4.1), la derivazione dei minimi quadrati (§4.2), le equazioni normali (§4.3), l'interpretazione dei coefficienti
+      (§4.4). <mark>Ogni simbolo, come sempre, spiegato nel suo significato.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>modello lineare</b> (§4.1), la <b>derivazione</b> dei minimi quadrati (§4.2), le <b>equazioni normali</b>
+      (§4.3), <b>interpretare i coefficienti</b> (§4.4). Nel laboratorio (§4.5) usi la regressione in scikit-learn.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la base di tutto</div>
+    <p style="margin-bottom:0">
+      La regressione lineare è semplice, veloce, e <b>interpretabile</b> (ti dice <em>perché</em> prevede quello che
+      prevede). <mark>È il punto di partenza di ogni analisi</mark> — il modello «di riferimento» contro cui misurare
+      tutti gli altri — e la sua matematica (i minimi quadrati) ritorna, in forme diverse, in decine di altri metodi.
+      Capirla bene qui è un investimento che frutta per tutto il libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>Il modello lineare</h2>
+
+  <p class="lead">
+    Cominciamo dal caso più semplice: una sola caratteristica (i metri quadri di una casa). Il modello lineare
+    ipotizza che il prezzo cresca in modo <b>costante</b> con i metri quadri: ogni metro quadro in più aggiunge sempre
+    lo stesso tot al prezzo. Questa è, geometricamente, una <b>retta</b>. Scriviamola.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modello a una caratteristica <span class="tag">l'equazione di una retta</span></div>
+    <p style="text-align:center; font-size:1.3rem; margin:.6rem 0 1rem">$$ \hat{y} = \beta_0 + \beta_1 x $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$\hat{y}$ — il prezzo <b>previsto</b></dt>
+        <dd>la nostra stima (col cappello, §1.3), da distinguere dal prezzo vero $y$.</dd>
+        <dt>$x$ — la caratteristica in ingresso</dt>
+        <dd>qui i metri quadri della casa. È il numero da cui partiamo per prevedere.</dd>
+        <dt>$\beta_1$ — la <b>pendenza</b> (il «peso» della caratteristica)</dt>
+        <dd>la lettera greca <b>beta</b> col pedice 1. Dice <b>di quanto cresce il prezzo per ogni metro quadro in
+            più</b>. <mark>Se $\beta_1 = 2$, ogni m² aggiunge 2 (mila €) al prezzo.</mark> È l'inclinazione della
+            retta.</dd>
+        <dt>$\beta_0$ — l'<b>intercetta</b> (il valore di partenza)</dt>
+        <dd>il prezzo previsto quando $x = 0$ (una casa di zero metri quadri — un'astrazione, ma matematicamente il
+            «punto di partenza» della retta). <mark>È dove la retta «taglia» l'asse verticale.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota bene: quelle due «beta» sono i <b>parametri</b> del modello — i due numeri che il machine learning deve
+      <b>trovare</b> a partire dai dati. <mark>Allenare la regressione lineare significa esattamente questo: scoprire i
+      valori di $\beta_0$ e $\beta_1$ che fanno passare la retta il più vicino possibile ai punti.</mark> Il modello ha
+      una «forma» fissa (una retta); l'apprendimento riempie i due bottoni con i numeri giusti.
+    </div>
+  </div>
+
+  <p>
+    E se le caratteristiche sono più d'una (metri quadri <em>e</em> numero di stanze <em>e</em> anno…)? L'idea non
+    cambia: ogni caratteristica ha il suo peso, e il prezzo previsto è la somma di tutti i contributi, più l'intercetta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il modello a più caratteristiche <span class="tag">ogni feature col suo peso</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \hat{y} = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots + \beta_p x_p $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$x_1, x_2, \ldots, x_p$ — le $p$ caratteristiche</dt>
+        <dd>metri quadri, stanze, anno… Il pedice le numera; $p$ è quante sono. <mark>Ogni caratteristica è un
+            «ingrediente» della previsione.</mark></dd>
+        <dt>$\beta_1, \beta_2, \ldots, \beta_p$ — i pesi corrispondenti</dt>
+        <dd>ognuno dice <b>quanto pesa</b> la sua caratteristica sul prezzo. <mark>Un peso grande = quella
+            caratteristica conta molto; un peso vicino a zero = conta poco.</mark></dd>
+        <dt>la struttura: intercetta + somma dei «peso × caratteristica»</dt>
+        <dd>si parte dall'intercetta $\beta_0$ e si aggiunge, per ogni caratteristica, il suo valore moltiplicato per
+            il suo peso. <mark>«Lineare» significa proprio questo: la previsione è una <b>somma pesata</b></mark> delle
+            caratteristiche, senza curve né prodotti tra loro. Semplice, ma sorprendentemente utile.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Chi conosce l'algebra lineare riconoscerà che questa lunga somma si può scrivere in modo compattissimo come un
+      «prodotto» tra il vettore delle caratteristiche e il vettore dei pesi: $\hat{y} = X\beta$. <mark>Non è
+      indispensabile ora</mark>: la forma «distesa» qui sopra dice esattamente la stessa cosa, e ci basta. La usiamo
+      solo per far vedere quanto è ordinata l'idea: una previsione = una somma di contributi pesati.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>Minimi quadrati: la derivazione</h2>
+
+  <p class="lead">
+    Ecco la domanda cruciale: tra tutte le rette possibili (tutte le coppie $\beta_0, \beta_1$), qual è la <b>migliore</b>?
+    Dal Capitolo 2 sappiamo la risposta a parole: quella che rende più piccola la somma dei quadrati degli errori (l'SSE).
+    Ora la troviamo <em>davvero</em>. E lo faremo con un'idea semplice e potente, alla portata di tutti.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> In fondo alla valle, il terreno è piatto</div>
+    <p style="margin-bottom:0">
+      Immagina l'SSE come l'<b>altitudine</b> di un paesaggio, dove ci si sposta cambiando i valori di $\beta_0$ e
+      $\beta_1$. Rette diverse danno errori diversi: alcune sono «in alto» (errore grande), altre «in basso» (errore
+      piccolo). La retta migliore è quella nel <b>punto più basso</b> di questa valle. E qui l'osservazione chiave:
+      <mark>nel punto più basso di una valle, il terreno è <b>piatto</b></mark> — non sale né scende in nessuna
+      direzione. In matematica «il terreno è piatto» si dice «la <b>pendenza</b> (la derivata) è <b>zero</b>». Quindi:
+      per trovare il minimo dell'SSE, cerchiamo dove la sua pendenza si annulla. Questa è tutta la magia dei minimi
+      quadrati.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La derivazione, nel caso a una caratteristica</div>
+    <p style="margin-bottom:.5rem">
+      Scriviamo l'SSE come funzione dei due parametri (ricorda: $\hat{y}_i = \beta_0 + \beta_1 x_i$):
+    </p>
+    <p style="text-align:center; font-size:1.15rem; margin:.4rem 0 .9rem">$$ \text{SSE}(\beta_0, \beta_1) = \sum_{i=1}^{n} \big(y_i - \beta_0 - \beta_1 x_i\big)^2 $$</p>
+    <p style="margin-bottom:.5rem">
+      È una funzione dei due «bottoni» $\beta_0$ e $\beta_1$. Cerchiamo i valori che la rendono minima imponendo che la
+      <b>pendenza sia zero</b> rispetto a ciascuno dei due. Questo dà <b>due condizioni</b> (una per ogni bottone). Non
+      serve fare i conti a mano: ci basta capire cosa dicono. Risolvendole, si ottiene la soluzione — e per il caso a
+      una caratteristica ha una forma bella e leggibile:
+    </p>
+    <p style="text-align:center; font-size:1.15rem; margin:.4rem 0 .9rem">$$ \hat{\beta}_1 = \frac{\sum_i (x_i - \bar{x})(y_i - \bar{y})}{\sum_i (x_i - \bar{x})^2} \qquad\qquad \hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x} $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$\bar{x}$ e $\bar{y}$ — le <b>medie</b> di $x$ e di $y$</dt>
+        <dd>la barretta sopra la lettera significa «media»: $\bar{x}$ è la metratura media delle case, $\bar{y}$ il
+            prezzo medio. <mark>Sono il «centro» dei dati.</mark></dd>
+        <dt>la formula di $\hat{\beta}_1$ (la pendenza): cosa significa</dt>
+        <dd>guardala così: al numeratore c'è quanto $x$ e $y$ «variano insieme» (quando la metratura è sopra la media,
+            anche il prezzo lo è?), al denominatore quanto $x$ varia da solo. <mark>È il rapporto «di quanto sale $y$
+            per ogni unità di salita di $x$»</mark> — cioè, esattamente, la pendenza. (In termini di statistica: è la
+            covarianza tra $x$ e $y$ divisa per la varianza di $x$.)</dd>
+        <dt>la formula di $\hat{\beta}_0$ (l'intercetta): cosa significa</dt>
+        <dd>dice una cosa elegante: <mark>la retta migliore passa sempre per il «centro» dei dati $(\bar{x},
+            \bar{y})$.</mark> Una volta scelta la pendenza, l'intercetta è quella che fa passare la retta per il punto
+            medio. Ha senso: la retta migliore è «centrata» sui dati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il punto da portare a casa non è memorizzare la formula, ma capire il <b>metodo</b>: <mark>scrivi l'errore come
+      funzione dei parametri, imponi che la sua pendenza sia zero (perché il minimo di una valle è piatto), e risolvi.</mark>
+      Questo procedimento — «minimizzare imponendo derivata zero» — è il cuore di quasi ogni algoritmo di apprendimento.
+      La cosa meravigliosa della regressione lineare è che qui la soluzione si ottiene con una formula chiusa, esatta,
+      senza dover «cercare a tentoni». Nel widget del §4.5 vedi la valle dell'SSE e il suo unico fondo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Le equazioni normali</h2>
+
+  <p class="lead">
+    E quando le caratteristiche sono tante? Fare i conti «distesi» diventa impraticabile. Ma l'idea è identica — «il
+    minimo è dove la pendenza è zero» — e con l'algebra lineare si scrive in una singola, elegante formula, valida per
+    qualsiasi numero di caratteristiche. Si chiama delle <b>equazioni normali</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La soluzione, in forma compatta <span class="tag">valida per tante caratteristiche</span></div>
+    <p style="text-align:center; font-size:1.3rem; margin:.6rem 0 1rem">$$ \hat{\beta} = (X^{\top} X)^{-1} X^{\top} y $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>non spaventarti: è la <b>stessa idea</b> di prima</dt>
+        <dd>questa formula fa esattamente ciò che abbiamo fatto nel §4.2 (imporre pendenza zero e risolvere), ma per
+            <b>tutti</b> i parametri insieme, usando la notazione compatta dell'algebra lineare. <mark>Il risultato è il
+            vettore $\hat{\beta}$ con dentro tutti i pesi ottimali</mark> ($\beta_0, \beta_1, \ldots$) in un colpo
+            solo.</dd>
+        <dt>$X$ — la <b>matrice dei dati</b></dt>
+        <dd>una tabella con una riga per ogni esempio (ogni casa) e una colonna per ogni caratteristica. <mark>Raccoglie
+            tutti i dati in ingresso.</mark></dd>
+        <dt>$y$ — il <b>vettore delle risposte</b></dt>
+        <dd>la colonna di tutti i prezzi veri, uno per esempio.</dd>
+        <dt>$X^{\top}$ (X «trasposta») e $(\cdot)^{-1}$ (l'«inversa»)</dt>
+        <dd>sono due operazioni dell'algebra lineare (il libro «Algebra lineare» le spiega): la <b>trasposta</b> gira
+            righe e colonne, l'<b>inversa</b> è l'analogo del «dividere» per le matrici. <mark>Non serve saperle
+            calcolare a mano</mark>: il computer lo fa in un istante. Ciò che conta è sapere che <b>esiste una formula
+            esatta e diretta</b> che, dai dati $X$ e $y$, restituisce i pesi migliori.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa è una delle bellezze della regressione lineare: <mark>a differenza di quasi tutti gli altri modelli, la
+      soluzione migliore <b>non va cercata</b> per tentativi — c'è una formula che la dà subito.</mark> In pratica non
+      la scriverai mai a mano: <code>LinearRegression().fit(X, y)</code> di scikit-learn la calcola per te
+      (internamente fa proprio questo). Ma sapere che dietro quel <code>fit</code> c'è questa formula pulita — «prendi
+      i dati, applica queste operazioni, ottieni i pesi ottimali» — toglie ogni mistero. La stessa formula, con una
+      piccola aggiunta, tornerà nel prossimo capitolo con la regolarizzazione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Interpretare i coefficienti</h2>
+
+  <p class="lead">
+    La regressione lineare ha un pregio che pochi modelli hanno: è <b>interpretabile</b>. Una volta trovati i pesi
+    $\hat{\beta}$, non solo prevediamo, ma possiamo <b>leggere</b> cosa dicono — ed è spesso la parte più preziosa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Come leggere i coefficienti <span class="tag">ogni peso racconta qualcosa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>segno</b> di $\hat{\beta}_j$ — la direzione</dt>
+        <dd>positivo = quella caratteristica <b>fa salire</b> la previsione; negativo = la <b>fa scendere</b>. <mark>Il
+            peso dei metri quadri sarà positivo (più grande = più cara); il peso della «distanza dal centro città»
+            probabilmente negativo</mark> (più lontano = meno caro).</dd>
+        <dt>la <b>grandezza</b> di $\hat{\beta}_j$ — quanto pesa</dt>
+        <dd>quantifica l'effetto: <mark>«a parità di tutte le altre caratteristiche, aumentare $x_j$ di un'unità cambia
+            la previsione di $\hat{\beta}_j$».</mark> Se il peso dei metri quadri è 2 (mila €), ogni m² in più vale 2
+            mila €, tenendo fisso il resto.</dd>
+        <dt>l'inciso cruciale: «<b>a parità delle altre</b>»</dt>
+        <dd>ogni coefficiente misura l'effetto della sua caratteristica <b>tenendo ferme tutte le altre</b>. <mark>È ciò
+            che rende la regressione capace di «isolare» il contributo di ogni fattore</mark> — un potere che i modelli
+            più complessi, più precisi ma «scatole nere», spesso non offrono.</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> Occhio alla scala, e a «correlazione ≠ causa»</div>
+      <p style="margin-bottom:0">
+        Due avvertenze da tenere sempre a mente. <b>(1) La scala conta:</b> se una caratteristica è in metri e un'altra
+        in migliaia, i loro coefficienti non sono confrontabili «a occhio» (uno è grande solo perché la sua unità è
+        piccola). Per confrontarli, spesso si <b>standardizzano</b> prima le caratteristiche (capitolo 19). <b>(2)</b>
+        <mark>Un coefficiente misura un'<b>associazione</b>, non una causa.</mark> «Le case con più bagni costano di
+        più» non vuol dire «aggiungere un bagno fa aumentare il valore di quella cifra»: potrebbero esserci altri
+        fattori intrecciati. La regressione dice <em>come</em> le cose variano insieme nei dati, non <em>perché</em>.
+        Interpretare i coefficienti con questa cautela è segno di maturità.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>Laboratorio (scikit-learn)</h2>
+
+  <p class="lead">
+    Prima il codice — vedrai quanto è breve — poi il widget per <em>vedere</em> la «valle dell'SSE» del §4.2, con il
+    suo unico fondo che la formula dei minimi quadrati trova al volo.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">regressione.py</div>
+    <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+
+<span class="cm"># X con DUE caratteristiche: [metri quadri, numero di stanze]</span>
+X <span class="op">=</span> [[<span class="nm">50</span>,<span class="nm">2</span>], [<span class="nm">80</span>,<span class="nm">3</span>], [<span class="nm">120</span>,<span class="nm">3</span>], [<span class="nm">150</span>,<span class="nm">4</span>], [<span class="nm">200</span>,<span class="nm">5</span>]]
+y <span class="op">=</span> [<span class="nm">120</span>, <span class="nm">180</span>, <span class="nm">250</span>, <span class="nm">310</span>, <span class="nm">400</span>]
+
+modello <span class="op">=</span> <span class="fn">LinearRegression</span>().<span class="fn">fit</span>(X, y)   <span class="cm"># calcola i pesi (equazioni normali)</span>
+
+<span class="cm"># leggi i coefficienti: un peso per caratteristica, più l'intercetta</span>
+<span class="bi">print</span>(modello.coef_)        <span class="rs"># [1.5, 20.] -> +1.5k per m², +20k per stanza (a parità dell'altra)</span>
+<span class="bi">print</span>(modello.intercept_)   <span class="rs"># il valore di partenza (beta_0)</span>
+
+<span class="cm"># previsione per una casa di 100 m² e 3 stanze</span>
+<span class="bi">print</span>(modello.<span class="fn">predict</span>([[<span class="nm">100</span>, <span class="nm">3</span>]]))</pre>
+  </div>
+
+  <div class="widget" id="w-valley">
+    <div class="w-head">
+      <span>La valle dell'errore (SSE)</span>
+      <span class="hint">l'SSE al variare della pendenza: una valle con un solo fondo</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="vl-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="max-width:420px; margin:.5rem auto 0; display:flex; align-items:center; gap:.6rem">
+        <label style="font-size:.85rem; color:var(--ink-soft); white-space:nowrap">pendenza β₁: <b id="vl-av">2.20</b></label>
+        <input type="range" id="vl-a" min="0.5" max="3.5" step="0.02" value="2.2" style="flex:1">
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="btn" id="vl-best">vai al fondo (minimi quadrati)</button>
+    </div>
+    <div class="w-readout" id="vl-out"></div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel codice: <code>coef_</code> ti dà i pesi (uno per caratteristica) e <code>intercept_</code> il valore di
+      partenza — proprio i $\hat{\beta}$ delle equazioni normali, calcolati per te da <code>fit</code>. E li puoi
+      <b>leggere</b> (§4.4): «+1.5k per ogni m², +20k per ogni stanza, a parità dell'altra». Nel widget: la curva è
+      l'<b>SSE al variare della pendenza</b> — quella «valle» del §4.2. <mark>Ha un solo fondo</mark>, e lì la pendenza
+      del terreno è zero: quello è il valore che i minimi quadrati trovano con la loro formula, senza cercare a
+      tentoni. Questa forma «a valle con un unico minimo» è ciò che rende la regressione lineare così affidabile: non
+      ci sono «falsi minimi» in cui restare intrappolati. Nel prossimo capitolo vedremo cosa succede quando questa
+      valle diventa «troppo facile da scendere» e il modello overfitta — e come la <b>regolarizzazione</b> lo evita,
+      con una piccola aggiunta alla stessa formula.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>modello lineare</b> prevede con una <b>somma pesata</b>: $\hat{y} = \beta_0 + \beta_1 x_1 + \cdots +
+          \beta_p x_p$. Ogni $\beta_j$ è il «peso» di una caratteristica; $\beta_0$ l'intercetta (§4.1).</li>
+      <li>I <b>minimi quadrati</b> trovano i pesi imponendo che la <b>pendenza dell'SSE sia zero</b> (il fondo della
+          valle). A una caratteristica: $\hat{\beta}_1$ = covarianza/varianza; la retta passa per il centro dei dati
+          (§4.2).</li>
+      <li>In generale, la soluzione è la formula delle <b>equazioni normali</b> $\hat{\beta} = (X^\top X)^{-1}X^\top y$:
+          esatta, diretta, calcolata da <code>fit</code>. Non serve cercare a tentoni (§4.3).</li>
+      <li>I <b>coefficienti</b> si <b>leggono</b>: segno = direzione, grandezza = effetto «a parità delle altre».
+          Attenzione alla scala e a «associazione ≠ causa» (§4.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai capito il modello lineare fin nel profondo: cosa prevede, come trova i pesi, come si leggono. Ma la regressione
+    lineare, così com'è, ha un punto debole: quando le caratteristiche sono tante (o correlate tra loro), i pesi possono
+    «impazzire» — diventare enormi e instabili — e il modello overfitta. Nel <strong>Capitolo 5</strong> impariamo il
+    rimedio elegante: la <b>regolarizzazione</b> (Ridge, Lasso, Elastic Net). Con una piccola aggiunta alla formula dei
+    minimi quadrati, «freniamo» i pesi e otteniamo modelli più stabili e semplici — e, con il Lasso, persino capaci di
+    <em>scegliere da soli</em> le caratteristiche importanti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Nel modello $\hat{y} = \beta_0 + \beta_1 x$, cosa rappresentano $\beta_0$ e $\beta_1$? Se per prevedere il voto di
+      un esame dalle ore di studio ottieni $\hat{y} = 18 + 0.5\,x$, cosa significano quei due numeri?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      L'idea centrale per trovare la retta migliore è «il minimo di una valle è dove la pendenza è zero». Spiega, con
+      parole tue, come questa idea porta a determinare i valori di $\beta_0$ e $\beta_1$.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      La formula $\hat{\beta} = (X^\top X)^{-1} X^\top y$ fa la stessa cosa della derivazione «a mano» del §4.2, ma per
+      tutti i pesi insieme. Qual è il vantaggio pratico di avere una formula «chiusa» come questa, rispetto a dover
+      cercare i pesi per tentativi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Un modello prevede il prezzo di una casa e ha coefficiente $+3$ per i metri quadri. Cosa significa esattamente?
+      Perché la frase «ogni m² in più <em>causa</em> un aumento di 3» va detta con cautela?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      $\beta_0$ è l'<b>intercetta</b> (il valore previsto quando $x = 0$, il punto di partenza della retta); $\beta_1$
+      è la <b>pendenza</b> (di quanto cambia la previsione per ogni unità di $x$). In $\hat{y} = 18 + 0.5\,x$: partendo
+      da un «minimo» di 18 (con zero ore di studio), <b>ogni ora di studio in più aggiunge 0.5 punti</b> al voto
+      previsto. Quindi 10 ore di studio → $18 + 0.5\times10 = 23$ (oltre il massimo, segno che il modello lineare va
+      preso nei limiti sensati).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      Si scrive l'errore totale (SSE) come una <b>funzione dei parametri</b> $\beta_0, \beta_1$: cambiando i parametri,
+      l'SSE cambia, formando una «valle». La retta migliore è quella con SSE minima, cioè nel <b>punto più basso</b>
+      della valle. In quel punto il terreno è <b>piatto</b>, cioè la pendenza (la derivata) dell'SSE rispetto a ciascun
+      parametro è <b>zero</b>. Imponendo queste condizioni («pendenza zero») si ottengono delle equazioni che, risolte,
+      danno i valori esatti di $\beta_0$ e $\beta_1$ che minimizzano l'errore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      Il vantaggio è che una formula «chiusa» dà la soluzione <b>esatta in un solo passo</b>, direttamente dai dati,
+      senza dover provare tante combinazioni di pesi sperando di avvicinarsi al minimo. È veloce, preciso e non rischia
+      di «restare bloccato» in una soluzione sbagliata. La maggior parte degli altri modelli del libro <b>non</b> ha
+      questa fortuna e deve cercare i parametri con procedure iterative: la regressione lineare è speciale proprio
+      perché la sua «valle» ha un unico fondo, raggiungibile con una formula.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      Significa che, <b>tenendo ferme tutte le altre caratteristiche</b>, a ogni metro quadro in più corrisponde un
+      aumento di 3 (nell'unità del prezzo) nella <b>previsione</b> del modello. Va detta con cautela la parola
+      «causa» perché il coefficiente misura un'<b>associazione</b> osservata nei dati, non un legame causale: potrebbero
+      esserci altri fattori intrecciati (le case grandi sono anche in zone migliori, più nuove, ecc.). Il modello dice
+      <em>come</em> prezzo e metratura variano insieme, non che aumentare i metri <em>faccia</em> aumentare il valore
+      di quella cifra esatta.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.5 — la "valle" dell'SSE al variare della pendenza (profilo, con b ottimale).
+   Mostra che c'è un unico minimo = la soluzione dei minimi quadrati. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('vl-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('vl-out');
+  const aEl = document.getElementById('vl-a');
+  const avEl = document.getElementById('vl-av');
+
+  const DATA = [[50,120],[80,180],[120,250],[150,310],[200,400]];
+  const n = DATA.length;
+  let mx=0, my=0; DATA.forEach(function(d){ mx+=d[0]; my+=d[1]; }); mx/=n; my/=n;
+  // per una pendenza a, l'intercetta ottimale è b = my - a*mx; SSE(a) è allora una parabola in a
+  function sseProfile(a) {
+    const b = my - a*mx;
+    let s = 0; DATA.forEach(function(d){ const e = d[1]-(a*d[0]+b); s += e*e; });
+    return s;
+  }
+  // pendenza ottimale (vertice della parabola)
+  let sxx=0, sxy=0; DATA.forEach(function(d){ sxx+=(d[0]-mx)*(d[0]-mx); sxy+=(d[0]-mx)*(d[1]-my); });
+  const aOpt = sxy/sxx;
+  const sseMin = sseProfile(aOpt);
+
+  const AMIN = 0.5, AMAX = 3.5;
+  // range verticale in migliaia per leggibilità
+  let smax = Math.max(sseProfile(AMIN), sseProfile(AMAX));
+  const p = new Plot(svg, { xmin: AMIN - 0.1, xmax: AMAX + 0.1, ymin: -smax*0.06, ymax: smax*1.05 });
+
+  function draw() {
+    const a = +aEl.value;
+    avEl.textContent = a.toFixed(2);
+    const sse = sseProfile(a);
+
+    p.clear(); p.grid((AMAX-AMIN)/6, smax/5); p.axes({ numbers: false });
+    p.text((AMIN+AMAX)/2, -smax*0.02, 'pendenza β₁ →', { size: 12, color: 'var(--ink-soft)' });
+    p.text(AMIN, smax*0.98, 'SSE (errore)', { size: 12, color: 'var(--ink-soft)', anchor: 'start' });
+
+    // la parabola SSE(a)
+    const pts = [];
+    for (let x = AMIN; x <= AMAX; x += 0.02) pts.push([x, sseProfile(x)]);
+    p.poly(pts, { color: 'var(--accent)', width: 2.4, close: false });
+
+    // il fondo della valle (minimo)
+    p.dot(aOpt, sseMin, { color: 'var(--green)', r: 6 });
+    p.line(aOpt, 0, aOpt, sseMin, { color: 'var(--green)', width: 1.2, dash: '3 3' });
+
+    // la posizione attuale
+    p.dot(a, sse, { color: 'var(--warm)', r: 6 });
+
+    const vicino = Math.abs(a - aOpt) < 0.05;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' +
+      'La <b style="color:var(--accent)">curva</b> è l\'SSE (l\'errore) al variare della pendenza β₁: una <b>valle con un solo fondo</b>. ' +
+      'Il tuo punto (<b style="color:var(--warm)">arancione</b>) è a β₁ = ' + a.toFixed(2) + '. ' +
+      (vicino
+        ? 'Sei sul <b style="color:var(--green)">fondo</b> (β₁ ≈ ' + aOpt.toFixed(2) + '): qui il terreno è piatto (pendenza zero) — è la soluzione dei minimi quadrati! ✅'
+        : 'Il <b style="color:var(--green)">fondo verde</b> è a β₁ ≈ ' + aOpt.toFixed(2) + ': lì la pendenza della valle è zero. È il valore che la formula trova al volo.') +
+      '</div>';
+  }
+
+  aEl.addEventListener('input', draw);
+  document.getElementById('vl-best').addEventListener('click', function () { aEl.value = aOpt.toFixed(2); draw(); });
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -60,7 +60,7 @@ const TOC = [
     n: 4,
     titolo: "Regressione lineare",
     file: "cap04-regressione-lineare.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Il modello lineare" },
       { id: "s4-2", n: "4.2", t: "Minimi quadrati: la derivazione" },
