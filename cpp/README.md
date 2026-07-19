@@ -15,7 +15,7 @@ Contenuto originale scritto ex novo.
 - [x] 2 — Variabili e tipi
 - [x] 3 — Operatori ed espressioni
 - [x] 4 — Prendere decisioni
-- [ ] 5 — I cicli
+- [x] 5 — I cicli
 - [ ] 6 — Le funzioni
 - [ ] 7 — Puntatori e riferimenti
 - [ ] 8 — Array e vector

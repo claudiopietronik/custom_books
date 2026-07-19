@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · I cicli — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>I cicli</h1>
+    <p class="standfirst">
+      Il superpotere dell'automazione: far <b>ripetere</b> al computer la stessa operazione, migliaia di volte,
+      senza sbagliare. In C++ i cicli sono uno strumento centrale e potente — dal <code>while</code> «finché», al
+      celebre <code>for</code> classico con la sua terna <b>inizializzazione-condizione-incremento</b> (compatta e
+      onnipresente in tutto il codice C++), fino al moderno <b>for range-based</b> che scorre le collezioni con
+      eleganza. Uniti alle decisioni del capitolo scorso, i cicli sbloccano il <em>lavoro vero</em>: elaborare
+      liste, righe, dati in massa con poche righe di codice. <mark>Il <code>for</code> del C++, in particolare, è
+      così caratteristico che imparerai a leggerlo a colpo d'occhio</mark> — lo troverai ovunque.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I cicli <code>while</code> e <code>do-while</code> (§5.1), il <b>for classico</b> con le sue tre parti (§5.2),
+      il moderno <b>for range-based</b> (§5.3), <b>break e continue</b> (§5.4). Nel laboratorio (§5.5) generi
+      tabelline e figure di testo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: fare tanto con poco</div>
+    <p style="margin-bottom:0">
+      La ripetizione è l'essenza dell'automazione: <mark>tutto ciò che va fatto «per ognuno» o «più volte» è un
+      ciclo</mark>. Insieme all'<code>if</code>, il <code>for</code> è lo strumento che userai in ogni programma non
+      banale. Il <code>for</code> classico del C++, con la sua struttura compatta a tre parti, è anche una «firma»
+      del linguaggio: saperlo leggere e scrivere fluentemente è indispensabile per capire qualsiasi codice C++ tu
+      incontri.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>while e do-while</h2>
+
+  <p class="lead">
+    Il ciclo più semplice: <code>while</code> ripete un blocco <b>finché</b> una condizione è vera. La variante
+    <code>do-while</code> garantisce almeno un'esecuzione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">while e do-while <span class="tag">finché · almeno una volta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">conto</span> <span class="op">=</span> <span class="nm">3</span>;
+<span class="kw">while</span> (<span class="nm">conto</span> <span class="op">&gt;</span> <span class="nm">0</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">conto</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;
+    <span class="nm">conto</span><span class="op">--</span>;               <span class="cm">// FONDAMENTALE: avvicinare la fine (o ciclo infinito!)</span>
+}
+<span class="cm">// stampa: 3 2 1</span>
+
+<span class="kw">do</span> {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Eseguito almeno una volta"</span>;
+} <span class="kw">while</span> (<span class="kw">false</span>);   <span class="cm">// do-while controlla la condizione DOPO</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">while (condizione) { … }</span></dt>
+        <dd>controlla la condizione <b>prima</b> di ogni giro: se vera esegue, poi ricontrolla. Se falsa
+            dall'inizio, il blocco non viene mai eseguito.</dd>
+        <dt><span class="mono">do { … } while (condizione);</span></dt>
+        <dd>controlla <b>dopo</b>: quindi il blocco viene eseguito <b>almeno una volta</b>, poi ripete finché la
+            condizione è vera. Utile per menu e input («chiedi, poi verifica»). Nota il <code>;</code> finale.</dd>
+        <dt><mark>il pericolo: il ciclo infinito</mark></dt>
+        <dd>dentro il <code>while</code> <b>devi</b> far avvicinare la condizione alla fine (qui <code>conto--</code>).
+            Dimenticarlo = ciclo che non finisce mai (fermalo con <b>Ctrl+C</b>). L'errore più temuto del while.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Il for classico</h2>
+
+  <p class="lead">
+    La firma del C++. Il <code>for</code> classico raccoglie <b>tre cose in una riga</b> — inizializza, controlla,
+    incrementa — rendendo compatto ed esplicito il ciclo «ripeti N volte». Vale la pena capirlo a fondo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il for a tre parti <span class="tag">for (init; condizione; incremento)</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">for</span> (<span class="ty">int</span> <span class="nm">i</span> <span class="op">=</span> <span class="nm">0</span>; <span class="nm">i</span> <span class="op">&lt;</span> <span class="nm">5</span>; <span class="nm">i</span><span class="op">++</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">i</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;
+}
+<span class="cm">// stampa: 0 1 2 3 4</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>1. <b>inizializzazione</b>: <span class="mono">int i = 0</span></dt>
+        <dd>eseguita <b>una sola volta</b>, all'inizio: crea la variabile del ciclo e le dà il valore di partenza.</dd>
+        <dt>2. <b>condizione</b>: <span class="mono">i &lt; 5</span></dt>
+        <dd>controllata <b>prima di ogni giro</b>: se vera, esegue il corpo; se falsa, il ciclo finisce. Qui: continua
+            finché <code>i</code> è minore di 5.</dd>
+        <dt>3. <b>incremento</b>: <span class="mono">i++</span></dt>
+        <dd>eseguito <b>alla fine di ogni giro</b>: fa avanzare la variabile. Qui aumenta <code>i</code> di 1.</dd>
+        <dt>il flusso completo</dt>
+        <dd><mark>init → (condizione? → corpo → incremento) → (condizione? → corpo → incremento) → …</mark> finché la
+            condizione diventa falsa. Con <code>i &lt; 5</code> partendo da 0: gira per i = 0, 1, 2, 3, 4 (cinque
+            volte), poi <code>i</code> diventa 5, la condizione è falsa, si esce.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il <code>for</code> classico è perfetto quando <b>conosci il numero di ripetizioni</b> o lavori con gli
+      <b>indici</b>. Le tre parti in una riga tengono tutta la «logica di conteggio» in un colpo d'occhio — ecco
+      perché i programmatori C++ lo amano. Il widget qui sotto lo esegue passo passo: guarda le tre parti al lavoro.
+    </div>
+  </div>
+
+  <div class="widget" id="w-for">
+    <div class="w-head">
+      <span>Il for classico, passo per passo</span>
+      <span class="hint">esegui un giro alla volta</span>
+    </div>
+    <div class="w-stage" style="min-height:200px">
+      <div id="wfr-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wfr-step">▶ passo successivo</button>
+      <button class="w-btn" id="wfr-reset">↺ ricomincia</button>
+    </div>
+    <div class="w-readout" id="wfr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Il for range-based</h2>
+
+  <p class="lead">
+    Il C++ moderno (dal 2011) offre un <code>for</code> più semplice per <b>scorrere una collezione</b> senza
+    gestire indici: il <b>for range-based</b>. Assomiglia molto al <code>for</code> di Python.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il for range-based <span class="tag">for (tipo x : collezione)</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">voti</span> <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>, <span class="nm">9</span>};   <span class="cm">// una lista (Cap. 8)</span>
+
+<span class="kw">for</span> (<span class="ty">int</span> <span class="nm">v</span> : <span class="nm">voti</span>) {          <span class="cm">// "per ogni v in voti"</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">v</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;
+}
+<span class="cm">// stampa: 7 8 6 9</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">for (int v : voti)</span></dt>
+        <dd>si legge «<b>per ogni v nella collezione voti</b>»: ad ogni giro <code>v</code> assume l'elemento
+            successivo. <mark>Niente indici da gestire</mark>: più semplice e meno soggetto a errori quando ti serve
+            solo scorrere.</dd>
+        <dt><code>for (auto v : voti)</code></dt>
+        <dd>spesso si usa <code>auto</code> per far dedurre il tipo (Cap. 2): comodo con collezioni di tipi
+            complessi.</dd>
+        <dt>per modificare gli elementi: il riferimento</dt>
+        <dd><code>for (int& v : voti)</code> (con la <code>&amp;</code>) permette di <b>modificare</b> gli elementi
+            originali (i riferimenti sono nel Cap. 7). Senza <code>&amp;</code>, <code>v</code> è una copia e
+            modificarla non tocca la collezione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quando usare quale <code>for</code>? Il <b>range-based</b> quando devi solo <b>scorrere</b> una collezione (più
+      leggibile). Il <b>classico</b> quando ti servono gli <b>indici</b> (es. accedere per posizione, andare a passi,
+      contare) o quando non hai una collezione ma vuoi «ripetere N volte». <mark>Nel dubbio, se hai una collezione da
+      scorrere, usa il range-based</mark>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>break e continue</h2>
+
+  <p class="lead">
+    Due parole per controllare un ciclo dall'interno, identiche in significato a tanti linguaggi:
+    <code>break</code> lo <b>interrompe</b>, <code>continue</code> <b>salta al giro successivo</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">break e continue <span class="tag">interrompi · salta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">for</span> (<span class="ty">int</span> <span class="nm">i</span> <span class="op">=</span> <span class="nm">1</span>; <span class="nm">i</span> <span class="op">&lt;=</span> <span class="nm">10</span>; <span class="nm">i</span><span class="op">++</span>) {
+    <span class="kw">if</span> (<span class="nm">i</span> <span class="op">==</span> <span class="nm">5</span>) <span class="kw">break</span>;        <span class="cm">// esce dal ciclo quando i vale 5</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">i</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;      <span class="cm">// stampa: 1 2 3 4</span>
+}
+
+<span class="kw">for</span> (<span class="ty">int</span> <span class="nm">i</span> <span class="op">=</span> <span class="nm">1</span>; <span class="nm">i</span> <span class="op">&lt;=</span> <span class="nm">6</span>; <span class="nm">i</span><span class="op">++</span>) {
+    <span class="kw">if</span> (<span class="nm">i</span> <span class="op">%</span> <span class="nm">2</span> <span class="op">==</span> <span class="nm">0</span>) <span class="kw">continue</span>;  <span class="cm">// salta i pari</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">i</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;      <span class="cm">// stampa: 1 3 5</span>
+}</pre>
+    </div>
+    <div class="f-note">
+      <code>break</code> abbandona <b>subito</b> tutto il ciclo (utile: «ho trovato ciò che cercavo»);
+      <code>continue</code> interrompe <b>solo il giro corrente</b> e passa al successivo (utile: «questo elemento
+      non m'interessa»). Nel <code>for</code>, dopo un <code>continue</code>, l'<b>incremento viene comunque
+      eseguito</b>. <mark>Usali con parsimonia</mark>: troppi salti rendono un ciclo difficile da seguire.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Laboratorio: tabelline e figure</h2>
+
+  <p class="lead">
+    Due classici che mostrano la potenza dei cicli: una tabellina e un triangolo di asterischi con cicli
+    <b>annidati</b>. Poche righe, risultati che a mano richiederebbero pagine.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Tabellina e triangolo <span class="tag">for singolo e annidato</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">figure.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="nm">5</span>;
+
+    <span class="cm">// tabellina del 5</span>
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">i</span> <span class="op">=</span> <span class="nm">1</span>; <span class="nm">i</span> <span class="op">&lt;=</span> <span class="nm">10</span>; <span class="nm">i</span><span class="op">++</span>) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">n</span> <span class="op">&lt;&lt;</span> <span class="st">" x "</span> <span class="op">&lt;&lt;</span> <span class="nm">i</span> <span class="op">&lt;&lt;</span> <span class="st">" = "</span> <span class="op">&lt;&lt;</span> <span class="nm">n</span> <span class="op">*</span> <span class="nm">i</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    }
+
+    <span class="cm">// triangolo di asterischi (cicli ANNIDATI)</span>
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">riga</span> <span class="op">=</span> <span class="nm">1</span>; <span class="nm">riga</span> <span class="op">&lt;=</span> <span class="nm">4</span>; <span class="nm">riga</span><span class="op">++</span>) {
+        <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">j</span> <span class="op">=</span> <span class="nm">0</span>; <span class="nm">j</span> <span class="op">&lt;</span> <span class="nm">riga</span>; <span class="nm">j</span><span class="op">++</span>) {   <span class="cm">// interno: 'riga' asterischi</span>
+            <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"*"</span>;
+        }
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    }
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Il triangolo esce così: <code>*</code> / <code>**</code> / <code>***</code> / <code>****</code>. Sono
+      <b>cicli annidati</b>: per <b>ogni</b> riga del ciclo esterno, quello interno stampa <code>riga</code>
+      asterischi. <mark>È lo schema per tutto ciò che ha due dimensioni</mark> (griglie, tabelle). Nota anche
+      l'<b>accumulatore</b> implicito della tabellina: <code>n * i</code> ricalcolato ogni giro. Compila con
+      <code>g++ figure.cpp -o figure</code>, poi divertiti a modificare le dimensioni o a disegnare altre figure.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><code>while (cond)</code> ripete finché vera (controlla prima); <code>do…while</code> esegue <b>almeno una
+          volta</b> (controlla dopo). Attento al <mark>ciclo infinito</mark> (§5.1).</li>
+      <li>Il <b>for classico</b> <code>for (init; cond; incr)</code>: init una volta, cond prima di ogni giro, incr
+          alla fine. Per contare e usare gli indici (§5.2).</li>
+      <li>Il <b>for range-based</b> <code>for (auto x : coll)</code> scorre una collezione senza indici; con
+          <code>&amp;</code> per modificarla (§5.3).</li>
+      <li><code>break</code> esce, <code>continue</code> salta al giro dopo (§5.4). I cicli si <b>annidano</b> per le
+          griglie (§5.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con variabili, decisioni e cicli hai i tre pilastri della logica: puoi già scrivere programmi non banali. Ma man
+    mano che crescono, riscriverai gli stessi pezzi. Serve organizzare il codice in blocchi riutilizzabili con un
+    nome. Nel <strong>Capitolo 6</strong> arrivano le <b>funzioni</b> del C++: come si <b>dichiarano</b> e
+    <b>definiscono</b>, il tipo di ritorno e i parametri, e una distinzione fondamentale che il C++ rende esplicita
+    — il passaggio degli argomenti <b>per valore</b> o <b>per riferimento</b>, che cambia se la funzione può o no
+    modificare i dati che riceve. È un concetto che ci porterà dritti al cuore del C++: i puntatori.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Descrivi le tre parti di <code>for (int i = 0; i &lt; 5; i++)</code> e quante volte gira. Quando viene
+      eseguito l'incremento <code>i++</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>while</code> e <code>do-while</code>? In quale caso il blocco viene eseguito
+      almeno una volta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Scrivi un <b>for range-based</b> che, data <code>std::vector&lt;int&gt; v = {3, 1, 4};</code>, stampa ogni
+      elemento su una riga.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi <code>somma.cpp</code>: usa un <code>for</code> e un accumulatore per sommare i numeri da 1 a
+      100 e stampare il totale (dovrebbe essere 5050).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      <b>Init</b> <code>int i = 0</code> (una volta, all'inizio); <b>condizione</b> <code>i &lt; 5</code> (prima di
+      ogni giro); <b>incremento</b> <code>i++</code> (alla fine di ogni giro). Gira <b>5 volte</b> (i = 0,1,2,3,4).
+      L'incremento avviene <b>dopo</b> il corpo, prima di ricontrollare la condizione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      <code>while</code> controlla la condizione <b>prima</b>: se falsa all'inizio, il blocco non gira mai.
+      <code>do-while</code> controlla <b>dopo</b>: quindi il blocco viene eseguito <b>almeno una volta</b>, poi
+      ripete finché la condizione è vera. Il do-while esegue sempre almeno una volta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">stampa.cpp</div>
+      <pre><span class="kw">for</span> (<span class="ty">int</span> <span class="nm">x</span> : <span class="nm">v</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">x</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">somma.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">totale</span> <span class="op">=</span> <span class="nm">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">i</span> <span class="op">=</span> <span class="nm">1</span>; <span class="nm">i</span> <span class="op">&lt;=</span> <span class="nm">100</span>; <span class="nm">i</span><span class="op">++</span>) {
+        <span class="nm">totale</span> <span class="op">+=</span> <span class="nm">i</span>;
+    }
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">totale</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;   <span class="cm">// 5050</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.2 — il for classico passo per passo (init/cond/incr)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wfr-view');
+  if (!view) return;
+  const out = document.getElementById('wfr-out');
+  const bStep = document.getElementById('wfr-step');
+  const bReset = document.getElementById('wfr-reset');
+  // stati: sequenza di {phase, i, out} — simuliamo for(int i=0;i<5;i++) cout<<i
+  let steps = [];
+  function build() {
+    steps = [];
+    steps.push({ phase: 'init', i: 0, printed: '', desc: '<b>init</b>: <code>int i = 0</code> — creo i e la metto a 0 (una volta sola).' });
+    let printed = '';
+    for (let i = 0; i < 5; i++) {
+      steps.push({ phase: 'cond', i, printed, desc: `<b>condizione</b>: <code>${i} &lt; 5</code> → <b style="color:var(--green)">vera</b>, eseguo il corpo.` });
+      printed += i + ' ';
+      steps.push({ phase: 'body', i, printed, desc: `<b>corpo</b>: <code>cout &lt;&lt; i</code> → stampa <b>${i}</b>.` });
+      steps.push({ phase: 'incr', i: i + 1, printed, desc: `<b>incremento</b>: <code>i++</code> → i diventa ${i + 1}.` });
+    }
+    steps.push({ phase: 'cond', i: 5, printed, desc: '<b>condizione</b>: <code>5 &lt; 5</code> → <b style="color:var(--warm)">falsa</b>. Il ciclo <b>finisce</b>.' });
+  }
+  build();
+  let idx = 0;
+  bStep.addEventListener('click', () => { if (idx < steps.length - 1) idx++; draw(); });
+  bReset.addEventListener('click', () => { idx = 0; draw(); });
+
+  function draw() {
+    const s = steps[idx];
+    const hl = { init: 0, cond: 1, incr: 2 };
+    const parts = ['int i = 0', 'i < 5', 'i++'];
+    const forline = parts.map((p, k) => {
+      const on = (s.phase === 'init' && k === 0) || (s.phase === 'cond' && k === 1) || (s.phase === 'incr' && k === 2);
+      return `<span style="padding:.1rem .35rem; border-radius:5px; background:${on ? 'color-mix(in srgb,var(--accent) 25%,transparent)' : 'transparent'}; color:${on ? 'var(--accent)' : 'var(--ink-soft)'}; font-weight:${on ? 700 : 400}">${p}</span>`;
+    }).join('<span style="color:var(--ink-faint)">; </span>');
+    const bodyOn = s.phase === 'body';
+    view.innerHTML = `
+      <div style="font-family:var(--mono); font-size:1rem; text-align:center; margin-bottom:.6rem">for (${forline}) {</div>
+      <div style="font-family:var(--mono); text-align:center; padding:.3rem; background:${bodyOn ? 'color-mix(in srgb,var(--green) 14%,transparent)' : 'transparent'}; border-radius:6px; margin:0 auto; max-width:260px">&nbsp;&nbsp;cout &lt;&lt; i;</div>
+      <div style="font-family:var(--mono); font-size:1rem; text-align:center; margin-top:.3rem">}</div>
+      <div style="display:flex; gap:2rem; justify-content:center; margin-top:1rem; flex-wrap:wrap">
+        <div style="text-align:center"><div style="color:var(--ink-faint); font-size:.75rem">i</div><div style="font-family:var(--mono); font-size:1.6rem; font-weight:700; color:var(--accent)">${s.i}</div></div>
+        <div style="text-align:center"><div style="color:var(--ink-faint); font-size:.75rem">output</div><div style="font-family:var(--mono); font-size:1.2rem; color:var(--green)">${s.printed || '—'}</div></div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + s.desc + (idx >= steps.length - 1 ? ' <span style="color:var(--green)">✓ fine (5 giri, output 0 1 2 3 4).</span>' : '') + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

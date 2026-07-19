@@ -77,7 +77,7 @@ const TOC = [
     n: 5,
     titolo: "I cicli",
     file: "cap05-cicli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "while e do-while" },
       { id: "s5-2", n: "5.2", t: "Il for classico" },
