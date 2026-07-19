@@ -20,7 +20,7 @@ usano Python/scikit-learn.
 - [x] 5 — Regolarizzazione: Ridge, Lasso, Elastic Net
 - [x] 6 — Oltre il lineare: basi e spline
 - [x] 7 — Classificazione lineare: LDA e QDA
-- [ ] 8 — Regressione logistica
+- [x] 8 — Regressione logistica
 - [ ] 9 — Naive Bayes e k-NN
 - [ ] 10 — Support Vector Machines
 - [ ] 11 — Metodi kernel e Gaussian Processes

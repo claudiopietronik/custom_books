@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Regressione logistica — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>Regressione logistica</h1>
+    <p class="standfirst">
+      La <b>regressione logistica</b> è, nonostante il nome, uno dei classificatori più usati al mondo: dietro a filtri
+      anti-spam, valutazioni del rischio di credito, previsioni cliniche. Affronta la classificazione in modo diverso
+      dalla LDA: invece di descrivere le nuvole delle classi, <mark>modella <b>direttamente</b> la probabilità che un
+      caso appartenga a una classe</mark>, con un'elegante curva a «S». In questo capitolo la costruiamo da zero. Prima
+      capiamo <b>perché</b> non basta usare la regressione lineare così com'è per prevedere una probabilità (§8.1). Poi
+      conosciamo la protagonista, la <b>sigmoide</b>, la curva a S che trasforma qualsiasi numero in una probabilità
+      tra 0 e 1, e la sua gemella, i <b>log-odds</b> (§8.2). Vediamo come il modello <b>impara</b>, con l'idea della
+      <b>verosimiglianza</b> e la sua «funzione di perdita» (§8.3), e infine come si allena in pratica e come si
+      estende a più di due classi con la <b>softmax</b> (§8.4). Come sempre: ogni formula smontata pezzo per pezzo, mai
+      un simbolo dato per scontato.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché serve una curva a S (§8.1), la <b>sigmoide</b> e i <b>log-odds</b> (§8.2), come impara — la
+      <b>verosimiglianza</b> e la <b>loss</b> (§8.3), ottimizzazione e <b>softmax</b> multiclasse (§8.4). Nel
+      laboratorio (§8.5) alleni una logistica e leggi le probabilità.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il cavallo di battaglia</div>
+    <p style="margin-bottom:0">
+      La regressione logistica è spesso il <b>primo</b> modello che si prova su un problema di classificazione: semplice,
+      veloce, interpretabile, e restituisce probabilità sensate. <mark>È anche il mattone concettuale delle reti
+      neurali</mark> (un neurone con sigmoide È una regressione logistica). Capirla bene qui ti fa capire più tardi
+      moltissime cose «gratis».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Dalla regressione alla probabilità</h2>
+
+  <p class="lead">
+    Idea ingenua: per la classificazione binaria (classe 0 o classe 1), perché non usare la regressione lineare del
+    capitolo 4 per prevedere direttamente «quanto è probabile la classe 1»? Proviamoci, e vediamo dove si rompe: capire
+    <b>perché</b> non funziona è il modo migliore per capire la soluzione.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> La retta esce dai binari</div>
+    <p style="margin-bottom:0">
+      Una probabilità deve stare <b>tra 0 e 1</b> (0 = «di sicuro classe 0», 1 = «di sicuro classe 1»). Ma la retta
+      della regressione lineare, $\hat{y}=\beta_0+\beta_1 x$, <b>non conosce questi limiti</b>: continua dritta
+      all'infinito. Per valori di $x$ abbastanza grandi ti darebbe una «probabilità» di 1,4 o di $-0,3$ — numeri
+      <b>privi di senso</b> come probabilità. <mark>Ci serve qualcosa che prenda l'uscita della retta e la «schiacci»
+      dolcemente dentro l'intervallo $[0,1]$</mark>, senza mai uscirne. Quel «qualcosa» è la sigmoide.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Il piano in due mosse</div>
+    <p style="margin-bottom:0">
+      La regressione logistica fa esattamente questo, in due tempi: <b>(1)</b> calcola come sempre una <b>somma pesata</b>
+      delle caratteristiche, $z = \beta_0 + \beta_1 x_1 + \cdots$ (un numero qualsiasi, da $-\infty$ a $+\infty$);
+      <b>(2)</b> passa quel numero $z$ dentro la <b>sigmoide</b>, che lo trasforma in una probabilità tra 0 e 1.
+      <mark>Il «motore lineare» che già conosci resta il cuore; la sigmoide è solo l'imbuto finale che rende il
+      risultato una probabilità onesta.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>La sigmoide e i log-odds</h2>
+
+  <p class="lead">
+    Conosciamo la protagonista. È una funzione con una forma bellissima e un significato preciso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La funzione sigmoide <span class="tag">schiaccia tutto in [0,1]</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \sigma(z) = \frac{1}{1 + e^{-z}} $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$z$ — l'ingresso, la somma pesata</dt>
+        <dd>è il numero che arriva dal «motore lineare» ($z=\beta_0+\beta_1 x_1+\cdots$). Può essere qualsiasi:
+            $-1000$, $0$, $+50$. <mark>La sigmoide accetta qualunque numero</mark> e ne restituisce sempre uno tra 0 e 1.</dd>
+        <dt>$e^{-z}$ — l'esponenziale che fa il lavoro</dt>
+        <dd>$e \approx 2{,}718$ è un numero speciale (la «costante di Eulero»); $e^{-z}$ significa «$e$ elevato a
+            $-z$». Non serve calcolarlo a mano: basta sapere <b>come si comporta</b>. Se $z$ è molto <b>grande e
+            positivo</b>, $e^{-z}$ diventa ≈ 0, quindi $\sigma(z) \approx \frac{1}{1+0}=1$. Se $z$ è molto <b>grande e
+            negativo</b>, $e^{-z}$ diventa enorme, quindi $\sigma(z)\approx \frac{1}{\text{enorme}}\approx 0$. Se $z=0$,
+            $e^{0}=1$ e $\sigma(0)=\frac{1}{1+1}=\tfrac12$. <mark>Ecco la curva a S: parte da 0, sale dolcemente,
+            passa per 0,5 a metà, e si appiattisce verso 1.</mark></dd>
+        <dt>$\sigma(z)$ — il risultato: la probabilità della classe 1</dt>
+        <dd>è il nostro $\hat{p}$, la <b>probabilità stimata</b> che il caso sia di classe 1. Sempre tra 0 e 1, come
+            deve essere. <mark>La classe si decide a 0,5</mark>: se $\hat{p}>0{,}5$ diciamo classe 1, altrimenti
+            classe 0 — e $\hat{p}=0{,}5$ (cioè $z=0$) è esattamente il confine decisionale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una frase: <mark>la sigmoide è l'imbuto che trasforma un numero senza limiti in una probabilità onesta.</mark>
+      La sua forma a S ha un senso profondo: vicino al confine ($z\approx 0$) piccole variazioni cambiano molto la
+      probabilità (siamo incerti, ogni indizio conta); lontano dal confine la probabilità è già quasi 0 o 1 e si muove
+      poco (siamo già convinti).
+    </div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> I log-odds: cosa significano davvero i pesi</div>
+    <p style="margin-bottom:.5rem">
+      C'è un modo illuminante di leggere il modello. Girando la formula della sigmoide si scopre che la somma pesata
+      $z$ è esattamente il <b>logaritmo delle «quote»</b> (in inglese <b>log-odds</b>):
+    </p>
+    <p style="text-align:center; font-size:1.1rem; margin:.3rem 0 .9rem">$$ z = \log\frac{\hat{p}}{1-\hat{p}} = \beta_0 + \beta_1 x_1 + \cdots $$</p>
+    <p style="margin-bottom:0">
+      Le <b>«quote» (odds)</b> $\frac{\hat p}{1-\hat p}$ sono il rapporto «probabilità che sì / probabilità che no» —
+      esattamente come le quote delle scommesse: «3 a 1» significa probabilità 3 volte più alta che accada. Il
+      <b>log</b> serve solo a rendere questo rapporto una scala simmetrica e illimitata (da $-\infty$ a $+\infty$),
+      quella su cui il motore lineare lavora comodo. <mark>La conseguenza pratica è preziosa: ogni peso $\beta_j$ dice
+      di quanto cambiano i log-odds se la caratteristica $x_j$ aumenta di 1.</mark> Un $\beta_j$ positivo spinge verso
+      la classe 1, uno negativo verso la classe 0, e la sua grandezza dice quanto forte. Ecco perché la logistica è
+      così amata: <b>è interpretabile</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>La verosimiglianza e la loss</h2>
+
+  <p class="lead">
+    Sappiamo che forma ha il modello. Ma come sceglie i pesi $\beta$ giusti a partire dai dati? Nella regressione
+    minimizzavamo la somma dei quadrati; qui usiamo un'idea altrettanto naturale, la <b>verosimiglianza</b>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Scegli i pesi che rendono i dati più credibili»</div>
+    <p style="margin-bottom:0">
+      L'idea è semplicissima, spiegata a parole: <mark>tra tutti i possibili pesi, scegliamo quelli che assegnano la
+      probabilità più alta di osservare proprio i dati che abbiamo visto.</mark> Se un'email era davvero spam, vogliamo
+      pesi che le diano un'alta $\hat p$ di essere spam; se non lo era, pesi che le diano una $\hat p$ bassa. I pesi
+      «buoni» sono quelli che, moltiplicando insieme le probabilità che il modello assegna alla risposta <b>giusta</b>
+      di ogni esempio, ottengono il valore più alto possibile. Questo valore complessivo si chiama <b>verosimiglianza</b>
+      («likelihood»): quanto il modello trova «verosimili» i dati osservati. Massimizzarla = trovare i pesi migliori.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La loss: la cross-entropy (log-loss) <span class="tag">quanto ti punisce l'errore</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">$$ \text{loss} = -\Big[\, y\,\log(\hat{p}) \;+\; (1-y)\,\log(1-\hat{p}) \,\Big] $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>di nuovo il trucco del logaritmo</dt>
+        <dd>massimizzare un prodotto di tante probabilità è scomodo (numeri piccolissimi). Prendendo il <b>logaritmo</b>,
+            il prodotto diventa una <b>somma</b> (più facile), e per abitudine invece di «massimizzare» mettiamo un
+            segno meno e <b>minimizziamo</b>. Il risultato è questa <b>loss</b> (perdita) per un singolo esempio: la
+            sommiamo su tutti e cerchiamo i pesi che la rendono minima.</dd>
+        <dt>$y$ — la classe vera dell'esempio (0 oppure 1)</dt>
+        <dd>è un interruttore. <mark>Se $y=1$</mark> (classe 1), il secondo pezzo $(1-y)=0$ sparisce e resta
+            $-\log(\hat p)$. <mark>Se $y=0$</mark>, il primo pezzo sparisce e resta $-\log(1-\hat p)$. Quindi, ogni
+            volta, la loss guarda <b>solo</b> la probabilità che il modello ha dato alla risposta giusta.</dd>
+        <dt>$-\log(\hat{p}_{\text{giusta}})$ — la punizione</dt>
+        <dd>ecco il cuore, con un significato bellissimo. Il $-\log$ di una probabilità: se il modello dà probabilità
+            <b>alta</b> (≈1) alla risposta giusta, $-\log(1)=0$ → <b>nessuna punizione</b>, bravo. Se dà probabilità
+            <b>bassa</b> alla risposta giusta (era sicuro e ha sbagliato), $-\log$ di un numero piccolo è <b>enorme</b>
+            → <mark>punizione severissima.</mark> La loss punisce moltissimo gli <b>errori sicuri</b>: è ciò che spinge
+            il modello a essere onesto sulla propria incertezza.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa loss ha molti nomi — <b>log-loss</b>, <b>cross-entropy</b>, «log-verosimiglianza negativa» — ma è sempre
+      la stessa idea: <mark>premia le probabilità alte sulla risposta giusta, punisce (tantissimo) quelle basse.</mark>
+      La ritroverai identica nelle reti neurali per la classificazione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Ottimizzazione e multiclasse (softmax)</h2>
+
+  <p class="lead">
+    Due ultime tessere: come si trovano in pratica i pesi che minimizzano la loss, e come si passa da due classi a tante.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Nessuna formula magica: si scende la valle</div>
+    <p style="margin-bottom:0">
+      Nella regressione lineare c'era una formula chiusa per i pesi ottimi (le equazioni normali del cap. 4). Per la
+      logistica <b>quella formula non esiste</b>: la loss è più complicata. Ma non è un problema, perché usiamo un
+      metodo generale e potentissimo, la <b>discesa del gradiente</b>: <mark>parti da pesi a caso, guarda in che
+      direzione la loss scende più ripida, fai un passettino in quella direzione, ripeti</mark> — finché arrivi in
+      fondo alla «valle» (la loss minima). È come scendere una collina nella nebbia sentendo con i piedi la pendenza.
+      La cosa bella: la loss della logistica è «a scodella» (convessa), quindi la valle ha <b>un solo fondo</b> e la
+      discesa ci arriva sempre. (La discesa del gradiente è il motore di quasi tutto il deep learning: la incontrerai
+      spesso.)
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Più di due classi: la softmax <span class="tag">la sigmoide, generalizzata</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">$$ \hat{p}_k = \frac{e^{z_k}}{\displaystyle\sum_{j} e^{z_j}} $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>il problema: 3, 10, 100 classi</dt>
+        <dd>la sigmoide dà <b>una</b> probabilità (classe 1 sì/no). Con più classi (cane/gatto/cavallo) serve una
+            probabilità <b>per ciascuna</b>, e devono <b>sommare a 1</b> (una delle classi è di sicuro quella giusta).</dd>
+        <dt>$z_k$ — un punteggio per ogni classe</dt>
+        <dd>ora ogni classe $k$ ha il suo motore lineare, che produce un punteggio $z_k$ («quanto tira verso la classe
+            $k$»).</dd>
+        <dt>$e^{z_k}$ diviso la somma di tutti — il trucco della softmax</dt>
+        <dd>si prende l'esponenziale di ogni punteggio (che lo rende positivo e amplifica i più grandi) e lo si
+            <b>divide per la somma</b> di tutti gli esponenziali. <mark>Dividere per il totale garantisce che le
+            probabilità sommino esattamente a 1</mark> — come distribuire una torta: la fetta di ogni classe è la sua
+            quota sul totale. La classe con $z_k$ più alto prende la fetta più grande. Con due sole classi, la softmax
+            si riduce esattamente alla sigmoide: è la sua sorella maggiore.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In scikit-learn non devi scegliere nulla a mano: <code>LogisticRegression</code> capisce da solo se hai due
+      classi (usa la sigmoide) o più di due (usa la softmax). La matematica sotto è quella che abbiamo appena visto.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget muovi i due «pesi» della sigmoide e guarda come cambia la curva di probabilità che separa due classi di
+    punti. Poi il codice per allenarla davvero con scikit-learn.
+  </p>
+
+  <div class="widget" id="w-log">
+    <div class="w-head">
+      <span>La sigmoide che separa due classi</span>
+      <span class="hint">muovi i pesi e guarda la curva a S</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="lg-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>pendenza (peso β₁) <input type="range" id="lg-w" min="0.4" max="6" step="0.1" value="1.6"></label>
+        <label>soglia (dove p = 0,5) <input type="range" id="lg-x0" min="2" max="8" step="0.1" value="5"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="lg-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">logistica.py</div>
+    <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+
+modello <span class="op">=</span> <span class="fn">LogisticRegression</span>()
+modello.<span class="fn">fit</span>(X, y)                       <span class="cm"># y = classi 0/1 (o più classi: usa softmax da solo)</span>
+
+<span class="bi">print</span>(modello.<span class="fn">predict</span>(X_nuovi))          <span class="cm"># la classe: [0 1 1 ...]</span>
+<span class="bi">print</span>(modello.<span class="fn">predict_proba</span>(X_nuovi))    <span class="cm"># la PROBABILITÀ: [[0.12 0.88] ...]</span>
+
+<span class="cm"># i pesi sono interpretabili: β_j = effetto sui log-odds della feature j</span>
+<span class="bi">print</span>(modello.coef_)                    <span class="cm"># i β_1, β_2, ...</span>
+<span class="bi">print</span>(modello.intercept_)               <span class="cm"># il β_0</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: la <b>pendenza</b> (β₁) controlla quanto è ripida la S — cioè quanto è «deciso» il modello nel passare
+      da classe 0 a classe 1; la <b>soglia</b> sposta il confine (dove la curva vale 0,5). I punti in basso sono
+      classe 0, quelli in alto classe 1, e la curva è la probabilità stimata. Nel codice: <code>.predict</code> dà la
+      classe, <code>.predict_proba</code> le probabilità (la fiducia!), e <code>coef_</code> i pesi <b>interpretabili</b>
+      di cui parlavamo. Hai capito la regressione logistica: motore lineare + sigmoide + log-loss. Nel prossimo capitolo
+      due classificatori dall'idea completamente diversa e disarmante: <b>Naive Bayes</b> (probabilità «ingenue» ma
+      efficaci) e <b>k-NN</b> (guarda semplicemente i vicini).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>La regressione lineare non va bene per una probabilità: esce da $[0,1]$. Serve un «imbuto» che la schiacci
+          dentro (§8.1).</li>
+      <li>La <b>sigmoide</b> $\sigma(z)=\frac{1}{1+e^{-z}}$ trasforma la somma pesata $z$ in una probabilità tra 0 e 1
+          (curva a S; 0,5 a $z=0$). I <b>log-odds</b> rendono i pesi $\beta_j$ interpretabili (§8.2).</li>
+      <li>Il modello impara massimizzando la <b>verosimiglianza</b> = minimizzando la <b>log-loss</b>
+          $-\log(\hat p_{\text{giusta}})$, che punisce severamente gli errori sicuri (§8.3).</li>
+      <li>I pesi si trovano con la <b>discesa del gradiente</b> (niente formula chiusa). Per più classi si usa la
+          <b>softmax</b>, che dà probabilità che sommano a 1 (§8.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la regressione logistica hai un classificatore probabilistico, interpretabile e velocissimo — il primo da
+    provare su quasi ogni problema. Ma esistono modi radicalmente diversi di classificare, che a volte funzionano
+    sorprendentemente bene con quasi nessun conto. Nel <strong>Capitolo 9</strong> ne vediamo due: <b>Naive Bayes</b>,
+    che fa un'assunzione «ingenua» eppure vince spesso sui testi, e <b>k-NN</b>, che classifica un punto guardando
+    semplicemente i suoi <b>vicini</b> — l'algoritmo più intuitivo che ci sia.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Perché non si usa direttamente la regressione lineare per prevedere una probabilità? Cosa risolve la sigmoide?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Cosa vale la sigmoide $\sigma(z)$ quando $z$ è molto grande e positivo? Molto grande e negativo? Quando $z=0$?
+      Che forma disegna al variare di $z$, e a cosa corrisponde $z=0$?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      La log-loss per un esempio è $-\log(\hat p_{\text{giusta}})$. Perché un errore fatto «con sicurezza» (alta
+      probabilità data alla classe sbagliata) viene punito così tanto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve la <b>softmax</b>? Quale proprietà fondamentale garantisce il fatto di dividere ogni $e^{z_k}$ per la
+      somma di tutti gli $e^{z_j}$?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.5</div>
+    <p style="margin-bottom:0">
+      Cosa significa che i pesi della regressione logistica sono «interpretabili»? Cosa ti dice il segno di un peso
+      $\beta_j$?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      Perché la retta della regressione lineare non è limitata: continua all'infinito e produrrebbe «probabilità»
+      maggiori di 1 o minori di 0, che non hanno senso. La <b>sigmoide</b> risolve schiacciando dolcemente qualsiasi
+      numero (l'uscita del motore lineare) dentro l'intervallo $[0,1]$, trasformandolo in una probabilità valida.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      Se $z$ è molto grande e positivo, $e^{-z}\approx 0$ e $\sigma(z)\approx 1$; se molto grande e negativo,
+      $e^{-z}$ è enorme e $\sigma(z)\approx 0$; se $z=0$, $\sigma(0)=\frac{1}{1+1}=0{,}5$. Al variare di $z$ disegna
+      una <b>curva a S</b> che sale da 0 a 1 passando per 0,5. Il punto $z=0$ (cioè $\hat p=0{,}5$) corrisponde al
+      <b>confine decisionale</b>: da lì in su si prevede la classe 1, da lì in giù la classe 0.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      Perché la punizione è $-\log$ della probabilità data alla risposta giusta: quando il modello dà una probabilità
+      <b>molto bassa</b> alla classe che poi risulta giusta (cioè era «sicuro» del contrario), $-\log$ di un numero
+      vicino a 0 tende all'infinito, quindi la loss diventa enorme. Al contrario, se dà probabilità ≈1 alla risposta
+      giusta, $-\log(1)=0$: nessuna punizione. Questo spinge il modello a essere <b>onesto sulla propria incertezza</b>
+      e a non dichiararsi sicuro quando non lo è.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      La <b>softmax</b> serve a estendere la regressione logistica a <b>più di due classi</b>: produce una probabilità
+      per ciascuna classe. Dividere ogni $e^{z_k}$ per la somma di tutti gli $e^{z_j}$ garantisce che le probabilità
+      siano tutte positive e <b>sommino esattamente a 1</b> (una distribuzione di probabilità valida sulle classi),
+      proprio come le fette di una torta sommano all'intera torta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.5</div>
+    <p style="margin-bottom:0">
+      «Interpretabili» significa che ogni peso $\beta_j$ ha un significato leggibile: dice di quanto cambiano i
+      <b>log-odds</b> (il logaritmo delle quote a favore della classe 1) quando la caratteristica $x_j$ aumenta di 1,
+      a parità delle altre. Il <b>segno</b> dice la direzione: $\beta_j$ positivo → aumentare $x_j$ spinge verso la
+      classe 1; $\beta_j$ negativo → spinge verso la classe 0. La grandezza dice quanto è forte l'effetto.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.5 — sigmoide σ(β1·(x − x0)) che separa due classi 1D.
+   Slider: pendenza β1 e soglia x0. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('lg-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('lg-out');
+  const sW = document.getElementById('lg-w');
+  const sX0 = document.getElementById('lg-x0');
+
+  // punti: classe 0 (in basso, p=0) a x piccoli; classe 1 (in alto, p=1) a x grandi
+  const C0 = [1.2,1.8,2.4,2.9,3.3,3.8,4.4,4.9];
+  const C1 = [5.1,5.6,6.1,6.7,7.2,7.6,8.1,8.6];
+  const XMIN=0, XMAX=10;
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: -0.15, ymax: 1.15 });
+  function sig(z){ return 1/(1+Math.exp(-z)); }
+
+  function draw(){
+    const w=+sW.value, x0=+sX0.value;
+    p.clear(); p.grid(1,0.25); p.axes({ numbers:false });
+    // linee guida p=0, 0.5, 1
+    p.line(XMIN,0,XMAX,0,{ color:'var(--grid)', width:1 });
+    p.line(XMIN,1,XMAX,1,{ color:'var(--grid)', width:1 });
+    p.line(XMIN,0.5,XMAX,0.5,{ color:'var(--warm)', width:1, dash:'4 4' });
+    p.text(XMIN+0.15,1,'p = 1',{ size:11, color:'var(--ink-soft)', anchor:'start', dy:-4 });
+    p.text(XMIN+0.15,0,'p = 0',{ size:11, color:'var(--ink-soft)', anchor:'start', dy:12 });
+    // sigmoide
+    const pts=[]; for(let x=XMIN;x<=XMAX;x+=0.05) pts.push([x, sig(w*(x-x0))]);
+    p.poly(pts, { color:'var(--accent)', width:2.6, close:false });
+    // confine verticale a x0
+    p.line(x0,-0.15,x0,1.15,{ color:'var(--ink-soft)', width:1.2, dash:'3 3' });
+    // punti dati
+    C0.forEach(function(x){ p.dot(x,0,{ color:'var(--ink)', r:4.5 }); });
+    C1.forEach(function(x){ p.dot(x,1,{ color:'var(--warm)', r:4.5 }); });
+
+    // calcola quanti punti sono classificati bene (soglia 0.5 ⇔ x rispetto a x0)
+    let ok=0; C0.forEach(function(x){ if(sig(w*(x-x0))<0.5) ok++; }); C1.forEach(function(x){ if(sig(w*(x-x0))>=0.5) ok++; });
+    const tot=C0.length+C1.length;
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">La curva a S dà la <b>probabilità</b> di classe 1. '+
+      'Confine (p = 0,5) a x ≈ <b>'+x0.toFixed(1)+'</b>; pendenza β₁ = <b>'+w.toFixed(1)+
+      '</b> (più alta = transizione più netta). Classificati bene: <b>'+ok+'/'+tot+'</b>. '+
+      '<span style="color:var(--ink-soft)">Blu in basso = classe 0, arancio in alto = classe 1.</span></div>';
+  }
+  sW.addEventListener('input',draw); sX0.addEventListener('input',draw); draw();
+})();
+</script>
+</body>
+</html>

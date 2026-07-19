@@ -120,7 +120,7 @@ const TOC = [
     n: 8,
     titolo: "Regressione logistica",
     file: "cap08-logistica.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Dalla regressione alla probabilità" },
       { id: "s8-2", n: "8.2", t: "La sigmoide e i log-odds" },
