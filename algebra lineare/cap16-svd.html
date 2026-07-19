@@ -126,21 +126,90 @@
 
 
   <!-- ==================================================================== -->
-  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Calcolare la SVD</h2>
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Da dove nasce la SVD: due derivazioni</h2>
 
   <p class="lead">
-    Come si trovano \(\mm{U}\), \(\boldsymbol{\Sigma}\), \(\mm{V}\)? Con un trucco che riporta tutto al
-    Capitolo 15: moltiplica \(\mm{A}\) per la sua trasposta e ottieni una matrice <b>simmetrica</b>, di cui
-    sai già tutto.
+    La SVD non è un assioma: si <b>costruisce</b> dagli autovettori del Capitolo 15. Ci si arriva per due
+    strade — una che monta la formula dal basso, una che la assume e la semplifica — e finiscono entrambe nello
+    stesso posto: gli autovettori di \(\mm{A}\T\mm{A}\).
+  </p>
+
+  <h3>Derivazione 1 — la via costruttiva (dagli autovettori)</h3>
+
+  <p>
+    <b>Step 1 — fabbrica una matrice quadrata e «gentile».</b> \(\mm{A}\) è rettangolare, quindi non ha
+    autovettori. Ma \(\mm{A}\T\mm{A}\) <em>sì</em>: è quadrata (§6.7). E ha due proprietà d'oro, che sono il
+    motore di tutto: è <b>simmetrica</b> (\((\mm{A}\T\mm{A})\T = \mm{A}\T\mm{A}\), §6.6) e i suoi autovalori
+    sono <b>tutti \(\ge 0\)</b> (semidefinita positiva, §17.6).
   </p>
 
   <p>
-    Parti da \(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\) e costruisci \(\mm{A}\T\mm{A}\). Le \(\mm{U}\) si
-    elidono (\(\mm{U}\T\mm{U} = \mm{I}\), §13.4) e resta qualcosa di puramente in termini di \(\mm{V}\):
+    <b>Step 2 — il teorema spettrale ti dà \(\mm{V}\).</b> Una matrice simmetrica gode di un regalo (§15.8): i
+    suoi autovettori si possono scegliere <b>ortonormali</b> — perpendicolari tra loro e lunghi 1. Non vale per
+    una matrice qualsiasi; vale perché \(\mm{A}\T\mm{A}\) è simmetrica. Raccogli quegli autovettori come colonne
+    di \(\mm{V}\) (che risulta ortogonale, una rotazione pura): \(\mm{A}\T\mm{A}\,\vv{v}_i = \lambda_i\,\vv{v}_i\).
   </p>
 
   <div class="formula">
-    <div class="f-head">La SVD nasce dagli autovettori di \(\mm{A}\T\mm{A}\) <span class="tag">simmetrica → teorema spettrale</span></div>
+    <div class="f-head">Step 3 — da dove nasce Σ (e la radice quadrata) <span class="tag">misura la lunghezza di Av</span></div>
+    <div class="f-body">
+      \[
+        \norm{\mm{A}\vv{v}_i}^2 = (\mm{A}\vv{v}_i)\T(\mm{A}\vv{v}_i) = \vv{v}_i\T\mm{A}\T\mm{A}\,\vv{v}_i
+        = \vv{v}_i\T(\lambda_i\vv{v}_i) = \lambda_i
+        \;\Longrightarrow\;
+        \sigma_i = \norm{\mm{A}\vv{v}_i} = \sqrt{\lambda_i}
+      \]
+    </div>
+    <div class="f-note">
+      Guarda cos'è successo: in mezzo è comparso \(\mm{A}\T\mm{A}\vv{v}_i = \lambda_i\vv{v}_i\), e
+      \(\vv{v}_i\T\vv{v}_i = 1\) (è unitario, §3.2). Resta \(\lambda_i\). Quindi la lunghezza di
+      \(\mm{A}\vv{v}_i\) è \(\sqrt{\lambda_i}\): <mark>è il valore singolare \(\sigma_i\)</mark>, lo stiramento
+      che \(\mm{A}\) applica lungo \(\vv{v}_i\). (Serviva \(\lambda_i \ge 0\), altrimenti la radice non
+      esisterebbe — ecco perché la proprietà dello Step 1 non era decorativa.)
+    </div>
+  </div>
+
+  <p>
+    <b>Step 4 — da dove nasce \(\mm{U}\).</b> Normalizza \(\mm{A}\vv{v}_i\) dividendolo per la sua lunghezza
+    \(\sigma_i\), e chiamalo \(\vv{u}_i\):
+    \[ \vv{u}_i = \frac{\mm{A}\vv{v}_i}{\sigma_i} \qquad\Longleftrightarrow\qquad \mm{A}\vv{v}_i = \sigma_i\,\vv{u}_i. \]
+    Questa relazione è il <b>cuore pulsante</b> della SVD: la matrice prende la direzione di input \(\vv{v}_i\),
+    la stira di \(\sigma_i\), e la deposita nella direzione di output \(\vv{u}_i\). Ruota-stira-ruota, in una
+    riga. Anche i \(\vv{u}_i\) risultano <b>ortonormali</b> (sfruttando l'ortogonalità dei \(\vv{v}_i\)): sono
+    gli autovettori dell'altra matrice quadrata, \(\mm{A}\mm{A}\T\), e impacchettati come colonne danno
+    \(\mm{U}\).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Step 5 — assembla, e la formula appare <span class="tag">tutte le relazioni in una</span></div>
+    <div class="f-body">
+      \[
+        \mm{A}\mm{V} = \mm{U}\boldsymbol{\Sigma}
+        \;\xrightarrow{\ \times\,\mm{V}\T \text{ a destra},\ \mm{V}\mm{V}\T = \mm{I}\ }\;
+        \mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T
+      \]
+    </div>
+    <div class="f-note">
+      Impacchetta tutte le relazioni \(\mm{A}\vv{v}_i = \sigma_i\vv{u}_i\) in un'unica equazione matriciale
+      (i \(\vv{v}_i\) nelle colonne di \(\mm{V}\), i \(\vv{u}_i\) in quelle di \(\mm{U}\), i \(\sigma_i\) sulla
+      diagonale di \(\boldsymbol{\Sigma}\)): esce \(\mm{A}\mm{V} = \mm{U}\boldsymbol{\Sigma}\). Siccome
+      \(\mm{V}\) è ortogonale (\(\mm{V}\inv = \mm{V}\T\), §13.4), moltiplica a destra per \(\mm{V}\T\) e usa
+      \(\mm{V}\mm{V}\T = \mm{I}\): <mark>\(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\)</mark>. Formula ricavata,
+      non calata dall'alto.
+    </div>
+  </div>
+
+  <h3>Derivazione 2 — la via manipolativa (il trucco di \(\mm{A}\T\))</h3>
+
+  <p>
+    C'è anche la strada «algebrica», la stessa logica dei minimi quadrati: <b>assumi</b> che la formula esista,
+    \(\mm{A} = \mm{U}\boldsymbol{\Sigma}\mm{V}\T\), e guarda cosa ti obbliga a concludere. Costruisci
+    \(\mm{A}\T\mm{A}\): le \(\mm{U}\) si elidono (\(\mm{U}\T\mm{U} = \mm{I}\), §13.4) e resta tutto in termini
+    di \(\mm{V}\):
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il trucco di Aᵀ <span class="tag">assumi la forma, semplifica, riconosci</span></div>
     <div class="f-body">
       \[
         \mm{A}\T\mm{A} = (\mm{U}\boldsymbol{\Sigma}\mm{V}\T)\T(\mm{U}\boldsymbol{\Sigma}\mm{V}\T)
@@ -148,22 +217,40 @@
         = \mm{V}\,(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma})\,\mm{V}\T
       \]
     </div>
-    <div class="simboli">
-      <dl>
-        <dt>\(\mm{A}\T\mm{A} = \mm{V}(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma})\mm{V}\T\)</dt>
-        <dd>è <em>esattamente</em> l'autodecomposizione di una matrice simmetrica (§15.8)! Quindi i vettori
-            singolari destri \(\mm{V}\) sono gli <b>autovettori di \(\mm{A}\T\mm{A}\)</b>, e
-            \(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma}\) ne ha gli autovalori sulla diagonale.</dd>
-        <dt>\(\sigma_i = \sqrt{\lambda_i}\)</dt>
-        <dd>gli autovalori di \(\mm{A}\T\mm{A}\) sono i \(\sigma_i^2\): i <b>valori singolari sono le radici</b>
-            degli autovalori di \(\mm{A}\T\mm{A}\). Reali e \(\ge 0\) perché \(\mm{A}\T\mm{A}\) è semidefinita
-            positiva (§7.7, §17.6): i suoi autovalori non sono mai negativi.</dd>
-        <dt>\(\vv{u}_i = \dfrac{1}{\sigma_i}\mm{A}\vv{v}_i\)</dt>
-        <dd>trovati i \(\vv{v}_i\) e i \(\sigma_i\), i vettori singolari sinistri escono dalla relazione
-            \(\mm{A}\vv{v}_i = \sigma_i\vv{u}_i\). (In alternativa: \(\mm{U}\) sono gli autovettori di
-            \(\mm{A}\mm{A}\T\), §7.7.)</dd>
-      </dl>
+    <div class="f-note">
+      Questa scrittura, \(\mm{A}\T\mm{A} = \mm{V}\mm{D}\mm{V}\T\) con \(\mm{D}\) diagonale, <em>è</em> la
+      diagonalizzazione di una matrice simmetrica (§15.8). Confrontandola con l'equazione degli autovettori:
+      \(\mm{V}\) sono gli <b>autovettori</b> di \(\mm{A}\T\mm{A}\), e gli elementi di
+      \(\boldsymbol{\Sigma}\T\boldsymbol{\Sigma}\) ne sono gli <b>autovalori</b>; siccome valgono \(\sigma_i^2\),
+      ricavi di nuovo \(\sigma_i = \sqrt{\lambda_i}\). La mossa gemella dall'altro lato,
+      \(\mm{A}\mm{A}\T = \mm{U}\,\boldsymbol{\Sigma}\boldsymbol{\Sigma}\T\,\mm{U}\T\), ti consegna \(\mm{U}\)
+      (autovettori di \(\mm{A}\mm{A}\T\)).
     </div>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> Perché due strade diverse (e cosa cambia dai minimi quadrati)</div>
+    <div class="tbl-wrap" style="margin:.3rem 0 0">
+    <table class="tbl">
+      <thead><tr><th></th><th>Minimi quadrati (Cap. 14)</th><th>SVD</th></tr></thead>
+      <tbody>
+        <tr><td><b>Punto di partenza</b></td><td>un'equazione già scritta, \(\mm{A}\vv{x} = \vv{b}\)</td>
+            <td>nessuna equazione: \(\mm{U}, \boldsymbol{\Sigma}, \mm{V}\) non esistono ancora</td></tr>
+        <tr><td><b>Incognita</b></td><td>un solo vettore \(\vv{x}\)</td>
+            <td>due matrici ortogonali \(\mm{U}, \mm{V}\)</td></tr>
+        <tr><td><b>Il trucco di \(\mm{A}\T\)…</b></td>
+            <td><b>chiude</b> il problema: isoli \(\vv{x}\) e hai finito</td>
+            <td><b>riduce</b> il problema a «trova gli autovettori di \(\mm{A}\T\mm{A}\)», poi serve il passo spettrale</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:.6rem 0 0">
+      Le due derivazioni sono lo stesso oggetto visto da due lati: la <b>costruttiva</b> monta la formula dal
+      basso partendo dagli autovettori; la <b>manipolativa</b> assume la forma, moltiplica per \(\mm{A}\T\),
+      semplifica e <em>scopre</em> che i pezzi devono essere proprio quegli autovettori. Stesso trucco dei
+      minimi quadrati — ma là <em>chiudeva</em> il conto, qui lo <em>riporta</em> a un problema agli autovalori
+      che sai già risolvere.
+    </p>
   </div>
 
   <p>
