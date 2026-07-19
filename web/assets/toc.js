@@ -119,7 +119,7 @@ const TOC = [
     n: 8,
     titolo: "Il box model",
     file: "cap08-box-model.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Ogni elemento è una scatola" },
       { id: "s8-2", n: "8.2", t: "content, padding, border, margin" },
