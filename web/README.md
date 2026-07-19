@@ -20,7 +20,7 @@ Contenuto originale scritto ex novo.
 - [x] 7 — I selettori
 - [x] 8 — Il box model
 - [x] 9 — Layout con Flexbox
-- [ ] 10 — Responsive: ogni schermo
+- [x] 10 — Responsive: ogni schermo
 - [ ] 11 — JavaScript: le basi
 - [ ] 12 — Il DOM: la pagina come oggetti
 - [ ] 13 — Manipolare il DOM
