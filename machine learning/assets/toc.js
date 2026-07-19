@@ -225,7 +225,7 @@ const TOC = [
     n: 15,
     titolo: "Clustering: k-means e gerarchico",
     file: "cap15-clustering.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "L'apprendimento non supervisionato" },
       { id: "s15-2", n: "15.2", t: "k-means: l'algoritmo" },

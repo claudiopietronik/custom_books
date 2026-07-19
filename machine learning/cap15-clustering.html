@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Clustering: k-means e gerarchico — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>Clustering: k-means e gerarchico</h1>
+    <p class="standfirst">
+      Fin qui i nostri dati avevano sempre una «risposta giusta»: un prezzo da prevedere, una classe da indovinare.
+      Qualcuno ci diceva la verità e noi imparavamo a riprodurla. Ma gran parte dei dati del mondo <b>non ha
+      etichette</b>: solo osservazioni grezze — milioni di clienti, di cellule, di documenti — senza nessuna risposta
+      allegata. È l'<b>apprendimento non supervisionato</b>, e la domanda cambia radicalmente: non «qual è la risposta?»
+      ma <mark>«che <b>struttura</b> si nasconde in questi dati?»</mark>. Il primo e più intuitivo compito è il
+      <b>clustering</b>: scoprire <b>gruppi naturali</b> di osservazioni simili, senza che nessuno ci abbia detto quali
+      siano — clienti con abitudini affini, cellule dello stesso tipo, temi ricorrenti in una massa di testi. In questo
+      capitolo: cos'è (e cosa non è) l'apprendimento non supervisionato (§15.1), il celebre algoritmo <b>k-means</b> e
+      come funziona passo passo (§15.2), il problema spinoso di <b>quanti gruppi</b> cercare (§15.3), e un approccio
+      diverso e visivo, il <b>clustering gerarchico</b> (§15.4). Con la solita cura per ogni idea, senza mai correre.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'<b>apprendimento non supervisionato</b> (§15.1), l'algoritmo <b>k-means</b> (§15.2), <b>scegliere k</b> con
+      gomito e silhouette (§15.3), il <b>clustering gerarchico</b> (§15.4). Nel laboratorio (§15.5) fai girare k-means
+      passo dopo passo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: trovare ordine senza risposte</div>
+    <p style="margin-bottom:0">
+      Il clustering è ovunque nella pratica: <mark>segmentare i clienti per il marketing, raggruppare documenti o
+      immagini, individuare tipi di cellule, comprimere colori, scoprire anomalie.</mark> È spesso il primo passo per
+      <b>capire</b> un dataset nuovo di cui non si sa nulla. E introduce il modo di pensare non supervisionato — cercare
+      struttura, non risposte — che governa anche la riduzione della dimensionalità (cap. 17) e buona parte
+      dell'intelligenza artificiale moderna.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>L'apprendimento non supervisionato</h2>
+
+  <p class="lead">
+    Fissiamo bene la differenza, perché cambia tutto: cosa cerchiamo, e come giudichiamo se abbiamo fatto bene.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Niente etichette, niente «risposta giusta»</div>
+    <p style="margin-bottom:.5rem">
+      Nell'apprendimento <b>supervisionato</b> (capitoli 4–14) ogni esempio arrivava con la sua etichetta $y$ (il valore
+      o la classe corretta), e il modello imparava a riprodurla. Nell'apprendimento <b>non supervisionato</b> <mark>gli
+      esempi hanno <b>solo</b> le caratteristiche $x$, nessuna $y$</mark>. Non c'è una risposta da imparare: c'è solo una
+      montagna di dati in cui cercare <b>schemi, gruppi, strutture</b>.
+    </p>
+    <p style="margin-bottom:0">
+      Questo ha una conseguenza importante e talvolta scomoda: <mark>non essendoci una «verità», non c'è un modo secco di
+      dire se il risultato è «giusto».</mark> Nel supervisionato potevi misurare l'errore contro le etichette vere; qui i
+      raggruppamenti che trovi vanno <b>interpretati</b> e giudicati per la loro <b>utilità</b>, non confrontati con una
+      soluzione ufficiale. Imparare a convivere con questa ambiguità è parte del mestiere.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Cosa vuol dire «un gruppo»</div>
+    <p style="margin-bottom:0">
+      L'idea di clustering si regge su una nozione semplice: <mark>un buon gruppo (cluster) raccoglie punti <b>simili
+      tra loro</b> (vicini) e <b>diversi</b> dai punti degli altri gruppi (lontani).</mark> «Compatti dentro, ben
+      separati fuori.» Tutto il clustering è, in fondo, la ricerca di una divisione dei dati che rispetti al meglio
+      questo ideale. I vari algoritmi differiscono nel <b>come</b> definiscono e cercano questi gruppi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>k-means: l'algoritmo</h2>
+
+  <p class="lead">
+    Il <b>k-means</b> è l'algoritmo di clustering più famoso, e la sua idea è di una semplicità disarmante. Il nome dice
+    già molto: cerca $k$ gruppi, ciascuno rappresentato dalla sua <b>media</b> (in inglese «mean»), cioè dal suo centro.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Due passi che si alternano, fino a stabilizzarsi</div>
+    <p style="margin-bottom:.5rem">
+      Tu scegli in anticipo <b>quanti gruppi</b> vuoi ($k$, per esempio 3). L'algoritmo mette $k$ «centri»
+      (<b>centroidi</b>) in posizioni iniziali, poi <b>alterna</b> due passi semplicissimi finché nulla cambia più:
+    </p>
+    <ol style="margin:0 0 .6rem 1.1rem">
+      <li style="margin-bottom:.4rem"><b>Passo di assegnazione</b> — <mark>ogni punto va al centroide più
+          <b>vicino</b></mark> (si colora del gruppo del centro più prossimo). Così si formano $k$ gruppi provvisori.</li>
+      <li style="margin-bottom:.4rem"><b>Passo di aggiornamento</b> — <mark>ogni centroide si <b>sposta</b> nel centro
+          (la media) dei punti che gli sono stati assegnati.</mark> Il rappresentante si riposiziona per stare in mezzo
+          alla sua gente.</li>
+    </ol>
+    <p style="margin-bottom:0">
+      Poi si torna al passo 1 (i punti, coi centri spostati, potrebbero cambiare gruppo), poi al passo 2, e così via.
+      <mark>A ogni giro i gruppi diventano un po' più «giusti», finché si assestano</mark> e nessun punto cambia più
+      squadra: l'algoritmo si ferma. È una danza di due passi che converge sempre. Lo vedrai muoversi nel laboratorio.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Cosa minimizza, in fondo <span class="tag">gruppi compatti</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">
+      $$ \text{inerzia} = \sum_{\text{gruppi}}\;\sum_{\text{punti del gruppo}} \big(\text{distanza dal proprio centroide}\big)^2 $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>l'<b>inerzia</b> — la «dispersione» totale dentro i gruppi</dt>
+        <dd>è la somma, su tutti i punti, della distanza (al quadrato) di ciascun punto dal centro del <b>suo</b> gruppo.
+            <mark>Piccola = punti stretti attorno ai loro centri (gruppi compatti); grande = punti sparpagliati.</mark>
+            I due passi del k-means, alternati, non fanno che <b>ridurre</b> questa inerzia a ogni giro, finché non si
+            può più migliorare. In pratica: cerca gruppi il più possibile compatti.</dd>
+        <dt>attenzione a due limiti</dt>
+        <dd>il k-means <b>(1)</b> presuppone gruppi «tondeggianti» e di dimensioni simili (usa distanze da un centro),
+            quindi fatica con gruppi allungati o di forme strane; <b>(2)</b> il risultato dipende da <b>dove parti</b>
+            (le posizioni iniziali dei centroidi): partenze diverse possono dare gruppi diversi. <mark>Per questo si
+            fanno più partenze e si tiene la migliore</mark> — scikit-learn lo fa in automatico con
+            <code>n_init</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve memorizzare la formula: ti basta l'idea che il k-means cerca di rendere i gruppi <b>il più compatti
+      possibile</b> attorno ai loro centri, alternando «assegna al più vicino» e «sposta il centro in mezzo».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Scegliere k (gomito, silhouette)</h2>
+
+  <p class="lead">
+    C'è una domanda imbarazzante che il k-means ci scarica addosso: <b>quanti gruppi cercare?</b> Devi dirglielo tu, ma
+    spesso non lo sai! Per fortuna esistono due strumenti che aiutano a decidere.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📉</span> Il metodo del «gomito» (elbow)</div>
+    <p style="margin-bottom:0">
+      Prova diversi valori di $k$ (1, 2, 3, …) e per ognuno calcola l'inerzia (la dispersione dentro i gruppi). È ovvio
+      che <b>più gruppi metti, più l'inerzia scende</b> (con un gruppo per punto sarebbe zero!). Ma osserva <b>come</b>
+      scende: all'inizio crolla di molto (stai davvero separando gruppi veri), poi il guadagno si assottiglia (stai solo
+      spezzettando gruppi già buoni). <mark>Il punto dove la curva «piega» bruscamente — il <b>gomito</b> — segnala il
+      numero di gruppi «giusto»</mark>: oltre quello, aggiungere gruppi rende poco. Si disegna l'inerzia contro $k$ e si
+      cerca a occhio la piega del gomito.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il punteggio di silhouette</div>
+    <p style="margin-bottom:0">
+      Un metodo più quantitativo. Per ogni punto, la <b>silhouette</b> confronta due cose: quanto è <b>vicino</b> ai
+      compagni del proprio gruppo, contro quanto è vicino al gruppo <b>estraneo più prossimo</b>. <mark>Se un punto è
+      molto più vicino ai suoi che agli altri, ha silhouette alta (vicina a 1): è ben collocato.</mark> Se sta a cavallo
+      tra due gruppi, la silhouette è bassa (vicina a 0). Mediando la silhouette su tutti i punti si ottiene un
+      punteggio complessivo della bontà del raggruppamento: <b>si prova una gamma di $k$ e si sceglie quello con la
+      silhouette media più alta.</b> A differenza del gomito (da leggere a occhio), qui hai un numero da massimizzare.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🧭</span> Nessuna verità, solo indizi</div>
+    <p style="margin-bottom:0">
+      Ricorda il §15.1: <mark>non esiste un $k$ «ufficialmente giusto».</mark> Gomito e silhouette sono <b>indizi</b>,
+      non sentenze. Spesso la scelta migliore combina questi indizi con il <b>buon senso del dominio</b> (quanti
+      segmenti di clientela servono davvero al marketing? quanti tipi cellulari ha senso distinguere?). Gli strumenti
+      guidano; la conoscenza del problema decide.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Clustering gerarchico</h2>
+
+  <p class="lead">
+    Il k-means ti costringe a scegliere $k$ in anticipo e ti dà gruppi «piatti». Il <b>clustering gerarchico</b> offre
+    un'alternativa più ricca e visiva, che non richiede di fissare $k$ prima.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Fondere i più vicini, un passo alla volta</div>
+    <p style="margin-bottom:0">
+      La versione più comune (detta <b>agglomerativa</b>, «dal basso verso l'alto») procede così: <mark>all'inizio ogni
+      punto è un gruppo a sé. Poi, ripetutamente, si <b>fondono i due gruppi più vicini</b> in uno solo.</mark> Si
+      continua a fondere le coppie più vicine, finché rimane un unico grande gruppo che contiene tutto. Non serve
+      decidere $k$ prima: costruisci l'intera «storia» delle fusioni, e solo dopo scegli a che punto tagliarla. È come
+      ricostruire un albero genealogico partendo dai singoli individui e risalendo agli antenati comuni.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">🌳</span> Il dendrogramma: l'albero delle fusioni</div>
+    <p style="margin-bottom:0">
+      Tutta questa storia di fusioni si disegna in un grafico bellissimo e informativo, il <b>dendrogramma</b>: un
+      albero in cui le foglie in basso sono i singoli punti, e via via che sali i rami si <b>uniscono</b> alle altezze
+      corrispondenti a ciascuna fusione (più in alto = fusione tra gruppi più diversi). <mark>Per ottenere i cluster,
+      «tagli» il dendrogramma a una certa altezza con una linea orizzontale: quanti rami tagli, tanti gruppi ottieni.</mark>
+      Il bello è che vedi <b>tutta</b> la struttura a colpo d'occhio e scegli il numero di gruppi <b>dopo</b>, osservando
+      dove l'albero suggerisce «tagli naturali» (grandi salti di altezza). Un'unica cosa da decidere in anticipo: il
+      <b>criterio di distanza tra gruppi</b> (per esempio la distanza tra i punti più vicini, o tra i centri) — che
+      influenza la forma dei cluster.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget fai girare il k-means <b>un passo alla volta</b>: premi «passo» e guarda i punti ricolorarsi (assegnazione)
+    e i centri spostarsi (aggiornamento), fino a stabilizzarsi. È la danza dei due passi, dal vivo.
+  </p>
+
+  <div class="widget" id="w-km">
+    <div class="w-head">
+      <span>k-means passo dopo passo</span>
+      <span class="hint">assegna al più vicino, poi sposta i centri</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="km-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="display:flex; gap:.4rem; justify-content:center; margin-top:.6rem; flex-wrap:wrap">
+        <button class="btn" id="km-step">passo successivo ▸</button>
+        <button class="btn ghost" id="km-reset">ricomincia</button>
+      </div>
+    </div>
+    <div class="w-readout" id="km-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">clustering.py</div>
+    <pre><span class="kw">from</span> sklearn.cluster <span class="kw">import</span> KMeans, AgglomerativeClustering
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+
+X <span class="op">=</span> <span class="fn">StandardScaler</span>().<span class="fn">fit_transform</span>(X_grezzi)  <span class="cm"># standardizza: le distanze contano</span>
+
+km <span class="op">=</span> <span class="fn">KMeans</span>(n_clusters<span class="op">=</span><span class="nm">3</span>, n_init<span class="op">=</span><span class="nm">10</span>)   <span class="cm"># 10 partenze diverse, tiene la migliore</span>
+etichette <span class="op">=</span> km.<span class="fn">fit_predict</span>(X)               <span class="cm"># a quale gruppo va ogni punto</span>
+<span class="bi">print</span>(km.cluster_centers_)               <span class="cm"># i centroidi finali</span>
+<span class="bi">print</span>(km.inertia_)                       <span class="cm"># la dispersione (per il "gomito")</span>
+
+<span class="cm"># gerarchico: nessun k da fissare prima, guarda il dendrogramma</span>
+gerarchico <span class="op">=</span> <span class="fn">AgglomerativeClustering</span>(n_clusters<span class="op">=</span><span class="nm">3</span>).<span class="fn">fit</span>(X)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: a ogni «passo», prima i punti si <b>ricolorano</b> scegliendo il centro più vicino (assegnazione), poi
+      i centri (le X grandi) <b>scivolano</b> verso il mezzo dei loro punti (aggiornamento); dopo pochi giri tutto si
+      <b>stabilizza</b> sui tre gruppi naturali. Ecco il k-means. Nel codice: <code>n_clusters</code> (il tuo $k$),
+      <code>n_init</code> (più partenze, per il problema delle posizioni iniziali), <code>inertia_</code> (per il
+      gomito) e l'alternativa gerarchica. Hai fatto il tuo primo passo nel non supervisionato. Il k-means è potente ma
+      rigido (gruppi tondi, $k$ da fissare): nel prossimo capitolo due metodi che superano questi limiti — <b>DBSCAN</b>
+      (trova gruppi di forma qualsiasi e riconosce il rumore) e i <b>Gaussian Mixture Models</b> (gruppi «morbidi»,
+      probabilistici).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>L'apprendimento <b>non supervisionato</b> cerca <b>struttura</b> in dati <b>senza etichette</b>: non c'è una
+          «risposta giusta», i risultati vanno interpretati per utilità. Il <b>clustering</b> trova gruppi naturali
+          (§15.1).</li>
+      <li><b>k-means</b>: scegli $k$, poi alterna «<b>assegna</b> ogni punto al centro più vicino» e «<b>sposta</b> ogni
+          centro nella media dei suoi punti», finché si stabilizza. Minimizza l'<b>inerzia</b> (gruppi compatti) (§15.2).</li>
+      <li>Per scegliere $k$: il <b>gomito</b> (dove l'inerzia smette di calare bruscamente) e la <b>silhouette</b> (punti
+          molto più vicini ai propri che agli estranei). Sono indizi, non verità (§15.3).</li>
+      <li><b>Clustering gerarchico</b>: fonde via via i gruppi più vicini, costruendo un <b>dendrogramma</b> che tagli
+          all'altezza voluta — non serve fissare $k$ prima (§15.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il k-means e il gerarchico ci hanno dato i primi occhi per vedere i gruppi nascosti nei dati. Ma entrambi hanno
+    limiti: il k-means vuole gruppi tondeggianti e un numero deciso in anticipo, e nessuno dei due sa dire «questo punto
+    è solo rumore, non appartiene a nessun gruppo». Nel <strong>Capitolo 16</strong> conosciamo due metodi più
+    sofisticati che colmano queste lacune: <b>DBSCAN</b>, che scopre gruppi di <b>forma qualsiasi</b> e individua gli
+    outlier, e i <b>Gaussian Mixture Models</b>, che assegnano i punti ai gruppi in modo <b>probabilistico</b> e
+    morbido, riprendendo le nuvole gaussiane che già conosciamo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza fondamentale tra apprendimento supervisionato e non supervisionato? Perché nel clustering non
+      possiamo dire in modo secco se il risultato è «giusto»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Descrivi i due passi che il k-means alterna. Cosa cerca di minimizzare, in fondo, e cosa significa
+      geometricamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Perché non ha senso scegliere $k$ semplicemente prendendo quello che rende l'inerzia più piccola? Come aiutano il
+      metodo del gomito e la silhouette?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Cita due limiti del k-means. Perché il risultato può dipendere dalle posizioni iniziali dei centroidi, e come si
+      attenua questo problema?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.5</div>
+    <p style="margin-bottom:0">
+      Cos'è un dendrogramma e come si usa per ottenere un numero di gruppi a scelta? Qual è un vantaggio del clustering
+      gerarchico rispetto al k-means?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Nel <b>supervisionato</b> ogni esempio ha un'etichetta (la risposta giusta) e il modello impara a riprodurla; nel
+      <b>non supervisionato</b> gli esempi hanno solo le caratteristiche, senza risposta, e si cerca struttura (gruppi,
+      schemi). Nel clustering non c'è una «verità» con cui confrontarsi: mancano le etichette corrette, quindi i gruppi
+      trovati non si possono dichiarare giusti o sbagliati in assoluto — vanno interpretati e giudicati per la loro
+      utilità nel contesto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      Il k-means alterna: <b>(1) assegnazione</b> — ogni punto viene assegnato al centroide più vicino, formando gruppi
+      provvisori; <b>(2) aggiornamento</b> — ogni centroide si sposta nella media (il centro) dei punti che gli sono
+      stati assegnati. Ripetendo, minimizza l'<b>inerzia</b>: la somma delle distanze al quadrato di ogni punto dal
+      centro del proprio gruppo. Geometricamente, cerca di rendere i gruppi il più <b>compatti</b> possibile (punti
+      stretti attorno ai loro centri).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      Perché l'inerzia <b>diminuisce sempre</b> all'aumentare di $k$ (con un gruppo per punto sarebbe zero): scegliere il
+      $k$ che minimizza l'inerzia porterebbe a un numero assurdo di gruppi. Il <b>gomito</b> aiuta guardando <b>come</b>
+      cala l'inerzia: si cerca il punto in cui la curva «piega» (oltre il quale aggiungere gruppi rende poco). La
+      <b>silhouette</b> dà un punteggio (quanto i punti sono più vicini ai propri gruppi che agli estranei) da
+      massimizzare: si sceglie il $k$ con silhouette media più alta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      Due limiti: (1) presuppone gruppi <b>tondeggianti</b> e di dimensioni simili, quindi fatica con gruppi allungati o
+      di forma irregolare; (2) richiede di <b>fissare $k$</b> in anticipo. Il risultato dipende dalle posizioni iniziali
+      dei centroidi perché l'algoritmo può assestarsi su soluzioni diverse (minimi locali dell'inerzia) a seconda di
+      dove parte. Si attenua facendo <b>più partenze</b> con inizializzazioni diverse e tenendo quella con inerzia
+      minore (in scikit-learn, il parametro <code>n_init</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.5</div>
+    <p style="margin-bottom:0">
+      Un <b>dendrogramma</b> è l'albero che rappresenta tutte le fusioni del clustering gerarchico: le foglie sono i
+      singoli punti e i rami si uniscono a un'altezza pari alla «distanza» a cui i gruppi vengono fusi. Si usa
+      <b>tagliandolo</b> con una linea orizzontale a una certa altezza: il numero di rami intersecati dà il numero di
+      gruppi (tagliando più in basso ottieni più gruppi, più in alto meno). Un vantaggio rispetto al k-means è che
+      <b>non serve fissare $k$ in anticipo</b>: costruisci l'intera struttura e scegli il numero di gruppi dopo,
+      osservando dove l'albero suggerisce tagli naturali.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.5 — k-means passo a passo su 3 gruppi 2D. Bottone "passo" alterna
+   assegnazione e aggiornamento. Init deterministico. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('km-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('km-out');
+  const bStep = document.getElementById('km-step');
+  const bReset = document.getElementById('km-reset');
+
+  // tre gruppi naturali
+  const PTS=[];
+  function blob(cx,cy,arr){ arr.forEach(function(d){ PTS.push({x:cx+d[0],y:cy+d[1],a:-1}); }); }
+  const shape=[[-0.6,0.4],[0.5,0.6],[0.2,-0.5],[-0.4,-0.3],[0.6,-0.2],[-0.2,0.6],[0.3,0.2],[-0.5,-0.6],[0.1,0.5],[0.4,-0.5]];
+  blob(2.2,6.5,shape); blob(6.8,6.2,shape); blob(4.5,2.4,shape);
+  const XMIN=0, XMAX=9, YMIN=0, YMAX=9;
+  const K=3;
+  const COLS=['var(--accent)','var(--warm)','var(--green)'];
+  // init centroidi deterministico (volutamente "storto" per mostrare il moto)
+  const INIT=[[1.5,3.0],[3.5,7.5],[7.5,3.5]];
+  let cents, phase, iter, done;
+
+  function reset(){ cents=INIT.map(function(c){return c.slice();}); PTS.forEach(function(p){p.a=-1;}); phase='assign'; iter=0; done=false; draw(); }
+
+  function assign(){ PTS.forEach(function(p){ let bd=Infinity,bj=0; for(let j=0;j<K;j++){ const d=(p.x-cents[j][0])**2+(p.y-cents[j][1])**2; if(d<bd){bd=d;bj=j;} } p.a=bj; }); }
+  function update(){ let moved=false; for(let j=0;j<K;j++){ let sx=0,sy=0,c=0; PTS.forEach(function(p){ if(p.a===j){sx+=p.x;sy+=p.y;c++;} }); if(c>0){ const nx=sx/c, ny=sy/c; if(Math.abs(nx-cents[j][0])+Math.abs(ny-cents[j][1])>1e-4) moved=true; cents[j]=[nx,ny]; } } return moved; }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+  function draw(){
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    PTS.forEach(function(pt){ const col = pt.a<0 ? 'var(--grid)' : COLS[pt.a]; p.dot(pt.x,pt.y,{ color:col, r:4.2, stroke:'#fff', sw:1 }); });
+    for(let j=0;j<K;j++){ const c=cents[j];
+      p.line(c[0]-0.35,c[1]-0.35,c[0]+0.35,c[1]+0.35,{ color:COLS[j], width:3.5 });
+      p.line(c[0]-0.35,c[1]+0.35,c[0]+0.35,c[1]-0.35,{ color:COLS[j], width:3.5 });
+      p.dot(c[0],c[1],{ color:'#fff', r:2, stroke:COLS[j], sw:1 });
+    }
+    let msg;
+    if(done) msg='<b>Stabile!</b> Dopo '+iter+' giri nessun punto cambia più gruppo: il k-means ha trovato i tre cluster. Premi «ricomincia» per rivederlo.';
+    else if(phase==='assign') msg='Prossimo passo: <b>assegnazione</b> — ogni punto si colorerà del centro (X) più vicino.';
+    else msg='Prossimo passo: <b>aggiornamento</b> — ogni centro (X) scivolerà nella media dei suoi punti.';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">Giro <b>'+iter+'</b>. '+msg+'</div>';
+  }
+
+  bStep.addEventListener('click', function(){
+    if(done) return;
+    if(phase==='assign'){ assign(); phase='update'; }
+    else { const moved=update(); iter++; if(!moved){ done=true; } phase='assign'; }
+    draw();
+  });
+  bReset.addEventListener('click', reset);
+  reset();
+})();
+</script>
+</body>
+</html>
