@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Ricevere dati: Pydantic — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Ricevere dati: Pydantic</h1>
+    <p class="standfirst">
+      Finora abbiamo ricevuto valori singoli dall'URL: un id, una parola. Ma per <b>creare</b> qualcosa — un nuovo
+      utente, un ordine, un articolo — il client deve inviare un intero <b>oggetto</b>: nome, email, età, prezzo,
+      tutti insieme. Questi dati viaggiano nel <b>corpo</b> della richiesta, in JSON. Il problema: come li ricevi in
+      modo <b>sicuro</b>? Come ti assicuri che «email» sia davvero un'email, che «età» sia un numero positivo, che non
+      manchi un campo obbligatorio? La risposta di FastAPI è elegante: definisci la <b>forma</b> attesa dei dati con
+      un <b>modello Pydantic</b> — una semplice classe Python — e lasci che sia lui a validare ogni richiesta. Se i
+      dati combaciano, li ricevi come un comodo oggetto Python; se no, il client riceve un errore preciso.
+      <mark>È lo stesso superpotere del capitolo scorso, portato dai singoli valori agli oggetti complessi: il cuore
+      del modo in cui FastAPI gestisce i dati.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>corpo</b> della richiesta (§6.1), i <b>modelli Pydantic</b> (§6.2), la <b>validazione</b> dei dati (§6.3),
+      e le <b>risposte strutturate</b> con <code>response_model</code> (§6.4). Nel laboratorio (§6.5) ricevi e validi
+      un oggetto vero.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la porta d'ingresso dei dati</div>
+    <p style="margin-bottom:0">
+      Ogni volta che un utente si registra, pubblica, ordina, il tuo backend riceve un oggetto dati — ed è il punto
+      più <b>delicato</b>: dati sbagliati o malevoli entrano da qui. <mark>Validare rigorosamente ciò che entra è la
+      prima regola di sicurezza del backend</mark> (ricorda: «non fidarti mai del client», Cap. 1). Pydantic rende
+      questa validazione dichiarativa, leggibile e automatica. Lo userai in <em>ogni</em> endpoint che riceve dati,
+      per tutto il resto del libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Il corpo della richiesta</h2>
+
+  <p class="lead">
+    Come visto nel Cap. 2, le richieste che <b>creano</b> o <b>modificano</b> (POST, PUT) portano i dati nel
+    <b>corpo</b> (body), di solito in JSON. A differenza dei parametri di URL — pochi valori sciolti — il corpo
+    contiene un <b>oggetto completo</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">una richiesta POST con corpo JSON</div>
+    <pre><span class="hl">POST</span> /utenti <span class="out">HTTP/1.1</span>
+<span class="ar">Content-Type:</span> application/json
+
+<span class="st">{
+  "nome": "Anna",
+  "email": "anna@esempio.com",
+  "eta": 30
+}</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il problema da risolvere</div>
+    <p style="margin-bottom:0">
+      Quel JSON arriva come <b>testo grezzo</b>. Prima di poterlo usare bisognerebbe: convertirlo in dati Python;
+      controllare che <code>nome</code> ci sia e sia una stringa; che <code>email</code> abbia una forma valida; che
+      <code>eta</code> sia un intero (e magari non negativo); rifiutare campi mancanti o di tipo sbagliato. Farlo a
+      mano, per ogni endpoint, sarebbe <b>decine di righe di controlli</b> ripetitivi e facili da sbagliare.
+      <mark>Pydantic fa tutto questo per te, a partire da una semplice descrizione della forma dei dati.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>I modelli Pydantic</h2>
+
+  <p class="lead">
+    Un <b>modello Pydantic</b> è una classe Python che <b>descrive la forma</b> di un oggetto: quali campi ha, e di
+    che tipo. Si scrive ereditando da <code>BaseModel</code> e dichiarando i campi con le annotazioni di tipo — le
+    stesse che già conosci.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+<span class="kw">class</span> <span class="fn">Utente</span>(BaseModel):     <span class="cm"># un modello = una classe che eredita da BaseModel</span>
+    nome: <span class="ty">str</span>                <span class="cm"># campo obbligatorio, stringa</span>
+    email: <span class="ty">str</span>               <span class="cm"># campo obbligatorio, stringa</span>
+    eta: <span class="ty">int</span> <span class="op">=</span> <span class="nm">18</span>             <span class="cm"># campo facoltativo (default 18)</span></pre>
+  </div>
+
+  <p>Ora <b>usarlo</b> in un endpoint: basta dichiararlo come parametro della funzione, con il tipo del modello.</p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/utenti"</span>)
+<span class="kw">def</span> <span class="fn">crea_utente</span>(utente: Utente):   <span class="cm"># FastAPI legge il corpo e lo valida contro Utente</span>
+    <span class="kw">return</span> {<span class="st">"creato"</span>: utente.nome, <span class="st">"email"</span>: utente.email}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Come FastAPI usa il modello <span class="tag">parametro-modello → corpo validato</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">class Utente(BaseModel)</span></dt>
+        <dd>definisce la struttura attesa. <mark>I campi con annotazione ma senza default sono <b>obbligatori</b></mark>
+            (<code>nome</code>, <code>email</code>); quelli con <code>= valore</code> sono facoltativi
+            (<code>eta</code>).</dd>
+        <dt><span class="mono">def crea_utente(utente: Utente)</span></dt>
+        <dd>il parametro ha come tipo <b>il modello</b>. <mark>FastAPI capisce che deve leggere il <b>corpo</b> JSON</mark>
+            (non l'URL), validarlo contro <code>Utente</code>, e costruirne un'istanza da passarti.</dd>
+        <dt>dentro la funzione: <span class="mono">utente.nome</span>, <span class="mono">utente.email</span></dt>
+        <dd><code>utente</code> è un vero oggetto Python: accedi ai campi con il punto, già del tipo giusto.
+            <mark>Niente parsing manuale del JSON</mark>, niente <code>utente["nome"]</code>: attributi puliti, con
+            l'autocompletamento dell'editor.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La stessa regola del Cap. 5 vale al contrario: un parametro di tipo <b>semplice</b> (int, str) senza segnaposto
+      nel path è un query param; un parametro di tipo <b>modello Pydantic</b> è preso dal <b>corpo</b>. FastAPI
+      distingue guardando il tipo. E come bonus: <code>/docs</code> mostra automaticamente la <b>forma</b> del corpo
+      atteso, con un esempio già pronto da compilare e inviare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Validazione dei dati</h2>
+
+  <p class="lead">
+    Il valore vero del modello emerge quando i dati sono <b>sbagliati</b>. Pydantic controlla ogni campo e, se
+    qualcosa non va, FastAPI respinge la richiesta con un <b>422</b> che elenca <b>esattamente</b> quali campi e
+    perché — di nuovo, senza che tu scriva un controllo.
+  </p>
+
+  <div class="term">
+    <div class="t-head">dati validi → 200, dati invalidi → 422</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-X</span> <span class="ar">POST</span> <span class="ar">.../utenti</span> <span class="fl">-H</span> <span class="ar">"Content-Type: application/json"</span> \
+       <span class="fl">-d</span> <span class="ar">'{"nome": "Anna", "email": "anna@x.com", "eta": 30}'</span>
+<span class="out">{ "creato": "Anna", "email": "anna@x.com" }</span>            <span class="c"># ok</span>
+
+<span class="c"># manca "email" e "eta" non è un numero:</span>
+<span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-X</span> <span class="ar">POST</span> <span class="ar">.../utenti</span> <span class="fl">-H</span> <span class="ar">"Content-Type: application/json"</span> \
+       <span class="fl">-d</span> <span class="ar">'{"nome": "Bob", "eta": "vecchio"}'</span>
+<span class="hl">HTTP/1.1 422</span>
+<span class="out">{ "detail": [
+  { "loc": ["body", "email"], "msg": "Field required" },
+  { "loc": ["body", "eta"],   "msg": "Input should be a valid integer" }
+] }</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔬</span> Un errore per ogni problema, tutti insieme</div>
+    <p style="margin-bottom:0">
+      Guarda la risposta 422: Pydantic non si ferma al primo errore, ma li <b>raccoglie tutti</b> e li elenca, con la
+      posizione (<code>loc</code>: quale campo) e il motivo (<code>msg</code>). <mark>Il client sa esattamente cosa
+      correggere.</mark> Nota anche la conversione «gentile»: se avessi passato <code>"eta": "30"</code> (stringa),
+      Pydantic la convertirebbe in <code>30</code> intero senza lamentarsi — è flessibile dove può, rigoroso dove
+      deve.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🎯</span> Validazioni più fini: campi con vincoli</div>
+    <p style="margin-bottom:0">
+      Puoi imporre regole oltre al tipo. Con <code>Field</code> aggiungi vincoli come lunghezza minima o intervalli;
+      con tipi speciali validi formati noti:
+    </p>
+    <div class="term" style="margin:.9rem auto 0">
+      <div class="t-head file">main.py</div>
+      <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field, EmailStr
+
+<span class="kw">class</span> <span class="fn">Utente</span>(BaseModel):
+    nome: <span class="ty">str</span> <span class="op">=</span> <span class="fn">Field</span>(min_length<span class="op">=</span><span class="nm">2</span>, max_length<span class="op">=</span><span class="nm">50</span>)   <span class="cm"># 2-50 caratteri</span>
+    email: EmailStr                                <span class="cm"># dev'essere una email valida</span>
+    eta: <span class="ty">int</span> <span class="op">=</span> <span class="fn">Field</span>(ge<span class="op">=</span><span class="nm">0</span>, le<span class="op">=</span><span class="nm">120</span>)             <span class="cm"># tra 0 e 120 (ge/le = ≥/≤)</span></pre>
+    </div>
+    <p style="margin:.7rem 0 0">
+      Ora <code>email</code> senza <code>@</code> valido, o <code>eta = -5</code>, vengono respinti automaticamente.
+      <mark>Descrivi <b>le regole</b>, non <b>i controlli</b></mark>: Pydantic li esegue. (<code>EmailStr</code>
+      richiede il pacchetto <code>email-validator</code>: <code>pip install email-validator</code>.)
+    </p>
+  </div>
+
+  <div class="widget" id="w-pyd">
+    <div class="w-head">
+      <span>Valida un utente con Pydantic</span>
+      <span class="hint">compila e «invia»: valido o 422?</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:440px; margin:0 auto; text-align:left">
+        <div style="font-family:var(--mono); font-size:.8rem; color:var(--ink-soft); margin-bottom:.5rem">Modello: nome (2-50), email (valida), eta (0-120)</div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:.5rem .6rem; align-items:center; font-size:.9rem">
+          <label style="color:var(--ink-soft)">nome</label>
+          <input type="text" id="py-nome" value="Anna" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">email</label>
+          <input type="text" id="py-email" value="anna@esempio.com" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">eta</label>
+          <input type="text" id="py-eta" value="30" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="py-go">▶ POST /utenti</button>
+      <button class="btn ghost" data-bad="email">prova email non valida</button>
+      <button class="btn ghost" data-bad="eta">prova eta = -5</button>
+    </div>
+    <div class="w-readout" id="py-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Risposte strutturate</h2>
+
+  <p class="lead">
+    I modelli non servono solo a <b>ricevere</b>: puoi usarli anche per definire la forma della <b>risposta</b>. È
+    utile soprattutto per <b>non far uscire dati sensibili</b> — il caso classico: ricevi una password, ma non devi
+    mai ri-mandarla indietro.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="kw">class</span> <span class="fn">UtenteIn</span>(BaseModel):     <span class="cm"># cosa ENTRA: include la password</span>
+    nome: <span class="ty">str</span>
+    password: <span class="ty">str</span>
+
+<span class="kw">class</span> <span class="fn">UtenteOut</span>(BaseModel):    <span class="cm"># cosa ESCE: NIENTE password</span>
+    nome: <span class="ty">str</span>
+
+<span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/utenti"</span>, response_model<span class="op">=</span>UtenteOut)   <span class="cm"># filtra l'uscita</span>
+<span class="kw">def</span> <span class="fn">crea</span>(u: UtenteIn):
+    salva_su_db(u)              <span class="cm"># (userà la password internamente)</span>
+    <span class="kw">return</span> u                    <span class="cm"># anche se restituisci tutto u...</span>
+                                <span class="cm"># ...FastAPI manda SOLO i campi di UtenteOut</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">response_model: il filtro dell'uscita <span class="tag">sicurezza + contratto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">response_model=UtenteOut</span></dt>
+        <dd>si aggiunge al decoratore. Dice a FastAPI: «<mark>qualunque cosa la funzione restituisca, mandane al
+            client <b>solo</b> i campi di <code>UtenteOut</code></mark>». Qui: solo <code>nome</code>, mai la
+            <code>password</code>.</dd>
+        <dt>due modelli: <span class="mono">…In</span> e <span class="mono">…Out</span></dt>
+        <dd>una convenzione utilissima: un modello per ciò che <b>entra</b> (con la password) e uno per ciò che
+            <b>esce</b> (senza). <mark>Impedisce «per costruzione» di trapelare dati riservati.</mark></dd>
+        <dt>bonus: documentazione e coerenza</dt>
+        <dd><code>response_model</code> fa anche apparire in <code>/docs</code> la forma esatta della risposta, e
+            garantisce che l'uscita rispetti sempre quel contratto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questo pattern <b>In/Out</b> lo riprenderemo sul serio dal Cap. 11, quando i dati verranno dal database: avremo
+      un modello per l'input, uno per l'output, e i modelli del database (SQLAlchemy). Per ora tieni l'idea:
+      <mark>i modelli Pydantic descrivono e proteggono la forma dei dati in <b>entrambe</b> le direzioni.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Laboratorio: ricevere e validare</h2>
+
+  <p class="lead">
+    Aggiungi al tuo <code>main.py</code> un endpoint che riceve e valida un articolo, e provalo con dati giusti e
+    sbagliati per vedere Pydantic al lavoro.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py (aggiunte)</div>
+    <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field
+
+<span class="kw">class</span> <span class="fn">Articolo</span>(BaseModel):
+    titolo: <span class="ty">str</span> <span class="op">=</span> <span class="fn">Field</span>(min_length<span class="op">=</span><span class="nm">1</span>, max_length<span class="op">=</span><span class="nm">100</span>)
+    prezzo: <span class="ty">float</span> <span class="op">=</span> <span class="fn">Field</span>(gt<span class="op">=</span><span class="nm">0</span>)          <span class="cm"># gt = maggiore di 0</span>
+    disponibile: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">True</span>
+
+<span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/articoli"</span>)
+<span class="kw">def</span> <span class="fn">crea_articolo</span>(articolo: Articolo):
+    <span class="kw">return</span> {<span class="st">"ok"</span>: <span class="kw">True</span>, <span class="st">"articolo"</span>: articolo}</pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — provalo (e provalo a rompere)</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-X</span> <span class="ar">POST</span> <span class="ar">.../articoli</span> <span class="fl">-H</span> <span class="ar">"Content-Type: application/json"</span> \
+       <span class="fl">-d</span> <span class="ar">'{"titolo": "Tazza", "prezzo": 9.9}'</span>
+<span class="out">{ "ok": true, "articolo": { "titolo": "Tazza", "prezzo": 9.9, "disponibile": true } }</span>
+
+<span class="c"># prezzo negativo → violato gt=0:</span>
+<span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-X</span> <span class="ar">POST</span> <span class="ar">.../articoli</span> <span class="fl">-H</span> <span class="ar">"Content-Type: application/json"</span> \
+       <span class="fl">-d</span> <span class="ar">'{"titolo": "X", "prezzo": -3}'</span>
+<span class="hl">HTTP/1.1 422</span>  <span class="out">{ "detail": [ { "loc":["body","prezzo"], "msg":"Input should be greater than 0" } ] }</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      Con dati validi ottieni <code>200</code> e — nota — il campo <code>disponibile</code> che non avevi passato è
+      stato riempito con il default <code>true</code>. Con <code>prezzo: -3</code> scatta il <code>422</code> perché
+      hai chiesto <code>gt=0</code>. <mark>Prova anche a omettere <code>titolo</code></mark>: otterrai «Field
+      required». Il modo migliore per esplorare è <code>/docs</code>: FastAPI ha già generato un form con lo schema
+      dell'<code>Articolo</code>, pronto per il «Try it out».
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>I dati per creare/modificare arrivano nel <b>corpo</b> JSON della richiesta (POST/PUT) (§6.1).</li>
+      <li>Un <b>modello Pydantic</b> = classe che eredita da <code>BaseModel</code> con campi tipizzati; usato come
+          parametro-funzione, FastAPI valida il corpo e ti dà un <b>oggetto</b> pronto (§6.2).</li>
+      <li>La <b>validazione</b> è automatica: campi mancanti o di tipo sbagliato → <b>422</b> con dettagli. Con
+          <code>Field</code>/tipi speciali imponi vincoli (lunghezze, intervalli, email) (§6.3).</li>
+      <li><code>response_model</code> filtra l'<b>uscita</b>: pattern <b>In/Out</b> per non trapelare dati sensibili
+          (§6.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sai <b>leggere</b> (parametri, Cap. 5) e <b>ricevere e validare oggetti</b> (Pydantic). Hai tutti i pezzi per
+    costruire un'API completa che gestisce una risorsa in tutte le sue operazioni: elencare, leggere, creare,
+    modificare, cancellare. Nel <strong>Capitolo 7</strong> li mettiamo insieme in un'<b>API CRUD</b> completa — con
+    la gestione pulita degli errori (il <code>404</code> quando una risorsa non esiste) — costruendo la nostra prima
+    piccola applicazione: una rubrica. Sarà lo scheletro che, dal Cap. 11, collegheremo a un database vero.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Perché per creare una risorsa si usa il <b>corpo</b> della richiesta invece dei parametri di URL? Quale metodo
+      HTTP si usa tipicamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Scrivi un modello Pydantic <code>Libro</code> con: <code>titolo</code> (stringa, obbligatorio),
+      <code>autore</code> (stringa, obbligatorio), <code>anno</code> (intero, facoltativo con default 2025).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Un client invia <code>{"titolo": "Guida", "anno": "milleottocento"}</code> al tuo endpoint che usa il modello
+      <code>Libro</code>. Quali due problemi rileverà Pydantic, e con quale codice di stato risponde FastAPI?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      Spiega a cosa serve il pattern con due modelli <code>UtenteIn</code> / <code>UtenteOut</code> e
+      <code>response_model</code>. Fai un esempio di dato che vorresti ricevere ma <b>non</b> rimandare mai indietro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      Perché creare una risorsa richiede <b>molti dati strutturati</b> insieme (nome, email, età, indirizzo…), che
+      starebbero scomodi e sarebbero limitati nell'URL; il corpo può contenere un intero oggetto JSON, anche
+      complesso e annidato. Il metodo tipico è <b>POST</b> sulla collezione (es. <code>POST /utenti</code>), come da
+      convenzione REST (Cap. 2).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">main.py</div>
+      <pre><span class="kw">class</span> <span class="fn">Libro</span>(BaseModel):
+    titolo: <span class="ty">str</span>
+    autore: <span class="ty">str</span>
+    anno: <span class="ty">int</span> <span class="op">=</span> <span class="nm">2025</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0"><code>titolo</code> e <code>autore</code> sono obbligatori (nessun default);
+      <code>anno</code> è facoltativo grazie a <code>= 2025</code>.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Due problemi: <b>(1)</b> manca il campo obbligatorio <code>autore</code> → «Field required»; <b>(2)</b>
+      <code>anno</code> vale <code>"milleottocento"</code>, che non è convertibile in intero → «Input should be a
+      valid integer». FastAPI risponde con <b>422 Unprocessable Entity</b>, elencando <b>entrambi</b> gli errori con
+      la loro posizione, senza eseguire la funzione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      Serve a separare ciò che <b>entra</b> da ciò che <b>esce</b>: <code>UtenteIn</code> accetta anche dati riservati
+      necessari all'operazione, mentre <code>UtenteOut</code> (impostato come <code>response_model</code>) definisce
+      cosa il client può <b>vedere</b> nella risposta, escludendo il resto. L'esempio classico è la <b>password</b>
+      (o un hash, un token, un numero di carta): li ricevi per registrare l'utente, ma non devono <b>mai</b> comparire
+      nella risposta. Il <code>response_model</code> lo garantisce «per costruzione».
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.3 — validatore Pydantic: valida nome/email/eta come farebbe il modello
+   ========================================================================= */
+(function () {
+  const out = document.getElementById('py-out');
+  if (!out) return;
+  const nomeEl  = document.getElementById('py-nome');
+  const emailEl = document.getElementById('py-email');
+  const etaEl   = document.getElementById('py-eta');
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function valida() {
+    const nome = nomeEl.value;
+    const email = emailEl.value.trim();
+    const etaRaw = etaEl.value.trim();
+    const errori = [];
+
+    if (nome.trim().length < 2) errori.push(['nome', 'String should have at least 2 characters']);
+    else if (nome.length > 50) errori.push(['nome', 'String should have at most 50 characters']);
+
+    // email "valida" in modo semplice: qualcosa@qualcosa.qualcosa
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errori.push(['email', 'value is not a valid email address']);
+
+    if (!/^-?\d+$/.test(etaRaw)) errori.push(['eta', 'Input should be a valid integer']);
+    else { const e = parseInt(etaRaw, 10); if (e < 0) errori.push(['eta', 'Input should be greater than or equal to 0']); else if (e > 120) errori.push(['eta', 'Input should be less than or equal to 120']); }
+
+    const reqBody = '{ "nome": "' + esc(nome) + '", "email": "' + esc(email) + '", "eta": "' + esc(etaRaw) + '" }';
+    let head = '<div class="term" style="margin:.2rem auto; max-width:100%"><div class="t-head">richiesta</div>' +
+               '<pre><span class="hl">POST</span> /utenti\n<span class="ar">Content-Type:</span> application/json\n\n<span class="st">' + esc(reqBody) + '</span></pre></div>';
+
+    if (errori.length) {
+      const righe = errori.map(function (e) { return '  { "loc": ["body", "' + e[0] + '"], "msg": "' + e[1] + '" }'; }).join(',\n');
+      out.innerHTML = head +
+        '<div class="term" style="margin:.2rem auto 0; max-width:100%"><div class="t-head">risposta</div>' +
+        '<pre><span class="out">HTTP/1.1</span> <span style="color:#e0654f; font-weight:700">422 Unprocessable Entity</span>\n\n' +
+        '<span class="out">{ "detail": [\n' + esc(righe) + '\n] }</span></pre></div>' +
+        '<div style="color:var(--warm); font-size:.9rem; text-align:left; margin-top:.4rem">⚠ ' + errori.length + ' problema/i: Pydantic li elenca <b>tutti</b> e FastAPI respinge con <b>422</b>, senza eseguire la funzione.</div>';
+    } else {
+      out.innerHTML = head +
+        '<div class="term" style="margin:.2rem auto 0; max-width:100%"><div class="t-head">risposta</div>' +
+        '<pre><span class="out">HTTP/1.1</span> <span style="color:#5fb96d; font-weight:700">200 OK</span>\n\n' +
+        '<span class="st">{ "creato": "' + esc(nome) + '", "email": "' + esc(email) + '" }</span></pre></div>' +
+        '<div style="color:var(--green); font-size:.9rem; text-align:left; margin-top:.4rem">✅ Dati validi: FastAPI costruisce un oggetto <code>Utente</code> e chiama la funzione. <code>eta</code> «' + esc(etaRaw) + '» è stato convertito in intero.</div>';
+    }
+  }
+
+  document.getElementById('py-go').addEventListener('click', valida);
+  document.querySelectorAll('#w-pyd .btn[data-bad]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const k = b.getAttribute('data-bad');
+      if (k === 'email') emailEl.value = 'anna-chiocciola-esempio';
+      else etaEl.value = '-5';
+      valida();
+    });
+  });
+  [nomeEl, emailEl, etaEl].forEach(function (e) { e.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') valida(); }); });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Compila i campi e premi «POST /utenti». Il widget valida come farebbe il modello <code>Utente</code>: <code>nome</code> 2-50 caratteri, <code>email</code> valida, <code>eta</code> intero 0-120. Prova i pulsanti per rompere le regole e vedere il <b>422</b>.</div>';
+})();
+</script>
+</body>
+</html>

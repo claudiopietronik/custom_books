@@ -91,7 +91,7 @@ const TOC = [
     n: 6,
     titolo: "Ricevere dati: Pydantic",
     file: "cap06-pydantic.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Il corpo della richiesta" },
       { id: "s6-2", n: "6.2", t: "I modelli Pydantic" },
