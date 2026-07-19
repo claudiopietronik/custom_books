@@ -15,7 +15,7 @@ usano Python/scikit-learn.
 
 - [x] 1 — Cos'è il machine learning
 - [x] 2 — L'apprendimento supervisionato
-- [ ] 3 — Bias, varianza e generalizzazione
+- [x] 3 — Bias, varianza e generalizzazione
 - [ ] 4 — Regressione lineare
 - [ ] 5 — Regolarizzazione: Ridge, Lasso, Elastic Net
 - [ ] 6 — Oltre il lineare: basi e spline

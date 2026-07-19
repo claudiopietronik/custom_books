@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Bias, varianza e generalizzazione — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Bias, varianza e generalizzazione</h1>
+    <p class="standfirst">
+      Nel capitolo scorso abbiamo scoperto un pericolo: un modello può «memorizzare» gli esempi invece di capirli, e
+      allora fallisce sui casi nuovi. Ora affrontiamo questo problema di petto, perché è <b>il</b> problema centrale di
+      tutto il machine learning. Da un lato c'è un modello <b>troppo semplice</b>, che non coglie lo schema dei dati
+      (sbaglia sempre, anche sugli esempi): si dice che ha molto <b>bias</b>. Dall'altro un modello <b>troppo
+      complesso</b>, che si adatta a ogni minima increspatura dei dati — compreso il rumore — e quindi «balla» in modo
+      diverso a ogni cambio di dati: ha molta <b>varianza</b>. In mezzo, il punto giusto. C'è persino una formula
+      bellissima — la <b>scomposizione bias-varianza</b> — che spiega <em>da dove viene</em> l'errore di un modello,
+      e la smonteremo con calma, pezzo per pezzo. In questo capitolo: overfitting e underfitting (§3.1), la
+      scomposizione bias-varianza (§3.2), la «maledizione» delle troppe dimensioni (§3.3), e come dividere i dati per
+      misurare l'errore <b>onestamente</b> (§3.4). <mark>È il capitolo che ti insegna a non farti ingannare da un
+      modello che sembra bravo ma non lo è.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Overfitting e underfitting</b> (§3.1), la <b>scomposizione bias-varianza</b> (§3.2), la <b>maledizione della
+      dimensionalità</b> (§3.3), <b>train/validation/test</b> (§3.4). Nel laboratorio (§3.5) vedi un modello passare
+      da troppo semplice a troppo complesso.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il compromesso che governa tutto</div>
+    <p style="margin-bottom:0">
+      Ogni scelta che farai — quale modello, quanto complesso, quanto regolarizzare — è, in fondo, un modo di
+      bilanciare bias e varianza. <mark>Capire questo compromesso è la chiave che apre <em>tutti</em> i modelli del
+      libro</mark>: non c'è un modello «migliore in assoluto», c'è quello giusto per la giusta quantità di complessità.
+      E saper misurare l'errore onestamente ti protegge dall'illusione più comune: credere buono un modello che ha solo
+      imparato a memoria.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Overfitting e underfitting</h2>
+
+  <p class="lead">
+    Ci sono due modi opposti di sbagliare, quando si sceglie quanto «complesso» far essere un modello. Vediamoli con
+    un'immagine, prima ancora che con la teoria.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Lo studente troppo pigro e quello troppo pignolo</div>
+    <p style="margin-bottom:.6rem">
+      Immagina due studenti che si preparano a un esame studiando su vecchi compiti.
+    </p>
+    <p style="margin-bottom:.6rem">
+      Il primo studia poco e ricava una regola grossolana: «rispondo sempre B». Sbaglia molto — sui compiti vecchi
+      <em>e</em> su quelli nuovi. <mark>È l'<b>underfitting</b> («sotto-adattamento»): il modello è troppo semplice,
+      non ha colto lo schema.</mark> Sbaglia sempre, in modo sistematico.
+    </p>
+    <p style="margin-bottom:0">
+      Il secondo <b>memorizza a pappagallo</b> ogni singolo compito vecchio, parola per parola — comprese le risposte
+      dovute a errori di stampa o casualità. Sui compiti già visti prende il massimo; ma davanti a una domanda
+      <b>nuova</b> è perso, perché ha imparato i dettagli irrilevanti invece della materia. <mark>È l'<b>overfitting</b>
+      («sovra-adattamento»): il modello è troppo complesso, ha «imparato» anche il rumore.</mark>
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Underfitting vs overfitting <span class="tag">i due modi di sbagliare</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>underfitting</b> — modello <b>troppo semplice</b></dt>
+        <dd>non riesce a catturare lo schema dei dati, nemmeno sugli esempi di allenamento. <mark>Errore alto sia sui
+            dati visti sia su quelli nuovi.</mark> Come tracciare una retta là dove servirebbe una curva.</dd>
+        <dt><b>overfitting</b> — modello <b>troppo complesso</b></dt>
+        <dd>si adatta perfettamente agli esempi visti (errore quasi zero lì!) ma «insegue» anche il rumore, quindi
+            fallisce sui casi nuovi. <mark>Errore bassissimo sui dati visti, ma alto su quelli nuovi.</mark> Come una
+            curva che si contorce per passare esattamente su ogni punto.</dd>
+        <dt>il <b>punto giusto</b> nel mezzo</dt>
+        <dd>la complessità «giusta» cattura lo schema vero <b>senza</b> inseguire il rumore. <mark>Errore basso su
+            <em>entrambi</em></mark> — è quello che cerchiamo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il segnale che distingue i due casi è nel confronto tra <b>errore sugli esempi visti</b> ed <b>errore sui dati
+      nuovi</b> (§2.5). <mark>Underfitting: entrambi alti. Overfitting: il primo bassissimo, il secondo alto. Giusto:
+      entrambi bassi.</mark> Guarda questo passaggio dal vivo nel widget del §3.5, dove un modello diventa via via più
+      complesso sotto i tuoi occhi.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>La scomposizione bias-varianza</h2>
+
+  <p class="lead">
+    Ora una delle idee più eleganti del machine learning: si può <b>scomporre</b> l'errore di un modello in pezzi
+    separati, che ci dicono <em>da dove viene</em>. È una formula, ma la costruiremo con pazienza, un pezzo alla volta:
+    dopo, non guarderai mai più un modello nello stesso modo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Tre modi di sbagliare al bersaglio</div>
+    <p style="margin-bottom:0">
+      Immagina di tirare frecce a un bersaglio. Puoi sbagliare in tre modi. <b>(1)</b> Le tue frecce finiscono tutte
+      raggruppate, ma <em>lontane</em> dal centro (magari punti sempre troppo a sinistra): questo errore sistematico,
+      «costante», è il <b>bias</b>. <b>(2)</b> Le tue frecce sono <em>sparpagliate</em> ovunque, a volte a destra a
+      volte a sinistra: questa instabilità è la <b>varianza</b>. <b>(3)</b> Persino il tiratore perfetto non colpirebbe
+      <em>sempre</em> il centro esatto, perché c'è un po' di casualità inevitabile (un soffio di vento): è l'<b>errore
+      irriducibile</b>. <mark>L'errore totale è la somma di questi tre.</mark>
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La scomposizione dell'errore <span class="tag">tre sorgenti, che si sommano</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \text{Errore} = \underbrace{\text{Bias}^2}_{\text{troppo semplice}} + \underbrace{\text{Varianza}}_{\text{troppo instabile}} + \underbrace{\sigma^2}_{\text{rumore}} $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$\text{Bias}^2$ — l'errore da <b>modello troppo semplice</b></dt>
+        <dd>il <b>bias</b> («distorsione») misura quanto il modello, <em>in media</em>, manca sistematicamente il
+            bersaglio — come le frecce sempre a sinistra. <mark>È alto quando il modello è troppo rigido</mark> (una
+            retta per una curva): sbaglia sempre nella stessa direzione perché «non ci arriva». È il difetto
+            dell'<b>underfitting</b>. (Compare al quadrato per una ragione matematica, ma pensa a «errore
+            sistematico».)</dd>
+        <dt>$\text{Varianza}$ — l'errore da <b>modello troppo instabile</b></dt>
+        <dd>la <b>varianza</b> misura quanto le previsioni del modello <b>cambierebbero</b> se lo riaddestrassimo su un
+            campione di dati leggermente diverso — come le frecce sparpagliate. <mark>È alta quando il modello è troppo
+            complesso</mark> e «insegue» il rumore: basta cambiare un po' i dati e le sue previsioni saltano. È il
+            difetto dell'<b>overfitting</b>.</dd>
+        <dt>$\sigma^2$ — il <b>rumore irriducibile</b></dt>
+        <dd>la lettera greca <b>sigma</b> al quadrato è la quantità di rumore ($\varepsilon$ del §2.1) presente nei
+            dati. <mark>Nessun modello può eliminarlo</mark>: è il vento inevitabile. Rappresenta il muro invalicabile:
+            l'errore non può mai scendere sotto $\sigma^2$.</dd>
+        <dt>il segno $+$ tra i tre</dt>
+        <dd>i tre contributi <b>si sommano</b> per dare l'errore totale (atteso) del modello. <mark>Ridurne uno può far
+            crescere un altro</mark> — ed è qui il punto cruciale della prossima idea.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco il cuore, il <b>compromesso bias-varianza</b> («bias-variance tradeoff»): <mark>rendere il modello più
+      semplice <b>abbassa la varianza ma alza il bias</b>; renderlo più complesso <b>abbassa il bias ma alza la
+      varianza</b>.</mark> Non puoi azzerarli entrambi: c'è un punto di equilibrio, una complessità «giusta», che rende
+      la loro <b>somma</b> minima. Tutto il mestiere del machine learning è, in un certo senso, trovare quel punto di
+      equilibrio. Il $\sigma^2$ resta lì, invalicabile, a ricordarci che la perfezione non è possibile — e va bene così.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>La maledizione della dimensionalità</h2>
+
+  <p class="lead">
+    C'è un fenomeno sorprendente e controintuitivo che rende il machine learning più difficile quando le
+    caratteristiche ($X$) sono tante: la <b>maledizione della dimensionalità</b>. Suona esoterico, ma l'idea è
+    afferrabile con un esempio.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Con tante dimensioni, tutto diventa «lontano»</div>
+    <p style="margin-bottom:0">
+      Ogni caratteristica è una «dimensione» dello spazio in cui vivono i dati: una feature = una linea, due = un
+      piano, tre = un volume, e così via (anche se oltre le tre non le possiamo disegnare). Il fatto strano è questo:
+      <mark>più dimensioni aggiungi, più i dati diventano «sparsi», isolati, lontani gli uni dagli altri.</mark> Immagina
+      100 punti su una linea lunga 1 metro: sono fitti, vicini. Ora spargi gli stessi 100 punti in un cubo di 1 metro
+      di lato: sono già molto più radi. In uno spazio a <b>dieci</b> dimensioni sarebbero incredibilmente isolati, ognuno
+      in un angolo tutto suo, con vaste zone vuote intorno. <mark>La conseguenza: modelli che si basano sulla
+      «vicinanza» (come il k-NN) faticano</mark>, perché in tante dimensioni «vicino» perde significato — tutti i punti
+      sono più o meno ugualmente lontani. E servono <b>enormemente</b> più esempi per «riempire» lo spazio in modo
+      utile. Morale pratica: <mark>tante feature non sono automaticamente un bene</mark>; spesso conviene sceglierne
+      poche e buone, o ridurne il numero (è uno dei motivi della PCA, capitolo 17).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Train, validation, test</h2>
+
+  <p class="lead">
+    Abbiamo detto e ripetuto che l'errore che conta è quello sui <b>dati nuovi</b>, non su quelli visti. Ma come lo
+    misuriamo, se i dati che abbiamo li usiamo tutti per allenare? La soluzione è semplice e geniale: <b>metterne da
+    parte un po'</b>, e non guardarli mai durante l'allenamento.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dividere i dati in tre parti <span class="tag">imparare · scegliere · giudicare</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>training set</b> (allenamento) — per <b>imparare</b></dt>
+        <dd>la fetta più grande dei dati (es. il 60-70%): è quella che il modello vede e su cui impara la regola.
+            <mark>È il «materiale di studio».</mark></dd>
+        <dt>il <b>validation set</b> (validazione) — per <b>scegliere</b></dt>
+        <dd>una fetta a parte (es. il 15-20%), usata per <b>confrontare</b> modelli o regolare i loro «bottoni» (come
+            la complessità, o $k$ nel k-NN). <mark>Ci aiuta a scegliere la configurazione migliore</mark> senza
+            «sbirciare» il test. È come i simulacri d'esame.</dd>
+        <dt>il <b>test set</b> — per <b>giudicare</b></dt>
+        <dd>l'ultima fetta (es. il 15-20%), <b>toccata una volta sola, alla fine</b>, per dare il voto onesto e finale
+            al modello scelto. <mark>Deve restare «vergine»</mark>: se lo usi per prendere decisioni, non è più un test
+            onesto. È l'esame vero.</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> La regola sacra: non allenare mai sul test</div>
+      <p style="margin-bottom:0">
+        <mark>I dati di test non devono <b>mai</b> influenzare l'allenamento né le scelte.</mark> Se il modello «vede»
+        anche solo indirettamente il test (per esempio scegliendo la complessità in base ad esso), il voto finale
+        diventa gonfiato e bugiardo — è come studiare sulle domande dell'esame. Il test serve a stimare come il modello
+        andrà <b>nel mondo reale</b>, su dati che non ha mai visto: per questo va tenuto rigorosamente da parte fino
+        all'ultimo. Al capitolo 18 vedremo una tecnica ancora più furba per usare bene i dati quando sono pochi (la
+        <b>cross-validation</b>), ma il principio è questo: <b>giudica sempre su dati che il modello non ha usato per
+        imparare</b>.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Guardiamo overfitting e underfitting <em>succedere</em>. Nel widget qui sotto adattiamo ai dati una curva
+    (un polinomio) di complessità crescente: da troppo semplice a troppo contorta. È l'immagine da tenere per sempre in
+    mente.
+  </p>
+
+  <div class="widget" id="w-of">
+    <div class="w-head">
+      <span>Da underfitting a overfitting</span>
+      <span class="hint">alza la complessità: la curva passa dal rigido al contorto</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="of-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="max-width:420px; margin:.5rem auto 0; display:flex; align-items:center; gap:.6rem">
+        <label style="font-size:.85rem; color:var(--ink-soft); white-space:nowrap">complessità (grado): <b id="of-dv">1</b></label>
+        <input type="range" id="of-d" min="1" max="12" value="1" style="flex:1">
+      </div>
+    </div>
+    <div class="w-readout" id="of-out"></div>
+  </div>
+
+  <p>
+    In scikit-learn, la complessità è un «bottone» (un <b>iperparametro</b>): il grado del polinomio, o $k$ nel k-NN,
+    o la profondità di un albero. La si sceglie <b>guardando l'errore di validazione</b> (§3.4), non quello di
+    allenamento (che scende sempre, illudendoti):
+  </p>
+
+  <div class="term">
+    <div class="t-head file">dividere i dati e valutare onestamente</div>
+    <pre><span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> mean_squared_error
+
+<span class="cm"># dividi i dati: 80% per allenare, 20% per il test (mai visto durante il fit)</span>
+X_train, X_test, y_train, y_test <span class="op">=</span> <span class="fn">train_test_split</span>(
+    X, y, test_size<span class="op">=</span><span class="nm">0.2</span>, random_state<span class="op">=</span><span class="nm">42</span>)
+
+modello.<span class="fn">fit</span>(X_train, y_train)          <span class="cm"># impara SOLO sul training</span>
+
+<span class="cm"># confronta i due errori: la differenza rivela over/underfitting</span>
+err_train <span class="op">=</span> <span class="fn">mean_squared_error</span>(y_train, modello.<span class="fn">predict</span>(X_train))
+err_test  <span class="op">=</span> <span class="fn">mean_squared_error</span>(y_test,  modello.<span class="fn">predict</span>(X_test))
+<span class="bi">print</span>(err_train, err_test)
+<span class="rs"># train basso, test alto  -> OVERFITTING (ha memorizzato)</span>
+<span class="rs"># train alto,  test alto  -> UNDERFITTING (troppo semplice)</span>
+<span class="rs"># train basso, test basso -> il punto giusto!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      Il metodo <code>train_test_split</code> mette da parte una fetta di dati (il test) che il modello non vedrà mai
+      durante il <code>fit</code>: così l'errore su quella fetta è <b>onesto</b>. <mark>La chiave è confrontare i due
+      errori</mark>: se l'errore di training è molto più basso di quello di test, il modello ha <b>memorizzato</b>
+      (overfitting); se sono entrambi alti, è troppo semplice (underfitting); se sono entrambi bassi e vicini, hai
+      trovato il punto giusto. È il termometro che userai per ogni modello del libro. Nel widget hai visto la stessa
+      storia: il polinomio di grado basso è rigido e manca lo schema (bias alto), quello di grado alto si contorce per
+      passare su ogni punto (varianza alta) — e quello di grado intermedio è quello che, su dati nuovi, andrebbe meglio.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li><b>Underfitting</b>: modello troppo semplice, sbaglia su tutto (bias alto). <b>Overfitting</b>: troppo
+          complesso, memorizza il rumore, fallisce sui dati nuovi (varianza alta) (§3.1).</li>
+      <li>L'errore si scompone: <b>Bias² + Varianza + $\sigma^2$</b>. Semplificare abbassa la varianza ma alza il bias,
+          e viceversa: il <b>compromesso bias-varianza</b>. Il rumore $\sigma^2$ è invalicabile (§3.2).</li>
+      <li><b>Maledizione della dimensionalità</b>: con tante feature i dati diventano sparsi e «lontani»; servono molti
+          più esempi, e la vicinanza perde senso (§3.3).</li>
+      <li>Dividi i dati: <b>train</b> (impara), <b>validation</b> (scegli/regola), <b>test</b> (giudica, una volta
+          sola). <b>Mai allenare o decidere sul test</b> (§3.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora hai la bussola per giudicare qualsiasi modello: cerchi il punto di equilibrio tra semplicità (bias) e
+    complessità (varianza), e lo verifichi su dati mai visti. Con questa consapevolezza possiamo tornare al modello più
+    importante di tutti e studiarlo a fondo. Nel <strong>Capitolo 4</strong> smontiamo la <b>regressione lineare</b>:
+    non solo cosa cerca (l'abbiamo visto), ma <em>come</em> si trova esattamente la retta migliore — con una formula che
+    deriveremo insieme, passo dopo passo, capendo il significato di ogni pezzo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Un modello ha errore basso sui dati di allenamento e alto sul test. Un altro ha errore alto su entrambi. Quale
+      soffre di overfitting e quale di underfitting? Quale dei due «bottoni» (più semplice / più complesso) gireresti
+      per ciascuno?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Nella scomposizione $\text{Errore} = \text{Bias}^2 + \text{Varianza} + \sigma^2$, cosa rappresenta ciascun
+      termine? Perché $\sigma^2$ si dice «irriducibile»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Cos'è il «compromesso bias-varianza»? Se rendo un modello più complesso, cosa succede tipicamente al bias e cosa
+      alla varianza?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      Perché è sbagliato usare il test set per scegliere la complessità del modello? A cosa serve, allora, il
+      validation set?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      Il primo (train basso, test alto) soffre di <b>overfitting</b>: ha memorizzato gli esempi ma non generalizza →
+      va reso <b>più semplice</b> (ridurre la complessità, o regolarizzare, o dargli più dati). Il secondo (errore alto
+      su entrambi) soffre di <b>underfitting</b>: è troppo semplice per cogliere lo schema → va reso <b>più
+      complesso</b> (più flessibilità, feature migliori).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      <b>Bias²</b>: l'errore sistematico dovuto a un modello troppo semplice (manca sempre il bersaglio nella stessa
+      direzione). <b>Varianza</b>: l'instabilità dovuta a un modello troppo complesso (le previsioni cambiano molto se
+      si cambiano un po' i dati, perché insegue il rumore). <b>$\sigma^2$</b>: il rumore intrinseco dei dati
+      (l'$\varepsilon$ del Cap. 2). Si dice «irriducibile» perché <b>nessun modello può eliminarlo</b>: è casualità
+      genuina nei dati, un muro sotto il quale l'errore non può scendere.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      Il <b>compromesso bias-varianza</b> è il fatto che non si possono minimizzare bias e varianza <b>insieme</b>:
+      ridurne uno tende ad aumentare l'altro. Rendendo un modello <b>più complesso</b>, tipicamente il <b>bias
+      diminuisce</b> (il modello si adatta meglio ai dati) ma la <b>varianza aumenta</b> (diventa più instabile,
+      inseguendo il rumore). L'obiettivo è trovare la complessità che minimizza la <b>somma</b> dei due (più il rumore
+      irriducibile), cioè l'errore totale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      È sbagliato perché, se usi il test per scegliere la complessità (o qualsiasi decisione), il modello finisce per
+      «adattarsi» anche al test, e il voto finale non è più onesto: sovrastima quanto il modello andrà su dati davvero
+      nuovi (è come studiare sulle domande dell'esame). Il <b>validation set</b> serve proprio a questo: è una fetta
+      separata su cui confrontare modelli e regolare gli iperparametri, lasciando il <b>test</b> intatto per il
+      giudizio finale, dato una volta sola.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.5 — under/overfitting: polinomio di grado regolabile su dati rumorosi.
+   Fit ai minimi quadrati (Vandermonde, x scalata in [-1,1]). Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('of-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('of-out');
+  const dEl = document.getElementById('of-d');
+  const dvEl = document.getElementById('of-dv');
+
+  // dati: una curva liscia "vera" + rumore (hardcoded, deterministico)
+  // dominio x in [0,10]; y attorno a una curva dolce
+  const DATA = [
+    [0.5, 2.1],[1.2, 3.4],[2.0, 3.2],[2.8, 4.6],[3.6, 4.1],
+    [4.5, 5.3],[5.3, 4.7],[6.1, 5.9],[7.0, 5.2],[7.8, 6.4],[8.7, 5.8],[9.5, 6.9]
+  ];
+  const XMIN = 0, XMAX = 10, YMIN = 0, YMAX = 9;
+  // scala x -> t in [-1,1] per stabilità numerica
+  function toT(x) { return (x - (XMIN + XMAX) / 2) / ((XMAX - XMIN) / 2); }
+
+  // risolve un sistema lineare A c = b (Gauss con pivoting parziale)
+  function solve(A, b) {
+    const n = A.length;
+    const M = A.map(function (r, i) { return r.slice().concat([b[i]]); });
+    for (let col = 0; col < n; col++) {
+      let piv = col;
+      for (let r = col + 1; r < n; r++) if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+      const tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+      if (Math.abs(M[col][col]) < 1e-12) M[col][col] = 1e-12;
+      for (let r = 0; r < n; r++) {
+        if (r === col) continue;
+        const f = M[r][col] / M[col][col];
+        for (let k = col; k <= n; k++) M[r][k] -= f * M[col][k];
+      }
+    }
+    const c = new Array(n);
+    for (let i = 0; i < n; i++) c[i] = M[i][n] / M[i][i];
+    return c;
+  }
+
+  // fit polinomiale di grado d (coeff in t)
+  function polyfit(d) {
+    const m = d + 1;
+    const A = [], bb = [];
+    for (let i = 0; i < m; i++) { A.push(new Array(m).fill(0)); bb.push(0); }
+    DATA.forEach(function (pt) {
+      const t = toT(pt[0]);
+      const pw = [1]; for (let j = 1; j < 2 * m; j++) pw.push(pw[j - 1] * t);
+      for (let i = 0; i < m; i++) {
+        for (let j = 0; j < m; j++) A[i][j] += pw[i + j];
+        bb[i] += pw[i] * pt[1];
+      }
+    });
+    return solve(A, bb);
+  }
+  function evalPoly(c, x) {
+    const t = toT(x); let y = 0, p = 1;
+    for (let i = 0; i < c.length; i++) { y += c[i] * p; p *= t; }
+    return y;
+  }
+
+  const p = new Plot(svg, { xmin: XMIN - 0.5, xmax: XMAX + 0.5, ymin: YMIN, ymax: YMAX });
+
+  function draw() {
+    const d = +dEl.value;
+    dvEl.textContent = d;
+    const c = polyfit(d);
+    // errore di training
+    let sse = 0; DATA.forEach(function (pt) { const e = pt[1] - evalPoly(c, pt[0]); sse += e * e; });
+    const mse = sse / DATA.length;
+
+    p.clear(); p.grid(1, 1); p.axes({ numbers: false });
+    // curva del modello
+    const pts = [];
+    for (let x = XMIN; x <= XMAX; x += 0.1) { const y = evalPoly(c, x); pts.push([x, Math.max(YMIN - 1, Math.min(YMAX + 1, y))]); }
+    p.poly(pts, { color: 'var(--accent)', width: 2.4, close: false });
+    // dati
+    DATA.forEach(function (pt) { p.dot(pt[0], pt[1], { color: 'var(--ink)', r: 4.5 }); });
+
+    let msg, col;
+    if (d <= 2) { msg = '<b>Grado ' + d + ' — troppo semplice (UNDERFITTING)</b>: la curva è rigida, «non ci arriva», manca lo schema dei dati. <b>Bias alto</b>. Sbaglia sia qui sia su dati nuovi.'; col = 'var(--warm)'; }
+    else if (d <= 5) { msg = '<b>Grado ' + d + ' — circa il punto giusto</b>: la curva segue lo schema senza contorcersi. Errore basso qui <em>e</em> (probabilmente) su dati nuovi. È l\'equilibrio che cerchiamo. ✅'; col = 'var(--green)'; }
+    else { msg = '<b>Grado ' + d + ' — troppo complessa (OVERFITTING)</b>: la curva si <b>contorce</b> per passare vicino a ogni punto, inseguendo il rumore. Errore piccolo qui (MSE ' + mse.toFixed(2) + '), ma su dati nuovi <b>fallirebbe</b>: <b>varianza alta</b>.'; col = 'var(--warm)'; }
+    out.innerHTML = '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + msg + ' <span style="color:var(--ink-soft)">Errore sugli esempi (MSE): ' + mse.toFixed(2) + ' — scende sempre alzando il grado, ma è ingannevole!</span></div>';
+  }
+
+  dEl.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
