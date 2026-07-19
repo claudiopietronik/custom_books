@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · I database relazionali — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>I database relazionali</h1>
+    <p class="standfirst">
+      La nostra rubrica funziona, ma ha un difetto fatale: i dati vivono in un dizionario Python e <b>svaniscono</b> a
+      ogni riavvio del server. Un backend serio deve <b>ricordare per sempre</b>, gestire milioni di record,
+      cercarli in un lampo e non perderli mai. Per questo esistono i <b>database</b>. La famiglia più diffusa, e
+      quella che useremo, è quella dei database <b>relazionali</b>: organizzano i dati in <b>tabelle</b> — proprio
+      come fogli di calcolo, con righe e colonne — collegabili tra loro. E hanno un linguaggio dedicato per
+      interrogarli e modificarli, lo <b>SQL</b>, uno dei linguaggi più longevi e universali dell'informatica. In
+      questo capitolo capisci <b>perché</b> servono (§8.1), cosa sono tabelle, righe e colonne (§8.2), le <b>chiavi</b>
+      e i tipi (§8.3), e i quattro comandi SQL fondamentali (§8.4). <mark>Sono le fondamenta su cui, dal Capitolo 10,
+      poggeremo la persistenza vera del nostro backend.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché un database (§8.1), <b>tabelle, righe, colonne</b> (§8.2), <b>chiavi primarie</b> e tipi (§8.3), il
+      linguaggio <b>SQL</b> — SELECT, INSERT, UPDATE, DELETE (§8.4). Nel laboratorio (§8.5) esegui SQL vero con
+      SQLite, incluso nel tuo Python.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: i dati sono il cuore del backend</div>
+    <p style="margin-bottom:0">
+      Un backend, in fondo, è una <b>macchina per custodire e servire dati</b>. Il database è il luogo dove quei dati
+      vivono davvero: <mark>saper ragionare in termini di tabelle e SQL è una competenza fondamentale e
+      duratura</mark> — l'SQL ha più di quarant'anni ed è ancora ovunque. Anche quando (dal Cap. 10) useremo
+      SQLAlchemy per non scrivere SQL a mano, capire cosa succede «sotto» ti renderà infinitamente più efficace.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Perché un database</h2>
+
+  <p class="lead">
+    Potremmo salvare i dati in un file (un JSON, un CSV). Funziona per pochi dati e un solo utente, ma crolla in
+    fretta. Un database risolve una lista di problemi che, altrimenti, dovresti affrontare da solo — e male.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cosa ti dà un database (e un file no) <span class="tag">i problemi che risolve</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Persistenza</b> affidabile</dt>
+        <dd>i dati restano su disco, in sicurezza, anche se il server si riavvia o va in crash a metà di
+            un'operazione. Un database garantisce di <b>non lasciare i dati a metà</b> (le «transazioni»).</dd>
+        <dt><b>Ricerca veloce</b></dt>
+        <dd>trovare «l'utente con email X» tra milioni di righe è <b>istantaneo</b>, grazie agli <b>indici</b>. In un
+            file dovresti scorrere tutto ogni volta.</dd>
+        <dt><b>Accessi simultanei</b></dt>
+        <dd><mark>tanti utenti (e tante richieste) leggono e scrivono <b>nello stesso momento</b></mark> senza
+            corrompere i dati. Gestire questo a mano su un file è quasi impossibile.</dd>
+        <dt><b>Integrità</b> dei dati</dt>
+        <dd>il database <b>impone regole</b>: questo campo è obbligatorio, quell'id dev'essere unico, questo valore
+            deve esistere in un'altra tabella. Impedisce dati incoerenti.</dd>
+        <dt><b>Interrogazioni potenti</b></dt>
+        <dd>con SQL fai domande complesse («i 10 clienti che hanno speso di più questo mese») in una riga. Con un file
+            scriveresti codice su codice.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per questo <mark>praticamente ogni applicazione seria usa un database</mark>. Ne esistono due grandi famiglie: i
+      <b>relazionali</b> (tabelle + SQL: PostgreSQL, MySQL, SQLite…), i più diffusi e quelli di questo libro; e i
+      <b>NoSQL</b> (documenti, chiavi-valore: MongoDB, Redis…), utili in casi specifici. Noi ci concentriamo sui
+      relazionali, che sono la scelta di default per la stragrande maggioranza dei backend.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>Tabelle, righe, colonne</h2>
+
+  <p class="lead">
+    Il modello relazionale è sorprendentemente intuitivo: se hai mai usato un foglio di calcolo, sei già a metà
+    strada. I dati stanno in <b>tabelle</b>, fatte di <b>righe</b> e <b>colonne</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una tabella "utenti" <span class="tag">righe = record, colonne = campi</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">tabella: utenti</div>
+      <pre> <span class="hl">id</span> | nome   | email             | eta
+----+--------+-------------------+-----
+  <span class="nm">1</span> | Anna   | anna@esempio.com  |  <span class="nm">30</span>     <span class="c">&lt;- una RIGA (un utente)</span>
+  <span class="nm">2</span> | Luca   | luca@esempio.com  |  <span class="nm">25</span>
+  <span class="nm">3</span> | Sara   | sara@esempio.com  |  <span class="nm">41</span>
+    ^      ^
+   <span class="c">colonna colonna</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>tabella</b></dt>
+        <dd>raccoglie tutte le entità dello stesso tipo (qui, tutti gli utenti). Un database ha <b>molte</b> tabelle
+            (utenti, prodotti, ordini…). <mark>Una tabella ≈ una «risorsa» REST</mark> (Cap. 7).</dd>
+        <dt>la <b>riga</b> (record)</dt>
+        <dd>una singola entità: <b>un</b> utente, con tutti i suoi dati. Aggiungere un utente = aggiungere una riga.
+            <mark>Una riga ≈ un oggetto/dizionario</mark> (come i <code>Contatto</code> del Cap. 7).</dd>
+        <dt>la <b>colonna</b> (campo)</dt>
+        <dd>un attributo, uguale per tutte le righe: <code>nome</code>, <code>email</code>, <code>eta</code>. Ogni
+            colonna ha un <b>tipo</b> fisso (§8.3). <mark>Le colonne ≈ i campi di un modello Pydantic.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riconosci le corrispondenze? <b>Tabella ↔ risorsa/modello</b>, <b>riga ↔ oggetto</b>, <b>colonna ↔ campo</b>.
+      <mark>Questa mappatura è la chiave di tutto</mark>: è esattamente ciò che, dal Cap. 10, SQLAlchemy renderà
+      automatica, permettendoti di lavorare con oggetti Python che «sono» righe del database. Lo <b>schema</b> di una
+      tabella è la definizione delle sue colonne e dei loro tipi: il progetto della tabella.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Chiavi primarie e tipi</h2>
+
+  <p class="lead">
+    Due dettagli rendono una tabella robusta: un modo <b>univoco</b> per identificare ogni riga (la <b>chiave
+    primaria</b>) e un <b>tipo</b> per ogni colonna, che il database fa rispettare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Chiave primaria e tipi delle colonne <span class="tag">identità + disciplina dei dati</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>chiave primaria</b> (primary key)</dt>
+        <dd>una colonna (di solito <code>id</code>) il cui valore è <b>unico</b> per ogni riga: nessun due righe
+            possono avere lo stesso id. <mark>È il modo con cui identifichi e ritrovi una riga precisa</mark> — l'id
+            di <code>/contatti/42</code>. Di solito il database la assegna <b>da solo</b>, incrementale
+            (auto-increment): 1, 2, 3…</dd>
+        <dt>i <b>tipi</b> delle colonne</dt>
+        <dd>ogni colonna dichiara che dati contiene: <code>INTEGER</code> (interi), <code>TEXT</code>/<code>VARCHAR</code>
+            (testo), <code>REAL</code>/<code>FLOAT</code> (decimali), <code>BOOLEAN</code>, <code>DATE</code>/<code>TIMESTAMP</code>
+            (date e orari). <mark>Il database <b>rifiuta</b> dati del tipo sbagliato</mark>, come Pydantic per le API.</dd>
+        <dt>vincoli aggiuntivi</dt>
+        <dd>puoi imporre altre regole: <code>NOT NULL</code> (obbligatorio), <code>UNIQUE</code> (nessun duplicato —
+            es. sulle email), <code>DEFAULT</code> (valore predefinito). Sono le «regole di integrità» del §8.1.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota il parallelo con Pydantic (Cap. 6): là dichiaravi tipi e vincoli per validare i dati <b>in ingresso</b>
+      dall'API; qui il database dichiara tipi e vincoli per proteggere i dati <b>a riposo</b>. <mark>Due linee di
+      difesa</mark>: l'API valida ciò che entra, il database garantisce la coerenza di ciò che è salvato. Un backend
+      robusto le usa entrambe.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Il linguaggio SQL</h2>
+
+  <p class="lead">
+    Ai database relazionali si parla in <b>SQL</b> (Structured Query Language). Quattro comandi coprono il CRUD del
+    Cap. 7 — e li riconoscerai subito. L'SQL è dichiarativo: dici <b>cosa</b> vuoi, non <em>come</em> ottenerlo.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">i quattro comandi fondamentali</div>
+    <pre><span class="c">-- CREARE una riga (Create):</span>
+<span class="kw">INSERT INTO</span> utenti (nome, email, eta) <span class="kw">VALUES</span> (<span class="st">'Anna'</span>, <span class="st">'anna@x.com'</span>, <span class="nm">30</span>);
+
+<span class="c">-- LEGGERE righe (Read): tutte, o filtrate con WHERE</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> utenti;                          <span class="c">-- tutte le colonne, tutte le righe</span>
+<span class="kw">SELECT</span> nome, eta <span class="kw">FROM</span> utenti <span class="kw">WHERE</span> eta <span class="op">&gt;</span> <span class="nm">28</span>;    <span class="c">-- solo alcune, filtrate</span>
+
+<span class="c">-- AGGIORNARE righe (Update):</span>
+<span class="kw">UPDATE</span> utenti <span class="kw">SET</span> eta <span class="op">=</span> <span class="nm">31</span> <span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">1</span>;
+
+<span class="c">-- CANCELLARE righe (Delete):</span>
+<span class="kw">DELETE FROM</span> utenti <span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">2</span>;</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">SQL smontato <span class="tag">SELECT · INSERT · UPDATE · DELETE · WHERE</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">SELECT colonne FROM tabella</span></dt>
+        <dd>legge dati. <code>*</code> = «tutte le colonne»; oppure elenchi i nomi. Il comando che userai di più.</dd>
+        <dt><span class="mono">WHERE condizione</span></dt>
+        <dd>il <b>filtro</b>: applica il comando <b>solo</b> alle righe che soddisfano la condizione
+            (<code>eta &gt; 28</code>, <code>id = 1</code>, <code>nome = 'Anna'</code>). <mark>Vale per SELECT, UPDATE
+            e DELETE.</mark></dd>
+        <dt><span class="mono">INSERT INTO tabella (...) VALUES (...)</span></dt>
+        <dd>aggiunge una riga: elenchi le colonne e i valori corrispondenti.</dd>
+        <dt><span class="mono">UPDATE ... SET ... WHERE</span></dt>
+        <dd>modifica le righe che soddisfano il <code>WHERE</code>. <mark>Dimenticare il <code>WHERE</code> aggiorna
+            <b>tutte</b> le righe!</mark> (vedi la trappola sotto).</dd>
+        <dt><span class="mono">DELETE FROM tabella WHERE</span></dt>
+        <dd>cancella le righe che soddisfano il <code>WHERE</code>.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La trappola del WHERE dimenticato</div>
+    <p style="margin-bottom:0">
+      <code>DELETE FROM utenti;</code> (senza <code>WHERE</code>) <b>cancella tutti gli utenti</b>. Allo stesso modo,
+      <code>UPDATE utenti SET eta = 0;</code> azzera l'età di <b>tutti</b>. <mark>Il <code>WHERE</code> mancante è uno
+      degli errori più temuti e costosi</mark> nel lavoro con i database — c'è chi ha svuotato tabelle di produzione
+      così. Prendi l'abitudine di scrivere <em>prima</em> il <code>WHERE</code>, poi il resto. La buona notizia: dal
+      Cap. 10, lavorando con SQLAlchemy sugli oggetti, questo rischio si riduce moltissimo.
+    </p>
+  </div>
+
+  <div class="widget" id="w-sql">
+    <div class="w-head">
+      <span>SQL dal vivo su una tabella «utenti»</span>
+      <span class="hint">esegui SELECT / INSERT / DELETE</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:stretch">
+      <div style="flex:1; min-width:230px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">tabella: utenti</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="sq-tab" style="margin:0; font-size:12px"></pre></div>
+      </div>
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">query eseguita</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="sq-q" style="margin:0; min-height:44px"><span class="out">Scegli un comando.</span></pre></div>
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin:.6rem 0 .3rem">risultato</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="sq-res" style="margin:0; min-height:44px; font-size:12px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="flex-wrap:wrap; gap:.4rem; justify-content:center">
+      <button class="btn" data-sql="all">SELECT *</button>
+      <button class="btn" data-sql="where">SELECT ... WHERE eta &gt; 28</button>
+      <button class="btn" data-sql="insert">INSERT (Marco, 33)</button>
+      <button class="btn" data-sql="delete">DELETE WHERE id = 2</button>
+      <button class="btn ghost" data-sql="reset">reset</button>
+    </div>
+    <div class="w-readout" id="sq-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Laboratorio: SQL con SQLite</h2>
+
+  <p class="lead">
+    Per esercitarti con SQL <b>vero</b> non serve installare nulla: Python include <b>SQLite</b>, un database
+    relazionale completo che vive in un singolo file. È perfetto per imparare e per piccoli progetti (lo useremo anche
+    nei primi capitoli con SQLAlchemy).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — SQLite dal modulo Python</div>
+    <pre><span class="c"># apri una console SQL su un file di database (lo crea se non esiste)</span>
+<span class="p">$</span> <span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">sqlite3 rubrica.db</span>
+<span class="out">SQLite version 3...  Enter ".help" for usage hints.</span>
+<span class="out">sqlite&gt;</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">alla console sqlite&gt; — crea, inserisci, interroga</div>
+    <pre><span class="out">sqlite&gt;</span> <span class="kw">CREATE TABLE</span> utenti (
+   ...&gt;   id <span class="ty">INTEGER</span> <span class="kw">PRIMARY KEY AUTOINCREMENT</span>,
+   ...&gt;   nome <span class="ty">TEXT</span> <span class="kw">NOT NULL</span>,
+   ...&gt;   eta <span class="ty">INTEGER</span>
+   ...&gt; );
+<span class="out">sqlite&gt;</span> <span class="kw">INSERT INTO</span> utenti (nome, eta) <span class="kw">VALUES</span> (<span class="st">'Anna'</span>, <span class="nm">30</span>);
+<span class="out">sqlite&gt;</span> <span class="kw">INSERT INTO</span> utenti (nome, eta) <span class="kw">VALUES</span> (<span class="st">'Luca'</span>, <span class="nm">25</span>);
+<span class="out">sqlite&gt;</span> <span class="kw">SELECT</span> * <span class="kw">FROM</span> utenti;
+<span class="out">1|Anna|30
+2|Luca|25</span>
+<span class="out">sqlite&gt;</span> <span class="kw">SELECT</span> nome <span class="kw">FROM</span> utenti <span class="kw">WHERE</span> eta <span class="op">&gt;</span> <span class="nm">28</span>;
+<span class="out">Anna</span>
+<span class="out">sqlite&gt;</span> .quit                        <span class="c">-- esci</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai fatto</div>
+    <p style="margin-bottom:0">
+      Hai creato una <b>tabella</b> (con <code>CREATE TABLE</code>) definendo colonne, tipi, chiave primaria
+      auto-incrementale e un vincolo <code>NOT NULL</code>; hai <b>inserito</b> righe; le hai <b>interrogate</b>, anche
+      con un filtro. <mark>Nota che gli id (1, 2) sono stati assegnati dal database da solo</mark>, grazie a
+      <code>AUTOINCREMENT</code>. Tutto è salvato nel file <code>rubrica.db</code>: chiudi, riapri con
+      <code>python -m sqlite3 rubrica.db</code>, rifai la <code>SELECT</code> — i dati sono ancora lì. <b>Questa è la
+      persistenza</b> che mancava alla nostra rubrica. Sperimenta con <code>UPDATE</code> e <code>DELETE</code>: sono
+      i comandi che, tra due capitoli, azioneremo dal codice Python.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>database</b> dà persistenza affidabile, ricerca veloce, accessi simultanei e integrità — cose che un
+          file non offre (§8.1).</li>
+      <li>I relazionali organizzano i dati in <b>tabelle</b> (righe = record, colonne = campi). Corrispondono a
+          risorsa/oggetto/campo delle API (§8.2).</li>
+      <li>La <b>chiave primaria</b> (<code>id</code>, spesso auto-incrementale) identifica ogni riga; ogni colonna ha
+          un <b>tipo</b> e può avere vincoli (NOT NULL, UNIQUE) (§8.3).</li>
+      <li><b>SQL</b>: <code>SELECT</code> (leggi), <code>INSERT</code> (crea), <code>UPDATE</code> (modifica),
+          <code>DELETE</code> (cancella); il <code>WHERE</code> filtra — <b>non dimenticarlo mai</b> (§8.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai cos'è un database relazionale e come si parla con SQL. SQLite è ottimo per imparare, ma i backend di
+    produzione usano database più potenti, pensati per reggere carichi elevati e tanti utenti insieme. Nel
+    <strong>Capitolo 9</strong> conosciamo i due protagonisti del mondo reale — <b>PostgreSQL</b> e <b>MySQL</b> —
+    come si installano, come ci si connette, e in cosa differiscono. Poi (Cap. 10) smetteremo di scrivere SQL a mano e
+    lasceremo che sia <b>SQLAlchemy</b> a farlo per noi, dai comodi oggetti Python.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Elenca almeno tre vantaggi di un database rispetto al salvare i dati in un semplice file JSON.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Nel gergo dei database relazionali, a cosa corrispondono — nel mondo delle API viste finora — una <b>tabella</b>,
+      una <b>riga</b> e una <b>colonna</b>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Scrivi le istruzioni SQL per: (a) leggere nome ed email di tutti gli utenti con <code>eta &gt;= 18</code>;
+      (b) cancellare l'utente con <code>id = 5</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>UPDATE utenti SET eta = 40;</code> (senza <code>WHERE</code>)? Perché è pericoloso, e come lo
+      correggeresti per aggiornare solo l'utente 3?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      Tra i vantaggi: <b>(1)</b> <b>ricerca veloce</b> con gli indici (trovare una riga tra milioni è istantaneo);
+      <b>(2)</b> <b>accessi simultanei</b> sicuri (tanti utenti scrivono insieme senza corrompere i dati); <b>(3)</b>
+      <b>integrità</b> (vincoli come UNIQUE/NOT NULL impediscono dati incoerenti); inoltre persistenza affidabile con
+      transazioni e interrogazioni complesse in SQL. Un file JSON non offre nulla di tutto ciò senza enorme lavoro
+      manuale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      Una <b>tabella</b> corrisponde a una <b>risorsa</b> (o a un modello): es. la tabella <code>contatti</code> ↔ la
+      risorsa <code>/contatti</code>. Una <b>riga</b> corrisponde a un <b>singolo oggetto</b> (un contatto, come le
+      istanze del modello <code>Contatto</code>). Una <b>colonna</b> corrisponde a un <b>campo</b> (nome, telefono,
+      email — come i campi del modello Pydantic).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">SQL</div>
+      <pre><span class="c">-- (a)</span>
+<span class="kw">SELECT</span> nome, email <span class="kw">FROM</span> utenti <span class="kw">WHERE</span> eta <span class="op">&gt;=</span> <span class="nm">18</span>;
+<span class="c">-- (b)</span>
+<span class="kw">DELETE FROM</span> utenti <span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">5</span>;</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      Senza <code>WHERE</code>, <code>UPDATE utenti SET eta = 40;</code> imposta l'età a 40 per <b>tutte</b> le righe
+      della tabella — un disastro se non voluto. È pericoloso proprio perché sembra un comando innocuo ma agisce su
+      tutto. Correzione: aggiungere il filtro →
+      <code>UPDATE utenti SET eta = 40 <b>WHERE id = 3</b>;</code>. Regola: con <code>UPDATE</code> e
+      <code>DELETE</code>, scrivi <b>sempre</b> il <code>WHERE</code> (a meno che tu non voglia davvero agire su tutte
+      le righe).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.4 — SQL dal vivo su una tabella "utenti": SELECT / WHERE / INSERT / DELETE
+   ========================================================================= */
+(function () {
+  const tabEl = document.getElementById('sq-tab');
+  if (!tabEl) return;
+  const qEl = document.getElementById('sq-q');
+  const resEl = document.getElementById('sq-res');
+  const out = document.getElementById('sq-out');
+
+  const BASE = [
+    { id: 1, nome: 'Anna', eta: 30 },
+    { id: 2, nome: 'Luca', eta: 25 },
+    { id: 3, nome: 'Sara', eta: 41 }
+  ];
+  let rows = BASE.map(function (r) { return { id: r.id, nome: r.nome, eta: r.eta }; });
+  let nextId = 4;
+
+  function fmt(list) {
+    if (!list.length) return '<span class="out">(nessuna riga)</span>';
+    let s = ' <span class="hl">id</span> | nome | eta\n----+------+-----\n';
+    s += list.map(function (r) {
+      return '  <span class="nm">' + r.id + '</span> | ' + (r.nome + '    ').slice(0, 4) + ' |  <span class="nm">' + r.eta + '</span>';
+    }).join('\n');
+    return s;
+  }
+  function drawTab() { tabEl.innerHTML = fmt(rows); }
+
+  function run(kind) {
+    if (kind === 'reset') {
+      rows = BASE.map(function (r) { return { id: r.id, nome: r.nome, eta: r.eta }; });
+      nextId = 4; drawTab();
+      qEl.innerHTML = '<span class="out">Tabella ripristinata.</span>';
+      resEl.innerHTML = ''; out.innerHTML = '';
+      return;
+    }
+    if (kind === 'all') {
+      qEl.innerHTML = '<span class="kw">SELECT</span> * <span class="kw">FROM</span> utenti;';
+      resEl.innerHTML = fmt(rows);
+      out.innerHTML = msg('green', '<b>SELECT *</b>: restituisce <b>tutte</b> le righe e le colonne. La tabella non cambia (è una lettura).');
+    } else if (kind === 'where') {
+      qEl.innerHTML = '<span class="kw">SELECT</span> nome, eta <span class="kw">FROM</span> utenti <span class="kw">WHERE</span> eta <span class="op">&gt;</span> <span class="nm">28</span>;';
+      const f = rows.filter(function (r) { return r.eta > 28; });
+      resEl.innerHTML = f.length ? f.map(function (r) { return r.nome + ' | <span class="nm">' + r.eta + '</span>'; }).join('\n') : '<span class="out">(nessuna riga)</span>';
+      out.innerHTML = msg('green', '<b>WHERE eta &gt; 28</b>: solo le righe che soddisfano il filtro (' + f.length + ' su ' + rows.length + ').');
+    } else if (kind === 'insert') {
+      qEl.innerHTML = '<span class="kw">INSERT INTO</span> utenti (nome, eta) <span class="kw">VALUES</span> (<span class="st">\'Marco\'</span>, <span class="nm">33</span>);';
+      rows.push({ id: nextId, nome: 'Marc', eta: 33 }); // 4 char per allineamento
+      const created = nextId; nextId++;
+      drawTab();
+      resEl.innerHTML = '<span class="out">1 riga inserita (id ' + created + ')</span>';
+      out.innerHTML = msg('green', '<b>INSERT</b>: aggiunta una riga. Il database ha assegnato l\'id <b>' + created + '</b> (auto-increment). La tabella ora ha una riga in più.');
+    } else if (kind === 'delete') {
+      qEl.innerHTML = '<span class="kw">DELETE FROM</span> utenti <span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">2</span>;';
+      const before = rows.length;
+      rows = rows.filter(function (r) { return r.id !== 2; });
+      drawTab();
+      const removed = before - rows.length;
+      resEl.innerHTML = '<span class="out">' + removed + ' riga cancellata</span>';
+      out.innerHTML = removed
+        ? msg('green', '<b>DELETE WHERE id = 2</b>: rimossa la riga con id 2. Le altre restano intatte grazie al <b>WHERE</b>.')
+        : msg('warm', 'Nessuna riga con id 2 (già cancellata). Fai «reset» per ripristinare.');
+    }
+  }
+  function msg(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : 'var(--green)';
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.querySelectorAll('#w-sql .btn[data-sql]').forEach(function (b) {
+    b.addEventListener('click', function () { run(b.getAttribute('data-sql')); });
+  });
+  drawTab();
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Esegui i comandi e osserva la tabella «utenti» a sinistra. <b>SELECT</b> legge (non modifica); <b>INSERT</b> aggiunge una riga (con id automatico); <b>DELETE</b> ne toglie una. Il <b>WHERE</b> decide su quali righe agire.</div>';
+})();
+</script>
+</body>
+</html>

@@ -121,7 +121,7 @@ const TOC = [
     n: 8,
     titolo: "I database relazionali",
     file: "cap08-database-relazionali.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Perché un database" },
       { id: "s8-2", n: "8.2", t: "Tabelle, righe, colonne" },
