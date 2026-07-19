@@ -44,7 +44,7 @@ const TOC = [
     n: 3,
     titolo: "Il filesystem",
     file: "cap03-filesystem.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "L'albero delle directory" },
       { id: "s3-2", n: "3.2", t: "La radice e le cartelle principali" },

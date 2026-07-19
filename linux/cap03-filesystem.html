@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Il filesystem — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Il filesystem</h1>
+    <p class="standfirst">
+      In Linux, ogni file e ogni cartella vive dentro un unico grande <b>albero</b>, che parte da una radice comune.
+      Non esistono «unità C:» o «D:» come su Windows: c'è <b>un solo albero</b>, e persino i dischi esterni e i
+      dispositivi ci trovano posto come rami. Capire questa struttura — e come <b>muoverti</b> al suo interno — è
+      fondamentale: quasi ogni comando agisce «da dove ti trovi» o su un percorso che gli indichi, quindi devi sempre
+      sapere <em>dove sei</em> e <em>come raggiungere</em> ciò che ti serve. In questo capitolo vediamo com'è fatto
+      l'albero delle directory (§3.1), le cartelle principali che troverai su ogni sistema (§3.2), la differenza
+      cruciale tra percorsi <b>assoluti</b> e <b>relativi</b> (§3.3) e i tre comandi per navigare —
+      <code>pwd</code>, <code>ls</code>, <code>cd</code> (§3.4). <mark>È la mappa del mondo in cui lavorerai da qui in
+      poi: impararla bene rende tutto il resto naturale.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'<b>albero</b> delle directory (§3.1), la radice e le cartelle principali (§3.2), percorsi <b>assoluti e
+      relativi</b> (§3.3), navigare con <b>pwd, ls, cd</b> (§3.4). Nel laboratorio (§3.5) ti muovi nell'albero.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: senza orientarsi, ci si perde</div>
+    <p style="margin-bottom:0">
+      Il filesystem è il «territorio» del terminale. <mark>Sapere sempre dove sei e come raggiungere un file è la base
+      di ogni operazione</mark> — copiare, cercare, eseguire. Chi non padroneggia i percorsi si ritrova a dare comandi
+      «alla cieca», con risultati imprevedibili (o pericolosi). Poche idee chiare qui ti risparmiano un mare di
+      confusione dopo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>L'albero delle directory</h2>
+
+  <p class="lead">
+    In Linux le cartelle si chiamano anche <b>directory</b>, e sono organizzate in un <b>albero</b>: una directory
+    contiene file e altre directory, che a loro volta ne contengono altre, e così via — a partire da un'unica radice.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'albero, dalla radice in giù <span class="tag">tutto discende da /</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">un pezzo dell'albero</div>
+      <pre>/                        <span class="c">&lt;- la radice (root): l'inizio di tutto</span>
+├── home/
+│   └── anna/            <span class="c">&lt;- la tua cartella personale (home)</span>
+│       ├── documenti/
+│       └── foto/
+├── etc/                 <span class="c">&lt;- configurazioni di sistema</span>
+├── usr/                 <span class="c">&lt;- programmi installati</span>
+└── var/                 <span class="c">&lt;- dati variabili (log, ecc.)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>radice</b> <span class="mono">/</span></dt>
+        <dd>l'inizio dell'albero, indicata da una singola barra <code>/</code>. <mark>Tutto discende da qui</mark>: non
+            c'è nulla «sopra» la radice. Ogni file del sistema si raggiunge partendo da <code>/</code>.</dd>
+        <dt>le <b>directory</b> (cartelle)</dt>
+        <dd>contenitori che raccolgono file e altre directory. <code>home/anna/foto</code> è una directory dentro
+            <code>anna</code>, dentro <code>home</code>, dentro la radice.</dd>
+        <dt>un solo albero, non «unità»</dt>
+        <dd><mark>a differenza di Windows (C:, D:…), Linux ha <b>un unico albero</b></mark>: anche un disco esterno o
+            una chiavetta appaiono come una cartella dentro l'albero (di solito sotto <code>/mnt</code> o
+            <code>/media</code>). Tutto è raggiungibile da <code>/</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La barra <code>/</code> ha due usi che all'inizio confondono: <b>da sola, all'inizio</b>, è la <b>radice</b>
+      (<code>/</code>); <b>tra due nomi</b>, è un <b>separatore</b> (<code>home/anna</code>). Così <code>/home/anna</code>
+      si legge «dalla radice, entra in home, poi in anna». <mark>Questa struttura ad albero è la stessa dei file su
+      qualsiasi sistema</mark> — cambiano i nomi delle cartelle, non l'idea.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>La radice e le cartelle principali</h2>
+
+  <p class="lead">
+    Ogni sistema Linux ha, subito sotto la radice, un insieme di cartelle «standard» con ruoli precisi. Non devi
+    memorizzarle tutte, ma riconoscere le principali ti aiuta a orientarti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le cartelle che troverai ovunque <span class="tag">/home · /etc · /usr · /var · /tmp</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">/home</span> — le cartelle personali</dt>
+        <dd>contiene una cartella per ogni utente (<code>/home/anna</code>, <code>/home/luca</code>): i <b>tuoi</b>
+            file stanno qui. <mark>È «casa tua», dove lavorerai di più.</mark></dd>
+        <dt><span class="mono">/etc</span> — le configurazioni</dt>
+        <dd>i file di configurazione del sistema e dei programmi (il nome viene da «etcetera»). <mark>Qui si mette mano
+            per configurare i servizi</mark> (come hai visto per nginx nel libro «Backend»).</dd>
+        <dt><span class="mono">/usr</span> — i programmi</dt>
+        <dd>la gran parte dei programmi installati e dei loro file (comandi in <code>/usr/bin</code>). <mark>Il grosso
+            del software di sistema vive qui.</mark></dd>
+        <dt><span class="mono">/var</span> — i dati variabili</dt>
+        <dd>dati che cambiano nel tempo: i <b>log</b> (<code>/var/log</code>), le code di stampa, le cache. <mark>Il
+            primo posto dove guardare quando qualcosa non va</mark> (i log!).</dd>
+        <dt><span class="mono">/tmp</span> — i file temporanei</dt>
+        <dd>file «usa e getta», spesso cancellati al riavvio. Utile per cose provvisorie.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ce ne sono altre (<code>/bin</code>, <code>/lib</code>, <code>/root</code> — la home dell'amministratore,
+      <code>/dev</code> — i dispositivi…), ma queste cinque coprono la vita quotidiana. <mark>La più importante per te
+      è <code>/home/tuo-nome</code></mark>: è dove hai pieno controllo e dove terrai i tuoi file. Il prompt la
+      abbrevia con <code>~</code> (la tilde, Cap. 2): <code>~</code> significa «la mia home».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Percorsi assoluti e relativi</h2>
+
+  <p class="lead">
+    Un <b>percorso</b> (path) è l'«indirizzo» di un file o cartella nell'albero. Ci sono due modi di scriverlo, ed è
+    <b>essenziale</b> capire la differenza: <b>assoluto</b> (dalla radice) e <b>relativo</b> (da dove sei).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Assoluto vs relativo <span class="tag">dalla radice vs da qui</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>percorso <b>assoluto</b> (inizia con <span class="mono">/</span>)</dt>
+        <dd>parte sempre dalla <b>radice</b>: <code>/home/anna/foto/gatto.jpg</code>. <mark>È un indirizzo completo e
+            univoco</mark>: funziona sempre, da qualsiasi cartella tu sia. Come un indirizzo postale completo.</dd>
+        <dt>percorso <b>relativo</b> (non inizia con <span class="mono">/</span>)</dt>
+        <dd>parte da <b>dove ti trovi ora</b> (la cartella corrente): se sei in <code>/home/anna</code>,
+            <code>foto/gatto.jpg</code> indica lo stesso file. <mark>Più corto, ma dipende da dove sei</mark>. Come dire
+            «la seconda porta a destra» (ha senso solo se si sa da dove parti).</dd>
+        <dt>due scorciatoie fondamentali</dt>
+        <dd><code>.</code> = «la cartella corrente»; <code>..</code> = «la cartella <b>superiore</b>» (il livello
+            sopra). <mark><code>cd ..</code> ti fa «salire» di un livello</mark>. E <code>~</code> = la tua home
+            (utile ovunque).</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">stesso file, due percorsi (se sei in /home/anna)</div>
+      <pre>/home/anna/foto/gatto.jpg      <span class="c"># ASSOLUTO: dalla radice, sempre valido</span>
+foto/gatto.jpg                 <span class="c"># RELATIVO: da dove sei ora</span>
+../luca/foto/cane.jpg          <span class="c"># RELATIVO: sali (..) poi entra in luca/...</span></pre>
+    </div>
+    <div class="f-note">
+      Quando usare quale? <mark>Assoluto quando vuoi essere <b>sicuro</b></mark> (funziona sempre, indipendentemente da
+      dove sei — utile negli script); <mark>relativo quando è più <b>comodo</b></mark> (percorsi corti per cose vicine).
+      L'errore classico del principiante è dare un percorso relativo dimenticando «dove si trova»: per questo si
+      controlla sempre con <code>pwd</code> (prossima sezione). Il trucco per riconoscerli: <b>se inizia con
+      <code>/</code> è assoluto, altrimenti è relativo</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Navigare: pwd, ls, cd</h2>
+
+  <p class="lead">
+    Tre comandi bastano per muoverti nell'albero: <b>pwd</b> («dove sono?»), <b>ls</b> («cosa c'è qui?»), <b>cd</b>
+    («spostati»). Li userai in continuazione.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — i tre comandi della navigazione</div>
+    <pre><span class="p">$</span> <span class="cmd">pwd</span>                    <span class="c"># "print working directory": dove sono?</span>
+<span class="out">/home/anna</span>
+
+<span class="p">$</span> <span class="cmd">ls</span>                     <span class="c"># "list": cosa c'è nella cartella corrente?</span>
+<span class="out">documenti  foto  note.txt</span>
+
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">foto</span>               <span class="c"># "change directory": entra in foto</span>
+<span class="p">$</span> <span class="cmd">pwd</span>
+<span class="out">/home/anna/foto</span>
+
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">..</span>                 <span class="c"># torna su di un livello</span>
+<span class="p">$</span> <span class="cmd">cd</span>                     <span class="c"># cd da solo: torna alla tua home (~)</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I tre comandi smontati <span class="tag">pwd · ls · cd</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">pwd</span> — dove sono?</dt>
+        <dd>stampa il percorso <b>assoluto</b> della cartella corrente. <mark>Il tuo «tu sei qui»</mark>: usalo ogni
+            volta che hai un dubbio su dove ti trovi.</dd>
+        <dt><span class="mono">ls</span> — cosa c'è?</dt>
+        <dd>elenca il contenuto della cartella corrente (o di una che indichi: <code>ls foto</code>). Opzioni utili:
+            <code>ls -l</code> (dettagli), <code>ls -a</code> (anche i file nascosti, quelli che iniziano con
+            <code>.</code>). <mark>Combinabili: <code>ls -la</code>.</mark></dd>
+        <dt><span class="mono">cd percorso</span> — spostati</dt>
+        <dd>entra in una cartella. <code>cd foto</code> (relativo), <code>cd /etc</code> (assoluto), <code>cd ..</code>
+            (su di un livello), <code>cd</code> da solo o <code>cd ~</code> (alla tua home). <mark>Il prompt aggiorna
+            «dove sei» a ogni cd.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il ritmo della navigazione: <mark><code>pwd</code> per orientarti, <code>ls</code> per vedere cosa c'è,
+      <code>cd</code> per spostarti</mark> — e ripeti. Un aiuto prezioso: premi <b>Tab</b> mentre digiti un nome e la
+      shell lo <b>completa</b> automaticamente (l'«autocompletamento»); premendolo due volte, mostra le opzioni
+      possibili. Ti fa risparmiare battute ed evitare errori di digitazione. Prova la navigazione nel widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-nav">
+    <div class="w-head">
+      <span>Naviga un filesystem</span>
+      <span class="hint">clicca per entrare (cd), risali con ..</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">📂 contenuto (ls)</div>
+        <div id="nv-list" style="display:flex; flex-direction:column; gap:.3rem"></div>
+      </div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">terminale</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="nv-term" style="margin:0; min-height:120px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="nv-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Laboratorio: muoversi nell'albero</h2>
+
+  <p class="lead">
+    Esplora il filesystem del tuo sistema con i tre comandi. È il modo migliore per rendere concreto l'albero.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro di esplorazione</div>
+    <pre><span class="c"># parti dalla tua home e guardati intorno</span>
+<span class="p">$</span> <span class="cmd">cd</span>              <span class="c"># vai alla home</span>
+<span class="p">$</span> <span class="cmd">pwd</span>
+<span class="out">/home/anna</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-la</span>          <span class="c"># mostra tutto, anche i file nascosti (.bashrc ecc.)</span>
+
+<span class="c"># sali fino alla radice e guarda le cartelle principali</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">/</span>            <span class="c"># vai alla radice (percorso assoluto)</span>
+<span class="p">$</span> <span class="cmd">ls</span>
+<span class="out">bin  etc  home  tmp  usr  var  ...</span>
+
+<span class="c"># entra in una cartella di sistema (solo per guardare)</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">/var/log</span>     <span class="c"># i log del sistema</span>
+<span class="p">$</span> <span class="cmd">pwd</span>
+<span class="out">/var/log</span>
+<span class="p">$</span> <span class="cmd">cd</span>              <span class="c"># torna a casa</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Ti sei mosso nell'albero: dalla tua home alla radice, dentro le cartelle di sistema, e ritorno. <mark>Hai usato
+      sia percorsi relativi (<code>cd ..</code>) sia assoluti (<code>cd /var/log</code>)</mark>, controllando sempre
+      «dove sei» con <code>pwd</code>. Nota le cartelle principali del §3.2 comparire con <code>ls /</code>, e i file
+      nascosti (che iniziano con <code>.</code>) apparire solo con <code>ls -a</code>. Questa capacità di orientarti è
+      il prerequisito di tutto: nel prossimo capitolo inizieremo a <b>creare, copiare, spostare e cancellare</b> file
+      e cartelle — e per farlo devi sapere sempre dove sei e come indicare i percorsi. Ora lo sai.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li>Linux ha <b>un solo albero</b> di directory, dalla <b>radice</b> <code>/</code>; anche i dischi esterni vi
+          appaiono come cartelle (§3.1).</li>
+      <li>Cartelle principali: <code>/home</code> (i tuoi file), <code>/etc</code> (config), <code>/usr</code>
+          (programmi), <code>/var</code> (log/dati), <code>/tmp</code> (temporanei). <code>~</code> = la tua home
+          (§3.2).</li>
+      <li>Percorso <b>assoluto</b>: inizia con <code>/</code>, dalla radice, sempre valido. <b>Relativo</b>: da dove
+          sei. <code>.</code> = qui, <code>..</code> = livello sopra (§3.3).</li>
+      <li><b>pwd</b> (dove sono), <b>ls</b> (cosa c'è; <code>-l</code> dettagli, <code>-a</code> nascosti), <b>cd</b>
+          (spostati). Usa <b>Tab</b> per l'autocompletamento (§3.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai orientarti e muoverti nell'albero. È ora di <b>agire</b> su di esso. Nel <strong>Capitolo 4</strong> impariamo
+    a gestire file e cartelle: <b>creare</b> (<code>mkdir</code>, <code>touch</code>), <b>copiare</b> e <b>spostare</b>
+    (<code>cp</code>, <code>mv</code>), <b>cancellare</b> (<code>rm</code>) — con la dovuta cautela, perché il terminale
+    non ha un «cestino». Sono i comandi con cui organizzerai davvero i tuoi file, tutti i giorni.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      In cosa differisce l'organizzazione dei file di Linux da quella di Windows (con le sue «unità» C:, D:)? Cos'è la
+      radice?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Per ciascuno, di' se è un percorso <b>assoluto</b> o <b>relativo</b>: (a) <code>/etc/hosts</code>; (b)
+      <code>documenti/lettera.txt</code>; (c) <code>../foto</code>; (d) <code>~/note.txt</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Ti trovi in <code>/home/anna/progetti</code>. Scrivi due comandi <code>cd</code> per andare in
+      <code>/home/anna</code>: uno con percorso relativo, uno con percorso assoluto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      Quale comando usi per sapere in quale cartella ti trovi? E per vedere i file <b>nascosti</b> (quelli che iniziano
+      con un punto) di una cartella?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      Windows organizza i file in più «unità» separate (C:, D:…), ognuna con il suo albero. Linux ha invece <b>un
+      unico albero</b>, che parte da un'unica <b>radice</b> indicata da <code>/</code>: tutto — comprese cartelle
+      speciali, dischi esterni e dispositivi — si trova come ramo di questo singolo albero. La <b>radice</b> è il punto
+      di partenza dell'intero filesystem, «sopra» il quale non c'è nulla.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>/etc/hosts</code>: <b>assoluto</b> (inizia con <code>/</code>). (b) <code>documenti/lettera.txt</code>:
+      <b>relativo</b> (non inizia con <code>/</code>). (c) <code>../foto</code>: <b>relativo</b> (parte da dove sei,
+      salendo di un livello). (d) <code>~/note.txt</code>: è di fatto <b>assoluto</b> — la <code>~</code> viene
+      espansa nel percorso completo della tua home (es. <code>/home/anna</code>), quindi punta sempre allo stesso file.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">cd</span> <span class="ar">..</span>              <span class="c"># relativo: sali di un livello</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">/home/anna</span>      <span class="c"># assoluto: dalla radice</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Entrambi ti portano in <code>/home/anna</code>: il primo «salendo» da dove sei, il
+      secondo indicando l'indirizzo completo.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      Per sapere dove ti trovi: <code>pwd</code> («print working directory»), che stampa il percorso assoluto della
+      cartella corrente. Per vedere i file nascosti (quelli che iniziano con un punto, come <code>.bashrc</code>):
+      <code>ls -a</code> («all»), che li mostra insieme agli altri. Spesso si combina con i dettagli:
+      <code>ls -la</code>.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.4 — naviga un filesystem finto: cd nelle cartelle, .. per risalire, pwd
+   ========================================================================= */
+(function () {
+  const listEl = document.getElementById('nv-list');
+  if (!listEl) return;
+  const termEl = document.getElementById('nv-term');
+  const out = document.getElementById('nv-out');
+
+  // filesystem finto: mappa percorso -> {dirs:[], files:[]}
+  const FS = {
+    '/home/anna': { dirs: ['documenti', 'foto', 'progetti'], files: ['note.txt', '.bashrc'] },
+    '/home/anna/documenti': { dirs: [], files: ['lettera.txt', 'cv.pdf'] },
+    '/home/anna/foto': { dirs: ['vacanze'], files: ['gatto.jpg', 'profilo.png'] },
+    '/home/anna/foto/vacanze': { dirs: [], files: ['mare.jpg', 'monti.jpg'] },
+    '/home/anna/progetti': { dirs: [], files: ['app.py', 'README.md'] }
+  };
+  let cwd = '/home/anna';
+  const history = [];
+
+  function parent(p) { const i = p.lastIndexOf('/'); return i <= 0 ? '/home/anna' : p.slice(0, i); }
+
+  function draw(cmd, showLs) {
+    const node = FS[cwd] || { dirs: [], files: [] };
+    // lista cliccabile
+    let html = '';
+    if (cwd !== '/home/anna') {
+      html += '<div data-go=".." style="cursor:pointer; padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; font-family:var(--mono); font-size:.85rem">📁 <b>..</b> <span style="color:var(--ink-soft); font-size:.75rem">(risali)</span></div>';
+    }
+    node.dirs.forEach(function (d) {
+      html += '<div data-go="' + d + '" style="cursor:pointer; padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; font-family:var(--mono); font-size:.85rem; color:var(--accent)">📁 ' + d + '/</div>';
+    });
+    node.files.forEach(function (f) {
+      html += '<div style="padding:.4rem .6rem; border:1px dashed var(--ink-soft); border-radius:6px; font-family:var(--mono); font-size:.85rem; color:var(--ink-soft)">📄 ' + f + '</div>';
+    });
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('[data-go]').forEach(function (el) {
+      el.addEventListener('click', function () { go(el.getAttribute('data-go')); });
+    });
+    // terminale
+    const lsOut = node.dirs.map(function (d) { return d; }).concat(node.files.filter(function (f) { return f[0] !== '.'; })).join('  ');
+    termEl.innerHTML =
+      (cmd ? '<span class="p">$</span> <span class="cmd">' + cmd + '</span>\n' : '') +
+      '<span class="p">$</span> <span class="cmd">pwd</span>\n<span class="out">' + cwd + '</span>\n' +
+      '<span class="p">$</span> <span class="cmd">ls</span>\n<span class="out">' + (lsOut || '(vuota)') + '</span>';
+  }
+
+  function go(where) {
+    if (where === '..') { cwd = parent(cwd); draw('cd ..'); msg('Sei salito di un livello con <code>cd ..</code>. Il prompt (pwd) mostra la nuova posizione.'); }
+    else { cwd = cwd + '/' + where; draw('cd ' + where); msg('Sei entrato in <b>' + where + '</b> con <code>cd ' + where + '</code> (percorso relativo). <code>ls</code> mostra cosa contiene.'); }
+  }
+  function msg(html) { out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + html + '</div>'; }
+
+  draw('');
+  msg('Sei in <code>/home/anna</code>. Clicca una <b>cartella</b> (📁) per entrarci (<code>cd</code>) o <b>..</b> per risalire. Il terminale mostra <code>pwd</code> (dove sei) e <code>ls</code> (cosa c\'è). I file 📄 non sono cartelle: non ci entri.');
+})();
+</script>
+</body>
+</html>
