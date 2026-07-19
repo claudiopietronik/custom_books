@@ -23,7 +23,7 @@ usano Python/scikit-learn.
 - [x] 8 — Regressione logistica
 - [x] 9 — Naive Bayes e k-NN
 - [x] 10 — Support Vector Machines
-- [ ] 11 — Metodi kernel e Gaussian Processes
+- [x] 11 — Metodi kernel e Gaussian Processes
 - [ ] 12 — Alberi di decisione
 - [ ] 13 — Bagging e Random Forests
 - [ ] 14 — Boosting: AdaBoost e Gradient Boosting

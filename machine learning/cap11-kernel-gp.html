@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Metodi kernel e Gaussian Processes — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Metodi kernel e Gaussian Processes</h1>
+    <p class="standfirst">
+      Nel capitolo scorso abbiamo intravisto un'idea potente — il <b>kernel</b>, una funzione che misura quanto due
+      punti sono <b>simili</b> — usata per dare alle SVM confini curvi. Quell'idea è così feconda che va oltre le SVM:
+      è un modo generale di costruire modelli flessibili ragionando solo per <b>somiglianze</b>. In questo capitolo la
+      guardiamo con calma e la portiamo alla regressione, incontrando un modello dal fascino particolare: i
+      <b>Gaussian Processes</b> (processi gaussiani), che hanno una qualità rara e preziosa. Non danno solo una
+      previsione, ma anche una misura <b>onesta della propria incertezza</b>: <mark>«qui prevedo 3,2, e ne sono molto
+      sicuro; là prevedo 5, ma potrebbe essere qualsiasi cosa».</mark> Capire <b>quando</b> il modello non sa è spesso
+      più utile della previsione stessa. In questo capitolo: cos'è davvero un kernel (§11.1), il kernel trick
+      generalizzato (§11.2), i Gaussian Processes spiegati con dolcezza (§11.3), e quando conviene usarli (§11.4).
+      Nessuna formula lasciata muta.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>kernel</b> (§11.1), il <b>kernel trick</b> generalizzato (§11.2), i <b>Gaussian Processes</b> e la loro
+      incertezza (§11.3), quando usarli (§11.4). Nel laboratorio (§11.5) vedi la previsione con la sua <b>banda di
+      incertezza</b> che si allarga dove mancano dati.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: sapere quanto non sai</div>
+    <p style="margin-bottom:0">
+      I metodi kernel offrono flessibilità con eleganza matematica; i Gaussian Processes aggiungono qualcosa che quasi
+      nessun altro modello dà così bene: <mark>una stima calibrata dell'incertezza.</mark> È oro in medicina, nella
+      scienza sperimentale, nell'ottimizzazione (dove decidere «quale esperimento fare dopo» dipende proprio da dove il
+      modello è più incerto). Un modo diverso e maturo di pensare la previsione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Cos'è un kernel</h2>
+
+  <p class="lead">
+    Sgombriamo subito il campo da una parola che spaventa. «Kernel» suona esotico, ma il concetto è semplicissimo e
+    intuitivo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Un kernel è una misura di somiglianza</div>
+    <p style="margin-bottom:.5rem">
+      Un <b>kernel</b> è semplicemente una funzione $k(a,b)$ che, dati due punti $a$ e $b$, restituisce un numero che
+      dice <mark>quanto quei due punti sono <b>simili</b></mark>: grande se si somigliano molto, piccolo (o zero) se
+      sono diversi. Tutto qui. Il kernel più usato, l'<b>RBF</b> (o gaussiano), lo scrive così:
+    </p>
+    <p style="text-align:center; font-size:1.1rem; margin:.3rem 0 .9rem">$$ k(a,b) = \exp\!\left(-\frac{\lVert a-b\rVert^2}{2\ell^2}\right) $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$\lVert a-b\rVert^2$ — la distanza (al quadrato) tra i due punti</dt>
+        <dd>è quanto sono <b>lontani</b> $a$ e $b$ (il Pitagora del cap. 9, elevato al quadrato). <mark>Se i punti
+            coincidono, vale 0; più si allontanano, più cresce.</mark></dd>
+        <dt>il segno meno e l'esponenziale — trasformano «lontano» in «poco simile»</dt>
+        <dd>mettendo la distanza (positiva) dentro $\exp(-\ldots)$, otteniamo una <b>campana</b>: quando la distanza è 0,
+            $\exp(0)=1$ (massima somiglianza); quando la distanza cresce, l'esponenziale precipita verso 0 (nessuna
+            somiglianza). <mark>Vicini → somiglianza ≈ 1; lontani → somiglianza ≈ 0.</mark> Esattamente ciò che vogliamo.</dd>
+        <dt>$\ell$ — la «lunghezza di scala» (lengthscale): quanto lontano conta come «vicino»</dt>
+        <dd>è la larghezza della campana, la manopola più importante. <mark>$\ell$ <b>piccolo</b>: solo i punti
+            vicinissimi contano come simili</mark> (campana stretta → modello che coglie dettagli fini, ma nervoso);
+            <mark>$\ell$ <b>grande</b>: anche punti lontani contano come simili</mark> (campana larga → modello liscio e
+            morbido). È la stessa idea del $\gamma$ dell'SVM (cap. 10), scritta all'inverso: $\ell$ grande ↔ $\gamma$
+            piccolo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ricorda solo questo: <mark>un kernel = «quanto due cose si somigliano».</mark> Tutto il resto (SVM, Gaussian
+      Processes, e altri) è costruito su questo mattoncino tanto umile quanto potente.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>Il trucco del kernel, generalizzato</h2>
+
+  <p class="lead">
+    Perché la somiglianza è così centrale? Perché una sorprendente quantità di algoritmi, sotto il cofano, ha bisogno
+    <b>soltanto</b> delle somiglianze tra i punti, non delle loro coordinate. E questo apre una porta.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Basta la tabella delle somiglianze»</div>
+    <p style="margin-bottom:0">
+      Immagina di avere non le coordinate dei punti, ma solo una <b>tabella</b> che, per ogni coppia, dice quanto si
+      somigliano (calcolata da un kernel). Ebbene: <mark>molti algoritmi (SVM, regressione, PCA, clustering…) possono
+      funzionare avendo <b>solo</b> quella tabella.</mark> Questo è liberatorio per due motivi. <b>Primo</b>: cambiando
+      la funzione-kernel cambiamo la nozione di «vicinanza», e quindi la <b>forma</b> che il modello può assumere —
+      curve, cerchi, forme complesse — semplicemente scegliendo un kernel diverso, senza toccare l'algoritmo.
+      <b>Secondo</b>: possiamo definire una somiglianza anche tra oggetti che <b>non sono numeri</b> — testi, molecole,
+      grafi, sequenze di DNA — e applicarci gli stessi algoritmi. Basta saper dire «quanto questi due testi si
+      somigliano» e il gioco è fatto. <mark>Il kernel trick, in generale, è questo: ragionare per somiglianze anziché
+      per coordinate.</mark>
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La matrice del kernel (matrice di Gram)</div>
+    <p style="margin-bottom:0">
+      La «tabella delle somiglianze» ha un nome: <b>matrice del kernel</b> (o matrice di Gram). È una griglia $n\times n$
+      dove la casella $(i,j)$ contiene $k(x_i, x_j)$, la somiglianza tra il punto $i$ e il punto $j$. <mark>Sulla
+      diagonale (un punto con sé stesso) c'è la massima somiglianza</mark>; fuori diagonale, valori che scendono con la
+      distanza. Questa matrice è il «carburante» comune di tutti i metodi kernel — compresi i Gaussian Processes, che
+      vediamo ora, dove diventa la chiave di volta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Gaussian Processes (cenni)</h2>
+
+  <p class="lead">
+    Arriviamo al modello-gioiello di questo capitolo. Non spaventarti del nome: l'idea, spiegata bene, è di una bellezza
+    limpida. Facciamola in tre passi, senza mai correre.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Passo 1 — l'idea: «vicino ai dati sono sicuro, lontano no»</div>
+    <p style="margin-bottom:0">
+      Immagina di aver misurato una grandezza (la temperatura di un forno) in <b>pochi</b> istanti. Che valore aveva
+      <b>tra</b> due misure? Il buon senso dice: vicino a un istante misurato, sarà <b>simile</b> alla misura (e ne sei
+      abbastanza sicuro); <b>lontano</b> da ogni misura, potrebbe essere parecchie cose (e sei molto <b>incerto</b>).
+      <mark>Il Gaussian Process (GP) è la messa in formule esatta di questo buon senso:</mark> traccia una curva che
+      passa vicino ai dati osservati, e attorno a essa disegna una <b>banda di incertezza</b> che è <b>stretta</b> dove
+      hai dati e si <b>allarga</b> dove non ne hai. Semplice e onesto.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Passo 2 — come lo fa: pesa i vicini per somiglianza</div>
+    <p style="margin-bottom:0">
+      Come previsione in un punto nuovo $x$, il GP fa in sostanza una <b>media pesata</b> dei valori osservati, dove il
+      peso di ciascun dato è la sua <b>somiglianza</b> a $x$ (data dal kernel!). <mark>I dati vicini a $x$ pesano molto,
+      quelli lontani quasi nulla</mark> — ecco perché la previsione «segue» i dati vicini. E per l'<b>incertezza</b>: se
+      attorno a $x$ ci sono dati molto simili, il GP è sicuro (banda stretta); se il punto più simile è comunque
+      lontano, il GP «non ha appigli» ed è incerto (banda larga). Il kernel (la somiglianza) governa <b>entrambe</b> le
+      cose: previsione e fiducia. La lunghezza di scala $\ell$ decide quanto in fretta la fiducia svanisce
+      allontanandosi dai dati.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🎁</span> Passo 3 — cosa ottieni: una previsione + la sua fiducia</div>
+    <p style="margin-bottom:0">
+      Il risultato di un GP non è un solo numero, ma <b>due</b>: la previsione (il centro della banda) e la sua
+      <b>incertezza</b> (la larghezza della banda). Di solito si disegna come una curva centrale con un'ombra attorno.
+      <mark>Quell'ombra è la cosa preziosa</mark>: ti dice esplicitamente dove fidarti del modello e dove no. Nessun
+      altro modello visto finora te lo dice in modo così naturale — la logistica dà una probabilità di classe, ma il GP
+      dà una vera «barra d'errore» su una previsione numerica, punto per punto. (Sotto il cofano c'è algebra con la
+      matrice del kernel del §11.2; ma l'idea da portare a casa è tutta qui in questi tre passi.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Quando usarli</h2>
+
+  <p class="lead">
+    Ogni strumento ha il suo posto. Vediamo con onestà pregi e limiti dei metodi kernel e dei GP, così saprai quando
+    tirarli fuori dalla cassetta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Pregi e limiti <span class="tag">scegli con cognizione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>✔ quando <b>brillano</b></dt>
+        <dd>con <b>pochi dati</b> ma «puliti», dove serve una previsione liscia e soprattutto un'<b>incertezza</b>
+            affidabile: esperimenti scientifici, medicina, sensori costosi, e l'<b>ottimizzazione bayesiana</b> (scegliere
+            il prossimo esperimento puntando dove il modello è più incerto o più promettente). <mark>Se ti serve sapere
+            «quanto è sicuro il modello», il GP è spesso la scelta migliore.</mark></dd>
+        <dt>✗ il <b>costo</b> da conoscere</dt>
+        <dd>i metodi kernel devono calcolare e gestire la matrice delle somiglianze $n\times n$: con <b>tanti</b> dati
+            (decine di migliaia e oltre) diventa <b>pesantissima</b> (memoria e tempo crescono in fretta col numero di
+            punti). <mark>Per questo su grandi dataset si preferiscono altri modelli</mark> (alberi, boosting, reti
+            neurali) — che sono, guarda caso, i protagonisti dei prossimi capitoli.</dd>
+        <dt>la scelta del kernel è la scelta del modello</dt>
+        <dd>cambiare kernel cambia le forme che il modello può assumere. È potente ma richiede cura: il kernel codifica
+            le tue <b>assunzioni</b> su come è fatta la realtà (quanto liscia, periodica, ecc.). Sceglierlo bene è
+            un'arte che si affina con l'esperienza.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riassunto pratico: <mark>pochi dati + serve l'incertezza → pensa ai GP; tantissimi dati → guarda altrove</mark>
+      (boosting o reti neurali). In ogni caso, l'idea del kernel come «somiglianza» resta un modo di pensare che
+      illumina moltissimi metodi.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi un Gaussian Process al lavoro: la curva di previsione e, soprattutto, la <b>banda di incertezza</b>
+    che si stringe sui dati e si allarga nei vuoti. Muovi la lunghezza di scala $\ell$ e guarda come cambia tutto.
+  </p>
+
+  <div class="widget" id="w-gp">
+    <div class="w-head">
+      <span>Il Gaussian Process e la sua incertezza</span>
+      <span class="hint">la banda si allarga dove mancano dati</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="gp-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>lunghezza di scala ℓ <input type="range" id="gp-l" min="0.4" max="3.5" step="0.05" value="1.2"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="gp-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">gp.py</div>
+    <pre><span class="kw">from</span> sklearn.gaussian_process <span class="kw">import</span> GaussianProcessRegressor
+<span class="kw">from</span> sklearn.gaussian_process.kernels <span class="kw">import</span> RBF, WhiteKernel
+
+<span class="cm"># il kernel RBF codifica "punti vicini → valori simili"; ℓ = length_scale</span>
+kernel <span class="op">=</span> <span class="fn">RBF</span>(length_scale<span class="op">=</span><span class="nm">1.0</span>) <span class="op">+</span> <span class="fn">WhiteKernel</span>()   <span class="cm"># + un po' di rumore</span>
+gp <span class="op">=</span> <span class="fn">GaussianProcessRegressor</span>(kernel<span class="op">=</span>kernel)
+gp.<span class="fn">fit</span>(X, y)
+
+<span class="cm"># la magia: predict restituisce media E deviazione standard (l'incertezza!)</span>
+media, sigma <span class="op">=</span> gp.<span class="fn">predict</span>(X_nuovi, return_std<span class="op">=</span><span class="kw">True</span>)
+<span class="bi">print</span>(media)      <span class="cm"># la previsione</span>
+<span class="bi">print</span>(sigma)      <span class="cm"># quanto è incerto in ogni punto (banda = media ± 2·sigma)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: la curva passa vicino ai punti osservati e la <b>banda</b> (l'ombra) è stretta lì e si <b>allarga nei
+      buchi</b> tra i dati e ai bordi — il GP ammette onestamente «qui non so». Cambiando $\ell$: piccolo → curva
+      nervosa e incertezza che esplode appena ti allontani da un punto; grande → curva liscia e fiducia più estesa.
+      Nel codice: <code>return_std=True</code> è la chiave — restituisce anche <code>sigma</code>, la deviazione
+      standard, cioè la <b>barra d'errore</b> punto per punto. Hai visto un modello che sa quanto non sa. Nei prossimi
+      capitoli cambiamo famiglia e affrontiamo i modelli che dominano i dati «a tabella»: gli <b>alberi di decisione</b>
+      e i loro potentissimi ensemble (foreste e boosting).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>kernel</b> è una misura di <b>somiglianza</b> tra due punti (RBF: vicini ≈ 1, lontani ≈ 0). La
+          lunghezza di scala $\ell$ decide «quanto lontano conta come vicino» (§11.1).</li>
+      <li>Molti algoritmi hanno bisogno <b>solo</b> delle somiglianze (la matrice del kernel), non delle coordinate:
+          questo permette forme flessibili e persino di lavorare su testi, molecole, grafi (§11.2).</li>
+      <li>I <b>Gaussian Processes</b> prevedono con una <b>media pesata per somiglianza</b> dei dati, e — unici —
+          restituiscono anche l'<b>incertezza</b>: banda stretta sui dati, larga nei vuoti (§11.3).</li>
+      <li>Ottimi con <b>pochi dati</b> quando serve l'incertezza; <b>pesanti</b> con tanti dati (matrice $n\times n$).
+          Il kernel scelto è il modello (§11.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con i kernel e i Gaussian Processes chiudiamo la famiglia dei modelli «geometrici», basati su distanze e
+    somiglianze. Ora cambiamo radicalmente strada. Nel <strong>Capitolo 12</strong> incontriamo un modello che non
+    ragiona per distanze ma per <b>domande</b>: gli <b>alberi di decisione</b>, che classificano ponendo una serie di
+    semplici domande «sì/no» sui dati, come in un gioco delle venti domande. Sono intuitivi, leggibili come un
+    diagramma di flusso, e — combinati in gruppo — daranno vita ad alcuni dei modelli più vincenti in assoluto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      In parole semplici, cos'è un kernel? Nel kernel RBF, cosa vale la somiglianza quando due punti coincidono e cosa
+      quando sono molto lontani?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Cosa controlla la lunghezza di scala $\ell$ nel kernel RBF? Descrivi la differenza tra un $\ell$ piccolo e uno
+      grande.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Perché è utile che molti algoritmi abbiano bisogno «solo» della matrice delle somiglianze e non delle coordinate?
+      Cita almeno un vantaggio concreto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Qual è la caratteristica distintiva dei Gaussian Processes rispetto agli altri modelli visti finora? Dove la banda
+      di incertezza è stretta e dove è larga, e perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.5</div>
+    <p style="margin-bottom:0">
+      In quali situazioni conviene usare un Gaussian Process, e quando invece è meglio evitarlo? Qual è il suo principale
+      limite di scalabilità?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      Un <b>kernel</b> è una funzione che, dati due punti, misura quanto sono <b>simili</b> (un numero grande se si
+      somigliano, piccolo se sono diversi). Nel kernel RBF, quando due punti <b>coincidono</b> la distanza è 0 e la
+      somiglianza vale $\exp(0)=1$ (massima); quando sono <b>molto lontani</b>, la distanza è grande e la somiglianza
+      tende a 0 (nessuna somiglianza).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      $\ell$ è la larghezza della «campana» di somiglianza: stabilisce quanto lontano due punti possono essere
+      continuando a contare come «simili». Con $\ell$ <b>piccolo</b> solo i punti vicinissimi sono simili → il modello
+      coglie dettagli fini ma è nervoso e la fiducia svanisce subito allontanandosi dai dati. Con $\ell$ <b>grande</b>
+      anche punti lontani contano come simili → il modello è liscio e morbido e la fiducia si estende più lontano.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      È utile per due motivi. <b>Primo</b>: cambiando la funzione-kernel si cambia la nozione di somiglianza e quindi la
+      forma che il modello può assumere, senza modificare l'algoritmo — un modo comodo di ottenere modelli flessibili.
+      <b>Secondo</b> (concreto): si possono trattare oggetti che non sono numeri — testi, molecole, grafi, sequenze di
+      DNA — purché si sappia definire quanto due di essi si somigliano; così gli stessi algoritmi diventano applicabili
+      a dati non numerici.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      La caratteristica distintiva è che restituiscono, oltre alla previsione, una <b>stima onesta dell'incertezza</b>
+      (una barra d'errore punto per punto). La banda di incertezza è <b>stretta</b> dove ci sono dati osservati vicini
+      (il modello ha appigli e si fida), ed è <b>larga</b> nei vuoti tra i dati e ai bordi (dove non ci sono punti simili
+      su cui basarsi, quindi il modello ammette di non sapere).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.5</div>
+    <p style="margin-bottom:0">
+      Conviene usarli con <b>pochi dati puliti</b> quando serve una previsione liscia e soprattutto una misura
+      affidabile dell'incertezza (esperimenti scientifici, medicina, sensori costosi, ottimizzazione bayesiana). È
+      meglio evitarli con <b>moltissimi dati</b>: il loro principale limite di scalabilità è la <b>matrice delle
+      somiglianze $n\times n$</b>, che con tanti punti diventa troppo costosa in memoria e tempo; in quei casi si
+      preferiscono alberi, boosting o reti neurali.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.5 — regressione con Gaussian Process (kernel RBF) in JS.
+   Media posteriore + banda ±2σ; ℓ regolabile. Inversione matrice via Gauss.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('gp-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('gp-out');
+  const sL = document.getElementById('gp-l');
+
+  // dati osservati (con un vuoto tra x≈4 e x≈7 per mostrare l'incertezza)
+  const XS = [1.0, 2.0, 3.0, 4.0, 7.5, 8.5, 9.5];
+  const YS = [2.2, 3.4, 3.0, 4.1, 3.6, 4.6, 4.0];
+  const NOISE = 0.05;
+  const XMIN=0, XMAX=10.5, YMIN=0, YMAX=7;
+  const n = XS.length;
+
+  function rbf(a,b,l){ const d=a-b; return Math.exp(-(d*d)/(2*l*l)); }
+
+  // inversione di matrice n×n via Gauss-Jordan
+  function inv(M){
+    const N=M.length;
+    const A=M.map(function(r,i){ return r.slice().concat(Array.from({length:N},function(_,j){return i===j?1:0;})); });
+    for(let c=0;c<N;c++){
+      let pv=c; for(let r=c+1;r<N;r++) if(Math.abs(A[r][c])>Math.abs(A[pv][c])) pv=r;
+      const t=A[c];A[c]=A[pv];A[pv]=t;
+      const d=A[c][c]||1e-9;
+      for(let k=0;k<2*N;k++) A[c][k]/=d;
+      for(let r=0;r<N;r++){ if(r===c)continue; const f=A[r][c]; for(let k=0;k<2*N;k++) A[r][k]-=f*A[c][k]; }
+    }
+    return A.map(function(r){ return r.slice(N); });
+  }
+  function matVec(M,v){ return M.map(function(r){ let s=0; for(let i=0;i<v.length;i++)s+=r[i]*v[i]; return s; }); }
+  function dot(a,b){ let s=0; for(let i=0;i<a.length;i++)s+=a[i]*b[i]; return s; }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const l=+sL.value;
+    // K + rumore, e sua inversa
+    const K=[]; for(let i=0;i<n;i++){ K.push([]); for(let j=0;j<n;j++) K[i].push(rbf(XS[i],XS[j],l)+(i===j?NOISE:0)); }
+    const Ki=inv(K);
+    const alpha=matVec(Ki,YS); // K^{-1} y
+
+    const mean=[], up=[], lo=[];
+    for(let x=XMIN;x<=XMAX;x+=0.08){
+      const ks=XS.map(function(xi){ return rbf(x,xi,l); });
+      const m=dot(ks,alpha);
+      const v=Math.max(0, 1 - dot(ks, matVec(Ki,ks))); // varianza posteriore (k(x,x)=1)
+      const s=Math.sqrt(v+NOISE);
+      mean.push([x,m]); up.push([x, Math.min(YMAX, m+2*s)]); lo.push([x, Math.max(YMIN, m-2*s)]);
+    }
+
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // banda di incertezza: poligono chiuso up + lo(reverse)
+    const band = up.concat(lo.slice().reverse());
+    p.poly(band, { color:'none', fill:'rgba(90,120,220,0.16)', width:0, close:true });
+    // curva media
+    p.poly(mean, { color:'var(--accent)', width:2.6, close:false });
+    // punti osservati
+    for(let i=0;i<n;i++) p.dot(XS[i],YS[i],{ color:'var(--ink)', r:5, stroke:'#fff', sw:1.5 });
+
+    let msg;
+    if(l<0.8) msg='<b>ℓ piccolo</b>: la curva è nervosa e la banda <b>esplode</b> appena ti allontani da un punto — il modello si fida solo pochissimo attorno ai dati.';
+    else if(l>2.2) msg='<b>ℓ grande</b>: la curva è molto liscia e la fiducia si estende lontano, ma rischia di «tirare dritto» ignorando dettagli.';
+    else msg='<b>ℓ medio</b>: buon equilibrio. Guarda il <b>vuoto</b> centrale (tra x = 4 e x = 7,5): lì mancano dati e la banda si <b>allarga</b> — il GP ammette onestamente l\'incertezza.';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">'+msg+
+      ' <span style="color:var(--ink-soft)">La linea = previsione; l\'ombra = incertezza (media ± 2σ). Stretta sui dati, larga nei vuoti.</span></div>';
+  }
+  sL.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>

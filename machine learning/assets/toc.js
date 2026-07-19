@@ -165,7 +165,7 @@ const TOC = [
     n: 11,
     titolo: "Metodi kernel e Gaussian Processes",
     file: "cap11-kernel-gp.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Cos'è un kernel" },
       { id: "s11-2", n: "11.2", t: "Il trucco del kernel, generalizzato" },
