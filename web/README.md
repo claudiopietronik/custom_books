@@ -15,7 +15,7 @@ Contenuto originale scritto ex novo.
 - [x] 2 — HTML: la struttura
 - [x] 3 — I tag del testo
 - [x] 4 — Link, immagini e liste
-- [ ] 5 — Form e input
+- [x] 5 — Form e input
 - [ ] 6 — CSS: dare stile
 - [ ] 7 — I selettori
 - [ ] 8 — Il box model

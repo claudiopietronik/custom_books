@@ -73,7 +73,7 @@ const TOC = [
     n: 5,
     titolo: "Form e input",
     file: "cap05-form.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "A cosa serve un form" },
       { id: "s5-2", n: "5.2", t: "I campi di input" },
