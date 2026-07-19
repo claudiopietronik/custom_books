@@ -17,7 +17,7 @@ Contenuto originale scritto ex novo.
 - [x] 4 — Link, immagini e liste
 - [x] 5 — Form e input
 - [x] 6 — CSS: dare stile
-- [ ] 7 — I selettori
+- [x] 7 — I selettori
 - [ ] 8 — Il box model
 - [ ] 9 — Layout con Flexbox
 - [ ] 10 — Responsive: ogni schermo
