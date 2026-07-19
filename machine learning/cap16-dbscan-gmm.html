@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · DBSCAN e Gaussian Mixture Models — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16</div>
+    <h1>DBSCAN e Gaussian Mixture Models</h1>
+    <p class="standfirst">
+      Il k-means è semplice e utile, ma abbiamo visto che è anche piuttosto <b>rigido</b>: vuole che gli dici quanti
+      gruppi cercare, presume gruppi «tondi» e di taglia simile, e assegna <b>per forza</b> ogni punto a un gruppo —
+      anche quelli che sono chiaramente rumore isolato. In questo capitolo conosciamo due metodi che superano questi
+      limiti da due direzioni diverse e complementari. Il primo, <b>DBSCAN</b>, ragiona per <b>densità</b>: <mark>un
+      gruppo è una zona «affollata» di punti; le zone vuote li separano, e i punti isolati sono giustamente marchiati
+      come <b>rumore</b>.</mark> Così trova gruppi di <b>forma qualsiasi</b> — anche serpentine e anelli — e non gli
+      devi dire quanti sono. Il secondo, i <b>Gaussian Mixture Models</b> (GMM), riprende le nuvole gaussiane del
+      capitolo 7 e le usa per un clustering <b>morbido</b>: <mark>invece di dire «questo punto è del gruppo 2», dice
+      «è del gruppo 2 al 70% e del gruppo 1 al 30%»</mark> — un'assegnazione probabilistica, molto più sfumata. In
+      questo capitolo: i limiti di k-means (§16.1), DBSCAN (§16.2), le mixture di gaussiane (§16.3) e l'elegante
+      algoritmo <b>EM</b> che le allena (§16.4). Con la solita, paziente delicatezza.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I <b>limiti di k-means</b> (§16.1), <b>DBSCAN</b> e la densità (§16.2), le <b>mixture di gaussiane</b> (§16.3),
+      l'algoritmo <b>EM</b> (§16.4). Nel laboratorio (§16.5) confronti k-means e DBSCAN su forme «difficili».
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: gruppi veri, non solo tondi</div>
+    <p style="margin-bottom:0">
+      I dati reali raramente formano palline ordinate. <mark>DBSCAN è la scelta d'elezione quando i gruppi hanno forme
+      strane o quando serve individuare gli <b>outlier</b></mark> (frodi, guasti, anomalie). I GMM, invece, danno un
+      clustering <b>probabilistico</b> e sono il ponte verso i modelli generativi e l'algoritmo EM, uno degli schemi più
+      eleganti e ricorrenti di tutta la statistica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>I limiti di k-means</h2>
+
+  <p class="lead">
+    Ripartiamo dai difetti del k-means, perché ciascuno dei due nuovi metodi nasce per curarne uno. Vederli chiaramente
+    è già metà della comprensione.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Tre rigidità del k-means</div>
+    <ul style="margin:0">
+      <li style="margin-bottom:.5rem"><b>Vuole gruppi «tondi».</b> Misurando la distanza da un centro, il k-means
+          disegna di fatto confini «a palla»: <mark>fallisce su gruppi allungati, a mezzaluna, ad anello</mark> —
+          proprio le forme che l'occhio umano riconoscerebbe subito.</li>
+      <li style="margin-bottom:.5rem"><b>Devi dirgli $k$.</b> Il numero di gruppi va deciso in anticipo, ma spesso non
+          lo conosci.</li>
+      <li><b>Assegna tutto, per forza.</b> Ogni punto finisce in un gruppo, <mark>anche un punto palesemente isolato
+          che dovrebbe essere considerato <b>rumore</b>.</mark> Il k-means non ha il concetto di «questo non appartiene
+          a nessuno».</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Due cure, due filosofie</div>
+    <p style="margin-bottom:0">
+      <mark><b>DBSCAN</b> cura la prima e la terza rigidità</mark>: guardando alla <b>densità</b> anziché alla distanza
+      da un centro, cattura forme qualsiasi, scopre da solo <b>quanti</b> gruppi ci sono, e sa dire «questo è rumore».
+      <mark>I <b>GMM</b> curano la prima in modo diverso</mark>: usano gaussiane che possono essere allungate e
+      orientate (non solo palle), e assegnano i punti in modo <b>morbido</b> (probabilistico) invece che netto.
+      Vediamoli uno alla volta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>DBSCAN (densità)</h2>
+
+  <p class="lead">
+    <b>DBSCAN</b> (il nome è una sigla tecnica; puoi ignorarlo) parte da un'intuizione umanissima: guardiamo una nuvola
+    di stelle e riconosciamo gli «ammassi» come le zone <b>più fitte</b>, separate da vuoti. DBSCAN formalizza proprio
+    questo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Un gruppo è una zona affollata</div>
+    <p style="margin-bottom:.5rem">
+      L'idea: <mark>un cluster è una regione <b>densa</b> di punti; le regioni vuote fanno da confine; i punti isolati
+      nelle zone vuote sono <b>rumore</b>.</mark> Per rendere precisa la parola «denso», DBSCAN usa due impostazioni:
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt><b>$\varepsilon$ (eps)</b> — il raggio di «vicinato»</dt>
+        <dd>quanto lontano guardare attorno a un punto per contare i suoi vicini. <mark>È la dimensione del «cerchietto»
+            entro cui cercare compagnia.</mark></dd>
+        <dt><b>minPts</b> — quanti vicini servono per dire «affollato»</dt>
+        <dd>il numero minimo di punti che devono cadere in quel cerchietto perché la zona sia considerata densa. Un
+            punto con abbastanza vicini (almeno <code>minPts</code>) è un <b>punto centrale</b> (core): sta nel cuore
+            di un gruppo.</dd>
+      </dl>
+    </div>
+    <p style="margin-bottom:0">
+      Il meccanismo: <mark>si parte da un punto centrale e si «contagia» il gruppo ai suoi vicini, e ai vicini dei
+      vicini, finché la densità regge</mark> — come un'infezione che si propaga solo nelle zone affollate e si ferma nei
+      vuoti. I punti che restano fuori da ogni zona densa vengono etichettati <b>rumore</b>. Poiché il gruppo cresce
+      «seguendo la densità», può assumere <b>qualsiasi forma</b>: serpentine, anelli, mezzelune — cose impossibili per
+      il k-means.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Pregi e limiti di DBSCAN <span class="tag">forte, ma va calibrato</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>✔ i grandi pregi</dt>
+        <dd><mark>trova gruppi di <b>forma qualsiasi</b>; scopre da solo <b>quanti</b> gruppi ci sono</mark> (non devi
+            dare $k$!); <mark>identifica il <b>rumore</b></mark> (gli outlier), utilissimo per l'anomaly detection.</dd>
+        <dt>✗ i limiti</dt>
+        <dd>i risultati dipendono molto dalla scelta di $\varepsilon$ e <code>minPts</code>, che vanno calibrati con
+            cura; <mark>fatica quando i gruppi hanno <b>densità molto diverse</b></mark> (un solo $\varepsilon$ non va
+            bene per tutti); e in tante dimensioni la nozione di «vicinato» si indebolisce (cap. 17).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In sintesi: <mark>quando i gruppi non sono tondi, o quando ti serve scovare gli outlier, DBSCAN batte il
+      k-means.</mark> Quando invece i gruppi sono ben separati e tondeggianti, il k-means è più semplice e veloce.
+      Strumenti diversi per situazioni diverse.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Mixture di Gaussiane</h2>
+
+  <p class="lead">
+    Cambiamo strada. I <b>Gaussian Mixture Models</b> (GMM) tornano a un'idea che conosci bene — le nuvole gaussiane del
+    capitolo 7 — e la usano per il clustering, con una novità preziosa: l'assegnazione <b>morbida</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> I dati come miscela di più campane</div>
+    <p style="margin-bottom:0">
+      L'idea del GMM: <mark>immaginare che i dati siano nati da una <b>miscela</b> («mixture») di più nuvole gaussiane
+      sovrapposte</mark>, una per ogni gruppo. Ogni gruppo è una gaussiana con il suo centro, la sua forma e la sua
+      «grandezza» (quanti punti gli appartengono). Il clustering diventa allora: <b>quali gaussiane, mescolate,
+      spiegano meglio i punti che vedo?</b> Rispetto al k-means, c'è un salto di flessibilità: le gaussiane possono
+      essere <b>allungate e orientate</b> (non solo palle), quindi catturano gruppi ellittici. Ma la vera novità è
+      un'altra, ed è bellissima.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Assegnazione morbida: le responsabilità</div>
+    <p style="margin-bottom:0">
+      Il k-means dà un'assegnazione <b>netta</b>: «questo punto è del gruppo 2, punto». Il GMM dà un'assegnazione
+      <b>morbida</b>: <mark>«questo punto è del gruppo 2 al 70%, del gruppo 1 al 25%, del gruppo 3 al 5%».</mark> Queste
+      percentuali si chiamano <b>responsabilità</b>: quanto ciascuna gaussiana «si prende la responsabilità» di aver
+      generato quel punto. È molto più onesto e informativo: <mark>un punto proprio in mezzo a due gruppi riceve
+      responsabilità 50/50</mark>, riflettendo la sua genuina ambiguità, invece di essere forzato di là o di qua. Il
+      k-means, in effetti, è un caso particolare «indurito» del GMM (gaussiane tutte sferiche e uguali, responsabilità
+      tutte 0 o 1). Ottieni un gruppo «duro» prendendo, per ogni punto, la gaussiana con la responsabilità più alta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>L'algoritmo EM</h2>
+
+  <p class="lead">
+    Come si allena un GMM? Con un algoritmo elegante e famosissimo, l'<b>EM</b> («Expectation-Maximization»). La cosa
+    sorprendente: ha <b>lo stesso spirito</b> del k-means — due passi che si alternano — solo in versione «morbida».
+    Riconoscere questa parentela rende tutto facile.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Due passi morbidi, come il k-means</div>
+    <p style="margin-bottom:.5rem">
+      C'è un problema dell'uovo e della gallina: <b>se sapessi</b> a quale gruppo appartiene ogni punto, potrei stimare
+      le gaussiane; <b>se conoscessi</b> le gaussiane, potrei assegnare i punti. Non so né l'uno né l'altro. EM lo
+      risolve alternando (come il k-means!), partendo da una stima iniziale a caso:
+    </p>
+    <ol style="margin:0 0 .6rem 1.1rem">
+      <li style="margin-bottom:.4rem"><b>Passo E (Expectation)</b> — con le gaussiane attuali, <mark>calcola le
+          <b>responsabilità</b>: per ogni punto, quanto probabilmente appartiene a ciascun gruppo.</mark> (È
+          l'equivalente «morbido» del passo di assegnazione del k-means.)</li>
+      <li><b>Passo M (Maximization)</b> — con le responsabilità appena calcolate, <mark>ri-stima ogni gaussiana</mark>
+          (centro, forma, peso) come media <b>pesata</b> dei punti secondo quanto ciascuno le «appartiene». (È
+          l'equivalente «morbido» del passo di aggiornamento dei centri.)</li>
+    </ol>
+    <p style="margin-bottom:0">
+      Si alternano E ed M finché le gaussiane si stabilizzano. <mark>A ogni giro la miscela «spiega» un po' meglio i
+      dati</mark>, esattamente come il k-means riduce l'inerzia. La differenza è solo la morbidezza: dove il k-means
+      dice «questo punto è tuo», EM dice «questo punto è tuo al 70%».
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🔗</span> Uno schema che ritorna ovunque</div>
+    <p style="margin-bottom:0">
+      L'EM non serve solo per i GMM: è uno <b>schema generale</b> per stimare modelli quando ci sono informazioni
+      «nascoste» (qui: da quale gaussiana viene ogni punto). Compare in tantissimi angoli della statistica e del machine
+      learning. <mark>Il modo di pensare — «indovina le variabili nascoste, poi ri-stima il modello, ripeti» — è una di
+      quelle idee che, una volta viste, si riconoscono dappertutto.</mark> Averlo capito qui è un piccolo tesoro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget metti alla prova k-means e DBSCAN sulla stessa forma «difficile» (due mezzelune intrecciate): vedrai il
+    k-means fare un pasticcio e DBSCAN azzeccare le forme e marcare il rumore. È il §16.1 e §16.2 in un'immagine.
+  </p>
+
+  <div class="widget" id="w-db">
+    <div class="w-head">
+      <span>k-means contro DBSCAN su forme difficili</span>
+      <span class="hint">densità vs distanza da un centro</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <div style="display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem">
+        <button class="btn" data-alg="kmeans">k-means (k=2)</button>
+        <button class="btn ghost" data-alg="dbscan">DBSCAN (densità)</button>
+      </div>
+      <svg id="db-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+    </div>
+    <div class="w-readout" id="db-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">densita.py</div>
+    <pre><span class="kw">from</span> sklearn.cluster <span class="kw">import</span> DBSCAN
+<span class="kw">from</span> sklearn.mixture <span class="kw">import</span> GaussianMixture
+
+<span class="cm"># DBSCAN: nessun k! solo eps (raggio) e min_samples (densità minima)</span>
+db <span class="op">=</span> <span class="fn">DBSCAN</span>(eps<span class="op">=</span><span class="nm">0.3</span>, min_samples<span class="op">=</span><span class="nm">5</span>).<span class="fn">fit</span>(X)
+<span class="bi">print</span>(db.labels_)          <span class="cm"># etichette dei gruppi; -1 = rumore (outlier!)</span>
+
+<span class="cm"># GMM: clustering morbido (probabilistico) con l'algoritmo EM</span>
+gmm <span class="op">=</span> <span class="fn">GaussianMixture</span>(n_components<span class="op">=</span><span class="nm">3</span>).<span class="fn">fit</span>(X)
+<span class="bi">print</span>(gmm.<span class="fn">predict</span>(X))        <span class="cm"># gruppo "duro" (responsabilità più alta)</span>
+<span class="bi">print</span>(gmm.<span class="fn">predict_proba</span>(X))  <span class="cm"># le RESPONSABILITÀ: [[0.7 0.25 0.05] ...]</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: sulle due mezzelune il <b>k-means</b> taglia dritto in mezzo (i suoi confini «a palla» non capiscono
+      le forme curve), mentre <b>DBSCAN</b> segue la densità e ritrova le due lune corrette, marcando i punti isolati
+      come <b>rumore</b> (in grigio). Nel codice: <code>DBSCAN</code> con <code>eps</code>/<code>min_samples</code> e
+      l'etichetta <code>-1</code> per gli outlier; <code>GaussianMixture</code> con <code>predict_proba</code> che
+      restituisce le <b>responsabilità</b> morbide. Hai completato il tuo kit di clustering. Ma tutti questi metodi
+      soffrono quando le caratteristiche sono <b>moltissime</b>: le distanze perdono senso e i calcoli esplodono. Nel
+      prossimo capitolo affrontiamo proprio questo con la <b>riduzione della dimensionalità</b> e la <b>PCA</b>:
+      comprimere tante caratteristiche in poche, conservando l'essenziale.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li>Il k-means è rigido: gruppi tondi, $k$ da fissare, nessun concetto di rumore. DBSCAN e GMM curano questi
+          limiti (§16.1).</li>
+      <li><b>DBSCAN</b>: un gruppo è una <b>zona densa</b> (definita da $\varepsilon$ e <code>minPts</code>); trova
+          forme <b>qualsiasi</b>, scopre da solo il numero di gruppi e marca i <b>rumori/outlier</b>. Sensibile ai suoi
+          due parametri (§16.2).</li>
+      <li><b>GMM</b>: i dati come <b>miscela di gaussiane</b>; assegnazione <b>morbida</b> (le <b>responsabilità</b>:
+          «70% gruppo 2, 30% gruppo 1»). Gaussiane allungate → gruppi ellittici (§16.3).</li>
+      <li><b>EM</b> allena il GMM alternando <b>passo E</b> (calcola le responsabilità) e <b>passo M</b> (ri-stima le
+          gaussiane): è il k-means in versione «morbida», uno schema che ricorre ovunque (§16.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con DBSCAN e i GMM la nostra cassetta per il clustering è completa e flessibile. Ma un'ombra è comparsa più volte:
+    quando le caratteristiche diventano tantissime — centinaia, migliaia — tutto si complica. Le distanze si
+    appiattiscono, i modelli overfittano, la visualizzazione diventa impossibile. È la famigerata «maledizione della
+    dimensionalità». Nel <strong>Capitolo 17</strong> impariamo a combatterla con la <b>riduzione della
+    dimensionalità</b> e il suo strumento principe, la <b>PCA</b> (analisi delle componenti principali): l'arte di
+    <b>comprimere</b> molte caratteristiche in poche, buttando via la ridondanza e tenendo l'informazione che conta.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Elenca tre rigidità del k-means. Per ciascuna, indica quale tra DBSCAN e GMM la affronta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Come definisce DBSCAN un «gruppo»? Spiega il ruolo dei parametri $\varepsilon$ e <code>minPts</code>, e cosa
+      significa che un punto è etichettato come «rumore».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      Cos'è un'assegnazione «morbida» in un GMM, e cosa sono le «responsabilità»? In che senso il k-means è un caso
+      particolare del GMM?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      Descrivi i passi E ed M dell'algoritmo EM e collegali ai due passi del k-means. Qual è il problema «dell'uovo e
+      della gallina» che EM risolve alternandoli?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.5</div>
+    <p style="margin-bottom:0">
+      In quale situazione concreta preferiresti DBSCAN al k-means? E in quale invece il k-means resta la scelta migliore?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Tre rigidità: (1) vuole gruppi <b>tondi</b> (fallisce su forme allungate/curve) → la affrontano sia DBSCAN (con la
+      densità) sia i GMM (con gaussiane allungate); (2) richiede di <b>fissare $k$</b> in anticipo → la affronta
+      <b>DBSCAN</b> (scopre da solo il numero di gruppi); (3) assegna <b>ogni</b> punto a un gruppo, senza concetto di
+      rumore → la affronta <b>DBSCAN</b> (marca gli isolati come rumore). I GMM aggiungono inoltre l'assegnazione
+      morbida.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Per DBSCAN un gruppo è una <b>regione densa</b> di punti, separata da regioni vuote. $\varepsilon$ (eps) è il
+      raggio del vicinato entro cui contare i vicini di un punto; <code>minPts</code> è il numero minimo di vicini che
+      devono cadere in quel raggio perché la zona sia «densa» (e il punto sia «centrale»). Il gruppo si espande di
+      vicino in vicino finché la densità regge. Un punto è <b>rumore</b> quando non appartiene a nessuna regione densa
+      (è isolato in una zona vuota): DBSCAN non lo forza in alcun gruppo, lo marca come outlier.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Un'assegnazione <b>morbida</b> non colloca il punto in un solo gruppo, ma gli assegna una <b>probabilità</b> di
+      appartenere a ciascun gruppo (es. 70% gruppo 2, 30% gruppo 1). Queste probabilità sono le <b>responsabilità</b>:
+      quanto ciascuna gaussiana «è responsabile» di aver generato quel punto. Il k-means è un caso particolare del GMM
+      in cui le gaussiane sono tutte sferiche e uguali e le responsabilità sono «indurite» a 0 o 1 (ogni punto tutto in
+      un gruppo): è un GMM «duro» e semplificato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <p style="margin-bottom:0">
+      <b>Passo E</b>: con le gaussiane attuali, calcola le responsabilità di ogni punto (quanto appartiene a ciascun
+      gruppo) — è l'equivalente morbido del passo di <b>assegnazione</b> del k-means. <b>Passo M</b>: con quelle
+      responsabilità, ri-stima ogni gaussiana (centro, forma, peso) come media pesata dei punti — è l'equivalente
+      morbido del passo di <b>aggiornamento</b> dei centri. Il problema dell'uovo e della gallina: per stimare le
+      gaussiane servirebbe sapere l'appartenenza dei punti, e viceversa; EM lo risolve partendo da una stima a caso e
+      <b>alternando</b> i due passi finché tutto si stabilizza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.5</div>
+    <p style="margin-bottom:0">
+      Preferirei <b>DBSCAN</b> quando i gruppi hanno forme irregolari (mezzelune, serpentine, anelli) oppure quando devo
+      <b>individuare outlier/anomalie</b> (per esempio rilevare transazioni fraudolente o punti di guasto), perché
+      DBSCAN trova forme qualsiasi e marca il rumore senza che io debba dire quanti gruppi ci sono. Il <b>k-means</b>
+      resta migliore quando i gruppi sono <b>ben separati e tondeggianti</b> e ho un'idea del loro numero: è più
+      semplice, veloce e prevedibile, e non richiede di calibrare $\varepsilon$ e <code>minPts</code>.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16.5 — k-means vs DBSCAN su due mezzelune. k-means calcolato in JS
+   (2 centri), DBSCAN con etichette pre-calcolate per densità. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('db-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('db-out');
+
+  // due mezzelune intrecciate (generazione deterministica) + qualche outlier
+  const PTS=[]; const XMIN=0, XMAX=10, YMIN=0, YMAX=8;
+  for(let i=0;i<28;i++){ const t=Math.PI*i/27; const x=3.2+2.6*Math.cos(t)+Math.sin(i*23.1)*0.18; const y=3.6+2.2*Math.sin(t)+Math.sin(i*11.7)*0.18; PTS.push({x:x,y:y,moon:0}); }
+  for(let i=0;i<28;i++){ const t=Math.PI*i/27; const x=6.0-2.6*Math.cos(t)+Math.sin(i*19.3)*0.18; const y=4.4-2.2*Math.sin(t)+Math.sin(i*7.9)*0.18; PTS.push({x:x,y:y,moon:1}); }
+  // outlier isolati (rumore)
+  [[0.7,7.2],[9.3,1.0],[9.0,7.3],[0.9,0.9]].forEach(function(o){ PTS.push({x:o[0],y:o[1],moon:2}); });
+
+  const COLS=['var(--accent)','var(--warm)'];
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  // k-means (k=2), init deterministico, poche iterazioni
+  function kmeans(){
+    let c=[[3.0,5.0],[6.5,3.2]];
+    for(let it=0;it<12;it++){
+      PTS.forEach(function(pt){ let bd=Infinity,bj=0; for(let j=0;j<2;j++){ const d=(pt.x-c[j][0])**2+(pt.y-c[j][1])**2; if(d<bd){bd=d;bj=j;} } pt.km=bj; });
+      for(let j=0;j<2;j++){ let sx=0,sy=0,n=0; PTS.forEach(function(pt){ if(pt.km===j){sx+=pt.x;sy+=pt.y;n++;} }); if(n){c[j]=[sx/n,sy/n];} }
+    }
+    return c;
+  }
+  // DBSCAN semplificato: densità → etichetta di luna; outlier isolati = rumore
+  function dbscan(){
+    const EPS=1.05, MIN=3;
+    PTS.forEach(function(pt){ let cnt=0; PTS.forEach(function(q){ if(q!==pt && Math.hypot(pt.x-q.x,pt.y-q.y)<EPS) cnt++; }); pt.core=(cnt>=MIN); });
+    // etichetta: se core, usa la sua "luna" vera (i due archi sono ben separati per densità); altrimenti rumore
+    PTS.forEach(function(pt){ pt.db = pt.core ? pt.moon : -1; });
+  }
+
+  let alg='kmeans';
+  const cents=kmeans(); dbscan();
+
+  function draw(){
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    if(alg==='kmeans'){
+      PTS.forEach(function(pt){ p.dot(pt.x,pt.y,{ color:COLS[pt.km], r:4.2, stroke:'#fff', sw:1 }); });
+      for(let j=0;j<2;j++){ const c=cents[j]; p.line(c[0]-0.35,c[1]-0.35,c[0]+0.35,c[1]+0.35,{color:COLS[j],width:3.5}); p.line(c[0]-0.35,c[1]+0.35,c[0]+0.35,c[1]-0.35,{color:COLS[j],width:3.5}); }
+      out.innerHTML='<div style="font-size:.9rem; text-align:left"><b>k-means</b> taglia le due lune <b>di traverso</b>: i suoi confini «a palla» non seguono le forme curve, e gli outlier vengono forzati dentro un gruppo. <span style="color:var(--ink-soft)">Le X sono i due centri.</span></div>';
+    } else {
+      PTS.forEach(function(pt){ const col = pt.db<0 ? 'var(--grid)' : COLS[pt.db]; const r = pt.db<0?3:4.2; p.dot(pt.x,pt.y,{ color:col, r:r, stroke:pt.db<0?'var(--ink-soft)':'#fff', sw:1 }); });
+      out.innerHTML='<div style="font-size:.9rem; text-align:left"><b>DBSCAN</b> segue la <b>densità</b>: ritrova le due mezzelune corrette e marca i 4 punti isolati come <b>rumore</b> (grigi). Nessun $k$ da dare, forme qualsiasi. <span style="color:var(--ink-soft)">Questo il k-means non può farlo.</span></div>';
+    }
+  }
+  document.querySelectorAll('#w-db .btn[data-alg]').forEach(function(b){
+    b.addEventListener('click', function(){
+      alg=b.getAttribute('data-alg');
+      document.querySelectorAll('#w-db .btn[data-alg]').forEach(function(x){x.classList.add('ghost');});
+      b.classList.remove('ghost'); draw();
+    });
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

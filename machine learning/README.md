@@ -28,7 +28,7 @@ usano Python/scikit-learn.
 - [x] 13 — Bagging e Random Forests
 - [x] 14 — Boosting: AdaBoost e Gradient Boosting
 - [x] 15 — Clustering: k-means e gerarchico
-- [ ] 16 — DBSCAN e Gaussian Mixture Models
+- [x] 16 — DBSCAN e Gaussian Mixture Models
 - [ ] 17 — Riduzione della dimensionalità: PCA
 - [ ] 18 — Valutare i modelli
 - [ ] 19 — Feature engineering e pipeline

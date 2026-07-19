@@ -240,7 +240,7 @@ const TOC = [
     n: 16,
     titolo: "DBSCAN e Gaussian Mixture Models",
     file: "cap16-dbscan-gmm.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "I limiti di k-means" },
       { id: "s16-2", n: "16.2", t: "DBSCAN (densità)" },
