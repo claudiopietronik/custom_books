@@ -26,7 +26,7 @@ usano Python/scikit-learn.
 - [x] 11 — Metodi kernel e Gaussian Processes
 - [x] 12 — Alberi di decisione
 - [x] 13 — Bagging e Random Forests
-- [ ] 14 — Boosting: AdaBoost e Gradient Boosting
+- [x] 14 — Boosting: AdaBoost e Gradient Boosting
 - [ ] 15 — Clustering: k-means e gerarchico
 - [ ] 16 — DBSCAN e Gaussian Mixture Models
 - [ ] 17 — Riduzione della dimensionalità: PCA

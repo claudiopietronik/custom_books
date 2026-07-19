@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Boosting: AdaBoost e Gradient Boosting — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Boosting: AdaBoost e Gradient Boosting</h1>
+    <p class="standfirst">
+      Le Random Forests combinavano tanti alberi <b>in parallelo</b>, ognuno allenato per conto suo, e ne facevano la
+      media. Il <b>boosting</b> capovolge la strategia: allena i modelli <b>in sequenza</b>, uno dopo l'altro, e
+      <mark>chiede a ciascun nuovo modello di concentrarsi proprio sugli errori che i precedenti hanno commesso.</mark>
+      È come uno studente che, dopo ogni verifica, ripassa <b>solo</b> gli argomenti sbagliati: correzione dopo
+      correzione, un gruppo di modellini «deboli» — ciascuno appena meglio del caso — si trasforma in un predittore
+      fortissimo. Il boosting, nella sua incarnazione moderna (XGBoost, LightGBM), è oggi <b>il</b> vincitore quasi
+      indiscusso sui dati a tabella, e domina le competizioni. In questo capitolo lo costruiamo con cura: l'idea di
+      fondo (§14.1), la prima versione storica, <b>AdaBoost</b> (§14.2), la versione moderna e generale, il
+      <b>Gradient Boosting</b> (§14.3), e le librerie che lo hanno reso re, XGBoost e LightGBM (§14.4). Ogni concetto
+      dal principio, con la solita delicatezza — perché qui l'intuizione conta più della formula.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'<b>idea del boosting</b> (§14.1), <b>AdaBoost</b> (§14.2), il <b>Gradient Boosting</b> (§14.3), <b>XGBoost e
+      LightGBM</b> in pratica (§14.4). Nel laboratorio (§14.5) vedi il boosting correggere i propri errori, un albero
+      alla volta.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il campione dei dati a tabella</div>
+    <p style="margin-bottom:0">
+      Se hai dati «a tabella» (righe e colonne, come un foglio di calcolo) e vuoi la massima accuratezza, <mark>il
+      gradient boosting è quasi sempre la risposta.</mark> Vince competizioni, alimenta sistemi di produzione, batte
+      spesso persino le reti neurali su questo tipo di dati. Capirne l'idea — correggere gli errori un passo alla volta
+      — ti mette in mano lo strumento più potente della cassetta per moltissimi problemi reali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>L'idea del boosting</h2>
+
+  <p class="lead">
+    Partiamo dall'intuizione, che è tutto. Metti a confronto le due filosofie di ensemble e la differenza sarà limpida.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> In parallelo (bagging) contro in sequenza (boosting)</div>
+    <ul style="margin:0">
+      <li style="margin-bottom:.5rem"><b>Bagging / Random Forest</b> (cap. 13): tanti alberi <b>indipendenti</b>,
+          allenati in parallelo su dati diversi, poi mediati. Ogni albero è <b>forte e completo</b> di suo; l'insieme
+          serve a <b>ridurre la varianza</b>. Metafora: tanti esperti che votano indipendentemente.</li>
+      <li><b>Boosting</b>: tanti modelli <b>deboli</b> (piccoli, appena meglio del caso), allenati <b>in sequenza</b>,
+          ognuno per <b>correggere gli errori</b> di chi lo precede. L'insieme serve soprattutto a <b>ridurre il
+          bias</b> — a trasformare tanti modellini scarsi in uno molto accurato. Metafora: uno studente che, verifica
+          dopo verifica, ripassa mirato sugli errori.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Weak learner»: bastano modelli appena decenti</div>
+    <p style="margin-bottom:0">
+      La cosa affascinante del boosting è che i suoi ingredienti sono volutamente <b>deboli</b>: tipicamente alberi
+      pochissimo profondi, spesso <b>«stump»</b> (alberi con <b>una sola domanda</b>!). Un modello così, da solo, è
+      appena meglio di tirare a indovinare. <mark>Eppure, mettendone in fila tanti e facendo correggere a ciascuno gli
+      errori dei precedenti, si ottiene un predittore fortissimo.</mark> È un risultato quasi magico (e con solide basi
+      teoriche): <b>tanti deboli, ben coordinati, battono un forte.</b> Il segreto non è la potenza dei singoli, ma il
+      modo in cui collaborano, correggendosi a vicenda.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>AdaBoost</h2>
+
+  <p class="lead">
+    <b>AdaBoost</b> («Adaptive Boosting», 1995) è il primo algoritmo di boosting di successo. La sua idea di come
+    «concentrarsi sugli errori» è concreta e visiva: <b>ripesare</b> i dati.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Dai più peso ai casi sbagliati</div>
+    <p style="margin-bottom:.5rem">
+      AdaBoost costruisce i modelli deboli uno alla volta, e a ogni giro <b>ripesa</b> gli esempi così:
+    </p>
+    <ol style="margin:0 0 .6rem 1.1rem">
+      <li style="margin-bottom:.3rem">All'inizio tutti gli esempi hanno lo <b>stesso peso</b>.</li>
+      <li style="margin-bottom:.3rem">Alleni un modello debole; guardi quali esempi <b>sbaglia</b>.</li>
+      <li style="margin-bottom:.3rem"><mark><b>Aumenti il peso</b> degli esempi sbagliati e <b>diminuisci</b> quello dei
+          giusti</mark>: al prossimo giro il nuovo modello sarà «costretto» a prestare più attenzione ai casi finora
+          mancati.</li>
+      <li>Ripeti per tanti giri. Alla fine <b>combini</b> tutti i modelli deboli con un voto pesato, dove i modelli più
+          bravi contano di più.</li>
+    </ol>
+    <p style="margin-bottom:0">
+      L'immagine da tenere: <mark>gli esempi difficili «diventano più pesanti» e attirano l'attenzione dei modelli
+      successivi</mark>, finché anche loro vengono classificati bene. È un riflettore che si sposta progressivamente sui
+      casi ostici.
+    </p>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Il rovescio: sensibile al rumore</div>
+    <p style="margin-bottom:0">
+      Proprio perché insegue gli esempi sbagliati, AdaBoost può <b>ostinarsi su punti che sono semplicemente
+      rumore</b> o errori di etichetta: continua ad aumentarne il peso cercando di indovinarli, e rischia di
+      overfittare su di essi. <mark>È il prezzo della sua «testardaggine» sui casi difficili.</mark> Il Gradient
+      Boosting, che vediamo ora, affronta lo stesso problema in modo più flessibile e controllabile — ed è per questo
+      che oggi si usa quasi sempre lui.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Gradient Boosting</h2>
+
+  <p class="lead">
+    Il <b>Gradient Boosting</b> è la versione moderna, generale e potente del boosting. La sua idea di «correggere gli
+    errori» è, se possibile, ancora più semplice e diretta di quella di AdaBoost: invece di ripesare i dati, ogni nuovo
+    modello impara direttamente <b>l'errore residuo</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Ogni albero impara ciò che manca (il residuo)</div>
+    <p style="margin-bottom:.5rem">
+      L'idea, spiegata per la regressione (prevedere numeri), è di una chiarezza cristallina:
+    </p>
+    <ol style="margin:0 0 .6rem 1.1rem">
+      <li style="margin-bottom:.3rem"><b>Parti</b> da una previsione grezza (per esempio, la media di tutti i valori).</li>
+      <li style="margin-bottom:.3rem"><b>Calcola i residui</b>: per ogni punto, di quanto la previsione attuale <b>sbaglia</b>
+          (verità meno previsione). <mark>Il residuo è «l'errore che resta da spiegare».</mark></li>
+      <li style="margin-bottom:.3rem"><b>Alleni un nuovo alberello</b> non a prevedere il valore vero, ma a prevedere
+          <b>proprio quei residui</b> — cioè a indovinare gli errori attuali.</li>
+      <li style="margin-bottom:.3rem"><b>Aggiungi</b> (una piccola frazione di) questo alberello alla previsione: ora
+          l'errore complessivo è un po' più piccolo.</li>
+      <li>Ricalcola i residui (più piccoli) e <b>ripeti</b>. Ogni alberello «lima» un altro pezzetto di errore.</li>
+    </ol>
+    <p style="margin-bottom:0">
+      <mark>Passo dopo passo, sommando tanti alberelli che spiegano ciascuno un residuo, la previsione complessiva si
+      avvicina sempre di più alla verità.</mark> È come scolpire: ogni colpo di scalpello toglie un po' di materiale
+      che ancora non va, avvicinandosi alla forma finale.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Perché «gradient» (gradiente)? <span class="tag">i residui indicano la discesa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il legame con la discesa del gradiente</dt>
+        <dd>ricordi la discesa del gradiente del cap. 8 (scendere la valle dell'errore un passettino alla volta)? Il
+            gradient boosting è la <b>stessa idea</b>, ma i «passettini» sono <b>interi alberelli</b>. <mark>Si dimostra
+            che i <b>residui</b> (per l'errore quadratico) indicano proprio la direzione in cui l'errore scende più
+            ripido — il «gradiente».</mark> Quindi ogni alberello che impara i residui è un passo di discesa del
+            gradiente nello spazio delle previsioni. Da qui il nome.</dd>
+        <dt>il <b>learning rate</b> — quanto piccolo è ogni passo</dt>
+        <dd>si aggiunge solo una <b>piccola frazione</b> (es. 0,1) di ogni alberello, non tutto: è il <b>learning
+            rate</b>. <mark>Passi più piccoli = correzioni più caute = modello più robusto</mark> (ma servono più
+            alberi). È una delle manopole chiave: learning rate basso + tanti alberi è la ricetta tipica per la miglior
+            precisione.</dd>
+        <dt>funziona per qualsiasi tipo di errore</dt>
+        <dd>la bellezza del «gradiente»: cambiando la funzione di perdita (quadratica per la regressione, log-loss per
+            la classificazione…) e usandone il gradiente, <mark>lo stesso schema si applica a ogni problema.</mark> Ecco
+            perché il gradient boosting è così generale e ha soppiantato AdaBoost.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Le manopole da regolare sono soprattutto tre e sono tutte volti del compromesso bias-varianza: <b>numero di
+      alberi</b>, <b>learning rate</b> (quanto cauto ogni passo) e <b>profondità di ogni alberello</b> (di solito
+      piccola: 3–8). Troppi alberi o passi troppo aggressivi → overfitting; troppo pochi → underfitting. Si sceglie,
+      come sempre, in validazione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>XGBoost e LightGBM in pratica</h2>
+
+  <p class="lead">
+    Il gradient boosting «di base» è ottimo, ma alcune librerie lo hanno reso <b>velocissimo</b> e ancora più accurato,
+    diventando lo standard di fatto. Conviene sapere quali sono e perché si usano.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Le librerie che hanno vinto le competizioni</div>
+    <p style="margin-bottom:0">
+      <b>XGBoost</b>, <b>LightGBM</b> e <b>CatBoost</b> sono implementazioni ottimizzate del gradient boosting.
+      Fanno la stessa cosa concettuale che hai appena capito — alberelli che correggono i residui in sequenza — ma con
+      accorgimenti che le rendono <b>molto più rapide</b> (sfruttano bene la memoria e i core della CPU) e con una
+      <b>regolarizzazione integrata</b> che le protegge dall'overfitting. <mark>Sono, da anni, i modelli che vincono la
+      maggioranza delle competizioni di machine learning su dati a tabella</mark> e alimentano moltissimi sistemi reali.
+      LightGBM è famoso per la velocità su grandi dataset; CatBoost gestisce bene le variabili categoriche; XGBoost è il
+      più celebre e collaudato. La buona notizia: <b>l'idea che devi capire è quella del §14.3</b> — le librerie sono
+      «solo» versioni molto ben fatte di essa.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Foresta o boosting? Una bussola pratica</div>
+    <p style="margin-bottom:0">
+      Un consiglio operativo che vale oro. <mark><b>Random Forest</b>: robusta, facile, poche impostazioni da toccare —
+      perfetta come primo modello serio e come riferimento affidabile.</mark> <mark><b>Gradient Boosting</b>
+      (XGBoost/LightGBM): di solito <b>più accurato</b>, ma va regolato con più cura</mark> (learning rate, numero di
+      alberi, profondità) e, se strapazzato, overfitta più facilmente. Strategia tipica: parti dalla Random Forest per
+      avere subito un buon risultato di riferimento, poi passa al boosting per spremere l'accuratezza massima, dedicando
+      tempo alla regolazione delle manopole in validazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi il gradient boosting al lavoro sulla regressione: parti da una previsione piatta e, aggiungendo
+    alberelli, guardi la previsione <b>modellarsi</b> sui dati man mano che ogni albero lima un pezzo di errore residuo.
+  </p>
+
+  <div class="widget" id="w-boost">
+    <div class="w-head">
+      <span>Il boosting corregge i residui, un albero alla volta</span>
+      <span class="hint">ogni alberello lima l'errore che resta</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="bo-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>numero di alberelli <input type="range" id="bo-n" min="0" max="60" step="1" value="0"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="bo-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">boosting.py</div>
+    <pre><span class="cm"># scikit-learn ha il gradient boosting integrato...</span>
+<span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> GradientBoostingClassifier
+gb <span class="op">=</span> <span class="fn">GradientBoostingClassifier</span>(
+    n_estimators<span class="op">=</span><span class="nm">300</span>,     <span class="cm"># quanti alberelli in sequenza</span>
+    learning_rate<span class="op">=</span><span class="nm">0.1</span>,    <span class="cm"># quanto piccolo ogni passo di correzione</span>
+    max_depth<span class="op">=</span><span class="nm">3</span>            <span class="cm"># alberelli "deboli", poco profondi</span>
+).<span class="fn">fit</span>(X, y)
+
+<span class="cm"># ...ma in pratica si usano XGBoost o LightGBM (più veloci e accurati)</span>
+<span class="kw">from</span> xgboost <span class="kw">import</span> XGBClassifier
+xgb <span class="op">=</span> <span class="fn">XGBClassifier</span>(n_estimators<span class="op">=</span><span class="nm">300</span>, learning_rate<span class="op">=</span><span class="nm">0.1</span>, max_depth<span class="op">=</span><span class="nm">4</span>)
+xgb.<span class="fn">fit</span>(X, y)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: con <b>0 alberelli</b> la previsione è una linea piatta (la media, tanti errori); ogni alberello
+      aggiunto <b>corregge</b> un pezzo di residuo e la curva si modella sempre meglio sui dati, con l'errore che
+      scende. Spingendo <b>troppi</b> alberelli, la curva inizia a inseguire anche il rumore (overfitting) — ecco perché
+      servono learning rate e numero di alberi ben scelti. Nel codice:
+      <code>n_estimators</code>, <code>learning_rate</code>, <code>max_depth</code> — le tre manopole — e le librerie
+      XGBoost/LightGBM che dominano la pratica. Hai completato il grande blocco degli ensemble ad alberi, i re dei dati
+      a tabella. Nei prossimi capitoli cambiamo mondo: abbandoniamo le etichette e passiamo all'apprendimento
+      <b>non supervisionato</b>, dove i dati non hanno risposte e dobbiamo scoprire da soli la struttura nascosta — a
+      partire dal <b>clustering</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li><b>Boosting</b>: modelli <b>deboli</b> allenati <b>in sequenza</b>, ognuno per correggere gli <b>errori</b>
+          dei precedenti. Riduce soprattutto il <b>bias</b>: tanti deboli coordinati → un forte (§14.1).</li>
+      <li><b>AdaBoost</b>: a ogni giro <b>aumenta il peso</b> degli esempi sbagliati, così i modelli successivi vi si
+          concentrano. Efficace, ma sensibile al rumore (§14.2).</li>
+      <li><b>Gradient Boosting</b>: ogni alberello impara i <b>residui</b> (l'errore che resta), aggiunti a piccoli passi
+          (<b>learning rate</b>). I residui indicano la direzione di discesa del gradiente; funziona per ogni tipo di
+          errore (§14.3).</li>
+      <li><b>XGBoost/LightGBM/CatBoost</b>: implementazioni veloci e regolarizzate — i <b>campioni</b> sui dati a tabella.
+          Random Forest = robusta e facile; Boosting = più accurato ma da regolare con cura (§14.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con il boosting si chiude il nostro viaggio nell'apprendimento <b>supervisionato</b>, quello in cui i dati hanno una
+    «risposta giusta» (un valore o una classe) da imparare. Ma moltissimi dati, nel mondo reale, <b>non</b> hanno
+    etichette: solo osservazioni grezze, senza risposte. Cosa possiamo imparare allora? Sorprendentemente tanto. Nel
+    <strong>Capitolo 15</strong> entriamo nell'apprendimento <b>non supervisionato</b> con il <b>clustering</b>: l'arte
+    di scoprire da soli i <b>gruppi naturali</b> nascosti nei dati — clienti simili, cellule dello stesso tipo, temi
+    ricorrenti — senza che nessuno ci dica quali siano.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza fondamentale tra il modo in cui il bagging (Random Forest) e il boosting combinano i modelli?
+      Quale componente dell'errore riduce principalmente ciascuno?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Come fa AdaBoost a «concentrarsi sugli errori» a ogni giro? Perché questo comportamento lo rende sensibile al
+      rumore?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Descrivi i passi del Gradient Boosting per la regressione. Cosa impara, concretamente, ogni nuovo alberello?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      Cos'è il «learning rate» nel gradient boosting? Che effetto ha usarne uno piccolo, e cosa comporta come
+      contropartita?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.5</div>
+    <p style="margin-bottom:0">
+      In quali situazioni sceglieresti una Random Forest e in quali un gradient boosting (XGBoost/LightGBM)? Motiva in
+      base a robustezza, accuratezza e facilità di regolazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Nel <b>bagging</b> i modelli sono allenati <b>in parallelo</b>, indipendenti, su dati diversi, e poi <b>mediati</b>:
+      serve soprattutto a ridurre la <b>varianza</b> (partendo da alberi forti ma instabili). Nel <b>boosting</b> i
+      modelli sono allenati <b>in sequenza</b>, ognuno per correggere gli errori dei precedenti: serve soprattutto a
+      ridurre il <b>bias</b> (partendo da modelli deboli e rendendoli, insieme, molto accurati).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      AdaBoost, dopo ogni modello debole, <b>aumenta il peso</b> degli esempi che ha sbagliato e diminuisce quello dei
+      giusti: al giro successivo il nuovo modello è spinto a prestare più attenzione ai casi finora mancati. Questo lo
+      rende <b>sensibile al rumore</b> perché anche i punti che sono semplicemente rumore o errori di etichetta vengono
+      sbagliati, quindi ricevono peso crescente: AdaBoost si ostina a cercare di indovinarli, rischiando di overfittare
+      proprio sul rumore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      Passi: (1) parti da una previsione grezza (es. la media); (2) calcola i <b>residui</b>, cioè di quanto la
+      previsione attuale sbaglia su ogni punto; (3) alleni un nuovo alberello a prevedere <b>quei residui</b>; (4)
+      aggiungi una piccola frazione dell'alberello alla previsione, riducendo l'errore; (5) ricalcola i residui (ora più
+      piccoli) e ripeti. Ogni nuovo alberello impara, concretamente, <b>l'errore che resta da spiegare</b> (il residuo)
+      della previsione corrente, così da correggerlo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      Il <b>learning rate</b> è la frazione con cui ogni alberello viene aggiunto alla previsione complessiva: controlla
+      quanto è «cauto» ogni passo di correzione. Un learning rate <b>piccolo</b> significa correzioni più prudenti e
+      graduali, il che rende il modello più <b>robusto</b> e meno incline all'overfitting (spesso più accurato). La
+      contropartita è che servono <b>molti più alberi</b> per arrivare a modellare bene i dati, quindi più tempo di
+      calcolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.5</div>
+    <p style="margin-bottom:0">
+      La <b>Random Forest</b> è preferibile quando si vuole un buon modello <b>subito</b>, robusto e con poche
+      impostazioni da regolare: ottima come riferimento affidabile e quando non si ha tempo per una regolazione fine, o
+      quando il rischio di overfitting va minimizzato senza sforzo. Il <b>gradient boosting</b> (XGBoost/LightGBM) è
+      preferibile quando si punta alla <b>massima accuratezza</b> ed si è disposti a <b>regolare con cura</b> le manopole
+      (learning rate, numero di alberi, profondità) in validazione: di solito ottiene risultati migliori, ma è più
+      delicato e, se strapazzato, overfitta più facilmente. Strategia comune: Random Forest come base, poi boosting per
+      spremere l'ultimo margine di precisione.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.5 — gradient boosting su regressione 1D con stump (alberi a 1
+   taglio) che imparano i residui. Slider = numero di alberelli. Tutto in JS.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('bo-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('bo-out');
+  const sN = document.getElementById('bo-n');
+
+  const XMIN=0, XMAX=10, YMIN=0, YMAX=6;
+  const LR=0.3;
+  // dati: una curva con due gobbe + rumore deterministico
+  const N=44, XS=[], YS=[];
+  function truef(x){ return 3 + 1.3*Math.sin(x*0.9) + 0.6*Math.cos(x*0.35); }
+  for(let i=0;i<N;i++){ const x=XMIN+(XMAX-XMIN)*i/(N-1); const noise=(Math.sin(i*57.3)*0.5); XS.push(x); YS.push(truef(x)+noise); }
+
+  // pre-calcola gli stump del boosting (fino a 60)
+  const MAXT=60;
+  const base = YS.reduce(function(a,b){return a+b;},0)/N;   // previsione iniziale = media
+  const stumps=[];
+  (function fit(){
+    const pred = new Array(N).fill(base);
+    for(let t=0;t<MAXT;t++){
+      const res = YS.map(function(y,i){ return y-pred[i]; }); // residui
+      // miglior stump su x che minimizza SSE dei residui
+      let best=null, bestSSE=Infinity;
+      const order = XS.map(function(x,i){return i;}).sort(function(a,b){return XS[a]-XS[b];});
+      for(let k=1;k<N;k++){
+        const s=(XS[order[k-1]]+XS[order[k]])/2;
+        let sl=0,cl=0,sr=0,cr=0;
+        for(let i=0;i<N;i++){ if(XS[i]<=s){sl+=res[i];cl++;} else {sr+=res[i];cr++;} }
+        if(!cl||!cr) continue;
+        const ml=sl/cl, mr=sr/cr;
+        let sse=0; for(let i=0;i<N;i++){ const p=(XS[i]<=s)?ml:mr; sse+=(res[i]-p)*(res[i]-p); }
+        if(sse<bestSSE){ bestSSE=sse; best={s:s,ml:ml,mr:mr}; }
+      }
+      stumps.push(best);
+      for(let i=0;i<N;i++) pred[i]+= LR*((XS[i]<=best.s)?best.ml:best.mr);
+    }
+  })();
+
+  function predictAt(x, n){ let v=base; for(let t=0;t<n;t++){ const st=stumps[t]; v+=LR*((x<=st.s)?st.ml:st.mr); } return v; }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const n=+sN.value;
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // dati
+    for(let i=0;i<N;i++) p.dot(XS[i],YS[i],{ color:'var(--grid)', r:2.8 });
+    // previsione corrente (spezzata fitta)
+    const pts=[]; for(let x=XMIN;x<=XMAX;x+=0.05) pts.push([x, Math.max(YMIN,Math.min(YMAX,predictAt(x,n)))]);
+    p.poly(pts, { color:'var(--accent)', width:2.8, close:false });
+    // errore medio (RMSE) sul training
+    let sse=0; for(let i=0;i<N;i++){ const e=YS[i]-predictAt(XS[i],n); sse+=e*e; }
+    const rmse=Math.sqrt(sse/N);
+
+    let note;
+    if(n===0) note='<b>0 alberelli</b>: previsione piatta (la media). Tanti errori: nessuna forma catturata.';
+    else if(n>=45) note='<b>'+n+' alberelli</b>: la curva ormai segue i dati molto da vicino, e comincia a inseguire anche il <b>rumore</b> (leggero overfitting).';
+    else note='<b>'+n+' alberelli</b>: ogni albero ha limato un pezzo di errore residuo; la curva si è modellata sui dati.';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">'+note+
+      ' Errore medio (RMSE) sul training: <b>'+rmse.toFixed(3)+'</b>. '+
+      '<span style="color:var(--ink-soft)">Aggiungi alberelli e guarda la curva formarsi correggendo i residui.</span></div>';
+  }
+  sN.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>

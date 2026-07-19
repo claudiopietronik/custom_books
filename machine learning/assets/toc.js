@@ -210,7 +210,7 @@ const TOC = [
     n: 14,
     titolo: "Boosting: AdaBoost e Gradient Boosting",
     file: "cap14-boosting.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "L'idea del boosting" },
       { id: "s14-2", n: "14.2", t: "AdaBoost" },
