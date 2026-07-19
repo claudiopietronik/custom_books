@@ -46,7 +46,7 @@ const TOC = [
     n: 3,
     titolo: "Operatori ed espressioni",
     file: "cap03-operatori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Aritmetici e divisione intera" },
       { id: "s3-2", n: "3.2", t: "Confronti e logici" },

@@ -13,7 +13,7 @@ Contenuto originale scritto ex novo.
 
 - [x] 1 — Il primo programma
 - [x] 2 — Variabili e tipi
-- [ ] 3 — Operatori ed espressioni
+- [x] 3 — Operatori ed espressioni
 - [ ] 4 — Prendere decisioni
 - [ ] 5 — I cicli
 - [ ] 6 — Le funzioni

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Operatori ed espressioni — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Operatori ed espressioni</h1>
+    <p class="standfirst">
+      Il C++ calcola come ci si aspetta — quasi sempre. Ma essendo un linguaggio «vicino alla macchina», ha alcune
+      insidie che altrove non esistono: <mark>una divisione tra interi butta via i decimali</mark>, un intero che
+      supera il suo limite «gira» a un valore assurdo (<b>overflow</b>), e la conversione tra tipi segue regole
+      precise che vanno conosciute. In questo capitolo padroneggiamo tutta l'aritmetica del C++, i confronti e gli
+      operatori logici, le comode scorciatoie (<code>++</code>, <code>+=</code>), e soprattutto le trappole dei
+      tipi. Capirle ora ti risparmierà ore di «ma perché il risultato è sbagliato?!» — l'errore più frustrante e più
+      comune per chi arriva al C++.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Gli operatori aritmetici e la <b>divisione intera</b> (§3.1), <b>confronti e operatori logici</b> (§3.2),
+      <b>incremento e assegnazioni composte</b> (§3.3), l'insidia dell'<b>overflow</b> e le <b>conversioni</b>
+      (§3.4), e la <b>precedenza</b> (§3.5). Nel laboratorio (§3.6) sperimenti conti e conversioni.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il diavolo è nei tipi</div>
+    <p style="margin-bottom:0">
+      In un linguaggio ad alto livello molti di questi dettagli sono nascosti; in C++ sono <b>in primo piano</b>, e
+      ignorarli produce bug silenziosi e sconcertanti. <mark>La divisione intera e l'overflow sono tra le prime
+      trappole in cui cade ogni principiante C++</mark>: un calcolo apparentemente banale che dà il risultato
+      sbagliato. Conoscerle non è pignoleria: è la differenza tra un programma corretto e uno che «a volte» sbaglia
+      di nascosto. È anche la porta per capire come il computer rappresenta davvero i numeri.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Aritmetici e divisione intera</h2>
+
+  <p class="lead">
+    Le quattro operazioni ci sono tutte, coi simboli soliti. Ma il comportamento della <b>divisione</b> dipende dal
+    <b>tipo</b> degli operandi — ed è la sorpresa numero uno.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Aritmetica e divisione <span class="tag">+ − * / e il modulo %</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">7</span> <span class="op">+</span> <span class="nm">3</span>;    <span class="cm">// 10</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">7</span> <span class="op">*</span> <span class="nm">3</span>;    <span class="cm">// 21</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">7</span> <span class="op">/</span> <span class="nm">2</span>;    <span class="cm">// 3  ← ATTENZIONE! divisione tra INTERI: decimali buttati</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">7.0</span> <span class="op">/</span> <span class="nm">2</span>;  <span class="cm">// 3.5  ← basta UN double e la divisione è "vera"</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">7</span> <span class="op">%</span> <span class="nm">2</span>;    <span class="cm">// 1  ← il resto (modulo)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><mark>la trappola: <code>/</code> tra interi</mark></dt>
+        <dd>se <b>entrambi</b> gli operandi sono <code>int</code>, la divisione è <b>intera</b>: il risultato è
+            intero e i decimali vengono <b>troncati</b> (non arrotondati). <code>7 / 2</code> fa <b>3</b>, non 3.5!
+            È logicissimo per il C++ (int / int = int), ma sorprende sempre.</dd>
+        <dt>la soluzione: un <code>double</code> di mezzo</dt>
+        <dd>se <b>almeno uno</b> è <code>double</code>, la divisione diventa «reale»: <code>7.0 / 2</code> →
+            <code>3.5</code>. Basta scrivere <code>7.0</code> invece di <code>7</code>, o convertire una variabile
+            (§3.4).</dd>
+        <dt><code>%</code> — il resto (modulo)</dt>
+        <dd>funziona solo tra interi e dà ciò che avanza: <code>7 % 2 = 1</code>. Utilissimo (pari/dispari,
+            «ogni tot») come in ogni linguaggio.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-div">
+    <div class="w-head">
+      <span>7 / 2: la stessa scritta, due risultati</span>
+      <span class="hint">cambia il tipo degli operandi</span>
+    </div>
+    <div class="w-stage" style="min-height:160px">
+      <div id="wdv-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-m="int">int / int</button>
+      <button class="w-btn" data-m="dbl">double / int</button>
+      <button class="w-btn" data-m="mod">int % int</button>
+    </div>
+    <div class="w-readout" id="wdv-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Confronti e logici</h2>
+
+  <p class="lead">
+    Gli operatori di <b>confronto</b> producono un <code>bool</code> (true/false), e si combinano con gli operatori
+    <b>logici</b>. Sono la base delle decisioni del prossimo capitolo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Confronti e operatori logici <span class="tag">== != &lt; &gt; &amp;&amp; || !</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>i confronti</dt>
+        <dd><code>==</code> (uguale), <code>!=</code> (diverso), <code>&lt;</code>, <code>&gt;</code>,
+            <code>&lt;=</code>, <code>&gt;=</code>. Ognuno restituisce <code>true</code> o <code>false</code>.
+            <mark>La solita trappola: <code>=</code> assegna, <code>==</code> confronta</mark> — e in C++ scrivere
+            <code>=</code> per sbaglio in un <code>if</code> compila senza errore ma fa il disastro! (Il compilatore
+            spesso avvisa: dagli retta.)</dd>
+        <dt>gli operatori logici</dt>
+        <dd><code>&amp;&amp;</code> (AND: entrambe vere), <code>||</code> (OR: almeno una), <code>!</code> (NOT:
+            inverte). Nota i <b>doppi</b> simboli: <code>&amp;&amp;</code> e <code>||</code>, non singoli (quelli
+            singoli sono operatori sui bit, un'altra cosa!).</dd>
+        <dt>la valutazione «corto circuito»</dt>
+        <dd><code>&amp;&amp;</code> e <code>||</code> si fermano appena il risultato è certo: in
+            <code>a &amp;&amp; b</code>, se <code>a</code> è falso, <code>b</code> non viene nemmeno valutato.
+            Utile e a volte importante (evita calcoli o accessi pericolosi).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Incremento e assegnazioni composte</h2>
+
+  <p class="lead">
+    Operazioni così frequenti da avere scorciatoie dedicate: <b>aumentare di uno</b> (<code>++</code>) e
+    <b>modificare una variabile con sé stessa</b> (<code>+=</code>, <code>-=</code>…).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">++ e le assegnazioni composte <span class="tag">scorciatoie comodissime</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">x</span> <span class="op">=</span> <span class="nm">5</span>;
+<span class="nm">x</span><span class="op">++</span>;          <span class="cm">// incrementa: x diventa 6  (come x = x + 1)</span>
+<span class="nm">x</span><span class="op">--</span>;          <span class="cm">// decrementa: x diventa 5</span>
+<span class="nm">x</span> <span class="op">+=</span> <span class="nm">10</span>;      <span class="cm">// x = x + 10  → 15</span>
+<span class="nm">x</span> <span class="op">*=</span> <span class="nm">2</span>;       <span class="cm">// x = x * 2   → 30</span></pre>
+    </div>
+    <div class="f-note">
+      <code>x++</code> è talmente iconico che ha dato il nome al linguaggio: «C++» significa scherzosamente «C
+      incrementato», un passo avanti rispetto al C. Le assegnazioni composte (<code>+= -= *= /= %=</code>) fanno
+      «operazione + riassegnazione» in un colpo: <code>x += 10</code> è <code>x = x + 10</code>. <mark>Sono
+      onnipresenti nei cicli</mark> (Cap. 5), dove si contano e accumulano valori. Piccola curiosità: esistono
+      <code>++x</code> (pre) e <code>x++</code> (post) con una sottile differenza sul valore restituito — per ora
+      usali come «aumenta di uno» e non farci caso.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Overflow e conversioni</h2>
+
+  <p class="lead">
+    Due conseguenze del lavorare «vicino alla macchina»: i tipi hanno <b>limiti finiti</b> (e superarli causa
+    l'<b>overflow</b>), e mescolare tipi diversi richiede <b>conversioni</b> con regole precise.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> L'overflow: quando un intero «gira»</div>
+    <p style="margin-bottom:0">
+      Un <code>int</code> occupa 4 byte, quindi arriva al massimo a circa <b>2,1 miliardi</b>. Se lo superi, non va
+      «in errore»: <mark>il valore «gira» e ridiventa negativo</mark>, un risultato assurdo e silenzioso. Es.:
+      moltiplicare due int grandi può dare un numero negativo! È l'<b>overflow</b>, e in un calcolo importante
+      (contatori, somme di file grandi) è un bug insidioso. Difese: usare tipi più capienti (<code>long long</code>,
+      fino a ~9 miliardi di miliardi) quando i numeri possono essere grandi, e sapere che questo limite esiste. È il
+      prezzo (e la lezione) del lavorare coi numeri come li vede davvero il computer.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Convertire tra tipi (il cast)</div>
+    <p style="margin-bottom:0">
+      Quando mescoli tipi, il C++ <b>converte</b> automaticamente (di solito verso il tipo «più capiente»): in
+      <code>7 / 2.0</code>, il <code>7</code> diventa <code>7.0</code> e la divisione è reale. A volte devi
+      convertire <b>tu</b>, esplicitamente, con un <b>cast</b>:
+    </p>
+    <div class="term" style="margin:.8rem auto 0">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">a</span> <span class="op">=</span> <span class="nm">7</span>, <span class="nm">b</span> <span class="op">=</span> <span class="nm">2</span>;
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">/</span> <span class="nm">b</span>;                     <span class="cm">// 3  (int / int)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="kw">static_cast</span><span class="op">&lt;</span><span class="ty">double</span><span class="op">&gt;</span>(<span class="nm">a</span>) <span class="op">/</span> <span class="nm">b</span>;  <span class="cm">// 3.5  (forzo a in double)</span></pre>
+    </div>
+    <p style="margin:.6rem 0 0">
+      <code>static_cast&lt;double&gt;(a)</code> converte <code>a</code> in <code>double</code> per quel calcolo.
+      <mark>È il modo «pulito» e moderno di convertire</mark> (più chiaro del vecchio stile <code>(double)a</code>).
+      Ti servirà proprio per fare divisioni «vere» tra variabili intere: convertine una in double e il gioco è
+      fatto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Precedenza</h2>
+
+  <p class="lead">
+    In un'espressione con più operatori, l'ordine segue le regole della matematica. E, come sempre, le
+    <b>parentesi</b> sono l'arma per non avere dubbi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'ordine, e le parentesi che salvano</div>
+    <p style="margin-bottom:0">
+      Come a scuola: prima <code>* / %</code>, poi <code>+ −</code>; i confronti dopo l'aritmetica; gli operatori
+      logici (<code>&amp;&amp;</code>, <code>||</code>) per ultimi. Quindi <code>2 + 3 * 4</code> fa <b>14</b>. Ma il
+      C++ ha <b>tanti</b> operatori e una tabella di precedenze intricata: <mark>nessuno la ricorda tutta, e non
+      serve</mark>. La regola pratica è una sola: <b>usa le parentesi</b> per rendere esplicito l'ordine e chiaro il
+      codice. <code>(a + b) * c</code>, <code>(x &gt; 0) &amp;&amp; (y &lt; 10)</code>: le parentesi non costano
+      nulla e cancellano ogni ambiguità, sia per il compilatore che per chi legge. Nel dubbio, mettile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Laboratorio: conti e conversioni</h2>
+
+  <p class="lead">
+    Mettiamo alla prova la divisione e le conversioni con un programma che calcola una media di voti interi — dove
+    la scelta del tipo fa tutta la differenza tra un risultato giusto e uno sbagliato.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>media.cpp</code> <span class="tag">quando serve il cast</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">media.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">somma</span> <span class="op">=</span> <span class="nm">7</span> <span class="op">+</span> <span class="nm">8</span> <span class="op">+</span> <span class="nm">6</span>;   <span class="cm">// 21, un int</span>
+    <span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="nm">3</span>;
+
+    <span class="cm">// SBAGLIATO: int / int → divisione intera</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Media (sbagliata): "</span> <span class="op">&lt;&lt;</span> <span class="nm">somma</span> <span class="op">/</span> <span class="nm">n</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;      <span class="cm">// 7 (non 7.0)</span>
+
+    <span class="cm">// GIUSTO: converto in double per una divisione reale</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Media (giusta):   "</span>
+              <span class="op">&lt;&lt;</span> <span class="kw">static_cast</span><span class="op">&lt;</span><span class="ty">double</span><span class="op">&gt;</span>(<span class="nm">somma</span>) <span class="op">/</span> <span class="nm">n</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;   <span class="cm">// 7 esatto qui, ma con decimali quando servono</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Con voti 7, 8, 6 la somma è 21 e la media è esatta (7); ma prova con 7, 8, 8 (somma 23): la versione
+      «sbagliata» dà <b>7</b> (23/3 troncato), quella «giusta» dà <b>7.67</b>. <mark>Ecco perché il cast conta</mark>:
+      ogni volta che dividi variabili intere e ti servono i decimali, converti almeno una in <code>double</code>. È
+      una delle abitudini più importanti da automatizzare in C++. Ricordati anche di includere quel che serve e
+      compilare: <code>g++ media.cpp -o media &amp;&amp; ./media</code>.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li><b>int / int = divisione intera</b> (decimali troncati!): <code>7/2 = 3</code>. Basta un <b>double</b> per
+          renderla reale (<code>7.0/2 = 3.5</code>). <code>%</code> = resto (§3.1).</li>
+      <li>Confronti (<code>== != &lt; &gt;</code>) danno bool; logici <code>&amp;&amp;</code> (and), <code>||</code>
+          (or), <code>!</code> (not) — doppi simboli! (§3.2). Scorciatoie <code>++</code>, <code>+=</code>… (§3.3).</li>
+      <li><b>Overflow</b>: gli int hanno un limite (~±2 mld); superarlo dà valori assurdi in silenzio — usa
+          <code>long long</code> per numeri grandi (§3.4).</li>
+      <li>Converti coi <b>cast</b>: <code>static_cast&lt;double&gt;(x)</code> per divisioni reali tra interi (§3.4).
+          <b>Precedenza</b> come in matematica, ma <mark>usa le parentesi</mark> (§3.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai calcolare e confrontare, e conosci le insidie dei tipi. I confronti producono <code>bool</code>: è ora di
+    usarli per far <b>scegliere</b> il programma. Nel <strong>Capitolo 4</strong> arrivano le <b>decisioni</b> del
+    C++ — <code>if</code>, <code>else if</code>, <code>else</code>, il costrutto <code>switch</code> per molti casi,
+    e l'operatore <b>ternario</b>. Vedrai anche il ruolo delle <b>graffe</b> nel definire i blocchi (in C++ sono
+    esplicite, non è l'indentazione a contare come in Python). I mattoni della logica cominciano a incastrarsi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Prevedi il risultato (e spiega): <code>9 / 4</code>, <code>9.0 / 4</code>, <code>9 % 4</code>,
+      <code>2 + 3 * 4</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Hai due <code>int</code>, <code>somma</code> e <code>n</code>, e vuoi la loro divisione <b>con i decimali</b>.
+      Come scrivi l'espressione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Cos'è l'<b>overflow</b> di un intero? Perché è pericoloso, e come lo puoi evitare quando i numeri sono grandi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi <code>fahrenheit.cpp</code>: chiede una temperatura in Celsius (<code>double</code>) e stampa
+      i Fahrenheit (<code>C * 9.0 / 5 + 32</code>). Perché conviene scrivere <code>9.0</code> e non <code>9</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">Sezione 3.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      <code>9 / 4</code> → <b>2</b> (int/int, troncato); <code>9.0 / 4</code> → <b>2.25</b> (c'è un double);
+      <code>9 % 4</code> → <b>1</b> (resto); <code>2 + 3 * 4</code> → <b>14</b> (prima la moltiplicazione).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      Converti almeno uno dei due in double: <code>static_cast&lt;double&gt;(somma) / n</code>. Così la divisione
+      diventa reale e conserva i decimali. (Scrivere solo <code>somma / n</code> con due int darebbe la divisione
+      intera.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      L'<b>overflow</b> avviene quando un intero supera il valore massimo del suo tipo (~2,1 mld per un
+      <code>int</code>): il valore «gira» diventando assurdo (spesso negativo), <b>senza errore</b>. È pericoloso
+      perché è silenzioso: il calcolo prosegue con un numero sbagliato. Si evita usando tipi più capienti come
+      <code>long long</code> quando i numeri possono essere grandi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">fahrenheit.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">double</span> <span class="nm">c</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Celsius: "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">c</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">c</span> <span class="op">*</span> <span class="nm">9.0</span> <span class="op">/</span> <span class="nm">5</span> <span class="op">+</span> <span class="nm">32</span> <span class="op">&lt;&lt;</span> <span class="st">" F\n"</span>;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Con <code>9.0</code> la divisione <code>9.0 / 5</code> è reale (1.8); con
+      <code>9</code>, <code>9 / 5</code> tra interi darebbe 1 e la formula sballerebbe. <code>c</code> è già double,
+      ma il <code>9.0</code> rende esplicita l'intenzione ed evita sorprese.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.1 — 7/2: divisione intera vs reale vs modulo
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wdv-view');
+  if (!view) return;
+  const out = document.getElementById('wdv-out');
+  const btns = document.querySelectorAll('#w-div .w-btn');
+  const modes = {
+    int: { expr: '7 / 2', res: '3', col: 'var(--warm)', note: 'Entrambi <b>int</b> → <b>divisione intera</b>: il risultato è intero e i decimali (.5) vengono <mark>troncati</mark>. Ecco il classico tranello!' },
+    dbl: { expr: '7.0 / 2', res: '3.5', col: 'var(--green)', note: 'Uno è <b>double</b> (7.0) → la divisione è <b>reale</b> e conserva i decimali. Basta un solo double per cambiare tutto.' },
+    mod: { expr: '7 % 2', res: '1', col: 'var(--accent)', note: 'Il <b>modulo</b>: il <b>resto</b> della divisione intera. 7 = 3×2 + <b>1</b>. Funziona solo tra interi.' }
+  };
+  function show(m) {
+    const d = modes[m];
+    view.innerHTML = `<div style="font-family:var(--mono); font-size:2rem">
+        <span style="color:var(--accent)">${d.expr}</span>
+        <span style="color:var(--ink-faint); margin:0 .5rem">=</span>
+        <span style="color:${d.col}; font-weight:700">${d.res}</span>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + d.note + '</div>';
+    btns.forEach(b => b.style.outline = b.dataset.m === m ? '2px solid ' + d.col : 'none');
+  }
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.m)));
+  show('int');
+})();
+</script>
+</body>
+</html>
