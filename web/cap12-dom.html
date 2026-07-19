@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Il DOM: la pagina come oggetti — Il Web</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Il DOM: la pagina come oggetti</h1>
+    <p class="standfirst">
+      Nel capitolo scorso JavaScript parlava solo alla console. Ora facciamo il salto che rende tutto interessante:
+      collegare JS alla <b>pagina</b>. Quando il browser carica il tuo HTML, non lo tiene come testo: lo trasforma in
+      un <b>albero di oggetti</b> — uno per ogni tag — che JavaScript può leggere e modificare. Questo albero si
+      chiama <b>DOM</b> (Document Object Model). È il <b>ponte</b> tra il tuo codice e ciò che l'utente vede:
+      attraverso il DOM puoi <b>trovare</b> un elemento (un titolo, un pulsante, un paragrafo), <b>leggere</b> cosa
+      contiene e <b>cambiarlo</b> al volo — senza ricaricare la pagina. <mark>Capire il DOM è capire come ogni sito
+      interattivo, dal più semplice al più complesso, aggiorna ciò che hai davanti agli occhi.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è il DOM (§12.1), l'<b>albero</b> degli elementi (§12.2), <b>selezionare</b> con
+      <code>querySelector</code> (§12.3), <b>leggere e cambiare</b> il contenuto (§12.4). Nel laboratorio (§12.5)
+      cambi davvero una pagina dal vivo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è qui che JS «tocca» la pagina</div>
+    <p style="margin-bottom:0">
+      Tutto ciò che un sito fa di dinamico — mostrare un messaggio, aggiornare un contatore, nascondere un menu,
+      inserire i risultati di una ricerca — passa dal DOM. <mark>Senza DOM, JavaScript sarebbe una calcolatrice
+      chiusa in una stanza</mark>: potente ma isolata. Con il DOM diventa il regista della pagina. È il concetto
+      cardine di tutta la programmazione web lato browser: i prossimi tre capitoli (manipolare, eventi, fetch) sono
+      tutti costruiti su di esso.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Cos'è il DOM</h2>
+
+  <p class="lead">
+    Quando scrivi HTML, scrivi <b>testo</b>. Ma il browser, per disegnare la pagina, quel testo lo
+    <b>interpreta</b> e ne costruisce una rappresentazione «viva» in memoria: un insieme di <b>oggetti</b>, uno per
+    ogni elemento. Quella rappresentazione è il DOM.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> DOM = Document Object Model</div>
+    <p>
+      Scomponiamo il nome: <b>Document</b> (il documento, cioè la pagina), <b>Object</b> (a oggetti: ogni tag diventa
+      un oggetto con proprietà e metodi), <b>Model</b> (un modello, cioè una rappresentazione strutturata).
+      <mark>Il DOM è la tua pagina HTML, ma vista come una collezione di oggetti che JavaScript può manipolare.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      La cosa magica: il DOM è <b>collegato in tempo reale</b> a ciò che vedi. Se JavaScript cambia un oggetto del DOM
+      (per esempio il testo di un titolo), <b>il browser ridisegna subito</b> la pagina di conseguenza. Non modifichi
+      il file HTML sul disco: modifichi la <b>copia viva</b> in memoria, e lo schermo si aggiorna all'istante. Questo
+      è il meccanismo dietro ogni pagina che «cambia da sola».
+    </p>
+  </div>
+
+  <p>
+    Il punto di ingresso è una parola speciale che JavaScript ti mette a disposizione: <code>document</code>.
+    Rappresenta l'intera pagina, e da lì parti per raggiungere ogni elemento.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>L'albero degli elementi</h2>
+
+  <p class="lead">
+    Gli elementi HTML sono <b>annidati</b> uno dentro l'altro (il <code>&lt;body&gt;</code> contiene un
+    <code>&lt;div&gt;</code> che contiene un <code>&lt;h1&gt;</code>…). Questa nidificazione forma un <b>albero</b>,
+    con relazioni di genitore, figlio e fratello — esattamente la struttura che il DOM rispecchia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dall'HTML all'albero <span class="tag">ogni tag è un nodo</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">questo HTML…</div>
+      <pre><span class="tg">&lt;body&gt;</span>
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="vl">"scheda"</span><span class="tg">&gt;</span>
+        <span class="tg">&lt;h1&gt;</span>Titolo<span class="tg">&lt;/h1&gt;</span>
+        <span class="tg">&lt;p&gt;</span>Un paragrafo<span class="tg">&lt;/p&gt;</span>
+    <span class="tg">&lt;/div&gt;</span>
+<span class="tg">&lt;/body&gt;</span></pre>
+    </div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head">…diventa questo albero</div>
+      <pre>document
+└─ body
+   └─ div.scheda
+      ├─ h1   "Titolo"
+      └─ p    "Un paragrafo"</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>nodo</b> (node)</dt>
+        <dd>ogni elemento dell'albero. <code>div</code>, <code>h1</code>, <code>p</code> sono nodi. Anche il testo
+            dentro un tag è, tecnicamente, un nodo.</dd>
+        <dt><b>genitore / figlio</b> (parent / child)</dt>
+        <dd>il <code>div</code> è il <b>genitore</b> di <code>h1</code> e <code>p</code>; loro sono i suoi
+            <b>figli</b>. <code>body</code> è il genitore del <code>div</code>. <mark>Le stesse relazioni di
+            annidamento dell'HTML</mark>, ora navigabili da JavaScript.</dd>
+        <dt><b>fratelli</b> (siblings)</dt>
+        <dd><code>h1</code> e <code>p</code>, avendo lo stesso genitore, sono <b>fratelli</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riconosci questa struttura? È la stessa dell'albero delle cartelle di un computer, o della struttura di una rete
+      (Cap. 6 di «Reti»). L'annidamento «a scatole dentro scatole» è ovunque in informatica — e nel DOM è ciò che ti
+      permette di dire «prendi il paragrafo <b>dentro</b> quella scheda».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Selezionare elementi</h2>
+
+  <p class="lead">
+    Per cambiare un elemento, prima devi <b>trovarlo</b> nel DOM. Lo strumento moderno è
+    <code>document.querySelector(…)</code>, che accetta gli stessi <b>selettori CSS</b> che hai imparato nel Cap. 7 —
+    quindi già sai usarlo.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">selezionare elementi</div>
+    <pre><span class="cm">// per id (il #): restituisce quell'unico elemento</span>
+<span class="kw">const</span> <span class="nm">titolo</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#titolo"</span>);
+
+<span class="cm">// per classe (il .): il PRIMO elemento con quella classe</span>
+<span class="kw">const</span> <span class="nm">scheda</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">".scheda"</span>);
+
+<span class="cm">// per tag: il primo &lt;button&gt; della pagina</span>
+<span class="kw">const</span> <span class="nm">bottone</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"button"</span>);
+
+<span class="cm">// TUTTI gli elementi che combaciano (una lista):</span>
+<span class="kw">const</span> <span class="nm">tutti</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelectorAll</span>(<span class="st">".scheda"</span>);</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Trovare elementi <span class="tag">querySelector / querySelectorAll</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">document.querySelector("selettore")</span></dt>
+        <dd>cerca nella pagina e restituisce il <b>primo</b> elemento che combacia con quel <b>selettore CSS</b>
+            (<code>#id</code>, <code>.classe</code>, <code>tag</code>, e tutte le combinazioni del Cap. 7).
+            <mark>Il selettore è identico a quello che scriveresti nel CSS</mark> — un solo linguaggio di
+            «puntamento», riusato.</dd>
+        <dt><span class="mono">querySelectorAll("selettore")</span></dt>
+        <dd>restituisce <b>tutti</b> gli elementi che combaciano, in una lista che puoi scorrere con un ciclo
+            <code>for … of</code>. Utile quando vuoi cambiare molti elementi insieme.</dd>
+        <dt>se non trova nulla?</dt>
+        <dd><code>querySelector</code> restituisce <code>null</code> (il «niente»). <mark>Provare a usare un elemento
+            <code>null</code> è la causa dell'errore più comune per chi inizia</mark> («Cannot read properties of
+            null»): quasi sempre significa che il selettore è sbagliato, o che lo script è partito <b>prima</b> che la
+            pagina esistesse (per questo si mette lo <code>&lt;script&gt;</code> in fondo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esiste anche il più vecchio <code>document.getElementById("titolo")</code> (senza il <code>#</code>): fa la
+      stessa cosa del <code>querySelector("#titolo")</code> ed è velocissimo. Lo vedrai spesso in giro e in questi
+      stessi widget. Ma <code>querySelector</code> è più flessibile (accetta qualsiasi selettore), quindi è il nostro
+      default.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Leggere e cambiare il contenuto</h2>
+
+  <p class="lead">
+    Una volta che hai un elemento in mano (in una variabile), puoi <b>leggerne</b> le proprietà e — la parte
+    magica — <b>modificarle</b>. La più usata è <code>textContent</code>: il testo dentro l'elemento.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">leggere e scrivere il contenuto</div>
+    <pre><span class="kw">const</span> <span class="nm">titolo</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#titolo"</span>);
+
+<span class="cm">// LEGGERE: cosa c'è scritto adesso?</span>
+<span class="bi">console</span>.<span class="fn">log</span>(<span class="nm">titolo</span>.<span class="nm">textContent</span>);   <span class="cm">// → "Titolo"</span>
+
+<span class="cm">// SCRIVERE: cambiamo il testo → la pagina si aggiorna subito!</span>
+<span class="nm">titolo</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="st">"Nuovo titolo!"</span>;
+
+<span class="cm">// cambiare anche lo stile, via la proprietà .style</span>
+<span class="nm">titolo</span>.<span class="nm">style</span>.<span class="nm">color</span> <span class="op">=</span> <span class="st">"crimson"</span>;</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le proprietà che userai di più <span class="tag">textContent, innerHTML, style</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.textContent</span></dt>
+        <dd>il <b>testo</b> dentro l'elemento. Lo leggi (a destra dell'<code>=</code>) o lo scrivi (a sinistra):
+            <code>el.textContent = "ciao"</code> sostituisce il contenuto testuale. <mark>È il modo più semplice e
+            sicuro per cambiare cosa mostra un elemento.</mark></dd>
+        <dt><span class="mono">.innerHTML</span></dt>
+        <dd>come <code>textContent</code>, ma interpreta l'<b>HTML</b> dentro la stringa: <code>el.innerHTML =
+            "&lt;b&gt;ciao&lt;/b&gt;"</code> mette la parola in grassetto. Potente, ma <b>attenzione</b>: non
+            metterci mai testo scritto da un utente sconosciuto (rischio di sicurezza — lo vedrai). Per solo testo,
+            preferisci <code>textContent</code>.</dd>
+        <dt><span class="mono">.style.qualcosa</span></dt>
+        <dd>cambia una proprietà CSS al volo: <code>el.style.color = "red"</code>,
+            <code>el.style.display = "none"</code> (per nascondere). <mark>Le proprietà CSS con il trattino
+            diventano camelCase</mark>: <code>background-color</code> → <code>el.style.backgroundColor</code>.</dd>
+        <dt><span class="mono">.value</span> (per gli input)</dt>
+        <dd>per i campi <code>&lt;input&gt;</code>, <code>.value</code> è ciò che l'utente ha digitato. Fondamentale
+            per leggere i form da JavaScript — lo userai molto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il concetto chiave da fissare: <mark>leggi con <code>= elemento.proprietà</code> (a destra), scrivi con
+      <code>elemento.proprietà =</code> (a sinistra)</mark>. La stessa proprietà serve per entrambi, a seconda di
+      quale lato dell'uguale sta. E ogni volta che <b>scrivi</b>, la pagina si aggiorna da sola. Nel prossimo
+      capitolo andremo oltre il testo: creare e rimuovere interi elementi, gestire classi. Ma leggere/scrivere
+      <code>textContent</code> e <code>style</code> è già abbastanza per fare cose vive — come nel laboratorio.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Laboratorio: cambiare la pagina</h2>
+
+  <p class="lead">
+    Il widget qui sotto è una <b>pagina in miniatura</b> (a sinistra) con il suo HTML, più una <b>console di
+    comandi</b> (a destra). Premi i pulsanti: ognuno esegue una riga di JavaScript che <b>modifica il DOM</b>, e vedi
+    la miniatura cambiare all'istante. È esattamente ciò che succede in ogni sito.
+  </p>
+
+  <div class="widget" id="w-dom">
+    <div class="w-head">
+      <span>Il DOM dal vivo: i comandi cambiano la pagina</span>
+      <span class="hint">ogni pulsante = una riga di JS</span>
+    </div>
+    <div class="w-stage" style="align-items:stretch; gap:.8rem; flex-wrap:wrap">
+      <div style="flex:1; min-width:200px; border:2px dashed var(--ink-soft); border-radius:10px; padding:1rem; background:var(--paper)">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🖥 la pagina</div>
+        <div id="wd-scheda" style="border:1px solid #ddd; border-radius:8px; padding:.8rem; background:#fff; color:#222">
+          <h3 id="wd-titolo" style="margin:.1rem 0 .4rem; font-size:1.2rem; color:#222">Titolo</h3>
+          <p id="wd-testo" style="margin:0; color:#444">Un paragrafo di esempio.</p>
+        </div>
+      </div>
+      <div style="flex:1; min-width:220px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">⌨ comandi eseguiti</div>
+        <div id="wd-cmd" style="font-family:var(--mono); font-size:.8rem; background:#1c1f2b; color:#8fd0ff; border-radius:8px; padding:.6rem .7rem; min-height:120px; max-height:150px; overflow:auto; text-align:left"></div>
+      </div>
+    </div>
+    <div class="w-controls" style="flex-wrap:wrap; gap:.4rem">
+      <button class="btn" data-do="titolo">cambia il titolo</button>
+      <button class="btn" data-do="colore">colora il titolo</button>
+      <button class="btn" data-do="testo">cambia il paragrafo</button>
+      <button class="btn" data-do="sfondo">sfondo della scheda</button>
+      <button class="btn" data-do="nascondi">nascondi il paragrafo</button>
+      <button class="btn ghost" data-do="reset">reset</button>
+    </div>
+    <div class="w-readout" id="wd-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>DOM</b> è la pagina vista come <b>albero di oggetti</b>: il ponte tra JavaScript e ciò che l'utente
+          vede. Il punto di ingresso è <code>document</code> (§12.1–12.2).</li>
+      <li><b>Selezionare</b>: <code>document.querySelector("selettore CSS")</code> (il primo),
+          <code>querySelectorAll(…)</code> (tutti). Se non trova, dà <code>null</code> (§12.3).</li>
+      <li><b>Leggere/scrivere</b>: <code>el.textContent</code> (il testo), <code>el.innerHTML</code> (con HTML),
+          <code>el.style.prop</code> (lo stile), <code>input.value</code> (i campi) (§12.4).</li>
+      <li>Ogni volta che <b>scrivi</b> una proprietà del DOM, la pagina si <b>aggiorna all'istante</b> (§12.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sai <b>trovare</b> un elemento e <b>cambiarne il contenuto e lo stile</b>. È già moltissimo. Ma finora
+    cambiamo elementi che <b>esistono già</b> nell'HTML. E se volessi <b>creare</b> nuovi elementi (una nuova riga in
+    una lista), <b>rimuoverli</b>, o gestire in modo pulito le <b>classi CSS</b> invece di impostare stili uno a uno?
+    È il tema del <strong>Capitolo 13</strong>: <b>manipolare</b> il DOM per davvero — costruire e smontare pezzi di
+    pagina.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Con parole tue: cos'è il DOM, e perché è diverso dal file HTML che scrivi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Scrivi la riga JS che seleziona l'elemento con <code>id="messaggio"</code> e lo mette in una costante
+      <code>msg</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Avendo <code>msg</code> dall'esercizio precedente, scrivi la riga che ne cambia il testo in
+      <code>"Fatto!"</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Un principiante scrive <code>document.querySelector("#box").textContent = "ciao"</code> e riceve l'errore
+      «Cannot read properties of null». Quali sono le due cause più probabili?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Il DOM è la rappresentazione <b>viva, a oggetti</b>, che il browser costruisce dal tuo HTML per disegnare e
+      gestire la pagina. Il file HTML è <b>testo statico</b> su disco; il DOM è la sua versione «in memoria», un
+      albero di oggetti che JavaScript può leggere e <b>modificare in tempo reale</b> — e ogni modifica si riflette
+      subito sullo schermo, senza toccare il file originale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="kw">const</span> <span class="nm">msg</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#messaggio"</span>);</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Oppure, equivalente: <code>const msg = document.getElementById("messaggio");</code>
+      (qui senza il <code>#</code>).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="nm">msg</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="st">"Fatto!"</span>;</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      «null» significa che <code>querySelector</code> <b>non ha trovato</b> l'elemento, quindi <code>textContent</code>
+      viene chiesto al «niente». Le due cause tipiche: <b>(1)</b> non esiste un elemento con
+      <code>id="box"</code> (id sbagliato o assente nell'HTML); <b>(2)</b> lo <code>&lt;script&gt;</code> è eseguito
+      <b>prima</b> che quell'elemento sia stato creato dal browser — soluzione: metti lo script <b>in fondo</b> al
+      <code>&lt;body&gt;</code> (o attendi il caricamento della pagina).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.5 — DOM dal vivo: i pulsanti eseguono comandi che cambiano la miniatura
+   ========================================================================= */
+(function () {
+  const scheda = document.getElementById('wd-scheda');
+  if (!scheda) return;
+  const titolo = document.getElementById('wd-titolo');
+  const testo  = document.getElementById('wd-testo');
+  const cmdBox = document.getElementById('wd-cmd');
+  const out    = document.getElementById('wd-out');
+
+  const orig = { t: titolo.textContent, p: testo.textContent };
+
+  function log(code) {
+    const d = document.createElement('div');
+    d.style.margin = '2px 0';
+    d.textContent = '> ' + code;
+    cmdBox.appendChild(d);
+    cmdBox.scrollTop = cmdBox.scrollHeight;
+  }
+
+  const actions = {
+    titolo: function () {
+      titolo.textContent = 'Cambiato da JS!';
+      log('titolo.textContent = "Cambiato da JS!";');
+    },
+    colore: function () {
+      titolo.style.color = '#7a5cff';
+      log('titolo.style.color = "#7a5cff";');
+    },
+    testo: function () {
+      testo.textContent = 'Questo paragrafo è stato riscritto dal DOM.';
+      log('testo.textContent = "…riscritto…";');
+    },
+    sfondo: function () {
+      scheda.style.background = '#f4f2ff';
+      log('scheda.style.background = "#f4f2ff";');
+    },
+    nascondi: function () {
+      testo.style.display = (testo.style.display === 'none') ? 'block' : 'none';
+      log('testo.style.display = "' + testo.style.display + '";');
+    },
+    reset: function () {
+      titolo.textContent = orig.t; testo.textContent = orig.p;
+      titolo.style.color = '#222'; scheda.style.background = '#fff';
+      testo.style.display = 'block';
+      cmdBox.innerHTML = ''; log('// pagina ripristinata');
+    }
+  };
+
+  document.querySelectorAll('#w-dom .btn[data-do]').forEach(function (b) {
+    b.addEventListener('click', function () { actions[b.getAttribute('data-do')](); });
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Ogni pulsante esegue <b>una riga di JavaScript</b> (mostrata a destra) che modifica il DOM della miniatura a sinistra. Nota come la pagina cambia <b>all\'istante</b>, senza ricaricare: è il DOM al lavoro.</div>';
+})();
+</script>
+</body>
+</html>

@@ -181,7 +181,7 @@ const TOC = [
     n: 12,
     titolo: "Il DOM: la pagina come oggetti",
     file: "cap12-dom.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Cos'è il DOM" },
       { id: "s12-2", n: "12.2", t: "L'albero degli elementi" },

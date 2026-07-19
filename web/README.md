@@ -22,7 +22,7 @@ Contenuto originale scritto ex novo.
 - [x] 9 — Layout con Flexbox
 - [x] 10 — Responsive: ogni schermo
 - [x] 11 — JavaScript: le basi
-- [ ] 12 — Il DOM: la pagina come oggetti
+- [x] 12 — Il DOM: la pagina come oggetti
 - [ ] 13 — Manipolare il DOM
 - [ ] 14 — Eventi: reagire all'utente
 - [ ] 15 — Fetch: dati dal web
