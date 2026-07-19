@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Un progetto completo — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Il gran finale</div>
+    <h1>Un progetto completo</h1>
+    <p class="standfirst">
+      Ci sei arrivato. Hai imparato tutti i mattoni del C++ — tipi, funzioni, puntatori, memoria, classi, template,
+      STL, eccezioni, file. È il momento di <b>costruire qualcosa di vero</b>, dall'inizio alla fine. Realizzeremo
+      un <b>gestore di attività</b> da terminale: una lista di cose da fare che <em>ricorda</em> tra un avvio e
+      l'altro, salvando su file. Non è un frammento isolato: è un'applicazione con una sua <b>architettura</b> — una
+      classe per modellare i dati, la STL per gestirli, i file per la persistenza, le eccezioni per la robustezza —
+      dove ogni pezzo che hai imparato trova il suo posto. <mark>È qui che «conoscere il C++» diventa «saper
+      costruire in C++»</mark>: il salto da studente a programmatore. E ti renderai conto di quanta strada hai fatto
+      dal primo <code>cout &lt;&lt; "Ciao, mondo!"</code>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Dall'idea al <b>piano</b> (§16.1), <b>progettare le classi</b> (§16.2), scrivere il <b>codice</b> pezzo per
+      pezzo (§16.3), <b>compilare e provare</b> (§16.4), <b>migliorare</b> (§16.5) e infine <b>dove andare</b>
+      (§16.6). Prima, prova la versione finita nel widget!
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il metodo, non solo il codice</div>
+    <p style="margin-bottom:0">
+      Questo capitolo insegna il <b>metodo</b> per affrontare un progetto reale: scomporre, progettare, costruire un
+      pezzo alla volta, compilare, provare, migliorare. <mark>È la competenza che trasforma la conoscenza in
+      capacità</mark>: non «sapere la sintassi», ma saper portare un'idea dal nulla a un programma funzionante e
+      ben strutturato. È lo stesso metodo che userai per qualsiasi cosa costruirai in C++ e oltre.
+    </p>
+  </div>
+
+  <div class="widget" id="w-app">
+    <div class="w-head">
+      <span>Il progetto finito: gestore di attività</span>
+      <span class="hint">provalo — è ciò che costruirai</span>
+    </div>
+    <div class="w-stage" style="min-height:230px">
+      <div id="wap-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <input id="wap-in" type="text" placeholder="nuova attività…" style="padding:.4rem .6rem; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); font:inherit; font-size:.9rem">
+      <button class="w-btn" id="wap-add">aggiungi</button>
+      <button class="w-btn" id="wap-reset">↺ reset</button>
+    </div>
+    <div class="w-readout" id="wap-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>L'idea e il piano</h2>
+
+  <p class="lead">
+    Ogni progetto parte da un'idea e da qualche domanda. Prima di scrivere codice, chiarisci <b>cosa deve fare</b>:
+    è metà del lavoro.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> L'idea: un gestore di attività</div>
+    <p style="margin-bottom:0">
+      Vogliamo un programma che permetta di: <b>vedere</b> le attività, <b>aggiungerne</b>, <b>segnarle come
+      fatte</b>, e — cruciale — <b>ricordarle</b> tra un avvio e l'altro. Domande da porsi subito: <b>come
+      rappresento un'attività?</b> (una classe con testo e stato «fatto»). <b>Come tengo la lista?</b> (un
+      <code>std::vector</code> di attività). <b>Dove salvo i dati?</b> (un file di testo, Cap. 15). <b>Come
+      interagisce l'utente?</b> (un menu che si ripete in un ciclo, Cap. 5). <mark>Rispondere a queste domande
+      <em>prima</em> di programmare evita di riscrivere tutto a metà strada</mark>. Un piano anche approssimativo
+      vale più di mille righe scritte a caso.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Progettare le classi</h2>
+
+  <p class="lead">
+    Con il piano in mano, decidiamo l'<b>architettura</b>: quali classi e funzioni servono. In C++, pensare per
+    <b>oggetti</b> (Cap. 10) e per <b>funzioni piccole</b> (Cap. 6) rende tutto più semplice.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Scomporre in classi e funzioni</div>
+    <p style="margin-bottom:0">
+      Il cuore è una classe <b><code>Attivita</code></b>: incapsula un <code>testo</code> e un <code>bool fatto</code>,
+      con metodi per completarla e mostrarla. Attorno, delle funzioni:
+    </p>
+    <ul style="margin:.5rem 0 0">
+      <li><code>carica()</code> — legge le attività dal file in un <code>vector&lt;Attivita&gt;</code> (o vuoto se il
+          file non c'è);</li>
+      <li><code>salva(...)</code> — scrive il vector sul file;</li>
+      <li><code>mostra(...)</code> — stampa l'elenco numerato;</li>
+      <li>un <b>ciclo menu</b> che chiama queste funzioni in base alla scelta dell'utente, con gestione dell'input.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>Ogni pezzo fa una cosa sola e bene</mark>: la classe modella il dato, le
+      funzioni orchestrano. Così puoi scriverli e provarli <b>uno alla volta</b>, e se qualcosa non va sai dove
+      guardare. È il «dividi e conquista» applicato al C++: un programma grande è tante parti piccole e chiare che
+      collaborano.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Il codice, pezzo per pezzo</h2>
+
+  <p class="lead">
+    Ecco il programma completo. Leggilo notando come <b>ogni concetto del libro</b> trova il suo posto — dalla
+    classe al vector, dai file alle eccezioni.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il progetto <code>attivita.cpp</code> <span class="tag">tutto il libro, in un file</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">attivita.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;fstream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="kw">class</span> <span class="fn">Attivita</span> {                     <span class="cm">// la classe (Cap. 10)</span>
+<span class="kw">public</span>:
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">testo</span>;
+    <span class="ty">bool</span> <span class="nm">fatto</span> <span class="op">=</span> <span class="kw">false</span>;
+    <span class="fn">Attivita</span>(<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">t</span>, <span class="ty">bool</span> <span class="nm">f</span> <span class="op">=</span> <span class="kw">false</span>) : <span class="nm">testo</span>(<span class="nm">t</span>), <span class="nm">fatto</span>(<span class="nm">f</span>) {}
+};
+
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Attivita</span><span class="op">&gt;</span> <span class="fn">carica</span>() {           <span class="cm">// legge dal file (Cap. 15)</span>
+    <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Attivita</span><span class="op">&gt;</span> <span class="nm">v</span>;
+    <span class="ns">std</span>::ifstream <span class="nm">in</span>(<span class="st">"attivita.txt"</span>);
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">riga</span>;
+    <span class="kw">while</span> (<span class="ns">std</span>::getline(<span class="nm">in</span>, <span class="nm">riga</span>)) {
+        <span class="ty">bool</span> <span class="nm">f</span> <span class="op">=</span> (<span class="nm">riga</span>[<span class="nm">0</span>] <span class="op">==</span> <span class="st">'1'</span>);     <span class="cm">// formato: "1|testo" o "0|testo"</span>
+        <span class="nm">v</span><span class="op">.</span><span class="fn">push_back</span>(<span class="fn">Attivita</span>(<span class="nm">riga</span><span class="op">.</span><span class="fn">substr</span>(<span class="nm">2</span>), <span class="nm">f</span>));
+    }
+    <span class="kw">return</span> <span class="nm">v</span>;
+}
+
+<span class="ty">void</span> <span class="fn">salva</span>(<span class="kw">const</span> <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Attivita</span><span class="op">&gt;&amp;</span> <span class="nm">v</span>) {   <span class="cm">// const& : niente copia (Cap. 6)</span>
+    <span class="ns">std</span>::ofstream <span class="nm">out</span>(<span class="st">"attivita.txt"</span>);
+    <span class="kw">for</span> (<span class="kw">const</span> <span class="fn">Attivita</span><span class="op">&amp;</span> <span class="nm">a</span> : <span class="nm">v</span>)
+        <span class="nm">out</span> <span class="op">&lt;&lt;</span> (<span class="nm">a</span><span class="op">.</span><span class="nm">fatto</span> <span class="op">?</span> <span class="st">"1|"</span> <span class="op">:</span> <span class="st">"0|"</span>) <span class="op">&lt;&lt;</span> <span class="nm">a</span><span class="op">.</span><span class="nm">testo</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}
+
+<span class="ty">void</span> <span class="fn">mostra</span>(<span class="kw">const</span> <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Attivita</span><span class="op">&gt;&amp;</span> <span class="nm">v</span>) {
+    <span class="kw">for</span> (<span class="ns">std</span>::size_t <span class="nm">i</span> <span class="op">=</span> <span class="nm">0</span>; <span class="nm">i</span> <span class="op">&lt;</span> <span class="nm">v</span><span class="op">.</span><span class="fn">size</span>(); <span class="nm">i</span><span class="op">++</span>)
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"  "</span> <span class="op">&lt;&lt;</span> <span class="nm">i</span> <span class="op">+</span> <span class="nm">1</span> <span class="op">&lt;&lt;</span> <span class="st">". ["</span>
+                  <span class="op">&lt;&lt;</span> (<span class="nm">v</span>[<span class="nm">i</span>]<span class="op">.</span><span class="nm">fatto</span> <span class="op">?</span> <span class="st">"x"</span> <span class="op">:</span> <span class="st">" "</span>) <span class="op">&lt;&lt;</span> <span class="st">"] "</span> <span class="op">&lt;&lt;</span> <span class="nm">v</span>[<span class="nm">i</span>]<span class="op">.</span><span class="nm">testo</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="kw">auto</span> <span class="nm">lista</span> <span class="op">=</span> <span class="fn">carica</span>();                  <span class="cm">// auto = vector&lt;Attivita&gt; (Cap. 2)</span>
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">scelta</span>;
+    <span class="kw">while</span> (<span class="kw">true</span>) {                        <span class="cm">// ciclo menu (Cap. 5)</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"\n--- ATTIVITÀ ---\n"</span>;
+        <span class="fn">mostra</span>(<span class="nm">lista</span>);
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"[a]ggiungi [f]atto [q]esci: "</span>;
+        <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">scelta</span>;
+
+        <span class="kw">if</span> (<span class="nm">scelta</span> <span class="op">==</span> <span class="st">"a"</span>) {
+            <span class="ns">std</span>::<span class="ns">cin</span><span class="op">.</span><span class="fn">ignore</span>();
+            <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">t</span>;
+            <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Cosa? "</span>;
+            <span class="ns">std</span>::getline(<span class="ns">std</span>::<span class="ns">cin</span>, <span class="nm">t</span>);
+            <span class="kw">if</span> (<span class="op">!</span><span class="nm">t</span><span class="op">.</span><span class="fn">empty</span>()) { <span class="nm">lista</span><span class="op">.</span><span class="fn">push_back</span>(<span class="fn">Attivita</span>(<span class="nm">t</span>)); <span class="fn">salva</span>(<span class="nm">lista</span>); }
+        } <span class="kw">else if</span> (<span class="nm">scelta</span> <span class="op">==</span> <span class="st">"f"</span>) {
+            <span class="ty">int</span> <span class="nm">n</span>; <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">n</span>;
+            <span class="kw">if</span> (<span class="nm">n</span> <span class="op">&gt;=</span> <span class="nm">1</span> <span class="op">&amp;&amp;</span> <span class="nm">n</span> <span class="op">&lt;=</span> (<span class="ty">int</span>)<span class="nm">lista</span><span class="op">.</span><span class="fn">size</span>()) {   <span class="cm">// controllo (Cap. 8)</span>
+                <span class="nm">lista</span>[<span class="nm">n</span> <span class="op">-</span> <span class="nm">1</span>]<span class="op">.</span><span class="nm">fatto</span> <span class="op">=</span> <span class="kw">true</span>; <span class="fn">salva</span>(<span class="nm">lista</span>);
+            }
+        } <span class="kw">else if</span> (<span class="nm">scelta</span> <span class="op">==</span> <span class="st">"q"</span>) {
+            <span class="kw">break</span>;
+        }
+    }
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Ciao!\n"</span>;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Fai il conto di quanti concetti collaborano: una <b>classe</b> con costruttore e lista di inizializzazione
+      (Cap. 10), un <b>vector</b> (Cap. 8), <b>file</b> con <code>ifstream</code>/<code>ofstream</code> e
+      <code>getline</code> (Cap. 15), <b>const&amp;</b> per non copiare (Cap. 6), <code>auto</code> (Cap. 2),
+      <b>substr</b> e l'operatore <b>ternario</b> (Cap. 9, 4), il <b>ciclo menu</b> con <code>while</code>/
+      <code>if</code> (Cap. 4-5), il <b>controllo dei limiti</b> (Cap. 8). <mark>Nessun pezzo, da solo, è difficile —
+      ma insieme formano un'applicazione vera</mark>. È così che si costruisce il software: componendo tante idee
+      semplici che hai imparato una alla volta.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Compilare e provare</h2>
+
+  <p class="lead">
+    Il codice scritto non è finito: va <b>compilato</b> (il C++ te lo ricorda!) e <b>provato</b> — specie nei casi
+    in cui le cose vanno storte.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Compila, poi metti alla prova i casi «cattivi»</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">$ </span><span class="cmd">g++</span> <span class="fl">-std=c++17</span> <span class="ar">attivita.cpp</span> <span class="fl">-o</span> <span class="ar">attivita</span>
+<span class="p">$ </span><span class="ar">./attivita</span></pre>
+    </div>
+    <ul style="margin-bottom:0">
+      <li>Il caso <b>normale</b>: aggiungi un'attività, segnala fatta, esci e riapri — <b>c'è ancora?</b> (la
+          persistenza su file funziona).</li>
+      <li>I casi <b>limite</b>: lista <b>vuota</b> all'avvio; testo <b>vuoto</b>; segnare fatto un <b>numero
+          inesistente</b> (5 su 3 attività). <mark>Il controllo <code>if (n &gt;= 1 &amp;&amp; n &lt;= size)</code>
+          previene l'accesso fuori limite</mark> — senza, sarebbe un bug pericoloso (Cap. 8).</li>
+      <li>Se il compilatore protesta, <b>leggi la prima riga d'errore</b> (Cap. 14) e correggi. È il ciclo del C++:
+          scrivi, compila, correggi, riprova.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>Provare pensando «come potrebbe rompersi?» è ciò che distingue il codice
+      fragile da quello robusto</mark>.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Migliorare</h2>
+
+  <p class="lead">
+    Un programma che funziona è l'inizio, non la fine. Con un occhio critico, si trovano sempre modi per renderlo
+    più utile, più robusto, più «C++ moderno».
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Idee per far crescere il progetto</div>
+    <ul style="margin-bottom:0">
+      <li><b>Funzionalità</b>: <b>rimuovere</b> un'attività (<code>lista.erase(...)</code>); una <b>priorità</b> o
+          una <b>scadenza</b>; contare quante sono fatte / da fare.</li>
+      <li><b>Qualità del codice</b>: spostare la classe e le funzioni in <b>file separati</b> (header + cpp, Cap. 6);
+          rendere i campi di <code>Attivita</code> <b>privati</b> con metodi (Cap. 10); usare gli <b>algoritmi
+          STL</b> (Cap. 13) per contare o cercare.</li>
+      <li><b>Robustezza</b>: gestire un input non-numerico nella scelta «fatto» con <b>try/catch</b> o controllando
+          <code>cin</code> (Cap. 14); un file corrotto.</li>
+    </ul>
+    <p style="margin:.6rem 0 0"><mark>Il codice migliore nasce dalla riscrittura</mark>: la prima versione fa
+      funzionare le cose, le successive le fanno funzionare <em>bene</em>. Non aver paura di rimettere mano a ciò
+      che hai scritto — è lì che si impara di più, e dove un progetto diventa davvero tuo.</p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai finito il libro — e sai programmare in C++. Non è un traguardo da poco: il C++ è uno dei linguaggi più
+    profondi in circolazione, e ne hai le fondamenta solide. Ecco alcune direzioni.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧭</span> Il cammino continua</div>
+    <ul style="margin-bottom:0">
+      <li><b>Costruisci</b>. La cosa più importante: <mark>fai progetti tuoi</mark>. Un gioco a caratteri, uno
+          strumento da riga di comando, un piccolo motore fisico. Il C++ si impara scrivendolo (e compilandolo!).</li>
+      <li><b>Approfondisci il C++ moderno</b>. C'è molto oltre le basi: move semantics, template avanzati,
+          concorrenza (thread), le novità di C++20/23. Ma ora hai il vocabolario per affrontarle.</li>
+      <li><b>Esplora dove regna il C++</b>. Motori di gioco (SFML per iniziare, poi Unreal), grafica, sistemi
+          embedded, calcolo ad alte prestazioni: scegli un ambito che ti appassiona e tuffati.</li>
+      <li><b>La collana continua</b>. Dopo i linguaggi, la parte <b>web</b> (HTML, CSS, JavaScript) e il
+          <b>backend</b> (server, database): mondi diversi, dove porterai il rigore che il C++ ti ha insegnato.</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro da tutto il libro</div>
+    <ol style="margin-bottom:0">
+      <li>Le <b>basi</b>: tipi statici, operatori (e le loro insidie), decisioni, cicli, funzioni con passaggio per
+          valore/riferimento.</li>
+      <li>Il <b>cuore del C++</b>: <b>puntatori e memoria</b> (stack/heap), e l'idea che rende tutto sicuro —
+          <b>RAII</b> e gli smart pointer.</li>
+      <li>L'<b>OOP</b>: classi, incapsulamento, ereditarietà e polimorfismo; e la potenza di <b>template e STL</b>
+          per fare tanto con poco.</li>
+      <li>Gli strumenti pratici: <b>eccezioni</b> e <b>file</b>. E soprattutto: <mark>sai portare un'idea dal nulla a
+          un programma C++ funzionante e ben strutturato</mark>. Il resto è pratica.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Complimenti: hai imparato il C++. Ricorda com'eri all'inizio del Capitolo 1 — davanti a un <code>g++</code> da
+    installare e a un <code>cout &lt;&lt; "Ciao, mondo!"</code> da compilare — e guardati ora, capace di progettare
+    classi, gestire la memoria e costruire un'applicazione completa che ricorda i suoi dati. Hai domato il linguaggio
+    con la fama più intimidatoria che ci sia, e con esso hai capito <em>come funziona davvero un computer</em>:
+    memoria, tipi, prestazioni. <mark>Questa comprensione ti renderà un programmatore migliore in ogni linguaggio
+    che toccherai.</mark> La collana continua — col web, col backend — ma tu hai già fatto il salto più difficile.
+    Ora vai, compila, e costruisci qualcosa di tuo. Buon codice! ⊕
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Prima di scrivere codice, quali domande ti poni per pianificare un progetto C++? Applicale a un'idea tua (es.
+      un'agenda, un punteggio di gioco).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Nel gestore di attività, elenca almeno cinque concetti del libro che riconosci nel codice, indicando il
+      capitolo di ciascuno.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      (Pratico) Aggiungi al progetto una scelta «[r]imuovi» che, dato un numero valido, elimina quell'attività dal
+      vector (suggerimento: <code>lista.erase(lista.begin() + (n-1))</code>) e risalva.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      (Sfida) Rendi <code>private</code> i campi di <code>Attivita</code> e aggiungi metodi pubblici
+      <code>completa()</code> e <code>e_fatta()</code>. Adatta il resto del codice a usarli invece di accedere
+      direttamente ai campi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Le domande chiave: <b>cosa deve fare</b> (funzionalità)? <b>Come rappresento i dati</b> (quali classi, quali
+      campi)? <b>Come li tengo insieme</b> (vector? map?)? <b>Dove li salvo</b> (file? formato?)? <b>Come interagisce
+      l'utente</b> (menu, input)? <b>Quali casi limite</b> gestire? Rispondere prima rende il codice molto più
+      diretto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Per esempio: <b>classe con costruttore</b> (Cap. 10), <b>std::vector</b> (Cap. 8), <b>file
+      ifstream/ofstream/getline</b> (Cap. 15), <b>passaggio const&amp;</b> (Cap. 6), <b>ciclo while + if/else if</b>
+      (Cap. 4-5), <b>ternario e substr</b> (Cap. 4, 9), <b>controllo dei limiti</b> (Cap. 8). Tutto il libro converge
+      qui.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">nel menu, aggiungi un ramo</div>
+      <pre>        <span class="kw">else if</span> (<span class="nm">scelta</span> <span class="op">==</span> <span class="st">"r"</span>) {
+            <span class="ty">int</span> <span class="nm">n</span>; <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">n</span>;
+            <span class="kw">if</span> (<span class="nm">n</span> <span class="op">&gt;=</span> <span class="nm">1</span> <span class="op">&amp;&amp;</span> <span class="nm">n</span> <span class="op">&lt;=</span> (<span class="ty">int</span>)<span class="nm">lista</span><span class="op">.</span><span class="fn">size</span>()) {
+                <span class="nm">lista</span><span class="op">.</span><span class="fn">erase</span>(<span class="nm">lista</span><span class="op">.</span><span class="fn">begin</span>() <span class="op">+</span> (<span class="nm">n</span> <span class="op">-</span> <span class="nm">1</span>));   <span class="cm">// toglie l'elemento</span>
+                <span class="fn">salva</span>(<span class="nm">lista</span>);
+            }
+        }</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">Attivita incapsulata</div>
+      <pre><span class="kw">class</span> <span class="fn">Attivita</span> {
+<span class="kw">private</span>:
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">testo_</span>;
+    <span class="ty">bool</span> <span class="nm">fatto_</span> <span class="op">=</span> <span class="kw">false</span>;
+<span class="kw">public</span>:
+    <span class="fn">Attivita</span>(<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">t</span>, <span class="ty">bool</span> <span class="nm">f</span> <span class="op">=</span> <span class="kw">false</span>) : <span class="nm">testo_</span>(<span class="nm">t</span>), <span class="nm">fatto_</span>(<span class="nm">f</span>) {}
+    <span class="ty">void</span> <span class="fn">completa</span>() { <span class="nm">fatto_</span> <span class="op">=</span> <span class="kw">true</span>; }
+    <span class="ty">bool</span> <span class="fn">e_fatta</span>() <span class="kw">const</span> { <span class="kw">return</span> <span class="nm">fatto_</span>; }
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="fn">get_testo</span>() <span class="kw">const</span> { <span class="kw">return</span> <span class="nm">testo_</span>; }
+};</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Poi nel codice usi <code>lista[n-1].completa()</code> invece di
+      <code>lista[n-1].fatto = true</code>, e <code>a.e_fatta()</code> / <code>a.get_testo()</code> per leggere. È il
+      progetto «cresciuto» con incapsulamento pieno.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16 — demo interattiva del progetto finito (gestore attività C++)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wap-view');
+  if (!view) return;
+  const out = document.getElementById('wap-out');
+  const inp = document.getElementById('wap-in');
+  const start = () => [{ t: 'Finire il libro di C++', f: true }, { t: 'Compilare un progetto mio', f: false }];
+  let items = start();
+  let msg = 'Prova: scrivi un\'attività e «aggiungi». Clicca una riga per segnarla fatta. È il programma che costruirai in questo capitolo.';
+
+  function add() {
+    const v = inp.value.trim();
+    if (!v) { msg = 'Testo vuoto: ignorato (come <code>if (!t.empty())</code> nel codice).'; draw(); return; }
+    items.push({ t: v, f: false }); inp.value = '';
+    msg = 'Aggiunta e <b>salvata su file</b> (nel programma vero, con ofstream).'; draw();
+  }
+  document.getElementById('wap-add').addEventListener('click', add);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+  document.getElementById('wap-reset').addEventListener('click', () => { items = start(); msg = 'Riavviato: nel programma reale, le attività verrebbero <b>ricaricate dal file</b> (carica()).'; draw(); });
+
+  function draw() {
+    const rows = items.map((a, i) =>
+      `<div data-i="${i}" style="cursor:pointer; display:flex; align-items:center; gap:.6rem; padding:.4rem .7rem; margin:.25rem auto; max-width:360px; border:1px solid var(--rule); border-radius:9px; background:${a.f ? 'color-mix(in srgb,var(--green) 10%,transparent)' : 'var(--paper)'}">
+        <span style="font-family:var(--mono); color:var(--ink-faint)">${i + 1}.</span>
+        <span style="font-family:var(--mono); color:var(--green); font-weight:700">[${a.f ? 'x' : ' '}]</span>
+        <span style="${a.f ? 'text-decoration:line-through; color:var(--ink-faint)' : ''}">${a.t.replace(/</g, '&lt;')}</span>
+      </div>`).join('') || '<div style="color:var(--ink-faint); text-align:center">(nessuna attività)</div>';
+    view.innerHTML = `<div style="font-family:var(--mono); color:var(--ink-soft); text-align:center; margin-bottom:.5rem">--- ATTIVITÀ ---</div>${rows}
+      <div style="text-align:center; margin-top:.6rem; font-size:.82rem; color:var(--ink-faint)">${items.filter(a => a.f).length}/${items.length} completate</div>`;
+    view.querySelectorAll('[data-i]').forEach(el => el.addEventListener('click', () => {
+      const i = +el.dataset.i; items[i].f = !items[i].f;
+      msg = 'Stato cambiato e salvato — come <code>lista[n-1].fatto = true; salva(lista);</code> nel codice.'; draw();
+    }));
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

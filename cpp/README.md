@@ -26,7 +26,7 @@ Contenuto originale scritto ex novo.
 - [x] 13 — Template e la STL
 - [x] 14 — Gestione degli errori
 - [x] 15 — File e I/O
-- [ ] 16 — Un progetto completo
+- [x] 16 — Un progetto completo
 
 ## La collana
 
