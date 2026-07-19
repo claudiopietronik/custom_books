@@ -78,7 +78,7 @@ const TOC = [
     n: 5,
     titolo: "pandas: selezionare e filtrare",
     file: "cap05-pandas-selezione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Selezionare colonne e righe" },
       { id: "s5-2", n: "5.2", t: "loc e iloc" },
