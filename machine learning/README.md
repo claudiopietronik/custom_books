@@ -22,7 +22,7 @@ usano Python/scikit-learn.
 - [x] 7 — Classificazione lineare: LDA e QDA
 - [x] 8 — Regressione logistica
 - [x] 9 — Naive Bayes e k-NN
-- [ ] 10 — Support Vector Machines
+- [x] 10 — Support Vector Machines
 - [ ] 11 — Metodi kernel e Gaussian Processes
 - [ ] 12 — Alberi di decisione
 - [ ] 13 — Bagging e Random Forests

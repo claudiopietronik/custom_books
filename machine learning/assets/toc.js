@@ -150,7 +150,7 @@ const TOC = [
     n: 10,
     titolo: "Support Vector Machines",
     file: "cap10-svm.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Il margine massimo" },
       { id: "s10-2", n: "10.2", t: "Il problema di ottimizzazione" },

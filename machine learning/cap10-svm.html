@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Support Vector Machines — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Support Vector Machines</h1>
+    <p class="standfirst">
+      Immagina di dover separare due gruppi di punti con una retta. Di rette che li separano ce ne sono
+      <b>infinite</b>: quale scegliere? La regressione logistica ne trovava una qualsiasi che funzionasse; le
+      <b>Support Vector Machines</b> (SVM, «macchine a vettori di supporto») fanno una domanda più ambiziosa e bellissima:
+      <mark>tra tutte le rette che separano, qual è <b>la migliore</b> — quella che lascia più «spazio di sicurezza» ai
+      due lati?</mark> Questa idea, il <b>margine massimo</b>, rende le SVM robuste ed eleganti. E c'è di più: con un
+      trucco quasi magico, il <b>kernel trick</b>, le SVM riescono a tracciare confini <b>curvi</b> in modo
+      sorprendentemente efficiente, diventando uno dei classificatori più potenti mai inventati. In questo capitolo:
+      l'idea del margine massimo (§10.1), come si traduce in un problema da risolvere e chi sono i «vettori di supporto»
+      (§10.2), cosa fare quando i dati non sono perfettamente separabili — il <b>soft margin</b> e il parametro
+      <b>C</b> (§10.3), e infine il kernel trick (§10.4). Con la solita, paziente cura per ogni pezzo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>margine massimo</b> (§10.1), il problema di ottimizzazione e i <b>vettori di supporto</b> (§10.2), il
+      <b>soft margin</b> e il parametro <b>C</b> (§10.3), il <b>kernel trick</b> per i confini curvi (§10.4). Nel
+      laboratorio (§10.5) vedi il margine e i vettori di supporto dal vivo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: potenza ed eleganza</div>
+    <p style="margin-bottom:0">
+      Le SVM sono state per anni <b>lo</b> stato dell'arte prima del deep learning, e restano fortissime su dati di
+      dimensione medio-piccola. Ma soprattutto <mark>racchiudono due idee bellissime — il margine massimo e i kernel —
+      che valgono da sole lo studio</mark>: la prima insegna cosa significa un confine «robusto», la seconda come
+      curvare un modello lineare senza pagarne il prezzo. Concetti che illuminano tutto il machine learning.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Il margine massimo</h2>
+
+  <p class="lead">
+    Partiamo dalla domanda che rende speciali le SVM. È così visiva che quasi non serve matematica per capirla.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La strada più larga tra le due classi</div>
+    <p style="margin-bottom:0">
+      Ci sono tante rette che separano due gruppi di punti. Ma una retta che passa <b>incollata</b> ai punti di una
+      classe è pericolosa: un nuovo caso appena spostato finirebbe dal lato sbagliato. Molto meglio una retta che tiene
+      i punti di entrambe le classi <b>il più lontano possibile</b>. L'idea delle SVM: <mark>invece di una linea sottile,
+      immagina di tracciare la <b>strada più larga possibile</b> che separa le due classi senza toccare nessun punto;
+      il confine è la <b>linea di mezzo</b> di questa strada.</mark> La larghezza della strada si chiama <b>margine</b>,
+      e le SVM cercano il confine che lo <b>massimizza</b>. Più margine = più «spazio di sicurezza» = più robustezza ai
+      dati nuovi e al rumore.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> I vettori di supporto: i pochi punti che decidono</div>
+    <p style="margin-bottom:0">
+      Ecco la cosa più sorprendente. La strada più larga è «spinta» ai suoi bordi soltanto da <b>pochissimi punti</b>:
+      quelli che le stanno appena appoggiati contro, i più vicini al confine. <mark>Questi pochi punti critici si
+      chiamano <b>vettori di supporto</b>: sono gli unici che contano davvero.</mark> Tutti gli altri, quelli ben dentro
+      il loro territorio, potresti spostarli o toglierli e il confine non cambierebbe di una virgola. È un fatto potente:
+      <b>l'SVM è definita da una manciata di esempi di frontiera</b>, non da tutti. Questa «parsimonia» la rende
+      efficiente e resistente. (Il nome «support vector machine» viene proprio da questi punti che «supportano» — cioè
+      sostengono, come pilastri — il confine.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Il problema di ottimizzazione</h2>
+
+  <p class="lead">
+    Mettiamo l'idea in formule, con delicatezza. «Massimizzare il margine» si può scrivere in modo preciso, e la cosa
+    bella è che si traduce in un problema che si sa risolvere benissimo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Massimizzare il margine = minimizzare i pesi <span class="tag">un legame sorprendente</span></div>
+    <p style="text-align:center; font-size:1.1rem; margin:.5rem 0 1rem">
+      $$ \min_{w,\,b}\; \tfrac{1}{2}\lVert w\rVert^2 \qquad\text{con}\quad y_i\,(w^\top x_i + b)\ge 1 \;\text{ per ogni punto } i $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>$w^\top x_i + b$ — il solito motore lineare, che qui definisce il confine</dt>
+        <dd>è la stessa somma pesata di sempre: $w$ sono i pesi, $b$ l'intercetta, $x_i$ il punto. Il confine è dove
+            questa espressione vale 0; da un lato è positiva, dall'altro negativa. <mark>Il segno decide la classe.</mark></dd>
+        <dt>$\lVert w\rVert^2$ — la «lunghezza» dei pesi, che si vuole <b>piccola</b></dt>
+        <dd>$\lVert w\rVert$ (si legge «norma di w») è la lunghezza del vettore dei pesi (Pitagora: radice della somma
+            dei quadrati). Ecco il legame magico: <mark>si può dimostrare che il margine (la larghezza della strada) è
+            $\frac{2}{\lVert w\rVert}$</mark> — quindi <b>più piccola è $\lVert w\rVert$, più largo è il margine</b>. Per
+            questo «massimizzare il margine» diventa «<b>minimizzare</b> $\lVert w\rVert$» (il $\tfrac12$ e il quadrato
+            sono solo comodità matematiche che non cambiano la sostanza).</dd>
+        <dt>il vincolo $y_i(w^\top x_i + b)\ge 1$ — «tutti dal lato giusto, oltre il bordo»</dt>
+        <dd>qui $y_i$ è la classe scritta come $+1$ o $-1$ (comodo trucco). Questa condizione, letta a parole, dice:
+            <mark>ogni punto deve stare dal proprio lato <b>e</b> oltre il bordo della strada</mark> (non dentro la
+            strada). Il «$\ge 1$» fissa la larghezza dei bordi. I punti per cui vale <b>esattamente l'uguale</b> ($=1$)
+            sono proprio i <b>vettori di supporto</b>: quelli appoggiati al bordo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non devi saper risolvere a mano questo problema (lo fa il computer, con metodi efficienti). Devi cogliere la
+      <b>storia</b>: «voglio il margine più largo» → «equivale a tenere piccoli i pesi $w$ rispettando che ogni punto
+      stia oltre il bordo» → il risultato è il confine più robusto, retto da pochi vettori di supporto. Una traduzione
+      elegante di un'idea geometrica in un conto risolvibile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>Soft margin e il parametro C</h2>
+
+  <p class="lead">
+    C'è un problema con quanto detto finora: assume che una retta possa separare <b>perfettamente</b> le due classi. Nel
+    mondo reale i dati si sovrappongono, si mescolano, hanno errori. Le SVM lo affrontano con un'idea molto sensata.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Concedere qualche errore: il margine «morbido»</div>
+    <p style="margin-bottom:0">
+      Se pretendiamo che <b>tutti</b> i punti stiano oltre il bordo (margine «duro», hard margin), un singolo punto
+      «ribelle» in mezzo agli altri renderebbe il problema irrisolvibile — o forzerebbe una strada strettissima e
+      contorta. La soluzione, il <b>soft margin</b> («margine morbido»): <mark>permettiamo ad alcuni punti di violare il
+      margine (entrare nella strada, o perfino finire dal lato sbagliato), ma li <b>puniamo</b></mark> in proporzione a
+      quanto sconfinano. L'SVM allora bilancia due desideri opposti: <b>strada larga</b> da una parte, <b>poche
+      violazioni</b> dall'altra. Un piccolo compromesso per una robustezza molto maggiore.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il parametro C: quanto punire gli sconfinamenti <span class="tag">la manopola chiave</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>C grande</b> — «non tollero errori»</dt>
+        <dd>punisci severamente ogni violazione: l'SVM cerca a tutti i costi di classificare bene ogni punto, anche a
+            costo di una strada stretta e contorta. <mark>Modello più flessibile → rischio overfitting</mark> (si piega
+            per accontentare i punti rumorosi).</dd>
+        <dt><b>C piccolo</b> — «un po' di errori va bene»</dt>
+        <dd>tolleri le violazioni pur di tenere la strada larga e liscia. <mark>Modello più semplice e robusto → rischio
+            underfitting</mark> se esageri (ignori troppa struttura).</dd>
+        <dt>è di nuovo il compromesso bias-varianza</dt>
+        <dd>C è per l'SVM ciò che $\lambda$ era per Ridge/Lasso (cap. 5) e $k$ per il k-NN (cap. 9): la manopola che
+            regola flessibilità contro robustezza. <mark>Si sceglie — indovina — con la validazione.</mark> Nota curiosa:
+            C agisce all'opposto di $\lambda$ (C grande = poca regolarizzazione), ma il concetto è identico.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Tienilo a mente per il laboratorio: nel widget potrai spostare i punti e vedere come solo pochi (i vettori di
+      supporto) plasmano il confine, mentre gli altri sono ininfluenti — l'essenza dell'SVM.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Il kernel trick</h2>
+
+  <p class="lead">
+    Ed eccoci all'idea più affascinante delle SVM, quella che le ha rese celebri. Finora abbiamo separato con una retta.
+    E se le classi sono intrecciate in modo che <b>nessuna</b> retta le separi? Ricordi le espansioni di base del
+    capitolo 6? Il kernel trick è la loro versione superpotenziata.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Alza i dati in una dimensione in più</div>
+    <p style="margin-bottom:0">
+      Immagina punti su una linea: cerchi rossi al centro, blu ai due estremi. <b>Nessun</b> singolo punto-taglio li
+      separa. Ma se «sollevi» ogni punto a un'altezza pari al suo <b>quadrato</b> ($x \to x^2$), i rossi centrali
+      restano in basso e i blu esterni salgono in alto: ora <b>una retta orizzontale li separa</b> perfettamente!
+      <mark>Questa è l'idea: portare i dati in uno spazio con più dimensioni (aggiungendo caratteristiche trasformate),
+      dove diventano separabili da un piano dritto.</mark> È l'espansione di base del cap. 6, spinta al massimo: nello
+      spazio «sollevato» un confine dritto corrisponde a un confine <b>curvo</b> nello spazio originale.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il «trucco»: lo spazio enorme senza pagarlo</div>
+    <p style="margin-bottom:0">
+      C'è un problema pratico: per separare bene classi molto intrecciate, servirebbe uno spazio con <b>tantissime</b>
+      (anche infinite!) dimensioni aggiunte — impossibile da calcolare esplicitamente. Qui arriva la magia. Si scopre
+      che l'SVM, per fare i suoi conti, non ha mai bisogno delle coordinate nello spazio gigante: le basta sapere il
+      <b>prodotto scalare</b> tra coppie di punti in quello spazio — cioè, in sostanza, <b>quanto due punti sono
+      simili</b>. E questa somiglianza si può calcolare con una funzione scorciatoia, il <b>kernel</b>, che lavora
+      direttamente sui punti originali <b>senza mai costruire lo spazio gigante</b>. <mark>Ecco il «trucco»: otteniamo
+      il potere di uno spazio con infinite dimensioni pagando solo un piccolo calcolo sui dati originali.</mark> È uno
+      dei risultati più eleganti di tutto il machine learning.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I kernel più usati <span class="tag">funzioni di somiglianza</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>kernel lineare</b> — nessuna trasformazione</dt>
+        <dd>è la SVM «dritta» di prima (somiglianza = prodotto scalare normale). Confine rettilineo. Buono quando i dati
+            sono già quasi separabili da una retta.</dd>
+        <dt><b>kernel polinomiale</b> — curve polinomiali</dt>
+        <dd>equivale ad aggiungere potenze e prodotti delle caratteristiche (come il cap. 6, ma «gratis»): dà confini
+            curvi di tipo polinomiale.</dd>
+        <dt><b>kernel RBF</b> (gaussiano) — il più popolare</dt>
+        <dd>misura la somiglianza come «quanto due punti sono vicini», con una campana: <mark>vicini → molto simili,
+            lontani → per niente.</mark> Corrisponde a uno spazio con <b>infinite</b> dimensioni e sa disegnare confini
+            di forma quasi qualsiasi. È il primo da provare quando i dati non sono separabili da una retta. Ha una
+            manopola, $\gamma$ («gamma»), che regola quanto «stretta» è la campana: $\gamma$ grande = confini molto
+            locali e frastagliati (rischio overfitting), $\gamma$ piccolo = confini più morbidi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In pratica con l'SVM regoli due manopole insieme, <b>C</b> (tolleranza agli errori) e, per l'RBF, <b>γ</b>
+      (larghezza della campana), cercando la coppia migliore in validazione. Entrambe sono, ancora una volta, forme del
+      compromesso bias-varianza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi il cuore dell'SVM lineare: la <b>strada</b> (il margine) tra due classi, il confine al centro, e i
+    <b>vettori di supporto</b> evidenziati — i pochi punti che sostengono tutto. Muovi lo slider e osserva.
+  </p>
+
+  <div class="widget" id="w-svm">
+    <div class="w-head">
+      <span>Margine massimo e vettori di supporto</span>
+      <span class="hint">la strada più larga tra le due classi</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="sv-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>separazione delle classi <input type="range" id="sv-sep" min="0" max="10" step="0.1" value="6"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="sv-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">svm.py</div>
+    <pre><span class="kw">from</span> sklearn.svm <span class="kw">import</span> SVC
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> make_pipeline
+
+<span class="cm"># SVM con kernel RBF: standardizza SEMPRE prima (come il k-NN)</span>
+modello <span class="op">=</span> <span class="fn">make_pipeline</span>(
+    <span class="fn">StandardScaler</span>(),
+    <span class="fn">SVC</span>(kernel<span class="op">=</span><span class="st">"rbf"</span>, C<span class="op">=</span><span class="nm">1.0</span>, gamma<span class="op">=</span><span class="st">"scale"</span>)  <span class="cm"># le due manopole: C e gamma</span>
+)
+modello.<span class="fn">fit</span>(X, y)
+<span class="bi">print</span>(modello.<span class="fn">predict</span>(X_nuovi))
+
+<span class="cm"># kernel lineare = confine dritto; prova RBF quando serve curvare</span>
+lineare <span class="op">=</span> <span class="fn">SVC</span>(kernel<span class="op">=</span><span class="st">"linear"</span>, C<span class="op">=</span><span class="nm">1.0</span>).<span class="fn">fit</span>(X, y)
+<span class="bi">print</span>(lineare.support_vectors_)     <span class="cm"># i pochi punti che sostengono il confine</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: l'SVM trova la <b>strada più larga</b> tra le due nuvole; le due linee tratteggiate sono i bordi
+      (il margine), la linea piena al centro è il confine, e i punti cerchiati sono i <b>vettori di supporto</b> —
+      appoggiati ai bordi. Avvicina le classi (slider) e la strada si restringe. Nel codice: <code>SVC</code> con
+      <code>kernel="rbf"</code> per i confini curvi (o <code>"linear"</code> per quelli dritti), le manopole
+      <code>C</code> e <code>gamma</code>, e <code>support_vectors_</code> per vedere i punti critici. Hai imparato uno
+      dei classificatori più belli: margine massimo, vettori di supporto, e il kernel trick. Il prossimo capitolo
+      approfondisce proprio l'idea di kernel e la porta anche alla regressione, con i <b>Gaussian Processes</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li><b>Margine massimo</b>: tra le infinite rette che separano, l'SVM sceglie quella che lascia la <b>strada più
+          larga</b> (più margine = più robustezza) (§10.1).</li>
+      <li>I <b>vettori di supporto</b> sono i pochi punti di frontiera che «reggono» il confine: gli altri non contano.
+          Massimizzare il margine equivale a minimizzare $\lVert w\rVert$ (§10.2).</li>
+      <li><b>Soft margin</b>: si concedono violazioni punite, per gestire dati non separabili. Il parametro <b>C</b>
+          regola quanto punirle (C grande = flessibile/overfitting, C piccolo = robusto) (§10.3).</li>
+      <li><b>Kernel trick</b>: separa classi intrecciate «sollevandole» in uno spazio con più dimensioni, calcolando
+          solo <b>somiglianze</b> (il kernel) senza costruire quello spazio. RBF = il kernel jolly per confini curvi
+          (§10.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Le SVM ci hanno regalato due idee luminose: cercare il confine <b>più robusto</b> (margine massimo) e curvare un
+    modello lineare tramite <b>somiglianze</b> (kernel). Quest'ultima idea è così ricca che merita un capitolo tutto
+    suo. Nel <strong>Capitolo 11</strong> guardiamo i <b>metodi kernel</b> più in generale e conosciamo i
+    <b>Gaussian Processes</b>: modelli che non danno solo una previsione, ma anche una misura onesta della propria
+    <b>incertezza</b> — quanto sono sicuri, punto per punto. Un'idea preziosa e sorprendentemente intuitiva.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Ci sono infinite rette che separano due classi. Quale principio usa l'SVM per scegliere «la migliore»? Perché una
+      retta con margine grande è preferibile a una con margine piccolo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Cosa sono i «vettori di supporto»? Cosa succederebbe al confine se spostassi un punto che <b>non</b> è un vettore
+      di supporto? E se ne spostassi uno che lo è?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      A cosa serve il «soft margin»? Descrivi il comportamento dell'SVM con C molto grande e con C molto piccolo,
+      collegandoli al compromesso bias-varianza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      In parole tue, cos'è il «kernel trick» e quale problema pratico risolve? Cosa calcola davvero il kernel al posto
+      delle coordinate nello spazio ad alte dimensioni?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.5</div>
+    <p style="margin-bottom:0">
+      Quando conviene un kernel lineare e quando un kernel RBF? Cosa controlla il parametro $\gamma$ dell'RBF?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      L'SVM sceglie la retta a <b>margine massimo</b>: quella che lascia la «strada» più larga possibile tra le due
+      classi (i punti più lontani dal confine da entrambi i lati). Un margine grande è preferibile perché offre più
+      «spazio di sicurezza»: un nuovo punto o un dato leggermente rumoroso ha meno probabilità di finire dal lato
+      sbagliato. Più margine = più robustezza e migliore generalizzazione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      I <b>vettori di supporto</b> sono i punti più vicini al confine, quelli appoggiati ai bordi della «strada»: sono
+      gli unici che determinano la posizione del confine. Spostare (o togliere) un punto che <b>non</b> è un vettore di
+      supporto non cambia nulla, perché è ben dentro il suo territorio e non tocca i bordi. Spostare un <b>vettore di
+      supporto</b>, invece, cambia il confine, perché è uno dei pilastri che lo sostengono.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      Il <b>soft margin</b> serve a gestire dati che non sono separabili perfettamente da una retta: permette ad alcuni
+      punti di violare il margine, ma con una penalità proporzionale allo sconfinamento. Con <b>C molto grande</b> le
+      violazioni sono punite severamente: l'SVM cerca di classificare bene ogni punto, diventando flessibile e a rischio
+      overfitting (varianza alta). Con <b>C molto piccolo</b> tollera più errori pur di tenere il margine largo e
+      liscio: modello più semplice e robusto, a rischio underfitting se esagerato (bias alto).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      Il <b>kernel trick</b> permette all'SVM di tracciare confini <b>curvi</b> comportandosi come se avesse «sollevato»
+      i dati in uno spazio con moltissime (anche infinite) dimensioni, dove diventano separabili da un piano dritto —
+      <b>senza</b> però costruire davvero quello spazio. Risolve il problema pratico che quello spazio sarebbe
+      impossibile da calcolare. Il segreto: all'SVM basta conoscere il <b>prodotto scalare</b> tra coppie di punti in
+      quello spazio, cioè quanto due punti sono <b>simili</b>, e il kernel calcola direttamente questa somiglianza
+      lavorando sui punti originali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.5</div>
+    <p style="margin-bottom:0">
+      Il <b>kernel lineare</b> conviene quando le classi sono già (quasi) separabili da una retta/piano: è semplice,
+      veloce e interpretabile. Il <b>kernel RBF</b> conviene quando il confine vero è curvo o complesso: è il jolly che
+      sa adattarsi a forme quasi qualsiasi. Il parametro $\gamma$ dell'RBF controlla quanto è «stretta» la campana di
+      somiglianza: $\gamma$ grande → l'influenza di ogni punto è molto locale, confini frastagliati e rischio
+      overfitting; $\gamma$ piccolo → influenza più ampia, confini più morbidi (fino all'underfitting se troppo piccolo).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.5 — SVM lineare a margine massimo su due nuvole verticali.
+   Il confine è verticale a x = centro; il margine dipende dalla separazione.
+   Vettori di supporto = punti più vicini al confine per ciascuna classe.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('sv-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('sv-out');
+  const sSep = document.getElementById('sv-sep');
+
+  // forme "base" delle due nuvole (offset orizzontale dal proprio centro)
+  const BASE0 = [[-0.6,4.5],[-1.2,5.5],[-0.3,3.4],[-1.5,4.2],[-0.8,6.1],[-1.9,5.0],[-0.5,2.6],[-1.3,3.0]];
+  const BASE1 = [[0.5,4.8],[1.3,5.6],[0.3,3.6],[1.7,4.4],[0.7,6.2],[1.9,5.1],[0.4,2.8],[1.2,3.2]];
+  const XMIN=0, XMAX=12, YMIN=1.5, YMAX=7.5;
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const sep = +sSep.value;              // distanza tra i centri
+    const cx = 6;                         // centro del grafico = confine
+    const c0 = cx - sep/2 - 1.0;          // centro nuvola 0 (a sinistra)
+    const c1 = cx + sep/2 + 1.0;          // centro nuvola 1 (a destra)
+    const P0 = BASE0.map(function(q){ return [c0+q[0], q[1]]; });
+    const P1 = BASE1.map(function(q){ return [c1+q[0], q[1]]; });
+
+    // vettore di supporto per lato = punto più vicino al confine cx
+    let right0=-Infinity, sv0=null; P0.forEach(function(q){ if(q[0]>right0){right0=q[0];sv0=q;} });
+    let left1=Infinity, sv1=null;   P1.forEach(function(q){ if(q[0]<left1){left1=q[0];sv1=q;} });
+    // confine ottimo = a metà tra i due vettori di supporto; margine = metà distanza
+    const boundary = (right0+left1)/2;
+    const margin = (left1-right0)/2;
+
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // la "strada" (margine) come banda tratteggiata
+    p.line(boundary-margin, YMIN, boundary-margin, YMAX, { color:'var(--ink-soft)', width:1.4, dash:'6 4' });
+    p.line(boundary+margin, YMIN, boundary+margin, YMAX, { color:'var(--ink-soft)', width:1.4, dash:'6 4' });
+    // il confine
+    p.line(boundary, YMIN, boundary, YMAX, { color:'var(--ink)', width:2.6 });
+    p.text(boundary, YMAX, 'confine', { size:11, color:'var(--ink)', anchor:'middle', dy:-4, bold:true });
+    // punti
+    P0.forEach(function(q){ const isSV=(q===sv0); p.dot(q[0],q[1],{ color:'var(--accent)', r:isSV?6.5:4.2, stroke:isSV?'var(--ink)':'#fff', sw:isSV?2:1 }); });
+    P1.forEach(function(q){ const isSV=(q===sv1); p.dot(q[0],q[1],{ color:'var(--warm)', r:isSV?6.5:4.2, stroke:isSV?'var(--ink)':'#fff', sw:isSV?2:1 }); });
+
+    const sepMsg = margin>0.05
+      ? 'Le classi sono separate: l\'SVM traccia la <b>strada più larga</b> (bordi tratteggiati) tra loro. Margine ≈ <b>'+margin.toFixed(2)+'</b>.'
+      : 'Le classi quasi si toccano: la strada si è ridotta a un filo. Con dati sovrapposti servirebbe il <b>soft margin</b> (parametro C).';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">'+sepMsg+
+      ' I due punti <b>cerchiati</b> sono i <b>vettori di supporto</b>: gli unici che toccano i bordi e decidono il confine. '+
+      '<span style="color:var(--ink-soft)">Tutti gli altri potresti spostarli senza cambiare nulla.</span></div>';
+  }
+  sSep.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>
