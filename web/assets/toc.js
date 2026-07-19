@@ -196,7 +196,7 @@ const TOC = [
     n: 13,
     titolo: "Manipolare il DOM",
     file: "cap13-manipolare-dom.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Cambiare stili e classi" },
       { id: "s13-2", n: "13.2", t: "Creare e rimuovere elementi" },
