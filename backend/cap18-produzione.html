@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Andare in produzione — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 18 · Il traguardo</div>
+    <h1>Andare in produzione</h1>
+    <p class="standfirst">
+      Ci siamo: il gran finale. Abbiamo costruito un backend completo — API validate, database persistente con
+      relazioni, autenticazione sicura, gestione dei file — e l'abbiamo impacchettato con Docker e orchestrato con
+      Compose, dietro nginx e HTTPS. Manca l'ultimo, emozionante passo: portarlo <b>online</b>, su un server vero,
+      raggiungibile da chiunque nel mondo attraverso un dominio. In questo capitolo affrontiamo il <b>deploy</b>: cos'è
+      un server VPS e come sceglierlo (§18.1), come accedervi e metterlo in sicurezza (§18.2), come far girare l'app
+      in modo robusto (§18.3), come collegare un <b>dominio</b> e andare live (§18.4), e come <b>mantenere</b> il tutto
+      nel tempo — log, backup, aggiornamenti (§18.5). <mark>È il momento in cui ciò che hai costruito smette di essere
+      un esercizio e diventa un servizio reale, vivo su Internet. La fine di un percorso, e l'inizio delle cose che
+      costruirai.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Un <b>server VPS</b> (§18.1), accesso e <b>sicurezza</b> con SSH e firewall (§18.2), <b>worker e systemd</b> per
+      un'app robusta (§18.3), <b>dominio e DNS</b> per andare live (§18.4), <b>manutenzione</b>: log, backup, update
+      (§18.5). Nel laboratorio (§18.6) il percorso di deploy completo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: rendere reale ciò che hai costruito</div>
+    <p style="margin-bottom:0">
+      Un'applicazione ha valore solo quando <b>le persone possono usarla</b>. Il deploy è il ponte tra «l'ho scritta»
+      e «è online». <mark>Saper mettere in produzione un backend — in sicurezza e in modo mantenibile — è ciò che
+      distingue chi sa <em>programmare</em> da chi sa <em>consegnare software</em>.</mark> È anche il momento in cui
+      tutti i pezzi del libro si uniscono in un unico sistema funzionante.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">Sezione 18.1</span>Un server vero (VPS)</h2>
+
+  <p class="lead">
+    Per essere online 24 ore su 24, la tua app ha bisogno di un computer sempre acceso e connesso a Internet: un
+    <b>server</b>. Non serve comprarne uno fisico: si <b>noleggia</b> un <b>VPS</b> (Virtual Private Server), un
+    computer virtuale nel data center di un provider.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il VPS in breve <span class="tag">un computer nel cloud, in affitto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>cos'è un <b>VPS</b></dt>
+        <dd>una porzione di un potente server fisico, tua in esclusiva, con un suo sistema operativo (di solito
+            <b>Linux</b>), CPU, RAM e disco. <mark>Un computer completo che affitti a poco al mese</mark> e controlli
+            da remoto.</dd>
+        <dt>i <b>provider</b></dt>
+        <dd>ce ne sono molti: Hetzner, DigitalOcean, Linode, AWS, Google Cloud… <mark>Per iniziare, un VPS piccolo
+            (pochi euro/mese) basta e avanza.</mark> Scegli una regione (data center) vicina ai tuoi utenti.</dd>
+        <dt>cosa ci metti sopra</dt>
+        <dd>ci installi <b>Docker</b> e ci porti il tuo <code>docker-compose.yml</code> (Cap. 16): l'intero stack —
+            app, database, MinIO, nginx — gira lì. <mark>Il lavoro fatto in locale si trasferisce quasi identico.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>Una parola sui costi e sull'invecchiamento</b> (come promesso nell'introduzione): prezzi, nomi dei provider e
+      interfacce cambiano nel tempo — non fidarti di cifre precise a lungo termine. <mark>Ciò che <b>non</b> cambia</mark>
+      è il concetto: affitti un computer Linux nel cloud, ci accedi da remoto, ci fai girare i tuoi container. Questa
+      idea resta valida qualunque provider userai. (Esistono anche piattaforme «gestite» — PaaS — che semplificano il
+      deploy nascondendo il server; ottime, ma capire il VPS ti dà il controllo e la comprensione di cosa succede
+      davvero.)
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">Sezione 18.2</span>Accesso e sicurezza di base</h2>
+
+  <p class="lead">
+    Al server si accede da remoto con <b>SSH</b> (l'hai incontrato nel libro «Reti»): una connessione sicura al suo
+    terminale. E poiché il server è esposto a Internet, va <b>messo in sicurezza</b> fin da subito.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — connettersi e mettere in sicurezza</div>
+    <pre><span class="c"># connettiti al server via SSH (dal tuo computer)</span>
+<span class="p">$</span> <span class="cmd">ssh</span> <span class="ar">utente@indirizzo-ip-del-server</span>
+
+<span class="c"># (sul server) attiva un firewall: apri solo le porte necessarie</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">OpenSSH</span>       <span class="c"># per non chiuderti fuori!</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">80</span>            <span class="c"># HTTP</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">443</span>           <span class="c"># HTTPS</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">enable</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le pratiche di sicurezza di base <span class="tag">SSH · chiavi · firewall · aggiornamenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>SSH con chiavi</b>, non password</dt>
+        <dd>accedi con una <b>chiave crittografica</b> invece di una password: molto più sicuro (impossibile da
+            «indovinare»). <mark>Disabilita il login con password</mark> una volta configurata la chiave.</dd>
+        <dt>il <b>firewall</b></dt>
+        <dd>chiudi <b>tutte</b> le porte tranne quelle indispensabili: SSH (per amministrare), 80 e 443 (per il web).
+            <mark>Meno porte aperte, meno superficie d'attacco.</mark> Il database e MinIO restano interni allo stack,
+            <b>non</b> esposti al mondo.</dd>
+        <dt><b>aggiornamenti</b> regolari</dt>
+        <dd>tieni aggiornato il sistema (<code>apt update &amp;&amp; apt upgrade</code>): le patch di sicurezza sono
+            la prima difesa contro le vulnerabilità note.</dd>
+        <dt><b>utente non-root</b></dt>
+        <dd>non lavorare come amministratore (<code>root</code>): crea un utente normale e usa <code>sudo</code> quando
+            serve. Limita i danni di un errore o di un attacco.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La sicurezza del server è un tema vasto, ma <mark>queste basi coprono la gran parte dei rischi comuni</mark>:
+      chiavi SSH, firewall stretto, aggiornamenti, niente root. E ricorda i segreti (Cap. 9, 13): le password del
+      database, le chiavi dei token, le credenziali di MinIO vanno in <b>variabili d'ambiente</b> sul server (spesso
+      in un file <code>.env</code> letto da Compose), <b>mai</b> nel codice o su git.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">Sezione 18.3</span>Worker e systemd</h2>
+
+  <p class="lead">
+    In sviluppo abbiamo avviato l'app con <code>uvicorn --reload</code>. In produzione servono due cose in più:
+    <b>più processi</b> (worker) per reggere il traffico, e la garanzia che l'app <b>si riavvii da sola</b> se cade o
+    se il server si riavvia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Robustezza in produzione <span class="tag">worker · riavvio automatico</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>più <b>worker</b></dt>
+        <dd>un solo processo Python gestisce una richiesta per volta a livello di CPU; con <b>più worker</b> (processi
+            paralleli) l'app serve più utenti insieme. Si avvia uvicorn/gunicorn con più worker, o si scalano più
+            container (Cap. 15). <mark>Regola pratica di partenza: circa 2×(numero di CPU)+1 worker.</mark></dd>
+        <dt><b>niente <code>--reload</code></b></dt>
+        <dd>l'opzione <code>--reload</code> è solo per lo sviluppo (ricarica a ogni modifica); in produzione si toglie,
+            per stabilità e prestazioni.</dd>
+        <dt><b>riavvio automatico</b></dt>
+        <dd>l'app deve ripartire da sola se va in crash o se il server si riavvia. <mark>Con Docker basta la policy
+            <code>restart: always</code></mark> nel <code>docker-compose.yml</code>; senza Docker, si usa
+            <b>systemd</b> (il gestore dei servizi di Linux) per tenere viva l'app come «servizio» di sistema.</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">docker-compose.yml — restart automatico</div>
+      <pre><span class="kw">services</span>:
+  <span class="ar">api</span>:
+    <span class="kw">build</span>: <span class="ar">.</span>
+    <span class="kw">restart</span>: <span class="ar">always</span>        <span class="cm"># riparte da solo se cade o al riavvio del server</span></pre>
+    </div>
+    <div class="f-note">
+      Con Docker Compose, la vita è semplice: <code>restart: always</code> su ogni servizio, e lo stack si
+      auto-guarisce. <mark>Se usi Docker (consigliato), systemd non ti serve quasi</mark> — ma è utile conoscerlo,
+      perché è il modo «tradizionale» di far girare un'app come servizio permanente su Linux, e lo incontrerai. Il
+      concetto chiave: in produzione, <b>l'app deve stare su da sola, senza che tu la sorvegli</b>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">Sezione 18.4</span>Dominio, DNS e messa online</h2>
+
+  <p class="lead">
+    Il tuo server ha un <b>indirizzo IP</b> (numeri), ma gli utenti hanno bisogno di un <b>nome</b> facile: un
+    <b>dominio</b> come <code>mio-sito.com</code>. Collegare il dominio al server si fa con il <b>DNS</b> (il libro
+    «Reti»: la «rubrica» che traduce nomi in IP).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dal dominio al sito live <span class="tag">registra · punta · HTTPS · live</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>registra un dominio</b></dt>
+        <dd>compri un nome (pochi euro/anno) da un registrar. È il tuo indirizzo pubblico.</dd>
+        <dt>2 · <b>punta il DNS al server</b></dt>
+        <dd>crei un <b>record A</b> che associa il dominio all'<b>indirizzo IP</b> del tuo VPS. <mark>Da quel momento,
+            <code>mio-sito.com</code> «significa» il tuo server</mark> (Cap. «Reti»: risoluzione DNS).</dd>
+        <dt>3 · <b>attiva l'HTTPS</b></dt>
+        <dd>con il dominio che punta al server, lanci <code>certbot --nginx -d mio-sito.com</code> (Cap. 17): il
+            certificato viene emesso e il sito va in HTTPS.</dd>
+        <dt>4 · <b>vai live</b></dt>
+        <dd>porti il progetto sul server (git clone / copia), imposti i segreti nel <code>.env</code>, e lanci
+            <code>docker compose up -d</code>. <mark>Il tuo backend è online.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La propagazione DNS può richiedere da minuti a qualche ora la prima volta (Cap. «Reti»: le cache). Ma una volta
+      pronta, <mark>chiunque nel mondo, digitando il tuo dominio, raggiunge il tuo backend</mark>: la richiesta viaggia
+      dal suo browser, il DNS la indirizza al tuo server, nginx la accoglie in HTTPS e la passa all'app, che risponde
+      leggendo dal database. Tutto ciò che hai imparato, al lavoro insieme — come nel widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-prod">
+    <div class="w-head">
+      <span>Il viaggio completo di una richiesta in produzione</span>
+      <span class="hint">premi «invia» e segui l'intero stack</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="display:flex; align-items:stretch; justify-content:center; gap:.35rem; flex-wrap:wrap">
+        <div class="pr-node" id="pr-user" style="text-align:center; border:2px solid var(--ink-soft); border-radius:9px; padding:.5rem .55rem; min-width:78px; transition:all .25s"><div style="font-size:1.3rem">🌐</div><div style="font-size:.72rem"><b>utente</b></div></div>
+        <div style="align-self:center; color:var(--ink-faint)">→</div>
+        <div class="pr-node" id="pr-dns" style="text-align:center; border:2px solid var(--ink-soft); border-radius:9px; padding:.5rem .55rem; min-width:78px; transition:all .25s"><div style="font-size:1.3rem">📖</div><div style="font-size:.72rem"><b>DNS</b></div></div>
+        <div style="align-self:center; color:var(--ink-faint)">→</div>
+        <div class="pr-node" id="pr-nginx" style="text-align:center; border:2px solid var(--ink-soft); border-radius:9px; padding:.5rem .55rem; min-width:78px; transition:all .25s"><div style="font-size:1.3rem">🛡️</div><div style="font-size:.72rem"><b>nginx</b><br>HTTPS</div></div>
+        <div style="align-self:center; color:var(--ink-faint)">→</div>
+        <div class="pr-node" id="pr-api" style="text-align:center; border:2px solid var(--ink-soft); border-radius:9px; padding:.5rem .55rem; min-width:78px; transition:all .25s"><div style="font-size:1.3rem">⚙️</div><div style="font-size:.72rem"><b>FastAPI</b></div></div>
+        <div style="align-self:center; color:var(--ink-faint)">→</div>
+        <div class="pr-node" id="pr-db" style="text-align:center; border:2px solid var(--ink-soft); border-radius:9px; padding:.5rem .55rem; min-width:78px; transition:all .25s"><div style="font-size:1.3rem">🗄️</div><div style="font-size:.72rem"><b>database</b></div></div>
+      </div>
+      <div id="pr-step" style="margin-top:1rem; min-height:2.6em; text-align:center; color:var(--ink); font-size:.96rem; display:flex; align-items:center; justify-content:center; padding:0 .5rem"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="pr-go">▶ invia una richiesta al sito live</button>
+      <button class="btn ghost" id="pr-reset">reset</button>
+    </div>
+    <div class="w-readout" id="pr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">Sezione 18.5</span>Manutenzione: log, backup, update</h2>
+
+  <p class="lead">
+    Il deploy non è la fine: un servizio vivo va <b>mantenuto</b>. Tre abitudini fanno la differenza tra un'app che
+    dura e una che crolla al primo problema.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le tre cure di un servizio vivo <span class="tag">log · backup · aggiornamenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>i log</b>: gli occhi sul sistema</dt>
+        <dd>l'app e nginx scrivono <b>log</b> di ciò che accade (richieste, errori). <code>docker compose logs</code>
+            te li mostra. <mark>Quando qualcosa non va, i log sono la prima cosa da guardare</mark> (Cap. 11: gli
+            errori 5xx). Per progetti seri si usano strumenti di monitoraggio che avvisano in caso di problemi.</dd>
+        <dt><b>i backup</b>: la rete di sicurezza</dt>
+        <dd>fai copie <b>regolari e automatiche</b> del database (e dei file in MinIO). <mark>Un giorno ti
+            salveranno</mark>: dischi che si rompono, cancellazioni per errore, aggiornamenti andati male. Un backup
+            non testato non è un backup: verifica ogni tanto di saperlo <b>ripristinare</b>.</dd>
+        <dt><b>gli aggiornamenti</b>: sicurezza e stabilità</dt>
+        <dd>aggiorna il sistema operativo, le immagini Docker e le dipendenze — soprattutto per le <b>patch di
+            sicurezza</b>. Fallo con criterio (prima in test, poi in produzione), ma <b>fallo</b>: il software che non
+            si aggiorna diventa vulnerabile.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un ciclo di aggiornamento tipico con Docker: modifichi il codice, fai <code>git push</code>, sul server
+      <code>git pull</code> e <code>docker compose up -d --build</code> per ricostruire e ripartire con la nuova
+      versione. <mark>Con i container, aggiornare è pulito e reversibile</mark> (se qualcosa va storto, torni alla
+      versione precedente). Automatizzare questo processo è ciò che si chiama <b>CI/CD</b>: un tema avanzato, ma il
+      seme è già qui.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-6"><span class="secnum">Sezione 18.6</span>Laboratorio: il deploy completo</h2>
+
+  <p class="lead">
+    Ecco, in sintesi, il percorso completo dal codice locale al sito online — la mappa che seguirai per mettere in
+    produzione il tuo backend.
+  </p>
+
+  <div class="term">
+    <div class="t-head">la ricetta del deploy, dall'inizio alla fine</div>
+    <pre><span class="c"># --- una volta sola: preparazione ---</span>
+<span class="c">#  1. noleggia un VPS (Linux) e prendi il suo indirizzo IP</span>
+<span class="c">#  2. registra un dominio e crea un record A: dominio -> IP del server</span>
+
+<span class="c"># --- sul server, via SSH ---</span>
+<span class="p">$</span> <span class="cmd">ssh</span> <span class="ar">utente@ip-del-server</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">OpenSSH</span> && <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">80</span> && <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">allow</span> <span class="ar">443</span> && <span class="cmd">sudo</span> <span class="cmd">ufw</span> <span class="ar">enable</span>
+<span class="p">$</span> <span class="c"># installa Docker + Docker Compose (dalla guida ufficiale)</span>
+
+<span class="c"># --- porta il progetto e vai live ---</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">clone</span> <span class="ar">il-tuo-repo.git</span> && <span class="cmd">cd</span> <span class="ar">progetto</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">.env</span>              <span class="c"># imposta i segreti (password DB, chiave token, MinIO)</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">compose</span> <span class="ar">up</span> <span class="fl">-d</span>   <span class="c"># avvia tutto lo stack in background</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">certbot</span> <span class="fl">--nginx</span> <span class="fl">-d</span> <span class="ar">mio-sito.com</span>   <span class="c"># attiva l'HTTPS</span>
+
+<span class="c"># il tuo backend è ONLINE: https://mio-sito.com  🎉</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🏁</span> Ce l'hai fatta</div>
+    <p style="margin-bottom:0">
+      Fermati e guarda cosa hai costruito, dal Capitolo 1 a qui: un'<b>API</b> con FastAPI, con dati validati da
+      <b>Pydantic</b>, salvati in un <b>database</b> tramite <b>SQLAlchemy</b>, con <b>relazioni</b> tra le tabelle,
+      protetta da <b>autenticazione</b>, capace di gestire <b>file</b> con MinIO, impacchettata in <b>Docker</b>,
+      orchestrata con <b>Compose</b>, servita da <b>nginx</b> in <b>HTTPS</b>, e ora <b>online</b> su un server con un
+      dominio. <mark>Hai costruito, pezzo dopo pezzo, un backend completo e reale</mark> — e, cosa più importante, hai
+      capito <em>come</em> e <em>perché</em> funziona ogni parte.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>VPS</b> è un computer Linux noleggiato nel cloud: ci installi Docker e ci porti il tuo stack
+          Compose (§18.1).</li>
+      <li>Sicurezza di base: <b>SSH con chiavi</b> (no password), <b>firewall</b> stretto (solo SSH/80/443), sistema
+          aggiornato, non lavorare da root, segreti in variabili d'ambiente (§18.2).</li>
+      <li>In produzione: <b>più worker</b>, niente <code>--reload</code>, <b>riavvio automatico</b>
+          (<code>restart: always</code> o systemd) (§18.3).</li>
+      <li><b>Dominio + record A</b> verso l'IP, poi <code>certbot</code> per l'HTTPS e <code>docker compose up -d</code>:
+          sei live (§18.4).</li>
+      <li>Manutieni: <b>log</b> (diagnosi), <b>backup</b> (regolari e testati), <b>aggiornamenti</b> (sicurezza)
+          (§18.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Questo è il traguardo del libro — ma è un punto di partenza per te. Da qui i sentieri si aprono: approfondire la
+    <b>sicurezza</b> e le prestazioni, aggiungere <b>test automatici</b>, code di lavoro in background, cache
+    (Redis), automatizzare il deploy con <b>CI/CD</b>, o crescere verso l'orchestrazione con Kubernetes quando (e
+    <em>se</em>) il traffico lo richiederà. Ma non lasciare che la lista ti intimidisca: <mark>hai già le fondamenta
+    solide su cui tutto il resto si appoggia</mark>. Il modo migliore per continuare è lo stesso di sempre —
+    <b>costruire</b>: prendi un'idea tua, e portala online, dall'inizio alla fine. Ora sai come si fa. Buon deploy. 🚀
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-7"><span class="secnum">Sezione 18.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.1</div>
+    <p style="margin-bottom:0">
+      Cos'è un VPS e perché si preferisce noleggiarlo invece di usare il proprio computer per ospitare un'app in
+      produzione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.2</div>
+    <p style="margin-bottom:0">
+      Elenca tre pratiche di sicurezza di base per un server esposto a Internet. Perché il firewall dovrebbe
+      permettere l'accesso <b>solo</b> a poche porte?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.3</div>
+    <p style="margin-bottom:0">
+      Perché in produzione si toglie <code>--reload</code> e si usano più <b>worker</b>? Cosa garantisce
+      <code>restart: always</code> nel file compose?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.4</div>
+    <p style="margin-bottom:0">
+      Descrivi, in ordine, cosa succede quando un utente digita <code>https://mio-sito.com/api/contatti</code> nel
+      browser, dal DNS fino alla risposta — nominando i componenti coinvolti (DNS, nginx, FastAPI, database).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.5</div>
+    <p style="margin-bottom:0">
+      Perché i backup vanno <b>testati</b> ogni tanto, e non solo creati? E perché gli aggiornamenti di sicurezza non
+      andrebbero rimandati?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-8"><span class="secnum">Sezione 18.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.1</div>
+    <p style="margin-bottom:0">
+      Un <b>VPS</b> (Virtual Private Server) è un computer virtuale, con il suo sistema operativo (di solito Linux),
+      noleggiato nel data center di un provider. Si preferisce al proprio computer perché deve stare <b>sempre acceso
+      e connesso</b>, avere un <b>indirizzo IP pubblico</b> stabile, banda affidabile e sicurezza fisica del data
+      center — condizioni che un PC di casa non offre (si spegne, cambia IP, la connessione domestica non è pensata per
+      servire il mondo). E costa pochi euro al mese.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.2</div>
+    <p style="margin-bottom:0">
+      Tre pratiche: <b>(1)</b> accesso <b>SSH con chiavi</b> crittografiche invece di password; <b>(2)</b>
+      <b>firewall</b> che apre solo le porte necessarie (SSH, 80, 443); <b>(3)</b> mantenere il sistema
+      <b>aggiornato</b> (patch di sicurezza) e non lavorare come root. Il firewall permette solo poche porte per
+      <b>ridurre la superficie d'attacco</b>: ogni porta aperta è una potenziale via d'ingresso; chiudendo tutto
+      tranne l'indispensabile, si eliminano moltissimi rischi (il database e MinIO, per esempio, restano interni e
+      irraggiungibili dall'esterno).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.3</div>
+    <p style="margin-bottom:0">
+      <code>--reload</code> serve solo in sviluppo (ricarica il codice a ogni modifica): in produzione è inutile e
+      dannoso per stabilità e prestazioni, quindi si toglie. Si usano più <b>worker</b> (processi paralleli) per
+      servire <b>più utenti contemporaneamente</b>, sfruttando le CPU. <code>restart: always</code> garantisce che il
+      container <b>riparta automaticamente</b> se l'app va in crash o se il server viene riavviato: l'app resta su da
+      sola, senza intervento manuale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.4</div>
+    <p style="margin-bottom:0">
+      <b>(1)</b> Il browser chiede al <b>DNS</b> l'indirizzo IP di <code>mio-sito.com</code> e lo ottiene (il record A
+      punta al server). <b>(2)</b> Invia la richiesta HTTPS a quell'IP, dove risponde <b>nginx</b> (porta 443), che
+      <b>decifra</b> l'HTTPS. <b>(3)</b> nginx, come reverse proxy, <b>inoltra</b> la richiesta all'app
+      <b>FastAPI</b>. <b>(4)</b> FastAPI elabora, interroga il <b>database</b> (via SQLAlchemy) per i contatti, e
+      costruisce la risposta JSON. <b>(5)</b> La risposta torna indietro: FastAPI → nginx (che la <b>cifra</b>) →
+      browser dell'utente, che la mostra. Tutti i pezzi del libro, in sequenza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.5</div>
+    <p style="margin-bottom:0">
+      I backup vanno <b>testati</b> perché un backup che non si riesce a <b>ripristinare</b> è inutile: potrebbe essere
+      corrotto, incompleto o in un formato che non sai recuperare — e lo scopriresti solo nel momento peggiore, durante
+      un'emergenza. Verificare ogni tanto il ripristino dà la certezza che funzioni. Gli aggiornamenti di sicurezza
+      non vanno rimandati perché correggono <b>vulnerabilità note</b>: una volta pubblica, una falla è nota anche agli
+      attaccanti, e un sistema non aggiornato diventa un bersaglio facile. Applicare le patch tempestivamente è una
+      delle difese più efficaci.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §18.4 — il viaggio completo di una richiesta in produzione (capstone)
+   ========================================================================= */
+(function () {
+  const nodes = {
+    user: document.getElementById('pr-user'),
+    dns: document.getElementById('pr-dns'),
+    nginx: document.getElementById('pr-nginx'),
+    api: document.getElementById('pr-api'),
+    db: document.getElementById('pr-db')
+  };
+  if (!nodes.user) return;
+  const step = document.getElementById('pr-step');
+  const out = document.getElementById('pr-out');
+  const go = document.getElementById('pr-go');
+
+  const ACC = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2f5d8c';
+  const GRN = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#2c6b4f';
+
+  function spegni() {
+    Object.values(nodes).forEach(function (n) { n.style.borderColor = 'var(--ink-soft)'; n.style.background = 'transparent'; n.style.transform = 'none'; });
+  }
+  function accendi(n, c) {
+    spegni();
+    n.style.borderColor = c; n.style.background = 'color-mix(in srgb, ' + c + ' 13%, transparent)'; n.style.transform = 'translateY(-4px)';
+  }
+
+  const FASI = [
+    { n: nodes.user, c: ACC, t: '1 · L\'<b>utente</b> apre <code>https://mio-sito.com/api/contatti</code> nel browser.' },
+    { n: nodes.dns, c: ACC, t: '2 · Il <b>DNS</b> traduce il dominio nell\'<b>IP del server</b> (record A).' },
+    { n: nodes.nginx, c: ACC, t: '3 · <b>nginx</b> (porta 443) riceve la richiesta e <b>decifra l\'HTTPS</b>.' },
+    { n: nodes.api, c: ACC, t: '4 · nginx <b>inoltra</b> all\'app <b>FastAPI</b> (reverse proxy), che verifica il token.' },
+    { n: nodes.db, c: ACC, t: '5 · FastAPI interroga il <b>database</b> (SQLAlchemy): «dammi i contatti».' },
+    { n: nodes.api, c: GRN, t: '6 · L\'app costruisce la risposta <b>JSON</b> (validata da Pydantic).' },
+    { n: nodes.nginx, c: GRN, t: '7 · nginx <b>cifra</b> la risposta in HTTPS e la rimanda indietro.' },
+    { n: nodes.user, c: GRN, t: '8 · L\'<b>utente</b> riceve i dati. Viaggio completo, in produzione! ✅🎉' }
+  ];
+
+  let timer = null;
+  function play() {
+    go.disabled = true;
+    let i = 0;
+    (function next() {
+      if (i >= FASI.length) { go.disabled = false; return; }
+      const f = FASI[i]; accendi(f.n, f.c); step.innerHTML = f.t; i++;
+      timer = setTimeout(next, 1100);
+    })();
+  }
+
+  go.addEventListener('click', play);
+  document.getElementById('pr-reset').addEventListener('click', function () {
+    if (timer) clearTimeout(timer); go.disabled = false; spegni(); step.textContent = '';
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Premi «invia»: la richiesta attraversa <b>tutto lo stack di produzione</b> che hai costruito nel libro — DNS, nginx+HTTPS, FastAPI, database — e torna indietro. È il tuo backend, vivo su Internet.</div>';
+})();
+</script>
+</body>
+</html>

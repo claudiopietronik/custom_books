@@ -29,4 +29,4 @@ Internet** e **Il Web**.
 - [x] 15 — Docker: impacchettare l'app
 - [x] 16 — Docker Compose
 - [x] 17 — nginx: reverse proxy e HTTPS
-- [ ] 18 — Andare in produzione
+- [x] 18 — Andare in produzione

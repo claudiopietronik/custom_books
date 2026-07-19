@@ -272,7 +272,7 @@ const TOC = [
     n: 18,
     titolo: "Andare in produzione",
     file: "cap18-produzione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Un server vero (VPS)" },
       { id: "s18-2", n: "18.2", t: "Accesso e sicurezza di base" },
