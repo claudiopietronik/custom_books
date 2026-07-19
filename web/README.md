@@ -14,7 +14,7 @@ Contenuto originale scritto ex novo.
 - [x] 1 — Il web e i suoi tre linguaggi
 - [x] 2 — HTML: la struttura
 - [x] 3 — I tag del testo
-- [ ] 4 — Link, immagini e liste
+- [x] 4 — Link, immagini e liste
 - [ ] 5 — Form e input
 - [ ] 6 — CSS: dare stile
 - [ ] 7 — I selettori

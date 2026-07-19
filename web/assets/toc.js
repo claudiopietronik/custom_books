@@ -58,7 +58,7 @@ const TOC = [
     n: 4,
     titolo: "Link, immagini e liste",
     file: "cap04-link-immagini.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "I link con <a>" },
       { id: "s4-2", n: "4.2", t: "Le immagini con <img>" },
