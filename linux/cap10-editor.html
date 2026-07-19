@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Editor di testo — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Editor di testo</h1>
+    <p class="standfirst">
+      Finora hai creato file solo con <code>echo</code> e la redirezione, ma per scrivere e modificare file veri — una
+      configurazione, uno script, delle note — serve un <b>editor di testo</b> che funzioni <em>dentro</em> il
+      terminale (perché sui server, spesso, non c'è un'interfaccia grafica per aprire un editor a finestre). Ce ne sono
+      due che devi conoscere: <b>nano</b>, semplice e amichevole, che imparerai in cinque minuti; e <b>vim</b>,
+      potentissimo ma con una curva d'apprendimento ripida — e con una fama leggendaria: è famoso per il fatto che i
+      principianti «restano intrappolati» dentro, non sapendo come uscirne (è forse la domanda più cercata online su
+      Linux!). Non ti serve diventare esperto di vim, ma sapere <b>sopravvivere</b> se ci finisci dentro sì. In questo
+      capitolo: perché un editor da terminale (§10.1), <b>nano</b> (§10.2), la <b>sopravvivenza con vim</b> (§10.3), e
+      quale usare quando (§10.4). <mark>Alla fine saprai modificare un file dal terminale con serenità — e non resterai
+      mai più intrappolato in vim.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché un editor da terminale (§10.1), <b>nano</b> semplice e pratico (§10.2), <b>vim</b>: cenni e sopravvivenza
+      (§10.3), quale usare quando (§10.4). Nel laboratorio (§10.5) modifichi un file.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: prima o poi devi modificare un file</div>
+    <p style="margin-bottom:0">
+      Configurare un servizio, correggere uno script, scrivere un file: succede in continuazione, e sui server puoi
+      farlo <b>solo</b> da terminale. <mark>Saper usare almeno nano — e sapersi districare da vim — è una competenza
+      pratica indispensabile.</mark> Il capitolo più «di sopravvivenza» del libro: poche cose, ma che ti salvano dal
+      panico quando ti trovi davanti a un editor testuale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Perché serve un editor da terminale</h2>
+
+  <p class="lead">
+    Sul tuo computer con interfaccia grafica potresti aprire un file con un editor a finestre. Ma sui <b>server</b> —
+    dove passerai molto tempo, via SSH — spesso non c'è grafica: solo il terminale. Lì, per modificare un file, ti
+    serve un editor che viva nel terminale stesso.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'editor che «vive» nel terminale</div>
+    <p style="margin-bottom:0">
+      Un editor da terminale occupa lo schermo testuale e ti fa scrivere e modificare il file lì dentro, usando la
+      <b>tastiera</b> per tutto (niente mouse). Lo lanci passando il nome del file: <code>nano config.txt</code> apre
+      quel file (o lo crea se non esiste) nell'editor. <mark>Il vantaggio: funziona <b>ovunque</b></mark> — sul tuo PC,
+      su un server remoto, dentro un container Docker — perché non dipende da un'interfaccia grafica. È lo strumento
+      con cui, ad esempio, hai «immaginato» di modificare i file di configurazione nel libro «Backend» (nginx,
+      <code>.env</code>). Imparare almeno un editor da terminale è quindi indispensabile per lavorare con sistemi
+      reali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>nano: semplice e pratico</h2>
+
+  <p class="lead">
+    <b>nano</b> è l'editor da terminale più amichevole: si usa in modo intuitivo (digiti e il testo appare, come ti
+    aspetti), e mostra sempre in basso i comandi principali. Se puoi scegliere, per iniziare, scegli nano.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — aprire e usare nano</div>
+    <pre><span class="c"># apri (o crea) un file con nano</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">note.txt</span>
+
+<span class="c"># dentro nano: scrivi normalmente. In basso vedi i comandi (^ = tasto Ctrl):</span>
+<span class="out">  GNU nano          note.txt
+
+  Ciao, questo è il mio file.
+  Lo sto scrivendo con nano.
+
+  ^O Salva   ^X Esci   ^W Cerca   ^K Taglia riga   ^G Aiuto</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">nano: i comandi essenziali <span class="tag">^ significa Ctrl</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>scrivere</b></dt>
+        <dd>digiti e basta: il testo appare dove c'è il cursore, che muovi con le <b>frecce</b>. <mark>Nessuna
+            «modalità» da imparare</mark>: si comporta come ti aspetti.</dd>
+        <dt><span class="mono">Ctrl+O</span> — salvare («Output»)</dt>
+        <dd>salva il file. nano chiede conferma del nome: premi <b>Invio</b>. <mark>La <code>^</code> nella barra
+            significa <code>Ctrl</code></mark>: <code>^O</code> = <code>Ctrl+O</code>.</dd>
+        <dt><span class="mono">Ctrl+X</span> — uscire</dt>
+        <dd>chiude nano. Se hai modifiche non salvate, chiede se salvarle (<code>Y</code> sì / <code>N</code> no).
+            <mark>Il modo di uscire è sempre in basso a sinistra</mark>: non resti mai intrappolato.</dd>
+        <dt>altri utili</dt>
+        <dd><code>Ctrl+W</code> (cerca), <code>Ctrl+K</code> (taglia la riga), <code>Ctrl+U</code> (incolla). Ma con
+            <b>scrivere + Ctrl+O + Ctrl+X</b> fai già tutto l'essenziale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco perché nano è amato dai principianti: <mark>i comandi sono <b>sempre visibili</b> in fondo allo schermo</mark>,
+      quindi non devi ricordarli a memoria, e scrivere funziona in modo naturale. In tre gesti — apri, scrivi, salva
+      (Ctrl+O) ed esci (Ctrl+X) — sei operativo. Se il tuo sistema non ha nano, si installa facilmente (Cap. 11);
+      spesso è già presente.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>vim: cenni e sopravvivenza</h2>
+
+  <p class="lead">
+    <b>vim</b> è un editor potentissimo e amatissimo dagli esperti, ma funziona in modo <b>completamente diverso</b> da
+    tutto il resto — e per questo intrappola i principianti. Non devi impararlo tutto: ti basta capire il suo
+    meccanismo di base e, soprattutto, sapere come <b>uscirne</b>.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il segreto di vim: le «modalità»</div>
+    <p style="margin-bottom:0">
+      Ecco cosa spiazza tutti: vim ha <b>modalità</b> diverse. All'apertura sei in <b>modalità normale</b>, dove i
+      tasti <b>non scrivono</b> testo ma danno comandi (muoversi, cancellare…). Se provi a digitare, «non succede
+      niente di sensato» — ed è qui che i principianti si spaventano. <mark>Per <b>scrivere</b> devi entrare in
+      modalità inserimento premendo <code>i</code></mark> («insert»); da lì digiti normalmente. Per tornare in
+      modalità normale (per salvare/uscire), premi <code>Esc</code>. Questa separazione «comandi vs scrittura» è
+      potente per chi la padroneggia, ma è la fonte di tutta la confusione iniziale.
+    </p>
+  </div>
+
+  <div class="term">
+    <div class="t-head">vim — la sopravvivenza minima</div>
+    <pre><span class="c"># apri un file</span>
+<span class="p">$</span> <span class="cmd">vim</span> <span class="ar">file.txt</span>
+
+<span class="c"># SEI IN MODALITÀ NORMALE. Per scrivere:</span>
+<span class="out">premi  i        -&gt; entri in modalità inserimento, ora puoi digitare</span>
+
+<span class="c"># PER SALVARE E USCIRE:</span>
+<span class="out">premi  Esc      -&gt; torni in modalità normale
+digita :wq      -&gt; "write & quit" (salva ed esci), poi Invio</span>
+
+<span class="c"># PER USCIRE SENZA SALVARE (la via di fuga!):</span>
+<span class="out">premi  Esc  poi  :q!  poi Invio   -&gt; esci scartando le modifiche</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le 4 cose da sapere su vim <span class="tag">i · Esc · :wq · :q!</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">i</span> — inizia a scrivere</dt>
+        <dd>dalla modalità normale, entri in <b>inserimento</b>: ora i tasti scrivono testo, come un editor normale.</dd>
+        <dt><span class="mono">Esc</span> — torna ai comandi</dt>
+        <dd>esci dalla modalità inserimento e torni in <b>normale</b>, da cui puoi dare comandi (salvare, uscire).
+            <mark>Nel dubbio, premi <code>Esc</code></mark>: ti riporta sempre in modalità normale.</dd>
+        <dt><span class="mono">:wq</span> — salva ed esci</dt>
+        <dd>dalla modalità normale, digiti <code>:wq</code> (write &amp; quit) e Invio: <mark>salva ed esce</mark>. Il
+            <code>:</code> apre la «riga di comando» di vim.</dd>
+        <dt><span class="mono">:q!</span> — esci senza salvare (la fuga!)</dt>
+        <dd><mark>la via di fuga che tutti cercano</mark>: <code>Esc</code>, poi <code>:q!</code>, poi Invio. Esce
+            <b>scartando</b> le modifiche. Se sei intrappolato e vuoi solo uscire, è questo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché imparare anche solo questo di vim? Perché <mark>prima o poi <b>ci finirai dentro</b> senza volerlo</mark>:
+      è l'editor di default in molti sistemi, e alcuni comandi lo aprono automaticamente. Sapere <code>Esc</code> +
+      <code>:q!</code> ti evita il panico e la ricerca disperata «come esco da vim». Se poi vim ti incuriosisce, è uno
+      strumento straordinariamente efficiente — ma è una scelta, non un obbligo. Prova il simulatore di modalità qui
+      sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-vim">
+    <div class="w-head">
+      <span>Simulatore di vim: le modalità e la fuga</span>
+      <span class="hint">non restare mai più intrappolato</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:480px; margin:0 auto">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem">
+          <span style="font-size:.82rem; color:var(--ink-soft)">modalità attuale:</span>
+          <span id="vm-mode" style="font-family:var(--mono); font-weight:700; padding:.2rem .6rem; border-radius:5px"></span>
+        </div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="vm-screen" style="margin:0; min-height:90px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-key="i">premi i</button>
+      <button class="btn" data-key="type">digita testo</button>
+      <button class="btn" data-key="esc">premi Esc</button>
+      <button class="btn" data-key="wq">:wq (salva ed esci)</button>
+      <button class="btn ghost" data-key="q!">:q! (esci senza salvare)</button>
+    </div>
+    <div class="w-readout" id="vm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Quale usare quando</h2>
+
+  <p class="lead">
+    Due editor, due filosofie. Quale scegliere? Per la maggior parte delle persone, e soprattutto all'inizio, la
+    risposta è semplice.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">nano o vim? <span class="tag">semplicità vs potenza</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>usa <b>nano</b> se…</dt>
+        <dd>vuoi solo modificare un file senza pensieri, sei all'inizio, o fai modifiche occasionali. <mark>Semplice,
+            immediato, i comandi sempre a vista.</mark> Copre benissimo il 95% delle esigenze quotidiane.</dd>
+        <dt>impara <b>vim</b> se…</dt>
+        <dd>passi molte ore a scrivere/modificare testo dal terminale e vuoi la massima efficienza (una volta
+            imparato, vim è velocissimo), o lavori in ambienti dove è lo standard. <mark>Grande investimento, grande
+            ritorno — ma è una scelta.</mark></dd>
+        <dt>in ogni caso, sappi <b>sopravvivere</b> a vim</dt>
+        <dd>anche se usi nano, <mark>conosci <code>Esc</code> + <code>:q!</code></mark>: prima o poi ti troverai in
+            vim senza volerlo, e devi saperne uscire. È la «sopravvivenza» del §10.3.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il consiglio pratico: <mark>parti con <b>nano</b> per fare il tuo lavoro serenamente</mark>, e tieni in tasca la
+      «via di fuga» da vim. Se in futuro vorrai investire nell'efficienza, vim (o il suo successore neovim) ti
+      ricompenserà — ma non è un prerequisito. Esistono anche editor grafici moderni (VS Code) che possono modificare
+      file su server remoti; ma saper usare un editor da terminale resta una competenza di base insostituibile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Laboratorio: modificare un file</h2>
+
+  <p class="lead">
+    Crea e modifica un file con nano, dall'inizio alla fine. Cinque minuti e sarai a tuo agio.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro con nano</div>
+    <pre><span class="c"># 1) apri (crea) un file</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">lista-spesa.txt</span>
+
+<span class="c"># 2) DENTRO nano: scrivi qualche riga (digita normalmente)</span>
+<span class="out">  latte
+  pane
+  caffè</span>
+
+<span class="c"># 3) salva: premi  Ctrl+O  poi Invio (conferma il nome)</span>
+<span class="c"># 4) esci:  premi  Ctrl+X</span>
+
+<span class="c"># 5) verifica dal terminale che il file sia stato salvato</span>
+<span class="p">$</span> <span class="cmd">cat</span> <span class="ar">lista-spesa.txt</span>
+<span class="out">latte
+pane
+caffè</span>
+
+<span class="c"># 6) riaprilo, aggiungi una riga, salva ed esci di nuovo</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">lista-spesa.txt</span>   <span class="c"># aggiungi "biscotti", Ctrl+O, Ctrl+X</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai <b>creato, scritto, salvato e riaperto</b> un file con nano — il ciclo completo di modifica dal terminale.
+      <mark>Con <b>scrivere + Ctrl+O + Ctrl+X</b> sei autonomo</mark> per qualsiasi file di testo: note, configurazioni,
+      script. E sai la «via di fuga» da vim (<code>Esc</code> + <code>:q!</code>) se mai ci finissi dentro. Questa
+      capacità ti servirà subito nel prossimo blocco del libro: dovrai <b>scrivere script</b> (Cap. 12-13), e uno
+      script non è che un file di testo con dei comandi. Ma prima, un tema che ti dà accesso a tutto il software: come
+      <b>installare programmi</b> su Linux, con i gestori di pacchetti.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>Serve un editor <b>da terminale</b> perché sui server spesso non c'è grafica. Lo apri con <code>editor
+          nomefile</code> (§10.1).</li>
+      <li><b>nano</b>: semplice, digiti normalmente, comandi sempre in basso. Salva <code>Ctrl+O</code>, esci
+          <code>Ctrl+X</code> (§10.2).</li>
+      <li><b>vim</b> ha <b>modalità</b>: <code>i</code> per scrivere, <code>Esc</code> per i comandi, <code>:wq</code>
+          salva+esci, <code>:q!</code> esci senza salvare (la fuga!) (§10.3).</li>
+      <li>Per iniziare usa <b>nano</b>; ma conosci sempre <code>Esc</code>+<code>:q!</code> per non restare
+          intrappolato in vim (§10.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai modificare file dal terminale: una competenza che sblocca la scrittura di configurazioni e script. Ma per
+    <b>avere</b> i programmi da configurare — e strumenti nuovi come <code>htop</code> o <code>git</code> — devi saperli
+    <b>installare</b>. Su Linux non si scaricano «installer» dal web: c'è un sistema ordinato e centralizzato, i
+    <b>gestori di pacchetti</b>. Nel <strong>Capitolo 11</strong> impariamo a installare, aggiornare e rimuovere
+    software con <code>apt</code> (e cenni agli altri gestori) — il modo pulito e sicuro di gestire il software su
+    Linux.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Perché su un server (a cui accedi via SSH) è indispensabile saper usare un editor <b>da terminale</b>, e non
+      basta un editor grafico?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      In nano, quali tasti usi per <b>salvare</b> e quali per <b>uscire</b>? Cosa significa il simbolo <code>^</code>
+      nella barra dei comandi in basso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Ti sei ritrovato dentro vim per sbaglio e vuoi solo uscire <b>senza salvare</b> nulla. Quale sequenza di tasti
+      usi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      In vim, perché all'apertura non riesci a scrivere digitando normalmente? Cosa devi premere prima per poter
+      inserire testo?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Perché un server, a cui accedi via SSH, spesso <b>non ha un'interfaccia grafica</b>: c'è solo il terminale
+      testuale. Un editor grafico (a finestre) non potrebbe nemmeno aprirsi. Un editor da terminale (nano, vim),
+      invece, vive nello schermo testuale e funziona anche da remoto, quindi è l'unico modo per modificare file di
+      configurazione e script direttamente sul server.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      In nano: <b>salvare</b> con <code>Ctrl+O</code> (poi Invio per confermare il nome); <b>uscire</b> con
+      <code>Ctrl+X</code> (chiede se salvare le modifiche non salvate). Il simbolo <code>^</code> nella barra dei
+      comandi significa <b>il tasto Ctrl</b>: quindi <code>^O</code> = <code>Ctrl+O</code>, <code>^X</code> =
+      <code>Ctrl+X</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      Premi <code>Esc</code> (per assicurarti di essere in modalità normale), poi digita <code>:q!</code> e premi
+      <b>Invio</b>. Il <code>:q!</code> significa «quit» forzato: esce <b>scartando</b> tutte le modifiche non salvate.
+      È la «via di fuga» classica da vim.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      Perché all'apertura vim è in <b>modalità normale</b>, dove i tasti non scrivono testo ma danno <b>comandi</b>
+      (muoversi, cancellare, ecc.). Per poter inserire testo devi premere prima <code>i</code> («insert»), che ti fa
+      entrare in <b>modalità inserimento</b>: da lì digiti normalmente. Per tornare ai comandi (e poi salvare/uscire),
+      premi <code>Esc</code>. Questa separazione tra «modalità comandi» e «modalità scrittura» è ciò che rende vim
+      spiazzante all'inizio.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.3 — simulatore vim: modalità normale/inserimento, salva/esci
+   ========================================================================= */
+(function () {
+  const modeEl = document.getElementById('vm-mode');
+  if (!modeEl) return;
+  const screenEl = document.getElementById('vm-screen');
+  const out = document.getElementById('vm-out');
+
+  let mode = 'normale';   // 'normale' | 'inserimento' | 'uscito'
+  let text = 'Ciao, sto imparando vim.';
+  let saved = true;
+
+  function draw() {
+    if (mode === 'uscito') {
+      modeEl.textContent = '— (uscito)';
+      modeEl.style.background = 'var(--paper-3)'; modeEl.style.color = 'var(--ink-soft)';
+      screenEl.innerHTML = '<span class="p">$</span> <span class="cmd">_</span>   <span class="out"># sei tornato al terminale!</span>';
+      return;
+    }
+    const ins = mode === 'inserimento';
+    modeEl.textContent = ins ? '-- INSERIMENTO --' : 'NORMALE';
+    modeEl.style.background = ins ? 'color-mix(in srgb, var(--green) 20%, var(--paper))' : 'color-mix(in srgb, var(--accent) 18%, var(--paper))';
+    modeEl.style.color = ins ? 'var(--green)' : 'var(--accent)';
+    screenEl.innerHTML = '<span class="out">' + text + '</span>' + (ins ? '<span style="background:var(--green); color:#fff">|</span>' : '') +
+      '\n\n<span style="color:#6b7385">~\n~</span>\n<span style="color:#6b7385">' + (ins ? '-- INSERT --' : (saved ? '"file.txt"' : '"file.txt" [modificato]')) + '</span>';
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  const ACT = {
+    i: function () {
+      if (mode === 'uscito') return reset2();
+      if (mode === 'inserimento') { out.innerHTML = note('', 'Sei già in modalità inserimento: digita pure.'); return; }
+      mode = 'inserimento'; draw();
+      out.innerHTML = note('green', 'Premuto <b>i</b>: sei in <b>modalità inserimento</b> (nota <code>-- INSERT --</code> in basso). Ora i tasti scrivono testo.');
+    },
+    type: function () {
+      if (mode !== 'inserimento') { out.innerHTML = note('warm', '⚠ Sei in modalità <b>normale</b>: digitare non scrive testo! Premi prima <b>i</b> per entrare in inserimento.'); return; }
+      text += ' Aggiungo altro.'; saved = false; draw();
+      out.innerHTML = note('green', 'In inserimento, il testo che digiti appare. (Qui ho aggiunto una frase.) Ricordati di premere <b>Esc</b> prima di salvare.');
+    },
+    esc: function () {
+      if (mode === 'uscito') return reset2();
+      mode = 'normale'; draw();
+      out.innerHTML = note('', 'Premuto <b>Esc</b>: torni in <b>modalità normale</b>. Da qui puoi dare comandi con <code>:</code> (salvare, uscire). <b>Nel dubbio, premi sempre Esc.</b>');
+    },
+    wq: function () {
+      if (mode === 'inserimento') { out.innerHTML = note('warm', '⚠ Sei in inserimento: <code>:wq</code> verrebbe scritto come testo! Premi prima <b>Esc</b>.'); return; }
+      if (mode === 'uscito') return reset2();
+      mode = 'uscito'; saved = true; draw();
+      out.innerHTML = note('green', '✅ <code>:wq</code> = <b>write & quit</b>: hai salvato ed sei uscito. Sei tornato al terminale. Premi un pulsante per ricominciare.');
+    },
+    'q!': function () {
+      if (mode === 'inserimento') { out.innerHTML = note('warm', '⚠ Premi prima <b>Esc</b>: in inserimento <code>:q!</code> non è un comando.'); return; }
+      if (mode === 'uscito') return reset2();
+      mode = 'uscito'; draw();
+      out.innerHTML = note('green', '✅ <code>:q!</code> = <b>quit forzato</b>: uscito <b>scartando</b> le modifiche. È la «via di fuga» quando sei intrappolato. Ora sai come uscire da vim!');
+    }
+  };
+  function reset2() { mode = 'normale'; text = 'Ciao, sto imparando vim.'; saved = true; draw(); out.innerHTML = note('', 'Ricominciamo: sei in modalità normale.'); }
+
+  document.querySelectorAll('#w-vim .btn[data-key]').forEach(function (b) {
+    b.addEventListener('click', function () { ACT[b.getAttribute('data-key')](); });
+  });
+  draw();
+  out.innerHTML = note('', 'Sei appena entrato in vim: <b>modalità normale</b>. Segui la sequenza: <b>i</b> (per scrivere) → <b>digita</b> → <b>Esc</b> → <b>:wq</b> (salva ed esci). Oppure prova la fuga: <b>Esc</b> → <b>:q!</b>. Prova anche a «digitare» senza premere prima i, per vedere l\'errore tipico dei principianti!');
+})();
+</script>
+</body>
+</html>

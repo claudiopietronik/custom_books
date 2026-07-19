@@ -149,7 +149,7 @@ const TOC = [
     n: 10,
     titolo: "Editor di testo",
     file: "cap10-editor.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Perché serve un editor da terminale" },
       { id: "s10-2", n: "10.2", t: "nano: semplice e pratico" },

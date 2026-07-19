@@ -21,7 +21,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 - [x] 7 — Utenti e sudo
 - [x] 8 — I processi
 - [x] 9 — Pipe e redirezione
-- [ ] 10 — Editor di testo
+- [x] 10 — Editor di testo
 - [ ] 11 — Installare software
 - [ ] 12 — Bash scripting: le basi
 - [ ] 13 — Bash scripting: logica
