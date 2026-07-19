@@ -22,7 +22,7 @@ Internet** e **Il Web**.
 - [x] 8 — I database relazionali
 - [x] 9 — PostgreSQL e MySQL
 - [x] 10 — SQLAlchemy: l'ORM
-- [ ] 11 — FastAPI + database
+- [x] 11 — FastAPI + database
 - [ ] 12 — Relazioni tra tabelle
 - [ ] 13 — Autenticazione e sicurezza
 - [ ] 14 — File e storage con MinIO

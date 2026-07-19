@@ -166,7 +166,7 @@ const TOC = [
     n: 11,
     titolo: "FastAPI + database",
     file: "cap11-fastapi-database.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Mettere insieme i pezzi" },
       { id: "s11-2", n: "11.2", t: "La dependency injection" },

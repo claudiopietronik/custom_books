@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · FastAPI + database — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>FastAPI + database</h1>
+    <p class="standfirst">
+      Ecco il capitolo in cui tutto converge. Abbiamo un'API FastAPI ben fatta (Cap. 4-7) e sappiamo parlare a un
+      database tramite SQLAlchemy (Cap. 10). Ora li <b>saldiamo insieme</b>: riscriviamo la rubrica del Capitolo 7
+      sostituendo il <code>DB = {}</code> in memoria — che perdeva tutto a ogni riavvio — con un database vero e
+      <b>persistente</b>. Impareremo il meccanismo elegante con cui FastAPI ci procura una sessione del database a
+      ogni richiesta, senza doverla aprire e chiudere a mano: la <b>dependency injection</b>. E chiariremo la
+      convivenza dei due tipi di «modello» che ormai conosci — quelli <b>Pydantic</b> (la forma dei dati dell'API) e
+      quelli <b>SQLAlchemy</b> (le righe del database) — che qui lavorano fianco a fianco, ciascuno col suo compito.
+      <mark>Alla fine, la nostra rubrica ricorderà i contatti anche dopo aver spento e riacceso il server: sarà una
+      vera applicazione backend.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Mettere insieme i pezzi (§11.1), la <b>dependency injection</b> con <code>get_db</code> (§11.2), il <b>CRUD sul
+      database</b> reale (§11.3), la distinzione <b>schemi Pydantic vs modelli SQLAlchemy</b> (§11.4). Nel laboratorio
+      (§11.5) la rubrica diventa persistente.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è il backend «completo» in miniatura</div>
+    <p style="margin-bottom:0">
+      Un'API che valida gli input e li salva in un database persistente è, in sostanza, <b>un backend funzionante</b>.
+      <mark>Quasi ogni applicazione reale è una variazione, più ricca, di questo schema.</mark> Da qui in poi
+      aggiungeremo strati (relazioni, autenticazione, file, deploy), ma il cuore — API + validazione + database — è
+      tutto in questo capitolo. Impararlo bene significa saper costruire il grosso di un servizio vero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Mettere insieme i pezzi</h2>
+
+  <p class="lead">
+    Un progetto backend ordinato divide il codice in file con ruoli chiari. Ecco la struttura tipica — piccola ma già
+    «professionale» — che useremo, con i pezzi già visti nei capitoli scorsi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">la struttura del progetto</div>
+    <pre>mia-api/
+├── database.py     <span class="c"># engine, SessionLocal, Base (Cap. 10)</span>
+├── models.py       <span class="c"># i modelli SQLAlchemy = le tabelle (Cap. 10)</span>
+├── schemas.py      <span class="c"># i modelli Pydantic = input/output API (Cap. 6)</span>
+├── main.py         <span class="c"># l'app FastAPI e gli endpoint (Cap. 4-7)</span>
+└── requirements.txt</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Separare le responsabilità</div>
+    <p style="margin-bottom:0">
+      Ogni file ha <b>un compito</b>: <code>database.py</code> la connessione, <code>models.py</code> le tabelle,
+      <code>schemas.py</code> le forme dell'API, <code>main.py</code> gli endpoint. <mark>Questa separazione rende il
+      progetto leggibile e scalabile</mark>: sai sempre dove mettere e dove cercare le cose. Man mano che l'app
+      cresce, potresti dividere ulteriormente (una cartella per gli endpoint, una per la logica…), ma questo schema è
+      un ottimo punto di partenza, usato in innumerevoli progetti reali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>La dependency injection</h2>
+
+  <p class="lead">
+    A ogni richiesta serve una <b>sessione</b> del database, da aprire prima e chiudere dopo — senza dimenticarsene
+    mai, anche se la funzione va in errore. Scriverlo a mano in ogni endpoint sarebbe noioso e fragile. FastAPI offre
+    un meccanismo pulito: la <b>dependency injection</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">database.py — la dipendenza get_db</div>
+    <pre><span class="kw">def</span> <span class="fn">get_db</span>():
+    db <span class="op">=</span> <span class="fn">SessionLocal</span>()      <span class="cm"># apri la sessione</span>
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> db               <span class="cm"># "consegnala" all'endpoint</span>
+    <span class="kw">finally</span>:
+        db.<span class="fn">close</span>()             <span class="cm"># ...e chiudila SEMPRE, alla fine</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">main.py — usarla in un endpoint</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> Depends
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> Session
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/contatti"</span>)
+<span class="kw">def</span> <span class="fn">elenca</span>(db: Session <span class="op">=</span> <span class="fn">Depends</span>(get_db)):   <span class="cm"># FastAPI fornisce db!</span>
+    <span class="kw">return</span> db.<span class="fn">query</span>(Contatto).<span class="fn">all</span>()</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Come funziona l'iniezione <span class="tag">Depends · yield · apri/chiudi automatici</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">def get_db()</span> con <span class="mono">yield</span></dt>
+        <dd>una funzione «dipendenza» che <b>apre</b> la sessione, la <code>yield</code> (la consegna), e nel
+            <code>finally</code> la <b>chiude</b> — <mark>garantito, anche in caso di errore</mark>. Lo scrivi una
+            volta sola.</dd>
+        <dt><span class="mono">db: Session = Depends(get_db)</span></dt>
+        <dd>nel parametro dell'endpoint dici: «per <code>db</code>, <b>chiama</b> <code>get_db</code> e passami ciò che
+            produce». <mark>FastAPI esegue <code>get_db</code>, ti «inietta» la sessione pronta</mark>, e a fine
+            richiesta la chiude per te.</dd>
+        <dt>perché è bello</dt>
+        <dd>ogni endpoint dichiara semplicemente <code>db: Session = Depends(get_db)</code> e <b>usa</b> <code>db</code>:
+            niente codice ripetuto di apertura/chiusura, niente sessioni dimenticate aperte. <mark>Un pattern pulito e
+            a prova di errore.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      «Dependency injection» suona complicato, ma l'idea è semplice: <mark>invece di procurarti tu ciò che ti serve,
+      lo <b>dichiari</b> e lasci che il framework te lo fornisca</mark>. È un concetto potente che FastAPI usa anche
+      per l'autenticazione (Cap. 13): lì una dipendenza <code>get_current_user</code> ti fornirà l'utente loggato,
+      esattamente come <code>get_db</code> ti fornisce la sessione. Imparato una volta, lo riconoscerai ovunque.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>CRUD sul database reale</h2>
+
+  <p class="lead">
+    Riscriviamo gli endpoint della rubrica (Cap. 7), stavolta contro il database. Nota quanto sono simili a prima: è
+    cambiato solo <em>dove</em> stanno i dati (dal dizionario alla sessione), non la struttura dell'API.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py — CRUD persistente</div>
+    <pre><span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/contatti"</span>, response_model<span class="op">=</span>schemas.Contatto, status_code<span class="op">=</span><span class="nm">201</span>)
+<span class="kw">def</span> <span class="fn">crea</span>(dati: schemas.ContattoCrea, db: Session <span class="op">=</span> <span class="fn">Depends</span>(get_db)):
+    contatto <span class="op">=</span> models.<span class="fn">Contatto</span>(<span class="op">**</span>dati.<span class="fn">model_dump</span>())   <span class="cm"># Pydantic -> oggetto ORM</span>
+    db.<span class="fn">add</span>(contatto)
+    db.<span class="fn">commit</span>()
+    db.<span class="fn">refresh</span>(contatto)          <span class="cm"># recupera l'id assegnato dal DB</span>
+    <span class="kw">return</span> contatto
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/contatti/{id}"</span>, response_model<span class="op">=</span>schemas.Contatto)
+<span class="kw">def</span> <span class="fn">leggi</span>(id: <span class="ty">int</span>, db: Session <span class="op">=</span> <span class="fn">Depends</span>(get_db)):
+    contatto <span class="op">=</span> db.<span class="fn">query</span>(models.Contatto).<span class="fn">get</span>(id)
+    <span class="kw">if</span> contatto <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Non trovato"</span>)
+    <span class="kw">return</span> contatto
+
+<span class="op">@</span>app.<span class="fn">delete</span>(<span class="st">"/contatti/{id}"</span>, status_code<span class="op">=</span><span class="nm">204</span>)
+<span class="kw">def</span> <span class="fn">cancella</span>(id: <span class="ty">int</span>, db: Session <span class="op">=</span> <span class="fn">Depends</span>(get_db)):
+    contatto <span class="op">=</span> db.<span class="fn">query</span>(models.Contatto).<span class="fn">get</span>(id)
+    <span class="kw">if</span> contatto <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Non trovato"</span>)
+    db.<span class="fn">delete</span>(contatto)
+    db.<span class="fn">commit</span>()</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Cosa è cambiato rispetto al Cap. 7 <span class="tag">stessi endpoint, dati persistenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il parametro <span class="mono">db: Session = Depends(get_db)</span></dt>
+        <dd>comparso in ogni endpoint: è la sessione iniettata (§11.2). Da qui operi sul database.</dd>
+        <dt><span class="mono">models.Contatto(**dati.model_dump())</span></dt>
+        <dd>il ponte tra i due mondi: prendi i dati validati dal modello <b>Pydantic</b> (<code>dati</code>) e crei
+            un oggetto <b>SQLAlchemy</b> (<code>models.Contatto</code>) da salvare. <mark>Pydantic valida, SQLAlchemy
+            persiste.</mark></dd>
+        <dt><span class="mono">db.query(...).get(id)</span> invece di <span class="mono">DB[id]</span></dt>
+        <dd>la lettura ora interroga il database. Il resto della logica (il controllo <code>None</code> → 404) è
+            <b>identico</b> al Cap. 7.</dd>
+        <dt><span class="mono">db.add/commit/delete</span></dt>
+        <dd>sostituiscono le operazioni sul dizionario. <mark>Il <code>commit</code> rende i dati permanenti</mark>:
+            è ciò che dà alla rubrica la memoria.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Guarda l'essenziale: <mark>la <b>forma</b> dell'API è la stessa del Cap. 7</mark> — stessi percorsi, metodi,
+      codici di stato, gestione del 404. È cambiato solo il «dietro»: dal dizionario volatile a un database
+      persistente. Questo conferma quanto anticipato: progettare bene l'API (Cap. 7) ripaga, perché il livello dei
+      dati si può cambiare sotto senza stravolgere gli endpoint.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Schemi Pydantic vs modelli ORM</h2>
+
+  <p class="lead">
+    Un punto che confonde molti principianti: perché <b>due</b> tipi di modello? Non basterebbe uno? No — e capire il
+    perché chiarisce l'intera architettura.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Due modelli, due lavori <span class="tag">Pydantic (API) vs SQLAlchemy (DB)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Modello SQLAlchemy</b> (<code>models.py</code>)</dt>
+        <dd>descrive la <b>tabella</b> del database: colonne, tipi, vincoli, chiavi. <mark>Il suo mondo è il
+            database.</mark> Es. <code>models.Contatto</code>.</dd>
+        <dt><b>Schema Pydantic</b> (<code>schemas.py</code>)</dt>
+        <dd>descrive la <b>forma dei dati dell'API</b>: cosa il client può inviare e cosa riceve. <mark>Il suo mondo è
+            l'HTTP/JSON.</mark> Es. <code>schemas.ContattoCrea</code> (input), <code>schemas.Contatto</code> (output).</dd>
+        <dt>perché separarli</dt>
+        <dd>i due mondi hanno esigenze diverse: <b>l'input</b> non deve avere l'<code>id</code> (lo assegna il DB);
+            <b>l'output</b> non deve rivelare campi sensibili (password); il DB ha dettagli (indici, relazioni) che
+            all'API non interessano. <mark>Tenerli separati mantiene ognuno pulito e sicuro.</mark></dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">schemas.py — gli schemi dell'API</div>
+      <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+<span class="kw">class</span> <span class="fn">ContattoCrea</span>(BaseModel):     <span class="cm"># INPUT: senza id (lo dà il DB)</span>
+    nome: <span class="ty">str</span>
+    telefono: <span class="ty">str</span>
+
+<span class="kw">class</span> <span class="fn">Contatto</span>(BaseModel):         <span class="cm"># OUTPUT: con id</span>
+    id: <span class="ty">int</span>
+    nome: <span class="ty">str</span>
+    telefono: <span class="ty">str</span>
+    <span class="kw">class</span> <span class="fn">Config</span>:
+        from_attributes <span class="op">=</span> <span class="kw">True</span>       <span class="cm"># legge dagli oggetti ORM</span></pre>
+    </div>
+    <div class="f-note">
+      La riga <code>from_attributes = True</code> (in Pydantic v2) è il «traduttore»: <mark>permette a FastAPI di
+      costruire la risposta JSON leggendo direttamente da un oggetto SQLAlchemy</mark> (i suoi attributi). Così puoi
+      <code>return contatto</code> (un oggetto ORM) e, grazie al <code>response_model=schemas.Contatto</code>, FastAPI
+      lo converte nel JSON giusto. È l'ultimo anello: <b>Pydantic valida l'ingresso → SQLAlchemy persiste →
+      Pydantic formatta l'uscita</b>. Tre modelli familiari (Cap. 6, 8, 10) che finalmente collaborano.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Laboratorio: rubrica persistente</h2>
+
+  <p class="lead">
+    La rubrica qui sotto funziona come quella del Cap. 7 — ma con una differenza cruciale: <b>ricorda i dati</b>. Crea
+    qualche contatto, poi premi «riavvia il server» (o <b>ricarica questa pagina</b>): i contatti sono ancora lì. È la
+    persistenza del database, resa visibile.
+  </p>
+
+  <div class="widget" id="w-persist">
+    <div class="w-head">
+      <span>La rubrica persistente</span>
+      <span class="hint">i dati sopravvivono al riavvio</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:440px; margin:0 auto">
+        <div style="display:flex; gap:.4rem; margin-bottom:.7rem; flex-wrap:wrap">
+          <input type="text" id="pe-nome" placeholder="nome" style="flex:1; min-width:90px; padding:.45rem .6rem; border:1px solid var(--ink-soft); border-radius:7px; background:var(--paper); color:var(--ink)">
+          <input type="text" id="pe-tel" placeholder="telefono" style="flex:1; min-width:90px; padding:.45rem .6rem; border:1px solid var(--ink-soft); border-radius:7px; background:var(--paper); color:var(--ink)">
+          <button class="btn" id="pe-add">POST</button>
+        </div>
+        <ul id="pe-lista" style="list-style:none; padding:0; margin:0; text-align:left"></ul>
+        <div id="pe-vuoto" style="color:var(--ink-soft); font-size:.85rem; padding:.5rem 0">Rubrica vuota. Crea un contatto.</div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn ghost" id="pe-restart">🔁 riavvia il server</button>
+      <button class="btn ghost" id="pe-drop">🗑 svuota il database</button>
+    </div>
+    <div class="w-readout" id="pe-out"></div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔬</span> Il contrasto col Capitolo 7</div>
+    <p style="margin-bottom:0">
+      Ricordi la rubrica del Cap. 7? Era <b>identica da usare</b>, ma «riavviando» perdeva tutto: viveva in un
+      dizionario in memoria. Questa versione salva su un database (qui simulato con l'archivio del browser, ma il
+      concetto è lo stesso di SQLite/Postgres): <mark>premi «riavvia» — o ricarica la pagina — e i contatti restano.</mark>
+      Questa, e non altro, è la differenza che rende un backend <b>utile</b> nel mondo reale. «Svuota il database»
+      cancella tutto di proposito (come un <code>DELETE FROM contatti</code>).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>Struttura ordinata: <code>database.py</code> (connessione), <code>models.py</code> (tabelle),
+          <code>schemas.py</code> (API), <code>main.py</code> (endpoint) (§11.1).</li>
+      <li><b>Dependency injection</b>: <code>get_db</code> (con <code>yield</code>) apre e chiude la sessione;
+          l'endpoint la riceve con <code>db: Session = Depends(get_db)</code> (§11.2).</li>
+      <li>Gli endpoint CRUD usano <code>db.add/commit/query/delete</code>: stessa <b>forma</b> del Cap. 7, ma dati
+          <b>persistenti</b> (§11.3).</li>
+      <li>Due modelli: <b>Pydantic</b> (schemi API, input/output) e <b>SQLAlchemy</b> (tabelle DB); il ponte è
+          <code>model_dump()</code> in ingresso e <code>from_attributes=True</code> in uscita (§11.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La nostra rubrica è ora una vera applicazione: valida, salva, ricorda. Ma i dati del mondo reale sono
+    <b>collegati</b> tra loro: un utente <em>ha</em> molti post, un ordine <em>appartiene</em> a un cliente, un post
+    <em>ha</em> molti commenti. Come si rappresentano questi <b>legami</b> tra tabelle, e come si navigano con
+    SQLAlchemy? È il tema del <strong>Capitolo 12</strong>: le <b>relazioni</b> — chiavi esterne, uno-a-molti,
+    <code>relationship</code> — che trasformano tabelle isolate in un vero <em>modello di dati</em>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      A cosa serve la dipendenza <code>get_db</code> e il pattern <code>Depends(get_db)</code>? Cosa garantisce il
+      blocco <code>try/finally</code> con <code>db.close()</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Perché si usano <b>due</b> modelli diversi (Pydantic e SQLAlchemy) invece di uno solo? Fai un esempio di campo
+      che sta nel modello di <b>output</b> ma non in quello di <b>input</b>, e spiega perché.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Nell'endpoint di creazione, cosa fa la riga <code>models.Contatto(**dati.model_dump())</code>? Quale
+      «traduzione» rappresenta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Confronta la rubrica del Cap. 7 (in memoria) con questa (su database): cosa cambia dal punto di vista
+      dell'<b>utente</b> dell'API, e cosa cambia «dietro le quinte»?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      <code>get_db</code> fornisce a ogni endpoint una <b>sessione</b> del database già aperta, tramite
+      <code>Depends(get_db)</code>: l'endpoint la dichiara come parametro e FastAPI gliela «inietta». Il
+      <code>try/finally</code> con <code>db.close()</code> garantisce che la sessione venga <b>sempre chiusa</b> al
+      termine della richiesta — anche se la funzione solleva un errore — evitando sessioni «dimenticate» aperte, che a
+      lungo andare esaurirebbero le risorse.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      Perché servono a cose diverse: il modello <b>Pydantic</b> definisce la forma dei dati <b>dell'API</b> (input e
+      output), il modello <b>SQLAlchemy</b> definisce la <b>tabella</b> del database. Esempio: il campo <code>id</code>
+      sta nel modello di <b>output</b> (il client deve conoscerlo) ma <b>non</b> in quello di <b>input</b> di
+      creazione, perché è il database ad assegnarlo automaticamente — chiederlo al client sarebbe inutile e rischioso.
+      (Altro esempio inverso: la <code>password</code> sta nell'input ma mai nell'output.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      <code>dati.model_dump()</code> converte l'oggetto Pydantic validato in un dizionario; <code>**</code> lo
+      «spacchetta» come argomenti con nome per costruire un oggetto SQLAlchemy <code>models.Contatto(nome=...,
+      telefono=...)</code>. Rappresenta la <b>traduzione dal mondo dell'API</b> (dati validati da Pydantic) <b>al
+      mondo del database</b> (un oggetto ORM pronto per essere salvato con <code>add</code>+<code>commit</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      Dal punto di vista dell'<b>utente</b> dell'API <b>non cambia nulla</b>: stessi endpoint, stessi metodi, stessi
+      codici di stato, stesse risposte JSON. «Dietro le quinte», invece, cambia tutto ciò che conta: i dati non
+      vivono più in un dizionario volatile ma in un <b>database persistente</b>, quindi <b>sopravvivono ai riavvii</b>,
+      possono crescere enormemente, essere cercati velocemente e usati da più istanze del server insieme. È la prova
+      che una buona progettazione dell'API disaccoppia l'interfaccia dall'implementazione.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.5 — rubrica persistente: usa localStorage per SOPRAVVIVERE al reload
+   (simula un vero database; "riavvia" ricarica dallo storage)
+   ========================================================================= */
+(function () {
+  const lista = document.getElementById('pe-lista');
+  if (!lista) return;
+  const nomeEl = document.getElementById('pe-nome');
+  const telEl  = document.getElementById('pe-tel');
+  const vuoto  = document.getElementById('pe-vuoto');
+  const out    = document.getElementById('pe-out');
+  const CHIAVE = 'custombooks:backend:rubrica';
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function carica() {
+    try { const s = localStorage.getItem(CHIAVE); return s ? JSON.parse(s) : { rows: [], next: 1 }; }
+    catch (e) { return { rows: [], next: 1 }; }
+  }
+  function salva(db) { try { localStorage.setItem(CHIAVE, JSON.stringify(db)); } catch (e) {} }
+
+  let db = carica();
+
+  function refresh() {
+    vuoto.style.display = db.rows.length ? 'none' : 'block';
+    lista.innerHTML = db.rows.map(function (r) {
+      return '<li style="display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.45rem .6rem; border:1px solid var(--ink-soft); border-radius:7px; margin-bottom:.35rem">' +
+        '<span style="font-size:.9rem"><b style="color:var(--accent)">#' + r.id + '</b> ' + esc(r.nome) + ' <span style="color:var(--ink-soft)">' + esc(r.telefono) + '</span></span>' +
+        '<button class="btn ghost" data-del="' + r.id + '" style="padding:.05rem .45rem; line-height:1.4">DELETE</button></li>';
+    }).join('');
+    lista.querySelectorAll('button[data-del]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const id = parseInt(b.getAttribute('data-del'), 10);
+        db.rows = db.rows.filter(function (r) { return r.id !== id; });
+        salva(db); refresh();
+        out.innerHTML = note('green', 'DELETE #' + id + ' → 204. Modifica <b>salvata nel database</b> (commit).');
+      });
+    });
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'blue' ? 'var(--accent)' : 'var(--green)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('pe-add').addEventListener('click', function () {
+    const nome = (nomeEl.value || '').trim();
+    const tel  = (telEl.value || '').trim();
+    if (!nome) { out.innerHTML = note('warm', '⚠ nome obbligatorio (Pydantic → 422).'); return; }
+    const id = db.next++;
+    db.rows.push({ id: id, nome: nome, telefono: tel });
+    salva(db); refresh();
+    nomeEl.value = ''; telEl.value = '';
+    out.innerHTML = note('green', 'POST → 201: contatto #' + id + ' <b>salvato nel database</b> (db.add + db.commit).');
+  });
+  telEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('pe-add').click(); });
+
+  document.getElementById('pe-restart').addEventListener('click', function () {
+    db = carica();   // ricarica dallo "storage" = database
+    refresh();
+    out.innerHTML = note('blue', '🔁 <b>Server riavviato</b>: ho ricaricato i dati dal database — i ' + db.rows.length + ' contatti sono <b>ancora qui</b>. (Nel Cap. 7, in memoria, sarebbero spariti!)');
+  });
+  document.getElementById('pe-drop').addEventListener('click', function () {
+    db = { rows: [], next: 1 }; salva(db); refresh();
+    out.innerHTML = note('warm', '🗑 Database svuotato (come un DELETE FROM contatti).');
+  });
+
+  refresh();
+  out.innerHTML = note('', 'Crea contatti (POST→201), cancellali (DELETE→204). Poi premi <b>🔁 riavvia</b> o <b>ricarica la pagina</b>: i dati restano, perché sono nel database (qui l\'archivio del browser). È la <b>persistenza</b> in azione.');
+})();
+</script>
+</body>
+</html>
