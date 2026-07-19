@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · L'ecosistema scientifico di Python — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 1</div>
+    <h1>L'ecosistema scientifico di Python</h1>
+    <p class="standfirst">
+      Python «puro» — quello del libro base — è un linguaggio meraviglioso per imparare, ma da solo <b>non</b> è ciò che
+      rende Python il re della data science. Il vero potere sta nelle sue <b>librerie</b>: strumenti scritti da altri,
+      installabili in un istante, che trasformano Python nel coltellino svizzero di chi lavora con i dati.
+      <mark>Un data scientist non passa la giornata a scrivere cicli <code>for</code>: passa la giornata a orchestrare
+      NumPy, pandas, Matplotlib, scikit-learn, PyTorch</mark> — un piccolo insieme di librerie potentissime che si
+      incastrano tra loro. Questo primo capitolo è una <b>mappa</b>: capiamo perché serve uno «stack» di librerie e come
+      i pezzi si combinano (§1.1), facciamo il giro delle librerie fondamentali e a cosa serve ciascuna (§1.2),
+      prepariamo un <b>ambiente</b> pulito in cui installarle (§1.3) e conosciamo lo strumento su cui il data scientist
+      vive davvero, il <b>notebook Jupyter</b> (§1.4). Alla fine avrai un ambiente pronto e la testa piena della mappa
+      giusta per non perderti nei capitoli che seguono.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché serve uno <b>stack di librerie</b> (§1.1), il <b>giro delle librerie</b> del data scientist (§1.2), gli
+      <b>ambienti</b> con pip/venv/conda (§1.3), i <b>notebook Jupyter</b> (§1.4). Nel laboratorio (§1.5) prepari da zero
+      l'ambiente e lanci il tuo primo notebook.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: conoscere gli strumenti prima di usarli</div>
+    <p style="margin-bottom:0">
+      Buttarsi su pandas senza sapere che sotto c'è NumPy, o su scikit-learn senza un ambiente pulito, porta a
+      confusione e a errori difficili da capire. <mark>Questo capitolo ti dà la mappa e le fondamenta pratiche</mark>:
+      quali librerie esistono, come si relazionano, e come installarle e usarle nel modo in cui lavora davvero chi fa
+      questo mestiere. Cinque minuti di panoramica ora ti risparmiano ore di smarrimento dopo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">Sezione 1.1</span>Perché uno stack di librerie</h2>
+
+  <p class="lead">
+    Partiamo da una domanda onesta: Python «base» sa già fare i conti e gestire liste. Perché mai servono altre
+    librerie? La risposta è duplice — <b>velocità</b> e <b>comodità</b> — e capirla bene spiega perché tutto lo stack è
+    costruito com'è.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Python puro è comodo ma lento sui numeri</div>
+    <p style="margin-bottom:0">
+      Python è un linguaggio <b>interpretato</b>: ogni operazione passa da parecchi controlli «dietro le quinte». Va
+      benissimo per scrivere programmi, ma quando devi fare <b>milioni</b> di calcoli numerici — la norma nella data
+      science — un ciclo <code>for</code> in Python puro diventa <b>lentissimo</b> (anche decine di volte più lento del
+      necessario). <mark>Moltiplicare due liste di un milione di numeri con un <code>for</code> può richiedere secondi;
+      con NumPy, una frazione di secondo.</mark> Ecco il primo motivo delle librerie: sotto il cofano sono scritte in
+      linguaggi velocissimi (C, C++, Fortran), e ti danno quella velocità mantenendo la comodità di Python.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🏛</span> Una piramide: ogni libreria poggia su un'altra</div>
+    <p style="margin-bottom:.5rem">
+      Le librerie dello stack scientifico non sono scollegate: formano una <b>piramide</b>, ognuna costruita sopra le
+      precedenti. Capire questa struttura è la chiave per orientarsi:
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>alla <b>base</b>: <span class="mono">NumPy</span></dt>
+        <dd>fornisce l'<b>array</b>, la struttura dati numerica veloce su cui poggia <b>tutto il resto</b>. <mark>Quasi
+            ogni altra libreria, sotto, parla in array NumPy.</mark> È il mattone fondativo (Cap. 2-3).</dd>
+        <dt>sopra NumPy: <span class="mono">pandas</span>, <span class="mono">SciPy</span>, <span class="mono">Matplotlib</span></dt>
+        <dd><b>pandas</b> aggiunge le tabelle (i DataFrame) per i dati reali; <b>SciPy</b> aggiunge la matematica
+            avanzata (statistica, ottimizzazione); <b>Matplotlib</b> disegna i grafici. Tutte usano array NumPy come
+            «valuta comune».</dd>
+        <dt>ancora sopra: <span class="mono">scikit-learn</span>, <span class="mono">seaborn</span>, …</dt>
+        <dd><b>scikit-learn</b> (machine learning) poggia su NumPy e SciPy; <b>seaborn</b> (grafici statistici) poggia su
+            Matplotlib e pandas. <mark>I livelli alti ti danno più comodità, quelli bassi più controllo.</mark></dd>
+        <dt>un mondo a parte ma imparentato: <span class="mono">PyTorch</span></dt>
+        <dd>per il <b>deep learning</b>: ha una sua struttura (il <b>tensore</b>) molto simile all'array NumPy, con in
+            più due superpoteri — la GPU e il calcolo automatico dei gradienti (Cap. 14-17).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La conseguenza pratica: <mark>impareremo le librerie <b>dal basso verso l'alto</b></mark> — prima NumPy (le
+      fondamenta), poi pandas, poi la visualizzazione, poi il machine learning e il deep learning. Ogni capitolo poggia
+      sui precedenti, esattamente come le librerie stesse.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">Sezione 1.2</span>Le librerie del data scientist</h2>
+
+  <p class="lead">
+    Facciamo il giro dei protagonisti. Non serve memorizzare nulla: l'importante è farsi un'idea di <b>chi fa cosa</b>,
+    così saprai dove guardare quando avrai un problema da risolvere. Ognuna avrà il suo capitolo (o più).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il cast principale <span class="tag">chi fa cosa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">NumPy</span> — calcolo numerico veloce</dt>
+        <dd>array n-dimensionali e operazioni matematiche velocissime su di essi. Il fondamento (Cap. 2-3).</dd>
+        <dt><span class="mono">pandas</span> — dati a tabella</dt>
+        <dd>il <b>DataFrame</b>: fogli di calcolo programmabili. Caricare, pulire, filtrare, raggruppare dati reali. Il
+            cavallo di battaglia quotidiano (Cap. 4-8).</dd>
+        <dt><span class="mono">Matplotlib</span> e <span class="mono">seaborn</span> — grafici</dt>
+        <dd>Matplotlib disegna qualsiasi grafico (controllo totale); seaborn ci mette sopra grafici statistici belli in
+            una riga. Per <b>vedere</b> i dati (Cap. 9-10).</dd>
+        <dt><span class="mono">SciPy</span> — matematica scientifica</dt>
+        <dd>statistica (test, distribuzioni), ottimizzazione, interpolazione, segnali, algebra lineare avanzata. La
+            «cassetta degli attrezzi» scientifica (Cap. 11).</dd>
+        <dt><span class="mono">scikit-learn</span> — machine learning</dt>
+        <dd>la libreria di ML per eccellenza: regressione, classificazione, clustering, preprocessing, pipeline,
+            valutazione — tutto con la stessa interfaccia semplice (Cap. 12-13).</dd>
+        <dt><span class="mono">XGBoost</span> / <span class="mono">LightGBM</span> — boosting di alto livello</dt>
+        <dd>i modelli che vincono le competizioni sui dati a tabella. Si usano accanto a scikit-learn (Cap. 13).</dd>
+        <dt><span class="mono">statsmodels</span> — statistica «da statistico»</dt>
+        <dd>regressione con test, intervalli di confidenza, riepiloghi dettagliati. Complementare a scikit-learn (Cap. 13).</dd>
+        <dt><span class="mono">PyTorch</span> — deep learning</dt>
+        <dd>reti neurali, GPU, differenziazione automatica. Il framework per l'IA moderna (Cap. 14-17).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esistono decine di altre librerie specializzate (Polars, TensorFlow/Keras, Plotly, spaCy, Hugging Face…), ma
+      <mark>queste otto sono il nucleo che copre la stragrande maggioranza del lavoro</mark>. Padroneggiate queste, le
+      altre si imparano in fretta perché seguono idee simili.
+    </div>
+  </div>
+
+  <div class="widget" id="w-lib">
+    <div class="w-head">
+      <span>Quale libreria per quale compito?</span>
+      <span class="hint">scegli un compito, scopri lo strumento giusto</span>
+    </div>
+    <div class="w-stage" style="min-height:150px">
+      <div id="wl-view" style="padding:1.1rem; text-align:center"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.4rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn on" data-t="0">caricare un CSV</button>
+      <button class="w-btn" data-t="1">fare conti veloci su matrici</button>
+      <button class="w-btn" data-t="2">un grafico</button>
+      <button class="w-btn" data-t="3">addestrare un modello ML</button>
+      <button class="w-btn" data-t="4">una rete neurale</button>
+      <button class="w-btn" data-t="5">un test statistico</button>
+    </div>
+    <div class="w-readout" id="wl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">Sezione 1.3</span>Ambienti: pip, venv, conda</h2>
+
+  <p class="lead">
+    Prima di installare le librerie, una regola d'oro (già vista nel libro Python, ma qui è vitale): <b>ogni progetto
+    nel suo ambiente isolato</b>. Le librerie scientifiche sono grandi e legate a versioni precise: mescolarle
+    globalmente è la ricetta per il caos.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📦</span> Due strade: pip+venv oppure conda</div>
+    <p style="margin-bottom:.5rem">
+      Ci sono due modi diffusi di gestire ambienti e pacchetti per la data science. Entrambi vanno bene; scegline uno e
+      sii coerente.
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt><b>pip + venv</b> — lo standard di Python</dt>
+        <dd><code>venv</code> crea l'ambiente isolato, <code>pip</code> installa i pacchetti da PyPI. Leggero,
+            universale, già incluso in Python. <mark>La via che useremo nel libro.</mark></dd>
+        <dt><b>conda</b> (Anaconda / Miniconda) — pensato per la scienza</dt>
+        <dd>un gestore alternativo, molto amato dai data scientist: installa non solo pacchetti Python ma anche librerie
+            di sistema (utile per pacchetti «difficili» da compilare). <b>Anaconda</b> è una grossa distribuzione con
+            tutto preinstallato; <b>Miniconda</b> è la versione minimale. Comodo su Windows.</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .5rem">
+      <div class="t-head">Terminale — creare l'ambiente e installare lo stack (pip + venv)</div>
+      <pre><span class="p">$ </span><span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">venv</span> <span class="ar">.venv</span>                 <span class="cm"># crea l'ambiente isolato</span>
+<span class="p">$ </span><span class="ar">source</span> <span class="ar">.venv/bin/activate</span>            <span class="cm"># attiva (Windows: .venv\Scripts\activate)</span>
+<span class="p">(.venv) $ </span><span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">numpy pandas matplotlib seaborn scipy scikit-learn</span>
+<span class="p">(.venv) $ </span><span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">jupyterlab</span>          <span class="cm"># il notebook (§1.4)</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Con l'ambiente <b>attivo</b> (vedi <code>(.venv)</code> nel prompt), tutto ciò che installi finisce lì dentro,
+      isolato. <mark>PyTorch si installa a parte</mark>, con il comando indicato sul suo sito (dipende dal tuo sistema e
+      dalla GPU): lo vedremo al Cap. 14.
+    </p>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">📝</span> requirements.txt: le dipendenze scritte nero su bianco</div>
+    <p style="margin-bottom:0">
+      Un file <code>requirements.txt</code> elenca i pacchetti (e le versioni) del progetto: chiunque, con
+      <code>pip install -r requirements.txt</code>, ricrea il tuo <b>identico</b> ambiente. <mark>Lo generi con
+      <code>pip freeze &gt; requirements.txt</code></mark>. È buona pratica averlo in ogni progetto: rende il tuo lavoro
+      riproducibile — un valore centrale nella data science (i risultati devono poter essere rifatti da altri).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">Sezione 1.4</span>Jupyter e i notebook</h2>
+
+  <p class="lead">
+    Ecco lo strumento che cambierà il tuo modo di lavorare. Il data scientist raramente scrive un unico file
+    <code>.py</code> da eseguire tutto insieme: lavora in un <b>notebook</b>, un documento interattivo dove codice,
+    risultati, grafici e note convivono.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📓</span> Cos'è un notebook</div>
+    <p style="margin-bottom:0">
+      Un <b>notebook</b> (Jupyter) è un documento diviso in <b>celle</b>: alcune contengono codice, altre testo. Esegui
+      una cella (con <kbd>Shift+Invio</kbd>) e il suo <b>risultato appare subito sotto</b> — un numero, una tabella, un
+      grafico. <mark>Puoi eseguire le celle in qualsiasi ordine, modificarle, rieseguirle</mark>, costruendo l'analisi
+      un pezzo alla volta e <b>vedendo</b> ogni passo. È perfetto per la data science, che è per sua natura
+      esplorativa: provi, guardi il risultato, aggiusti, riprovi. Il file ha estensione <code>.ipynb</code>.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché i data scientist lo adorano</div>
+    <p style="margin-bottom:0">
+      In un notebook <b>carichi i dati una volta</b> (cella lenta) e poi ci sperimenti sopra in mille celle veloci,
+      senza ricaricarli ogni volta. I <b>grafici compaiono inline</b>, accanto al codice che li genera. Puoi
+      <b>intercalare spiegazioni</b> (in celle di testo) e trasformare l'analisi in un racconto leggibile e
+      condivisibile. <mark>È al tempo stesso il tuo banco da lavoro e il tuo report finale.</mark>
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Dove girano i notebook <span class="tag">stesso file, tanti ambienti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>JupyterLab</b> / <b>Jupyter Notebook</b></dt>
+        <dd>si avviano dal terminale (<code>jupyter lab</code>) e si aprono nel browser. L'ambiente classico e completo.</dd>
+        <dt><b>VS Code</b></dt>
+        <dd>apre i file <code>.ipynb</code> con un'ottima interfaccia integrata, comoda se già usi VS Code per il codice.</dd>
+        <dt><b>Google Colab</b></dt>
+        <dd>notebook <b>nel browser, senza installare nulla</b>, con <b>GPU gratuita</b>: perfetto per provare PyTorch
+            senza avere una scheda grafica. <mark>Un'ottima via per iniziare a costo zero.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Una piccola avvertenza da conoscere fin da subito: siccome puoi eseguire le celle in ordine sparso, è facile
+      creare uno «stato» confuso (una variabile definita in una cella e cancellata poi, ma ancora in memoria).
+      <mark>La regola: prima di considerare finita un'analisi, riavvia il kernel ed esegui tutte le celle dall'alto</mark>
+      («Restart &amp; Run All»), per essere sicuro che funzioni davvero dall'inizio.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">Sezione 1.5</span>Laboratorio: preparare l'ambiente</h2>
+
+  <p class="lead">
+    Mettiamo su tutto: un ambiente isolato, lo stack installato, un notebook avviato e la prima cella che verifica che
+    le librerie rispondano. È il rito di iniziazione di ogni progetto data science.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Passo 1 — ambiente e installazione <span class="tag">nel terminale</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head">Terminale</div>
+      <pre><span class="p">$ </span><span class="cmd">mkdir</span> <span class="ar">mio-progetto</span> <span class="op">&amp;&amp;</span> <span class="cmd">cd</span> <span class="ar">mio-progetto</span>
+<span class="p">$ </span><span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">venv</span> <span class="ar">.venv</span>
+<span class="p">$ </span><span class="ar">source</span> <span class="ar">.venv/bin/activate</span>        <span class="cm"># Windows: .venv\Scripts\activate</span>
+<span class="p">(.venv) $ </span><span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">numpy pandas matplotlib jupyterlab</span>
+<span class="p">(.venv) $ </span><span class="cmd">jupyter</span> <span class="ar">lab</span>                <span class="cm"># apre il notebook nel browser</span></pre>
+    </div>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Passo 2 — la prima cella: importa e verifica <span class="tag">nel notebook</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">In una cella del notebook</div>
+      <pre><span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>            <span class="cm"># convenzione universale: np</span>
+<span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>           <span class="cm"># convenzione universale: pd</span>
+<span class="kw">import</span> <span class="nm">matplotlib</span><span class="op">.</span><span class="nm">pyplot</span> <span class="kw">as</span> <span class="nm">plt</span>  <span class="cm"># convenzione universale: plt</span>
+
+<span class="bi">print</span>(<span class="st">"NumPy:"</span>, <span class="nm">np</span><span class="op">.</span><span class="nm">__version__</span>)
+<span class="bi">print</span>(<span class="st">"pandas:"</span>, <span class="nm">pd</span><span class="op">.</span><span class="nm">__version__</span>)
+<span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>]) <span class="op">*</span> <span class="nm">10</span>      <span class="cm"># l'ultima riga viene mostrata da sola</span></pre>
+    </div>
+    <div class="f-note">
+      Esecuzione della cella (<kbd>Shift+Invio</kbd>):
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output sotto la cella</div>
+        <pre><span class="out">NumPy: 2.1.3
+pandas: 2.2.3
+array([10, 20, 30])</span></pre>
+      </div>
+      Tre cose da notare, che useremo per sempre: <b>(1)</b> le <b>abbreviazioni</b> <code>np</code>, <code>pd</code>,
+      <code>plt</code> sono convenzioni universali — le vedrai in ogni codice al mondo, usale anche tu. <b>(2)</b>
+      <code>np.array([1,2,3]) * 10</code> moltiplica <b>ogni</b> elemento per 10 in un colpo solo: è la
+      <b>vettorizzazione</b>, il cuore di NumPy (Cap. 3). <b>(3)</b> nel notebook, <mark>l'ultima riga di una cella viene
+      <b>mostrata automaticamente</b></mark> senza bisogno di <code>print</code> — comodissimo per ispezionare al volo.
+    </div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai ottenuto</div>
+    <p style="margin-bottom:0">
+      Un <b>ambiente isolato</b> con lo stack installato, un <b>notebook</b> funzionante, e la conferma che le librerie
+      rispondono. Da qui in poi ogni capitolo vivrà in un notebook come questo. <mark>Se le versioni che vedi sono
+      diverse dalle mie, va benissimo</mark>: lo stack evolve, ma le idee restano. Ora hai la mappa e gli strumenti:
+      possiamo cominciare a costruire, e si parte dalle fondamenta di tutto — l'array di NumPy.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li>La potenza di Python nella data science sta nelle <b>librerie</b> (scritte in C/C++ sotto): danno velocità e
+          comodità che il Python puro non ha (§1.1).</li>
+      <li>Formano una <b>piramide</b> su <b>NumPy</b> (la base): pandas, SciPy, Matplotlib sopra; scikit-learn, seaborn
+          ancora sopra; PyTorch imparentato ma a sé. Le impareremo dal basso (§1.1-1.2).</li>
+      <li>Ogni progetto nel suo <b>ambiente isolato</b> (<code>venv</code> + <code>pip</code>, o conda);
+          <code>requirements.txt</code> lo rende riproducibile (§1.3).</li>
+      <li>Il data scientist lavora nei <b>notebook Jupyter</b>: celle di codice con risultati e grafici inline, ideali
+          per l'analisi esplorativa (§1.4). Convenzioni: <code>np</code>, <code>pd</code>, <code>plt</code> (§1.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai la mappa dell'ecosistema e un ambiente pronto all'uso. È il momento di scendere alle fondamenta: sotto pandas,
+    sotto scikit-learn, sotto PyTorch, c'è sempre la stessa struttura dati che rende tutto veloce — l'<b>array</b> di
+    NumPy. Nel <strong>Capitolo 2</strong> lo conosciamo da vicino: cos'è, perché è così più veloce (e più comodo) delle
+    liste di Python, come si crea e come si «taglia» per estrarne i pezzi che servono. Capire bene NumPy è capire il
+    linguaggio segreto che tutte le altre librerie parlano tra loro.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">Sezione 1.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.1</div>
+    <p style="margin-bottom:0">
+      Perché un ciclo <code>for</code> in Python puro è lento per calcoli su milioni di numeri, e come risolvono il
+      problema librerie come NumPy?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.2</div>
+    <p style="margin-bottom:0">
+      Abbina ogni compito alla libreria giusta: (a) caricare e pulire un CSV; (b) disegnare un grafico a barre; (c)
+      addestrare un modello di classificazione classico; (d) costruire una rete neurale; (e) un test statistico.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.3</div>
+    <p style="margin-bottom:0">
+      Cosa significa che NumPy è «la base della piramide»? Fai un esempio di libreria che poggia su di esso.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve un ambiente virtuale in un progetto di data science? E a cosa serve un file
+      <code>requirements.txt</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.5</div>
+    <p style="margin-bottom:0">
+      Cos'è un notebook Jupyter e perché è particolarmente adatto all'analisi dei dati? Cosa vuol dire la regola
+      «riavvia il kernel ed esegui tutto» e perché è importante?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">Sezione 1.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.1</div>
+    <p style="margin-bottom:0">
+      Perché Python è <b>interpretato</b>: ogni operazione del ciclo passa da molti controlli «dietro le quinte»
+      (tipi, oggetti), e ripeterli milioni di volte è lentissimo. NumPy risolve eseguendo l'intera operazione in
+      <b>codice compilato</b> (C/Fortran) su un array in un colpo solo — la <b>vettorizzazione</b> — evitando il ciclo
+      Python e ottenendo velocità anche di decine o centinaia di volte superiori.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.2</div>
+    <p style="margin-bottom:0">
+      (a) <b>pandas</b> — caricare e pulire dati a tabella; (b) <b>Matplotlib</b> (o <b>seaborn</b>) — disegnare grafici;
+      (c) <b>scikit-learn</b> — addestrare un modello di ML classico; (d) <b>PyTorch</b> — costruire una rete neurale;
+      (e) <b>SciPy</b> (<code>scipy.stats</code>) o <b>statsmodels</b> — un test statistico.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.3</div>
+    <p style="margin-bottom:0">
+      Significa che NumPy fornisce la struttura dati fondamentale (l'<b>array</b>) e le operazioni veloci su di essa, e
+      che quasi tutte le altre librerie scientifiche la usano internamente come «valuta comune» per rappresentare i
+      numeri. Esempi di librerie che poggiano su NumPy: <b>pandas</b> (i DataFrame contengono array NumPy),
+      <b>SciPy</b>, <b>Matplotlib</b>, <b>scikit-learn</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.4</div>
+    <p style="margin-bottom:0">
+      Un <b>ambiente virtuale</b> isola i pacchetti (e le loro versioni) di un progetto dagli altri, evitando che
+      progetti diversi — che magari richiedono versioni diverse della stessa libreria — si pestino i piedi. Il file
+      <code>requirements.txt</code> elenca i pacchetti e le versioni usate: permette a chiunque (o a te stesso in
+      futuro, su un altro computer) di ricreare l'<b>identico</b> ambiente con <code>pip install -r requirements.txt</code>,
+      rendendo il lavoro <b>riproducibile</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.5</div>
+    <p style="margin-bottom:0">
+      Un <b>notebook Jupyter</b> è un documento a <b>celle</b> in cui codice, risultati, grafici e testo convivono: si
+      esegue una cella e il risultato appare subito sotto. È adatto all'analisi dei dati perché è <b>esplorativo</b>
+      (carichi i dati una volta e sperimenti in tante celle veloci, con grafici inline) e diventa al tempo stesso banco
+      di lavoro e report. La regola «riavvia il kernel ed esegui tutto» serve perché, eseguendo le celle in ordine
+      sparso, si può creare uno stato confuso in memoria: rieseguendo tutto da capo su un kernel pulito si verifica che
+      l'analisi funzioni davvero dall'inizio alla fine, in modo riproducibile.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §1.2 — "Quale libreria per quale compito?": scegli un compito, vedi
+   la libreria giusta e uno snippet minimo. Solo HTML/JS, nessuna dipendenza.
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wl-view');
+  if (!view) return;
+  const out = document.getElementById('wl-out');
+  const btns = document.querySelectorAll('#w-lib .w-btn');
+
+  const DATA = [
+    { lib: 'pandas',        emoji: '🐼', code: "pd.read_csv('dati.csv')",
+      note: 'Il DataFrame carica e maneggia dati a tabella. Il cavallo di battaglia (Cap. 4-8).' },
+    { lib: 'NumPy',         emoji: '🔢', code: "np.array(A) @ np.array(B)",
+      note: 'Array veloci e operazioni matematiche su matrici in un lampo (Cap. 2-3).' },
+    { lib: 'Matplotlib',    emoji: '📈', code: "plt.plot(x, y); plt.show()",
+      note: 'Disegna qualsiasi grafico; seaborn ci mette sopra grafici statistici (Cap. 9-10).' },
+    { lib: 'scikit-learn',  emoji: '🤖', code: "RandomForestClassifier().fit(X, y)",
+      note: 'Machine learning classico con un\'interfaccia semplice e uniforme (Cap. 12-13).' },
+    { lib: 'PyTorch',       emoji: '🔥', code: "nn.Linear(10, 1); loss.backward()",
+      note: 'Reti neurali, GPU e gradienti automatici per il deep learning (Cap. 14-17).' },
+    { lib: 'SciPy',         emoji: '🧪', code: "scipy.stats.ttest_ind(a, b)",
+      note: 'Statistica, test, ottimizzazione: la cassetta scientifica (Cap. 11).' }
+  ];
+
+  function show(i) {
+    const d = DATA[i];
+    view.innerHTML =
+      '<div style="font-size:2rem; margin-bottom:.2rem">' + d.emoji + '</div>' +
+      '<div style="font-size:1.15rem; font-weight:700; color:var(--accent); margin-bottom:.5rem">' + d.lib + '</div>' +
+      '<div style="font-family:var(--mono); font-size:.9rem; background:var(--code-bg,#1e1e1e); color:#e8e8e8; ' +
+      'display:inline-block; padding:.4rem .7rem; border-radius:6px">' + d.code + '</div>';
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem; color:var(--ink-soft)">' + d.note + '</div>';
+    btns.forEach(function (b, k) { b.classList.toggle('on', k === i); });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-t')); });
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

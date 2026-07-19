@@ -15,7 +15,7 @@ const TOC = [
     n: 1,
     titolo: "L'ecosistema scientifico di Python",
     file: "cap01-ecosistema.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Perché uno stack di librerie" },
       { id: "s1-2", n: "1.2", t: "Le librerie del data scientist" },

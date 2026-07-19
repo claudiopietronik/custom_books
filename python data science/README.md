@@ -10,7 +10,7 @@ Motore condiviso in `assets/` (toc.js, book.js, plot.js, style.css). Tema smeral
 
 ## Capitoli
 
-- [ ] 1 — L'ecosistema scientifico di Python
+- [x] 1 — L'ecosistema scientifico di Python
 - [ ] 2 — NumPy: l'array n-dimensionale
 - [ ] 3 — NumPy: vettorizzazione e broadcasting
 - [ ] 4 — pandas: Series e DataFrame
