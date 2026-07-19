@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Installare e configurare Git — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>Installare e configurare Git</h1>
+    <p class="standfirst">
+      Basta teoria: mettiamo Git sul tuo computer e prepariamolo all'uso. È un programma leggero che si installa in
+      pochi minuti e vive nel <b>terminale</b> — la finestra dove si digitano comandi. Dopo l'installazione, c'è un
+      passo di configurazione che tutti fanno una volta sola ma che è importante capire: dire a Git <b>chi sei</b>, cioè
+      il tuo nome ed email. Perché? Perché Git «firma» ogni tua commit con questi dati, così nella storia di un
+      progetto si sa sempre chi ha fatto cosa. In questo capitolo installiamo Git (§2.1), impariamo il comando di
+      configurazione <code>git config</code> (§2.2), impostiamo la nostra identità (§2.3) e prendiamo confidenza con i
+      comandi base del terminale (§2.4). <mark>Alla fine avrai un Git funzionante e configurato, pronto per creare il
+      tuo primo repository nel prossimo capitolo.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Installare Git (§2.1), <code>git config</code> e i livelli di configurazione (§2.2), impostare <b>nome ed
+      email</b> (§2.3), i comandi base del <b>terminale</b> (§2.4). Nel laboratorio (§2.5) configuri la tua identità.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la configurazione che ti segue ovunque</div>
+    <p style="margin-bottom:0">
+      La configurazione di nome ed email si fa <b>una volta</b> e vale per <b>tutti</b> i tuoi progetti su quel
+      computer. <mark>Farla bene fin da subito ti evita commit «anonime» o firmate con dati sbagliati</mark> —
+      un fastidio comune di chi salta questo passo. E capire il terminale, dove Git vive, è la chiave per usarlo con
+      sicurezza invece che a tentoni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Installare Git</h2>
+
+  <p class="lead">
+    Git è gratuito e disponibile per Windows, macOS e Linux. L'installazione è semplice; il modo cambia leggermente a
+    seconda del sistema operativo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Installare Git, per sistema <span class="tag">Windows · macOS · Linux</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Windows</b></dt>
+        <dd>scarica l'installer da <code>git-scm.com</code> e installalo (vanno bene le opzioni di default). Ottieni
+            anche «Git Bash», un terminale in stile Unix comodo per seguire il libro.</dd>
+        <dt><b>macOS</b></dt>
+        <dd>spesso Git è già presente. Altrimenti, installalo con <code>brew install git</code> (se hai Homebrew) o
+            scaricandolo da <code>git-scm.com</code>.</dd>
+        <dt><b>Linux</b></dt>
+        <dd>dal gestore pacchetti: <code>sudo apt install git</code> (Debian/Ubuntu) o l'equivalente della tua
+            distribuzione.</dd>
+        <dt>verifica l'installazione</dt>
+        <dd>apri un terminale e digita <code>git --version</code>. Se vedi un numero di versione, <mark>Git è
+            installato e funziona</mark>. È il tuo primo comando Git!</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">terminale — verifica</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="fl">--version</span>
+<span class="out">git version 2.45.0</span>          <span class="c"># il numero preciso non importa: basta che ci sia</span></pre>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>La prima configurazione</h2>
+
+  <p class="lead">
+    Prima di usare Git, gli si danno alcune impostazioni con il comando <code>git config</code>. La più importante è
+    la tua identità (§2.3); ma capiamo prima <b>come</b> funziona la configurazione, perché ha dei «livelli».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">git config e i suoi livelli <span class="tag">system · global · local</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git config</span></dt>
+        <dd>il comando per leggere e impostare le opzioni di Git. La forma base è
+            <code>git config &lt;livello&gt; &lt;chiave&gt; &lt;valore&gt;</code>.</dd>
+        <dt><span class="mono">--global</span> — per te, su tutto il computer</dt>
+        <dd>l'impostazione vale per <b>tutti i tuoi progetti</b> sul tuo account. <mark>È il livello che userai quasi
+            sempre</mark>, ad esempio per nome ed email: le imposti una volta e valgono ovunque.</dd>
+        <dt><span class="mono">--local</span> — solo questo progetto</dt>
+        <dd>l'impostazione vale <b>solo</b> per il repository corrente, e sovrascrive quella globale. Utile, per
+            esempio, per usare un'email diversa in un progetto specifico.</dd>
+        <dt><span class="mono">--system</span> — per tutti gli utenti</dt>
+        <dd>vale per l'intero computer, tutti gli utenti. Si usa raramente; richiede privilegi di amministratore.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La regola di precedenza: <mark><b>local</b> batte <b>global</b>, che batte <b>system</b></mark> — dal più
+      specifico al più generale. Per la tua identità userai <code>--global</code>: la imposti una volta e vale per
+      ogni progetto. Puoi rivedere tutte le impostazioni con <code>git config --list</code>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>Nome ed email: la tua identità</h2>
+
+  <p class="lead">
+    Ecco il passo che conta: dire a Git chi sei. Git includerà questo nome ed email in <b>ogni commit</b> che farai,
+    come «firma» dell'autore. Sono due comandi, da fare una volta sola.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — imposta la tua identità (una volta sola)</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.name</span> <span class="ar">"Anna Rossi"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.email</span> <span class="ar">"anna@esempio.com"</span>
+
+<span class="c"># verifica che siano stati impostati:</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.name</span>
+<span class="out">Anna Rossi</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Perché nome ed email <span class="tag">la firma di ogni commit</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">user.name</span></dt>
+        <dd>il nome che comparirà come <b>autore</b> di ogni tua commit. Metti il tuo nome vero (o lo pseudonimo con
+            cui vuoi essere riconosciuto): apparirà nella storia del progetto.</dd>
+        <dt><span class="mono">user.email</span></dt>
+        <dd>l'email associata alle tue commit. <mark>Importante per GitHub</mark> (Cap. 10): usa la stessa email del
+            tuo account GitHub, così il servizio collega le commit al tuo profilo.</dd>
+        <dt>compaiono in <b>ogni</b> commit</dt>
+        <dd>quando salvi uno snapshot (Cap. 4), Git vi allega automaticamente nome, email, data. <mark>Ecco perché la
+            configurazione va fatta <b>prima</b> di iniziare</mark>: senza, Git si lamenta o firma con dati vuoti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nessuna password qui: nome ed email sono solo un'<b>etichetta</b> di autore, non un login. <mark>Non sono un
+      segreto</mark> (finiscono pubblicamente nella storia dei progetti). Prova il widget qui sotto per vedere come
+      diventano la «firma» di una commit.
+    </div>
+  </div>
+
+  <div class="widget" id="w-id">
+    <div class="w-head">
+      <span>La tua identità nelle commit</span>
+      <span class="hint">imposta nome/email, guarda la firma</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:460px; margin:0 auto; text-align:left">
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:.5rem .6rem; align-items:center; font-size:.9rem; margin-bottom:.7rem">
+          <label style="color:var(--ink-soft)">user.name</label>
+          <input type="text" id="id-name" value="Anna Rossi" style="padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">user.email</label>
+          <input type="text" id="id-email" value="anna@esempio.com" style="padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+      </div>
+    </div>
+    <div class="w-readout" id="id-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>Il terminale e i comandi di base</h2>
+
+  <p class="lead">
+    Git si usa dal <b>terminale</b> (detto anche console, riga di comando, shell): una finestra dove scrivi comandi
+    testuali. Se non lo hai mai usato, ecco i pochissimi comandi di «navigazione» che ti serviranno per muoverti tra
+    le cartelle.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I comandi di navigazione essenziali <span class="tag">muoversi tra le cartelle</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">pwd</span> — dove sono?</dt>
+        <dd>«print working directory»: mostra la cartella in cui ti trovi ora. <mark>Il tuo «tu sei qui».</mark>
+            (Su Windows in PowerShell funziona anche <code>cd</code> senza argomenti.)</dd>
+        <dt><span class="mono">ls</span> — cosa c'è qui?</dt>
+        <dd>elenca i file e le cartelle della posizione corrente. (Su Windows/PowerShell anche <code>dir</code>.)</dd>
+        <dt><span class="mono">cd nome-cartella</span> — entra in una cartella</dt>
+        <dd>«change directory»: ti sposti dentro una cartella. <code>cd ..</code> torna a quella <b>superiore</b>;
+            <code>cd</code> da solo (o <code>cd ~</code>) torna alla tua home.</dd>
+        <dt><span class="mono">mkdir nome</span> — crea una cartella</dt>
+        <dd>«make directory»: crea una nuova cartella. La userai per creare la cartella dei tuoi progetti.</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">terminale — un giro di navigazione</div>
+      <pre><span class="p">$</span> <span class="cmd">pwd</span>
+<span class="out">/Users/anna</span>                    <span class="c"># sono nella mia home</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">progetti</span>            <span class="c"># creo una cartella "progetti"</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">progetti</span>               <span class="c"># ci entro</span>
+<span class="p">$</span> <span class="cmd">pwd</span>
+<span class="out">/Users/anna/progetti</span>           <span class="c"># ora sono qui dentro</span></pre>
+    </div>
+    <div class="f-note">
+      Non serve diventare esperti di terminale: <mark>questi quattro comandi (<code>pwd</code>, <code>ls</code>,
+      <code>cd</code>, <code>mkdir</code>) bastano per tutto il libro</mark>. Su Windows, «Git Bash» (installato con
+      Git) offre questi comandi in stile Unix, comodi per seguire gli esempi. Il concetto chiave: Git lavora <b>nella
+      cartella in cui ti trovi</b>, quindi devi sempre sapere «dove sei» (<code>pwd</code>) prima di dare comandi Git.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>Laboratorio: git config</h2>
+
+  <p class="lead">
+    Configura <b>ora</b> la tua identità: è un passo veloce e fondamentale, che farai una volta e ti servirà per tutto
+    il resto del libro (e della tua vita da programmatore).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — la ricetta completa</div>
+    <pre><span class="c"># 1) verifica che Git sia installato</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="fl">--version</span>
+<span class="out">git version 2.45.0</span>
+
+<span class="c"># 2) imposta nome ed email (usa i TUOI dati; per GitHub, la stessa email dell'account)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.name</span> <span class="ar">"Il Tuo Nome"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.email</span> <span class="ar">"tua@email.com"</span>
+
+<span class="c"># 3) (utile) imposta "main" come nome del branch iniziale</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">init.defaultBranch</span> <span class="ar">main</span>
+
+<span class="c"># 4) verifica tutto</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--list</span>
+<span class="out">user.name=Il Tuo Nome
+user.email=tua@email.com
+init.defaultBranch=main</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai fatto</div>
+    <p style="margin-bottom:0">
+      Hai verificato Git, impostato la tua <b>identità</b> (che firmerà ogni commit) e scelto <code>main</code> come
+      nome del branch principale (una convenzione moderna diffusa; vedrai i branch al Cap. 7). <mark>Con
+      <code>git config --list</code> controlli sempre le tue impostazioni.</mark> Se un domani vorrai cambiare
+      qualcosa, basta rieseguire il comando con il nuovo valore. Fatto questo, Git è pronto: nel prossimo capitolo
+      creiamo il nostro primo <b>repository</b> e iniziamo a versionare davvero.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>Git si installa da <code>git-scm.com</code> (o dal gestore pacchetti); verifica con <code>git --version</code>
+          (§2.1).</li>
+      <li><code>git config</code> imposta le opzioni; i livelli sono <b>local</b> (progetto) &gt; <b>global</b> (tuo
+          account) &gt; <b>system</b> (tutti). Per l'identità usi <code>--global</code> (§2.2).</li>
+      <li>Imposta <b>nome ed email</b> (<code>user.name</code>, <code>user.email</code>): firmano ogni commit; per
+          GitHub, usa l'email dell'account (§2.3).</li>
+      <li>Git vive nel <b>terminale</b>: naviga con <code>pwd</code>, <code>ls</code>, <code>cd</code>,
+          <code>mkdir</code>. Sappi sempre «dove sei» (§2.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Git è installato e sa chi sei. È il momento di creare qualcosa di reale: nel <strong>Capitolo 3</strong>
+    trasformiamo una cartella qualsiasi in un <b>repository</b> Git con <code>git init</code>, e scopriamo il concetto
+    più importante di tutto Git — le <b>tre aree</b> (working directory, staging, repository) — che spiega <em>come</em>
+    una modifica diventa uno snapshot. È la base su cui poggia ogni comando successivo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Quale comando usi per verificare che Git sia installato e vedere quale versione hai?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Scrivi i due comandi per impostare, a livello globale, il nome «Mario Bianchi» e l'email
+      <code>mario@posta.it</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>--global</code> e <code>--local</code> in <code>git config</code>? Se una chiave
+      è impostata in entrambi, quale vince?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      A cosa servono <code>user.name</code> e <code>user.email</code>? Perché, per usare GitHub, conviene che l'email
+      configurata in Git coincida con quella dell'account GitHub?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="fl">--version</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Se stampa un numero di versione (es. <code>git version 2.45.0</code>), Git è
+      installato e pronto.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.name</span> <span class="ar">"Mario Bianchi"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">config</span> <span class="fl">--global</span> <span class="ar">user.email</span> <span class="ar">"mario@posta.it"</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Le virgolette attorno al nome servono perché contiene uno spazio.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      <code>--global</code> imposta l'opzione per <b>tutti i progetti</b> del tuo account sul computer;
+      <code>--local</code> la imposta <b>solo per il repository corrente</b>. Se una chiave è definita in entrambi,
+      <b>vince quella local</b> (la più specifica): la regola di precedenza è local &gt; global &gt; system. Così puoi
+      avere un'impostazione generale e sovrascriverla in un singolo progetto quando serve.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      <code>user.name</code> e <code>user.email</code> sono l'<b>identità</b> che Git allega come autore a <b>ogni
+      commit</b>: servono a sapere, nella storia del progetto, chi ha fatto ogni modifica. Per GitHub conviene che
+      l'email coincida con quella dell'account perché GitHub usa l'email delle commit per <b>collegarle al tuo
+      profilo</b>: con l'email giusta, i tuoi contributi appaiono correttamente attribuiti a te (e nel tuo grafico dei
+      contributi); con un'email diversa, GitHub non riesce ad associare le commit al tuo account.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.3 — identità nelle commit: nome/email -> la riga Author di una commit
+   ========================================================================= */
+(function () {
+  const out = document.getElementById('id-out');
+  if (!out) return;
+  const nameEl = document.getElementById('id-name');
+  const emailEl = document.getElementById('id-email');
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const nome = nameEl.value.trim() || '(nessun nome)';
+    const email = emailEl.value.trim() || '(nessuna email)';
+    out.innerHTML =
+      '<div style="color:var(--ink-soft); font-size:.88rem; text-align:left; margin-bottom:.3rem">Quando farai una commit, Git la firmerà così:</div>' +
+      '<div class="term" style="margin:0 auto; max-width:100%"><div class="t-head">git log (una commit)</div>' +
+      '<pre><span class="nm">commit</span> a1b2c3d4e5f6...\n' +
+      '<span class="ar">Author:</span> ' + esc(nome) + ' &lt;' + esc(email) + '&gt;\n' +
+      '<span class="ar">Date:</span>   ...\n\n    Il mio messaggio di commit</pre></div>' +
+      '<div style="color:var(--ink-soft); font-size:.88rem; text-align:left; margin-top:.4rem">La riga <b>Author</b> viene da <code>user.name</code> e <code>user.email</code>. Cambiali sopra e guarda la firma cambiare. È così che la storia sa <b>chi</b> ha fatto ogni commit.</div>';
+  }
+  nameEl.addEventListener('input', render);
+  emailEl.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -13,7 +13,7 @@ nessun linguaggio di programmazione richiesto.
 ## Capitoli
 
 - [x] 1 — Cos'è il controllo di versione
-- [ ] 2 — Installare e configurare Git
+- [x] 2 — Installare e configurare Git
 - [ ] 3 — Il primo repository
 - [ ] 4 — Salvare le modifiche: la commit
 - [ ] 5 — La storia del progetto

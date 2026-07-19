@@ -28,7 +28,7 @@ const TOC = [
     n: 2,
     titolo: "Installare e configurare Git",
     file: "cap02-installare-configurare.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Installare Git" },
       { id: "s2-2", n: "2.2", t: "La prima configurazione" },
