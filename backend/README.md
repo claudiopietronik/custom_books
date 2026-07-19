@@ -23,7 +23,7 @@ Internet** e **Il Web**.
 - [x] 9 — PostgreSQL e MySQL
 - [x] 10 — SQLAlchemy: l'ORM
 - [x] 11 — FastAPI + database
-- [ ] 12 — Relazioni tra tabelle
+- [x] 12 — Relazioni tra tabelle
 - [ ] 13 — Autenticazione e sicurezza
 - [ ] 14 — File e storage con MinIO
 - [ ] 15 — Docker: impacchettare l'app

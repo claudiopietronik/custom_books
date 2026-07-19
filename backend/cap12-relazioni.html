@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Relazioni tra tabelle — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Relazioni tra tabelle</h1>
+    <p class="standfirst">
+      I dati del mondo reale non vivono isolati: sono <b>collegati</b>. Un utente <em>ha</em> molti post; un ordine
+      <em>appartiene</em> a un cliente e <em>contiene</em> molti prodotti; un post <em>ha</em> molti commenti. Questa
+      rete di legami è il vero valore di un database relazionale — è la «R» di «relazionale». In questo capitolo
+      impari a rappresentare i legami tra tabelle: il tipo più comune, l'<b>uno-a-molti</b> (§12.1); lo strumento che
+      lo realizza, la <b>chiave esterna</b> (§12.2); come navigarlo comodamente da Python con
+      <code>relationship</code> di SQLAlchemy (§12.3); e un cenno al <b>molti-a-molti</b> (§12.4). <mark>È ciò che
+      trasforma un mucchio di tabelle scollegate in un vero <em>modello di dati</em>, capace di rispondere a domande
+      come «dammi tutti i post di questo utente» in modo naturale ed efficiente.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La relazione <b>uno-a-molti</b> (§12.1), le <b>chiavi esterne</b> (§12.2), <code>relationship</code> in
+      SQLAlchemy per navigare i legami (§12.3), un cenno al <b>molti-a-molti</b> (§12.4). Nel laboratorio (§12.5)
+      colleghi utenti e post.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: i dati veri sono connessi</div>
+    <p style="margin-bottom:0">
+      Nessuna applicazione seria ha una sola tabella isolata: utenti, contenuti, transazioni sono <b>intrecciati</b>.
+      <mark>Saper modellare le relazioni è forse la competenza più importante nella progettazione di un database</mark>
+      — sbagliarle porta a dati duplicati, incoerenti, difficili da interrogare. Farle bene rende l'app solida e le
+      query naturali. È il salto da «so salvare dei dati» a «so progettare un sistema di dati».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Uno-a-molti</h2>
+
+  <p class="lead">
+    La relazione più diffusa è l'<b>uno-a-molti</b>: <b>un</b> elemento di una tabella è collegato a <b>molti</b>
+    elementi di un'altra. Un utente ha molti post; ma ogni post appartiene a un solo utente. Guardata dall'altro
+    lato, è una «molti-a-uno».
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Un utente, molti post</div>
+    <p>
+      Immagina due tabelle: <code>utenti</code> e <code>post</code>. Ogni post è stato scritto da <b>un</b> utente,
+      ma un utente può aver scritto <b>tanti</b> post. Come esprimiamo questo legame? <mark>Non copiando i dati
+      dell'utente dentro ogni post</mark> (sarebbe uno spreco e una fonte di incoerenze: se l'utente cambia nome,
+      dovresti aggiornarlo in mille post). Invece, ogni post «punta» al suo utente memorizzandone <b>solo l'id</b>.
+    </p>
+    <p style="margin-bottom:0">
+      Questo è il principio della <b>normalizzazione</b>: ogni informazione sta in <b>un solo posto</b>, e i legami si
+      fanno tramite id. Il nome dell'utente vive solo nella riga <code>utenti</code>; i post lo raggiungono
+      attraverso il suo id. <mark>Meno duplicazione, più coerenza.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Le chiavi esterne</h2>
+
+  <p class="lead">
+    Il meccanismo che realizza il legame è la <b>chiave esterna</b> (foreign key): una colonna, nella tabella «molti»,
+    che contiene l'<b>id</b> della riga collegata nell'altra tabella.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La chiave esterna in azione <span class="tag">post.utente_id → utenti.id</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">tabella: utenti</div>
+      <pre> <span class="hl">id</span> | nome
+----+------
+  <span class="nm">1</span> | Anna
+  <span class="nm">2</span> | Luca</pre>
+    </div>
+    <div class="term" style="margin:.4rem auto">
+      <div class="t-head">tabella: post</div>
+      <pre> <span class="hl">id</span> | titolo         | <span class="hl">utente_id</span>   <span class="c">&lt;- chiave esterna</span>
+----+----------------+-----------
+  <span class="nm">1</span> | Ciao mondo     |     <span class="nm">1</span>       <span class="c">-> di Anna</span>
+  <span class="nm">2</span> | La mia ricetta |     <span class="nm">1</span>       <span class="c">-> di Anna</span>
+  <span class="nm">3</span> | Viaggio        |     <span class="nm">2</span>       <span class="c">-> di Luca</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la colonna <span class="mono">utente_id</span> in <code>post</code></dt>
+        <dd>è la <b>chiave esterna</b>: contiene l'<code>id</code> dell'utente autore. Il post 1 ha
+            <code>utente_id = 1</code>, quindi è di Anna. <mark>Il legame è un semplice numero.</mark></dd>
+        <dt>«punta a» <span class="mono">utenti.id</span></dt>
+        <dd>la chiave esterna fa riferimento alla <b>chiave primaria</b> dell'altra tabella. Il database può
+            <b>garantire</b> che ogni <code>utente_id</code> esista davvero in <code>utenti</code> (integrità
+            referenziale): non puoi avere un post «orfano», legato a un utente inesistente.</dd>
+        <dt>uno-a-molti, ora visibile</dt>
+        <dd>più post possono avere lo stesso <code>utente_id</code> (Anna ne ha due) → <mark>un utente, molti
+            post</mark>. Ma ogni post ha un solo <code>utente_id</code> → un post, un utente.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Per «ricomporre» i dati collegati — es. «il titolo del post e il nome del suo autore» — in SQL puro si usa il
+      <b>JOIN</b>, che unisce le due tabelle sulle colonne id/utente_id. È potente ma verboso. <mark>La buona notizia:
+      con SQLAlchemy raramente scriverai JOIN a mano</mark> — la <code>relationship</code> (prossima sezione) ti farà
+      navigare i legami come semplici attributi Python.
+    </div>
+  </div>
+
+  <div class="widget" id="w-rel">
+    <div class="w-head">
+      <span>Uno-a-molti dal vivo</span>
+      <span class="hint">clicca un utente → i suoi post</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:180px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">👤 utenti (clicca)</div>
+        <ul id="rl-utenti" style="list-style:none; padding:0; margin:0"></ul>
+      </div>
+      <div style="flex:1.4; min-width:220px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">📝 post (utente_id = chiave esterna)</div>
+        <ul id="rl-post" style="list-style:none; padding:0; margin:0"></ul>
+      </div>
+    </div>
+    <div class="w-readout" id="rl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>relationship in SQLAlchemy</h2>
+
+  <p class="lead">
+    In SQLAlchemy definisci la relazione con due ingredienti: una colonna <b>ForeignKey</b> (il legame «fisico» nel
+    database) e una <b>relationship</b> (la comodità di navigarlo come attributo Python). Insieme rendono i legami
+    naturali da usare.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">models.py — utenti e post collegati</div>
+    <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> Column, Integer, String, ForeignKey
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> relationship
+<span class="kw">from</span> database <span class="kw">import</span> Base
+
+<span class="kw">class</span> <span class="fn">Utente</span>(Base):
+    __tablename__ <span class="op">=</span> <span class="st">"utenti"</span>
+    id <span class="op">=</span> <span class="fn">Column</span>(Integer, primary_key<span class="op">=</span><span class="kw">True</span>)
+    nome <span class="op">=</span> <span class="fn">Column</span>(String)
+    post <span class="op">=</span> <span class="fn">relationship</span>(<span class="st">"Post"</span>, back_populates<span class="op">=</span><span class="st">"autore"</span>)   <span class="cm"># i suoi post</span>
+
+<span class="kw">class</span> <span class="fn">Post</span>(Base):
+    __tablename__ <span class="op">=</span> <span class="st">"post"</span>
+    id <span class="op">=</span> <span class="fn">Column</span>(Integer, primary_key<span class="op">=</span><span class="kw">True</span>)
+    titolo <span class="op">=</span> <span class="fn">Column</span>(String)
+    utente_id <span class="op">=</span> <span class="fn">Column</span>(Integer, <span class="fn">ForeignKey</span>(<span class="st">"utenti.id"</span>))   <span class="cm"># la chiave esterna</span>
+    autore <span class="op">=</span> <span class="fn">relationship</span>(<span class="st">"Utente"</span>, back_populates<span class="op">=</span><span class="st">"post"</span>)   <span class="cm"># l'utente</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">ForeignKey e relationship <span class="tag">il legame + la navigazione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">Column(Integer, ForeignKey("utenti.id"))</span></dt>
+        <dd>crea la colonna chiave esterna nel database, dichiarando che punta a <code>utenti.id</code>. <mark>È il
+            legame «fisico»</mark>, quello che il database conosce e fa rispettare.</dd>
+        <dt><span class="mono">relationship("Post", ...)</span></dt>
+        <dd>non è una colonna: è una <b>comodità Python</b>. Aggiunge un attributo che ti fa <b>navigare</b> il legame:
+            <code>utente.post</code> ti dà <b>la lista dei suoi post</b> (oggetti <code>Post</code>);
+            <code>post.autore</code> ti dà <b>l'utente</b> (oggetto <code>Utente</code>).</dd>
+        <dt><span class="mono">back_populates</span></dt>
+        <dd>collega le due <code>relationship</code> tra loro (i due lati dello stesso legame), così restano
+            coerenti: aggiungere un post alla lista di un utente imposta anche il suo <code>autore</code>.</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">navigare i legami — che comodità</div>
+      <pre>utente <span class="op">=</span> db.<span class="fn">query</span>(Utente).<span class="fn">get</span>(<span class="nm">1</span>)
+<span class="fn">print</span>(utente.post)          <span class="cm"># -> [Post("Ciao mondo"), Post("La mia ricetta")]</span>
+
+post <span class="op">=</span> db.<span class="fn">query</span>(Post).<span class="fn">get</span>(<span class="nm">1</span>)
+<span class="fn">print</span>(post.autore.nome)     <span class="cm"># -> "Anna"</span></pre>
+    </div>
+    <div class="f-note">
+      Guarda la bellezza: <code>utente.post</code> e <code>post.autore</code> sono semplici <b>attributi</b>, ma
+      dietro le quinte SQLAlchemy esegue i JOIN e le query necessarie. <mark>Il legame del database diventa
+      navigazione a oggetti</mark> — proprio il tipo di astrazione per cui usiamo un ORM. Niente SQL, niente JOIN a
+      mano: pensi in termini di «l'utente e i suoi post», e il codice segue.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Molti-a-molti (cenni)</h2>
+
+  <p class="lead">
+    A volte il legame è <b>molti-a-molti</b>: ogni elemento di A è collegato a molti di B, <em>e</em> viceversa. Un
+    esempio classico: gli <b>studenti</b> e i <b>corsi</b> — uno studente segue molti corsi, e un corso ha molti
+    studenti.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La tabella «ponte»</div>
+    <p style="margin-bottom:0">
+      Una singola chiave esterna non basta (dove la metti? un corso ha tanti studenti e uno studente tanti corsi). La
+      soluzione: una <b>terza tabella</b>, detta di <b>associazione</b> o «ponte», che contiene <b>coppie</b> di id.
+      Ogni riga «studente 3 – corso 7» rappresenta un'iscrizione. <mark>Così un molti-a-molti si scompone in <b>due</b>
+      uno-a-molti</mark> verso la tabella ponte:
+    </p>
+    <div class="term" style="margin:.9rem auto 0">
+      <div class="t-head">tabella ponte: iscrizioni</div>
+      <pre> <span class="hl">studente_id</span> | <span class="hl">corso_id</span>
+-------------+----------
+      <span class="nm">3</span>      |    <span class="nm">7</span>      <span class="c">-- lo studente 3 segue il corso 7</span>
+      <span class="nm">3</span>      |    <span class="nm">9</span>      <span class="c">-- ...e anche il corso 9</span>
+      <span class="nm">5</span>      |    <span class="nm">7</span>      <span class="c">-- lo studente 5 segue il corso 7</span></pre>
+    </div>
+    <p style="margin:.7rem 0 0">
+      SQLAlchemy gestisce anche questo con <code>relationship</code> e un parametro <code>secondary</code> che indica
+      la tabella ponte, permettendoti di scrivere <code>studente.corsi</code> e <code>corso.studenti</code>.
+      <mark>Non lo approfondiamo qui</mark>: ti basti riconoscere lo schema e sapere che, quando ne avrai bisogno, la
+      «tabella ponte» è la risposta. La maggior parte delle relazioni che incontrerai è comunque uno-a-molti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Laboratorio: utenti e post</h2>
+
+  <p class="lead">
+    Costruiamo il legame utenti-post con SQLAlchemy e usiamolo. Usa i modelli del §12.3 e prova a creare un utente con
+    dei post, poi a navigare la relazione.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">prova_relazioni.py</div>
+    <pre>Base.metadata.<span class="fn">create_all</span>(bind<span class="op">=</span>engine)
+db <span class="op">=</span> <span class="fn">SessionLocal</span>()
+
+<span class="cm"># crea un utente con due post, collegati</span>
+anna <span class="op">=</span> <span class="fn">Utente</span>(nome<span class="op">=</span><span class="st">"Anna"</span>)
+anna.post <span class="op">=</span> [<span class="fn">Post</span>(titolo<span class="op">=</span><span class="st">"Ciao mondo"</span>), <span class="fn">Post</span>(titolo<span class="op">=</span><span class="st">"La mia ricetta"</span>)]
+db.<span class="fn">add</span>(anna)          <span class="cm"># salva l'utente E i suoi post (in cascata)</span>
+db.<span class="fn">commit</span>()
+
+<span class="cm"># naviga la relazione: dall'utente ai post</span>
+<span class="kw">for</span> p <span class="kw">in</span> anna.post:
+    <span class="fn">print</span>(p.titolo, <span class="st">"->"</span>, p.autore.nome)
+<span class="cm"># Ciao mondo -> Anna</span>
+<span class="cm"># La mia ricetta -> Anna</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      Hai assegnato i post all'utente con un semplice <code>anna.post = [...]</code>, e un solo
+      <code>db.add(anna)</code> ha salvato <b>anche</b> i post, impostando automaticamente la loro chiave esterna
+      <code>utente_id</code> — è la comodità di <code>relationship</code>. Poi hai navigato il legame in <b>entrambe</b>
+      le direzioni: <code>anna.post</code> (dall'uno ai molti) e <code>p.autore.nome</code> (dai molti all'uno).
+      <mark>Nessun JOIN scritto a mano, nessun id manipolato manualmente</mark>: pensi a oggetti collegati, e
+      SQLAlchemy traduce in SQL. Nell'API (FastAPI) potresti così esporre un endpoint
+      <code>GET /utenti/{id}/post</code> che restituisce i post di un utente, leggendoli con <code>utente.post</code>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li>La relazione <b>uno-a-molti</b> (un utente, molti post) evita di duplicare i dati: ogni info sta in un solo
+          posto (normalizzazione) (§12.1).</li>
+      <li>La <b>chiave esterna</b> (es. <code>post.utente_id</code>) è una colonna che contiene l'<b>id</b> della riga
+          collegata; il database ne garantisce l'integrità (§12.2).</li>
+      <li>In SQLAlchemy: <code>ForeignKey("utenti.id")</code> per il legame + <code>relationship(...)</code> per
+          <b>navigarlo</b> come attributo (<code>utente.post</code>, <code>post.autore</code>) (§12.3).</li>
+      <li>Il <b>molti-a-molti</b> si realizza con una <b>tabella ponte</b> di coppie di id (§12.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La nostra API ora sa gestire dati ricchi e collegati. Ma c'è un tema che finora abbiamo rimandato e che non
+    possiamo più ignorare: <b>chi</b> può fare cosa. Finora chiunque può creare, leggere e cancellare qualsiasi
+    contatto o post. Un'applicazione vera deve sapere <b>chi è l'utente</b> e <b>cosa gli è permesso</b>. Nel
+    <strong>Capitolo 13</strong> affrontiamo l'<b>autenticazione e la sicurezza</b>: password conservate in modo
+    sicuro, token per riconoscere gli utenti, e la protezione delle rotte — il tema più delicato e importante di
+    tutto il backend.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Per ciascuna coppia, indica il tipo di relazione (uno-a-molti o molti-a-molti): (a) autori e libri (un libro ha
+      un autore); (b) film e attori; (c) città e abitanti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Perché è meglio che un post memorizzi solo l'<code>utente_id</code> del suo autore, invece di copiare nome ed
+      email dell'utente dentro ogni post?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      In un modello SQLAlchemy per i <b>commenti</b> di un post, scrivi la colonna chiave esterna che li collega alla
+      tabella <code>post</code> (chiave primaria <code>post.id</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>ForeignKey(...)</code> e <code>relationship(...)</code> in SQLAlchemy? Puoi avere
+      l'uno senza l'altro?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      (a) autori–libri: <b>uno-a-molti</b> (un autore ha molti libri, ma qui ogni libro ha un autore). (b)
+      film–attori: <b>molti-a-molti</b> (un film ha molti attori, un attore recita in molti film → serve una tabella
+      ponte). (c) città–abitanti: <b>uno-a-molti</b> (una città ha molti abitanti, ma ogni abitante vive in una città).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      Per evitare <b>duplicazione</b> e <b>incoerenza</b> (normalizzazione). Se copiassi nome ed email in ogni post,
+      lo stesso dato sarebbe ripetuto centinaia di volte; e quando l'utente cambia email, dovresti aggiornarla in
+      <b>tutti</b> i suoi post — dimenticandone uno, avresti dati incoerenti. Memorizzando solo l'<code>utente_id</code>,
+      l'informazione dell'utente vive in <b>un solo posto</b> (la riga <code>utenti</code>) e i post la raggiungono
+      tramite il legame: una sola modifica aggiorna tutto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">models.py</div>
+      <pre>post_id <span class="op">=</span> <span class="fn">Column</span>(Integer, <span class="fn">ForeignKey</span>(<span class="st">"post.id"</span>))</pre>
+    </div>
+    <p style="margin:.5rem 0 0">La colonna <code>post_id</code> nella tabella <code>commenti</code> punta a
+      <code>post.id</code>: ogni commento appartiene a un post (uno-a-molti: un post, molti commenti).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      <code>ForeignKey(...)</code> definisce il legame <b>reale nel database</b>: una colonna che contiene l'id di
+      un'altra tabella, con l'integrità referenziale garantita dal database. <code>relationship(...)</code> è invece
+      una <b>comodità di SQLAlchemy</b> (non esiste nel database): aggiunge attributi Python per <b>navigare</b> il
+      legame come oggetti (<code>utente.post</code>). Puoi avere la <code>ForeignKey</code> <b>senza</b> la
+      <code>relationship</code> (il legame funziona, ma dovresti fare le query a mano); la <code>relationship</code>,
+      invece, si <b>appoggia</b> a una chiave esterna esistente per sapere come collegare le tabelle.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.2 — uno-a-molti: clicca un utente, evidenzia i suoi post (via utente_id)
+   ========================================================================= */
+(function () {
+  const ulU = document.getElementById('rl-utenti');
+  if (!ulU) return;
+  const ulP = document.getElementById('rl-post');
+  const out = document.getElementById('rl-out');
+
+  const utenti = [ { id: 1, nome: 'Anna' }, { id: 2, nome: 'Luca' }, { id: 3, nome: 'Sara' } ];
+  const post = [
+    { id: 1, titolo: 'Ciao mondo', utente_id: 1 },
+    { id: 2, titolo: 'La mia ricetta', utente_id: 1 },
+    { id: 3, titolo: 'Viaggio in Italia', utente_id: 2 },
+    { id: 4, titolo: 'Note di lettura', utente_id: 3 },
+    { id: 5, titolo: 'Diario', utente_id: 1 }
+  ];
+  let sel = null;
+
+  function draw() {
+    ulU.innerHTML = utenti.map(function (u) {
+      const on = sel === u.id;
+      return '<li data-uid="' + u.id + '" style="cursor:pointer; padding:.45rem .6rem; margin-bottom:.35rem; border-radius:7px; border:2px solid ' +
+        (on ? 'var(--accent)' : 'var(--ink-soft)') + '; background:' + (on ? 'color-mix(in srgb, var(--accent) 14%, transparent)' : 'transparent') + '">' +
+        '<b style="color:var(--accent)">#' + u.id + '</b> ' + u.nome + '</li>';
+    }).join('');
+    ulP.innerHTML = post.map(function (p) {
+      const on = sel === p.utente_id;
+      return '<li style="padding:.45rem .6rem; margin-bottom:.35rem; border-radius:7px; border:1px solid var(--ink-soft); opacity:' +
+        (sel && !on ? '.32' : '1') + '; background:' + (on ? 'color-mix(in srgb, var(--green) 13%, transparent)' : 'transparent') +
+        '; border-color:' + (on ? 'var(--green)' : 'var(--ink-soft)') + '">' +
+        '<b>#' + p.id + '</b> ' + p.titolo + ' <span style="color:var(--ink-soft); font-family:var(--mono); font-size:.8rem">utente_id=' + p.utente_id + '</span></li>';
+    }).join('');
+    ulU.querySelectorAll('li[data-uid]').forEach(function (li) {
+      li.addEventListener('click', function () { pick(parseInt(li.getAttribute('data-uid'), 10)); });
+    });
+  }
+
+  function pick(uid) {
+    sel = uid; draw();
+    const u = utenti.find(function (x) { return x.id === uid; });
+    const suoi = post.filter(function (p) { return p.utente_id === uid; });
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' +
+      '<code>' + u.nome + '.post</code> → <b>' + suoi.length + '</b> post evidenziati (quelli con <code>utente_id = ' + uid + '</code>). ' +
+      'In SQLAlchemy sarebbe <code>utente.post</code>; in SQL, <code>SELECT * FROM post WHERE utente_id = ' + uid + '</code>. ' +
+      'Nota: <b>un</b> utente, <b>molti</b> post.</div>';
+  }
+
+  draw();
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Clicca un utente a sinistra: si accendono i suoi post a destra, quelli la cui <b>chiave esterna</b> <code>utente_id</code> corrisponde. È la relazione <b>uno-a-molti</b> resa visibile — ed è ciò che <code>relationship</code> ti fa navigare come <code>utente.post</code>.</div>';
+})();
+</script>
+</body>
+</html>

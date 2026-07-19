@@ -181,7 +181,7 @@ const TOC = [
     n: 12,
     titolo: "Relazioni tra tabelle",
     file: "cap12-relazioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Uno-a-molti" },
       { id: "s12-2", n: "12.2", t: "Le chiavi esterne" },
