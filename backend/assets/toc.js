@@ -29,7 +29,7 @@ const TOC = [
     n: 2,
     titolo: "HTTP e le API REST",
     file: "cap02-http-api-rest.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Richiesta e risposta HTTP" },
       { id: "s2-2", n: "2.2", t: "I metodi: GET, POST, PUT, DELETE" },

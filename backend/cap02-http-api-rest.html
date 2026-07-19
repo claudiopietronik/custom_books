@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · HTTP e le API REST — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>HTTP e le API REST</h1>
+    <p class="standfirst">
+      Nel log del primo capitolo hai intravisto <code>GET / … 200</code>: la lingua con cui client e server si
+      parlano. Quella lingua è <b>HTTP</b>, ed è il fondamento di ogni cosa che costruiremo. Ma per scrivere un
+      backend non basta sapere che HTTP esiste: bisogna padroneggiarne il vocabolario — i <b>metodi</b> (GET, POST,
+      PUT, DELETE, il «verbo» di ogni richiesta), i <b>codici di stato</b> (200, 404, 500, l'esito di ogni risposta),
+      e il modo moderno di organizzare un'interfaccia attorno a essi: lo stile <b>REST</b>, dove tutto ruota attorno
+      alle <b>risorse</b>. Infine il <b>JSON</b>, il formato in cui i dati viaggiano avanti e indietro.
+      <mark>Questo è l'alfabeto del backend: una volta tuo, ogni API del mondo — comprese quelle che scriverai —
+      diventa leggibile.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La struttura di richiesta e risposta HTTP (§2.1), i <b>metodi</b> (§2.2), i <b>codici di stato</b> (§2.3), lo
+      stile <b>REST</b> e le risorse (§2.4), e il <b>JSON</b> (§2.5). Nel laboratorio (§2.6) interroghi un'API vera
+      con <code>curl</code> e leggi le risposte.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è il contratto tra le due metà</div>
+    <p style="margin-bottom:0">
+      Front-end e back-end sono programmi diversi, magari scritti da persone diverse, in linguaggi diversi. Ciò che
+      permette loro di collaborare è un <b>contratto condiviso</b>: HTTP + REST + JSON. <mark>Progettare bene questo
+      contratto è il 50% del lavoro di backend.</mark> E anche quando <em>consumi</em> API altrui (pagamenti, mappe,
+      IA), parli questa stessa lingua. Investire qui rende facile tutto il resto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Richiesta e risposta HTTP</h2>
+
+  <p class="lead">
+    Ogni interazione col backend è una coppia: il client manda una <b>richiesta</b>, il server rimanda una
+    <b>risposta</b>. Entrambe hanno una struttura fissa e semplice. Guardiamola da vicino — è più leggibile di quanto
+    sembri.
+  </p>
+
+  <div class="term">
+    <div class="t-head">una richiesta HTTP (cosa manda il client)</div>
+    <pre><span class="hl">GET</span> /utenti/42 <span class="out">HTTP/1.1</span>        <span class="c"># riga di richiesta: METODO percorso versione</span>
+<span class="ar">Host:</span> api.esempio.com          <span class="c"># intestazioni (header): metadati</span>
+<span class="ar">Authorization:</span> Bearer abc123   <span class="c"># es. il token di chi sei</span>
+<span class="ar">Accept:</span> application/json        <span class="c"># "rispondimi in JSON, per favore"</span>
+                                <span class="c"># (riga vuota, poi l'eventuale corpo)</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">la risposta HTTP (cosa rimanda il server)</div>
+    <pre><span class="out">HTTP/1.1</span> <span class="hl">200 OK</span>                 <span class="c"># riga di stato: versione CODICE messaggio</span>
+<span class="ar">Content-Type:</span> application/json   <span class="c"># header: il corpo è JSON</span>
+                                <span class="c"># riga vuota, poi il corpo:</span>
+<span class="st">{</span>
+  <span class="ar">"id"</span><span class="st">:</span> <span class="nm">42</span><span class="st">,</span>
+  <span class="ar">"nome"</span><span class="st">:</span> <span class="st">"Anna"</span>
+<span class="st">}</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le quattro parti di ogni messaggio <span class="tag">richiesta e risposta</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>riga iniziale</b></dt>
+        <dd>nella richiesta dice <b>metodo + percorso</b> (<code>GET /utenti/42</code>): cosa vuoi e da dove. Nella
+            risposta dice <b>codice di stato</b> (<code>200 OK</code>): com'è andata.</dd>
+        <dt>gli <b>header</b> (intestazioni)</dt>
+        <dd>coppie <code>Nome: valore</code> con i <b>metadati</b> del messaggio: chi sei (<code>Authorization</code>),
+            in che formato (<code>Content-Type</code>), cosa accetti (<code>Accept</code>)… <mark>Non sono i dati,
+            ma le informazioni <em>sui</em> dati.</mark></dd>
+        <dt>una <b>riga vuota</b></dt>
+        <dd>separa gli header dal corpo. Piccola ma obbligatoria.</dd>
+        <dt>il <b>corpo</b> (body)</dt>
+        <dd>il contenuto vero e proprio, quando c'è: i dati che invii (in una POST) o che ricevi (la risposta). Di
+            solito in <b>JSON</b> (§2.5). Alcune richieste (una GET semplice) non hanno corpo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La buona notizia: <mark>tutto questo lo gestirà FastAPI per te</mark>. Non scriverai header a mano né
+      analizzerai testo grezzo: il framework legge la richiesta, ti consegna i dati già pronti, e impacchetta la tua
+      risposta. Ma <b>capire</b> la struttura è essenziale per progettare bene e per fare debug quando qualcosa non
+      torna. È come guidare: non costruisci il motore, ma sapere che c'è ti rende un guidatore migliore.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>I metodi: GET, POST, PUT, DELETE</h2>
+
+  <p class="lead">
+    Il <b>metodo</b> è il «verbo» della richiesta: dichiara <b>che tipo di azione</b> vuoi compiere su una risorsa.
+    Quattro coprono la stragrande maggioranza dei casi, e mappano naturalmente sulle operazioni «leggi, crea,
+    modifica, cancella».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I quattro verbi essenziali <span class="tag">azione · idempotenza · ha corpo?</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">GET</span> — leggere</dt>
+        <dd>«dammi questa risorsa». <code>GET /utenti/42</code> = «dammi l'utente 42». Non modifica nulla
+            (<b>sicuro</b>): puoi ripeterlo mille volte senza effetti. Nessun corpo nella richiesta.</dd>
+        <dt><span class="mono">POST</span> — creare</dt>
+        <dd>«crea una nuova risorsa con questi dati». <code>POST /utenti</code> + corpo JSON = «crea un nuovo utente».
+            <mark>Ha un corpo</mark> (i dati del nuovo elemento) e <b>cambia</b> lo stato del server.</dd>
+        <dt><span class="mono">PUT</span> (e <span class="mono">PATCH</span>) — modificare</dt>
+        <dd>«aggiorna la risorsa esistente». <code>PUT /utenti/42</code> + corpo = «sostituisci i dati dell'utente
+            42». <code>PATCH</code> è la variante per una <b>modifica parziale</b> (solo alcuni campi).</dd>
+        <dt><span class="mono">DELETE</span> — cancellare</dt>
+        <dd>«elimina questa risorsa». <code>DELETE /utenti/42</code> = «cancella l'utente 42». Di solito senza corpo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota come lo <b>stesso percorso</b> (<code>/utenti/42</code>) faccia cose diverse a seconda del <b>metodo</b>:
+      GET lo legge, PUT lo modifica, DELETE lo cancella. <mark>È il cuore dello stile REST</mark> (§2.4): il percorso
+      identifica <em>la cosa</em>, il metodo dice <em>cosa farci</em>. Un concetto importante è l'<b>idempotenza</b>:
+      GET, PUT e DELETE ripetuti danno lo stesso risultato finale (cancellare due volte l'utente 42 lo lascia
+      cancellato); POST no, ripeterlo crea <b>due</b> utenti. Ne terrai conto progettando le API.
+    </div>
+  </div>
+
+  <div class="widget" id="w-rest">
+    <div class="w-head">
+      <span>Costruttore di richieste REST</span>
+      <span class="hint">scegli metodo e risorsa, guarda richiesta e risposta</span>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.6rem; flex-wrap:wrap">
+      <label style="font-size:.85rem; color:var(--ink-soft)">metodo
+        <select id="rb-metodo" style="margin-left:.3rem; padding:.3rem .5rem; border-radius:6px; background:var(--paper); color:var(--ink); border:1px solid var(--ink-soft)">
+          <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option>
+        </select>
+      </label>
+      <label style="font-size:.85rem; color:var(--ink-soft)">risorsa
+        <select id="rb-ris" style="margin-left:.3rem; padding:.3rem .5rem; border-radius:6px; background:var(--paper); color:var(--ink); border:1px solid var(--ink-soft)">
+          <option value="tutti">/utenti (collezione)</option>
+          <option value="uno">/utenti/42 (elemento)</option>
+        </select>
+      </label>
+    </div>
+    <div class="w-readout" id="rb-out" style="padding:.8rem"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>I codici di stato</h2>
+
+  <p class="lead">
+    Ogni risposta porta un numero di tre cifre, il <b>codice di stato</b>, che riassume l'esito. Non serve
+    memorizzarli tutti: bastano le <b>famiglie</b> (la prima cifra) e una manciata di codici comuni.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le famiglie dei codici <span class="tag">la prima cifra racconta tutto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>2xx</b> — successo ✅</dt>
+        <dd><code>200 OK</code> (tutto bene, ecco i dati), <code>201 Created</code> (risorsa creata, tipico dopo una
+            POST), <code>204 No Content</code> (fatto, niente da restituire, tipico dopo una DELETE).</dd>
+        <dt><b>3xx</b> — reindirizzamento ↪️</dt>
+        <dd>«la risorsa è altrove». <code>301</code>/<code>302</code>: vai a un altro indirizzo. Li incontri poco
+            scrivendo API, di più configurando nginx (Cap. 17).</dd>
+        <dt><b>4xx</b> — errore del <b>client</b> 🙋</dt>
+        <dd>«hai sbagliato tu». <code>400 Bad Request</code> (dati malformati), <code>401 Unauthorized</code> (non sei
+            autenticato), <code>403 Forbidden</code> (autenticato ma senza permesso), <code>404 Not Found</code> (non
+            esiste), <code>422</code> (dati non validi — FastAPI lo usa molto). <mark>La colpa è della richiesta.</mark></dd>
+        <dt><b>5xx</b> — errore del <b>server</b> 💥</dt>
+        <dd>«ho sbagliato io». <code>500 Internal Server Error</code> (il tuo codice è andato in crash),
+            <code>502</code>/<code>503</code> (server non raggiungibile/sovraccarico). <mark>La colpa è del
+            backend</mark>: un 500 significa che c'è un bug da sistemare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Regola mnemonica: <b>4xx = colpa tua (client)</b>, <b>5xx = colpa mia (server)</b>. Restituire il codice
+      <b>giusto</b> non è un dettaglio estetico: è parte del contratto. Un client ben scritto reagisce in modo
+      diverso a un 404 (mostra «non trovato») rispetto a un 401 (manda al login) o un 500 (mostra «riprova più
+      tardi»). <mark>Scegliere il codice corretto è un atto di comunicazione</mark> verso chi userà la tua API.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>Cos'è un'API REST</h2>
+
+  <p class="lead">
+    <b>REST</b> non è una tecnologia da installare: è uno <b>stile</b>, un insieme di convenzioni per organizzare
+    un'API in modo prevedibile. L'idea centrale è semplice e potente: modellare tutto come <b>risorse</b>,
+    identificate da URL, manipolate coi metodi HTTP.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Risorse e URL: i sostantivi dell'API</div>
+    <p>
+      In REST, ogni «cosa» del tuo sistema (un utente, un prodotto, un ordine) è una <b>risorsa</b>, e ha un
+      <b>indirizzo</b> (URL). La convenzione: usa <b>sostantivi al plurale</b> per le collezioni e aggiungi l'id per
+      il singolo elemento. <mark>Il percorso dice <em>quale cosa</em>, il metodo dice <em>cosa farci</em>.</mark>
+    </p>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">lo schema REST di una risorsa "utenti"</div>
+      <pre><span class="hl">GET</span>    /utenti        <span class="c"># elenca tutti gli utenti</span>
+<span class="hl">POST</span>   /utenti        <span class="c"># crea un nuovo utente (dati nel corpo)</span>
+<span class="hl">GET</span>    /utenti/42     <span class="c"># leggi l'utente 42</span>
+<span class="hl">PUT</span>    /utenti/42     <span class="c"># aggiorna l'utente 42</span>
+<span class="hl">DELETE</span> /utenti/42     <span class="c"># cancella l'utente 42</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Guarda quanto è <b>regolare</b>: chiunque conosca REST, vedendo <code>/utenti/42</code>, sa già cosa aspettarsi
+      da ogni metodo, senza leggere la documentazione. <mark>Questa prevedibilità è il valore di REST.</mark> Le
+      risorse possono anche annidarsi: <code>/utenti/42/ordini</code> = «gli ordini dell'utente 42».
+    </p>
+  </div>
+
+  <div class="box viola">
+    <div class="box-title"><span class="ico">💜</span> I principi che rendono «REST» un'API</div>
+    <p style="margin-bottom:0">
+      Oltre alle risorse, REST suggerisce: essere <b>stateless</b> (ogni richiesta è autosufficiente — il server non
+      «ricorda» le richieste precedenti; per questo l'identità viaggia in ogni richiesta, es. col token);
+      rappresentare i dati in un formato standard (<b>JSON</b>); usare i <b>metodi</b> e i <b>codici di stato</b> per
+      il loro significato vero. <mark>Non è una legge rigida ma un insieme di buone abitudini</mark>: seguirle rende
+      la tua API familiare a milioni di sviluppatori. FastAPI ti spinge naturalmente verso di esse.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>JSON: il formato dei dati</h2>
+
+  <p class="lead">
+    I dati che viaggiano nel corpo delle richieste e risposte hanno bisogno di un formato comune, comprensibile da
+    qualsiasi linguaggio. Lo standard indiscusso è <b>JSON</b> — che hai già incontrato nel libro «Il Web».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">JSON in breve <span class="tag">JavaScript Object Notation</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">un oggetto JSON</div>
+      <pre><span class="st">{</span>
+  <span class="ar">"id"</span><span class="st">:</span> <span class="nm">42</span><span class="st">,</span>                      <span class="cm">// numero</span>
+  <span class="ar">"nome"</span><span class="st">:</span> <span class="st">"Anna"</span><span class="st">,</span>                <span class="cm">// stringa (tra virgolette)</span>
+  <span class="ar">"attivo"</span><span class="st">:</span> <span class="kw">true</span><span class="st">,</span>                <span class="cm">// booleano: true / false</span>
+  <span class="ar">"ruoli"</span><span class="st">:</span> <span class="st">[</span><span class="st">"admin"</span><span class="st">,</span> <span class="st">"editor"</span><span class="st">]</span><span class="st">,</span>  <span class="cm">// lista</span>
+  <span class="ar">"profilo"</span><span class="st">:</span> <span class="st">{</span> <span class="ar">"citta"</span><span class="st">:</span> <span class="st">"Roma"</span> <span class="st">}</span>   <span class="cm">// oggetto annidato</span>
+<span class="st">}</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>coppie <b>chiave: valore</b></dt>
+        <dd>tra graffe <code>{ }</code>, chiavi sempre tra virgolette, valori separati da virgole. Rappresenta un
+            «oggetto», cioè una cosa con proprietà.</dd>
+        <dt>i <b>tipi</b>: numeri, stringhe, booleani, liste, oggetti, <code>null</code></dt>
+        <dd>pochi tipi, universali. Le liste stanno tra <code>[ ]</code>; gli oggetti si annidano. <mark>Con questi
+            mattoni descrivi qualsiasi dato.</mark></dd>
+        <dt>testo <b>puro</b></dt>
+        <dd>JSON è solo testo: leggibile da un umano e da <b>qualsiasi</b> linguaggio. Python lo converte in
+            dizionari/liste, JavaScript in oggetti/array. <mark>È la lingua franca dello scambio dati.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In Python il modulo <code>json</code> traduce tra JSON e dizionari; ma con FastAPI (dal Cap. 4) non lo userai
+      quasi mai a mano: il framework <b>converte automaticamente</b> tra JSON e oggetti Python in entrambe le
+      direzioni. Tu lavori con comodi oggetti Python; il JSON viaggia sul filo. Attenzione a una differenza di nomi:
+      il <code>true</code>/<code>false</code>/<code>null</code> del JSON diventano <code>True</code>/<code>False</code>/<code>None</code>
+      in Python.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Laboratorio: esplorare un'API con curl</h2>
+
+  <p class="lead">
+    Mettiamo in pratica: interroghiamo una vera API pubblica di test dal terminale, con <b>curl</b> — lo strumento
+    da riga di comando per fare richieste HTTP. Vedrai richieste, risposte JSON e codici di stato, dal vivo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧪</span> Serve curl (e una connessione)</div>
+    <p style="margin-bottom:0">
+      <code>curl</code> è preinstallato su Windows 10/11, macOS e Linux. Useremo <code>jsonplaceholder.typicode.com</code>,
+      un'API gratuita di test che risponde con dati finti — perfetta per esercitarsi senza rischi. (È un servizio
+      esterno: se un giorno non fosse più attivo, va bene qualsiasi API pubblica di prova.)
+    </p>
+  </div>
+
+  <p>Una <b>GET</b>: leggiamo il «post» numero 1.</p>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="ar">https://jsonplaceholder.typicode.com/posts/1</span>
+<span class="out">{
+  "userId": 1,
+  "id": 1,
+  "title": "sunt aut facere ...",
+  "body": "quia et suscipit ..."
+}</span></pre>
+  </div>
+
+  <p>
+    Aggiungiamo <code>-i</code> per vedere anche la <b>riga di stato e gli header</b> della risposta — così tocchi
+    con mano la struttura del §2.1:
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-i</span> <span class="ar">https://jsonplaceholder.typicode.com/posts/1</span>
+<span class="hl">HTTP/2 200</span>
+<span class="ar">content-type:</span> application/json; charset=utf-8
+<span class="out">...
+{ "userId": 1, "id": 1, "title": "...", "body": "..." }</span></pre>
+  </div>
+
+  <p>Ora una <b>POST</b>: creiamo un nuovo post, inviando dati JSON nel corpo.</p>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-X</span> <span class="ar">POST</span> <span class="ar">https://jsonplaceholder.typicode.com/posts</span> \
+       <span class="fl">-H</span> <span class="ar">"Content-Type: application/json"</span> \
+       <span class="fl">-d</span> <span class="ar">'{"title": "Ciao", "body": "primo post", "userId": 1}'</span>
+<span class="out">{
+  "title": "Ciao",
+  "body": "primo post",
+  "userId": 1,
+  "id": </span><span class="hl">101</span><span class="out">
+}</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il comando curl smontato <span class="tag">curl -X POST -H … -d …</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">curl URL</span></dt>
+        <dd>fa una richiesta all'indirizzo. Senza altro, è una <b>GET</b> (il default) e stampa la risposta.</dd>
+        <dt><span class="mono">-i</span></dt>
+        <dd>«includi» la riga di stato e gli header nella stampa, non solo il corpo. Utile per vedere il <b>codice</b>
+            (qui <code>200</code>) e il <code>Content-Type</code>.</dd>
+        <dt><span class="mono">-X POST</span></dt>
+        <dd>scegli il <b>metodo</b> esplicitamente (<code>-X</code> = eXecute con questo metodo). Qui una POST per
+            creare.</dd>
+        <dt><span class="mono">-H "Content-Type: application/json"</span></dt>
+        <dd>aggiunge un <b>header</b>: «il corpo che mando è JSON». Serve perché il server interpreti bene i dati.</dd>
+        <dt><span class="mono">-d '{...}'</span></dt>
+        <dd>i <b>dati</b> del corpo (data) da inviare: qui il JSON del nuovo post. Il <code>\</code> a fine riga serve
+            solo a spezzare il comando su più righe per leggibilità.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota nella risposta: il server ha restituito il post con un <b>id nuovo</b> (<code>101</code>) che ha assegnato
+      lui. <mark>Questa è REST in azione</mark>: POST su una collezione crea un elemento e ti ridà la versione
+      «ufficiale». (Essendo un'API di test, non salva davvero, ma <b>simula</b> perfettamente il comportamento reale.)
+      Prova anche <code>curl https://jsonplaceholder.typicode.com/posts</code> (l'intera collezione) e
+      <code>curl -i https://jsonplaceholder.typicode.com/posts/9999</code> (un id inesistente → guarda che codice
+      ottieni!).
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>Ogni scambio HTTP è <b>richiesta → risposta</b>, ciascuna con riga iniziale, <b>header</b>, riga vuota,
+          <b>corpo</b> (§2.1).</li>
+      <li>I <b>metodi</b> sono i verbi: <b>GET</b> legge, <b>POST</b> crea, <b>PUT/PATCH</b> modifica, <b>DELETE</b>
+          cancella. Stesso percorso, azioni diverse (§2.2).</li>
+      <li>I <b>codici di stato</b>: <b>2xx</b> ok, <b>3xx</b> redirect, <b>4xx</b> colpa del client, <b>5xx</b> colpa
+          del server (§2.3).</li>
+      <li><b>REST</b>: modella tutto come <b>risorse</b> con URL (sostantivi al plurale + id); il percorso dice quale
+          cosa, il metodo cosa farci; stateless (§2.4).</li>
+      <li>I dati viaggiano in <b>JSON</b>: chiave/valore, pochi tipi universali, testo puro. FastAPI converte da/verso
+          Python per te (§2.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora conosci l'alfabeto: metodi, stati, risorse, JSON. È tutto ciò che serve per <b>leggere</b> e <b>progettare</b>
+    un'API. Ma prima di scriverne una, dobbiamo preparare il banco di lavoro: installare gli strumenti in modo
+    ordinato, senza fare disastri sul sistema. Nel <strong>Capitolo 3</strong> allestiamo l'<b>ambiente Python</b> del
+    progetto — ambienti virtuali, <code>pip</code>, <code>requirements.txt</code> — le fondamenta pulite su cui, dal
+    Capitolo 4, nascerà il nostro primo vero server con FastAPI.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Per ciascuna azione, indica <b>metodo</b> e <b>percorso</b> REST: (a) elencare tutti i prodotti; (b) leggere il
+      prodotto 7; (c) creare un nuovo prodotto; (d) cancellare il prodotto 7.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Un client riceve questi codici: <code>200</code>, <code>404</code>, <code>500</code>, <code>401</code>. Per
+      ognuno, di chi è «la colpa» (client o server) e cosa significa a grandi linee?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Perché una <b>GET</b> è considerata «sicura» e <b>idempotente</b>, mentre una <b>POST</b> no? Cosa succede se
+      ripeti due volte la stessa POST di creazione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Con <code>curl -i</code>, chiedi <code>https://jsonplaceholder.typicode.com/posts/9999</code> (un id
+      che non esiste). Che <b>codice di stato</b> ricevi? A quale famiglia appartiene?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-8"><span class="secnum">Sezione 2.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      (a) <code>GET /prodotti</code>; (b) <code>GET /prodotti/7</code>; (c) <code>POST /prodotti</code> (coi dati nel
+      corpo JSON); (d) <code>DELETE /prodotti/7</code>. Nota il sostantivo al plurale e l'id per il singolo elemento:
+      è la convenzione REST del §2.4.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      <code>200</code>: successo (2xx), tutto bene. <code>404</code>: colpa del <b>client</b> (4xx) — la risorsa
+      richiesta non esiste. <code>500</code>: colpa del <b>server</b> (5xx) — un errore/bug nel backend.
+      <code>401</code>: colpa del <b>client</b> (4xx) — non sei autenticato (manca o è invalido il login/token).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      GET è «sicura» perché <b>non modifica</b> lo stato del server (solo lettura) e «idempotente» perché ripeterla
+      non cambia nulla. POST <b>crea</b> qualcosa, quindi cambia lo stato e <b>non</b> è idempotente: ripetere due
+      volte la stessa POST di creazione produce <b>due</b> risorse distinte (es. due utenti identici, con id
+      diversi). Per questo i form web spesso avvisano «non ricaricare per non inviare due volte».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      Ricevi un <code>404 Not Found</code>, della famiglia <b>4xx</b> (errore del client): stai chiedendo una risorsa
+      che non esiste. È il codice che, nel prossimo capitolo e oltre, imparerai a restituire tu stesso quando un
+      utente chiede un id assente — con <code>HTTPException(status_code=404)</code> in FastAPI (Cap. 7).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.2 — costruttore di richieste REST: scegli metodo+risorsa, vedi
+   la richiesta HTTP, il significato e la risposta plausibile con codice di stato.
+   ========================================================================= */
+(function () {
+  const box = document.getElementById('rb-out');
+  if (!box) return;
+
+  const metodoSel = document.getElementById('rb-metodo');
+  const risSel    = document.getElementById('rb-ris');
+
+  function render() {
+    const m = metodoSel.value;
+    const singolo = risSel.value === 'uno';
+    const path = singolo ? '/utenti/42' : '/utenti';
+    let corpo = '', azione = '', stato = '', rispBody = '';
+
+    if (m === 'GET' && !singolo) { azione = 'Elenca tutti gli utenti'; stato = '200 OK'; rispBody = '[ {"id":1,...}, {"id":2,...} ]'; }
+    else if (m === 'GET' && singolo) { azione = 'Leggi l\'utente 42'; stato = '200 OK'; rispBody = '{ "id": 42, "nome": "Anna" }'; }
+    else if (m === 'POST' && !singolo) { azione = 'Crea un nuovo utente'; corpo = '{ "nome": "Luca" }'; stato = '201 Created'; rispBody = '{ "id": 77, "nome": "Luca" }'; }
+    else if (m === 'POST' && singolo) { azione = '⚠ POST su un singolo elemento non è convenzionale in REST'; stato = '404 / 405'; rispBody = '{ "detail": "metodo non ammesso qui" }'; }
+    else if (m === 'PUT' && singolo) { azione = 'Aggiorna l\'utente 42'; corpo = '{ "nome": "Anna B." }'; stato = '200 OK'; rispBody = '{ "id": 42, "nome": "Anna B." }'; }
+    else if (m === 'PUT' && !singolo) { azione = '⚠ PUT sull\'intera collezione è insolito'; stato = '405'; rispBody = '{ "detail": "metodo non ammesso" }'; }
+    else if (m === 'DELETE' && singolo) { azione = 'Cancella l\'utente 42'; stato = '204 No Content'; rispBody = '(nessun corpo)'; }
+    else if (m === 'DELETE' && !singolo) { azione = '⚠ DELETE sull\'intera collezione: pericoloso/insolito'; stato = '405'; rispBody = '{ "detail": "metodo non ammesso" }'; }
+
+    const attenzione = azione.indexOf('⚠') === 0;
+    const colStato = stato.indexOf('2') === 0 ? 'var(--green)' : 'var(--warm)';
+
+    box.innerHTML =
+      '<div class="term" style="margin:.2rem auto 0; max-width:100%">' +
+        '<div class="t-head">la richiesta</div>' +
+        '<pre><span class="hl">' + m + '</span> ' + path + ' <span class="out">HTTP/1.1</span>' +
+        (corpo ? '\n<span class="ar">Content-Type:</span> application/json\n\n<span class="st">' + corpo + '</span>' : '') +
+        '</pre></div>' +
+      '<div style="margin:.5rem 0; color:var(--ink); font-size:.95rem">→ <b>' + azione + '</b></div>' +
+      '<div class="term" style="margin:0 auto; max-width:100%">' +
+        '<div class="t-head">la risposta plausibile</div>' +
+        '<pre><span class="out">HTTP/1.1</span> <span style="color:' + (attenzione ? '#e0654f' : (stato.indexOf('2')===0?'#5fb96d':'#e0b14f')) + '; font-weight:700">' + stato + '</span>\n<span class="out">' + rispBody + '</span></pre>' +
+      '</div>';
+  }
+  metodoSel.addEventListener('change', render);
+  risSel.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>
