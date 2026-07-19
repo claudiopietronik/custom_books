@@ -140,7 +140,7 @@ const TOC = [
     n: 9,
     titolo: "Le stringhe",
     file: "cap09-stringhe.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "std::string vs char*" },
       { id: "s9-2", n: "9.2", t: "Concatenare e confrontare" },

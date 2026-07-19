@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Le stringhe — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>Le stringhe</h1>
+    <p class="standfirst">
+      Il testo è dappertutto — nomi, messaggi, comandi, contenuti. In C++ le stringhe hanno una <b>doppia
+      natura</b>: le vecchie stringhe «grezze» ereditate dal C (array di <code>char</code>, spinose e insidiose) e
+      la moderna <b><code>std::string</code></b>, comoda, sicura e ricca di metodi. La lezione di questo capitolo è
+      la stessa del precedente con <code>std::vector</code>: <mark>usa <code>std::string</code></mark> e il testo in
+      C++ diventa quasi piacevole come nei linguaggi ad alto livello. Impariamo a concatenare, confrontare,
+      estrarre sottostringhe, usare i metodi utili, e — dettaglio pratico importante — a leggere <b>righe intere</b>
+      con gli spazi. Con vector e string, il C++ moderno mostra il suo volto amichevole.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>std::string vs char*</b> (§9.1), <b>concatenare e confrontare</b> (§9.2), <b>indici, lunghezza,
+      sottostringhe</b> (§9.3), i <b>metodi utili</b> (§9.4), e leggere <b>righe intere</b> con getline (§9.5). Nel
+      laboratorio (§9.6) analizzi del testo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il testo, senza dolore</div>
+    <p style="margin-bottom:0">
+      Ogni programma tocca del testo, e in C++ farlo «bene» (con <code>std::string</code>) invece che «alla vecchia»
+      (con <code>char*</code>) è la differenza tra codice sicuro e codice pieno di trappole. <mark>Le vecchie
+      stringhe C sono la fonte storica di innumerevoli falle di sicurezza</mark> (buffer overflow); <code>std::string</code>
+      le elimina gestendo la memoria per te. Sapere che <code>char*</code> esiste ti serve per leggere codice
+      legacy, ma per il tuo codice: <code>std::string</code>, sempre.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>std::string vs char*</h2>
+
+  <p class="lead">
+    Due modi di rappresentare il testo, uno moderno e uno storico. Capire la differenza spiega perché il C++ ha
+    fama di essere «difficile col testo» — e perché oggi non deve esserlo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il vecchio e il nuovo</div>
+    <ul style="margin-bottom:0">
+      <li>La stringa <b>C «grezza»</b>: un <b>array di <code>char</code></b> che finisce con un carattere speciale
+          «zero» (<code>'\0'</code>). Il nome della variabile è, di fatto, un <b>puntatore</b> al primo carattere
+          (<code>char*</code>). Nessuna gestione della lunghezza, nessun controllo: <mark>facilissimo sforare la
+          memoria</mark> (il famigerato buffer overflow). Spinosa e pericolosa.</li>
+      <li><b><code>std::string</code></b> (moderna): un <b>oggetto</b> che gestisce il testo per te — memoria,
+          lunghezza, crescita — e offre decine di metodi comodi. <mark>Si comporta come le stringhe di Python</mark>:
+          la concateni con <code>+</code>, la confronti con <code>==</code>, ne chiedi la lunghezza. Richiede
+          <code>#include &lt;string&gt;</code>.</li>
+    </ul>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Creare una std::string <span class="tag">un oggetto, non un array</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">nome</span> <span class="op">=</span> <span class="st">"Anna"</span>;      <span class="cm">// una std::string, non un array di char</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">nome</span><span class="op">.</span><span class="fn">length</span>();   <span class="cm">// 4  (conosce la sua lunghezza!)</span></pre>
+    </div>
+    <div class="f-note">
+      Nota il <b>doppio vs singolo apice</b>, come dal Cap. 2: <code>"Anna"</code> (virgolette) è testo (usato per
+      inizializzare la string); <code>'A'</code> (apici) è un singolo <code>char</code>. <mark>Una
+      <code>std::string</code> è una sequenza di <code>char</code></mark>, gestita in modo sicuro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Concatenare e confrontare</h2>
+
+  <p class="lead">
+    Con <code>std::string</code>, unire e confrontare testo è intuitivo — proprio come ci si aspetterebbe, e come
+    nei linguaggi ad alto livello.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">+ unisce, == confronta <span class="tag">testo naturale</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::<span class="ns">string</span> <span class="nm">nome</span> <span class="op">=</span> <span class="st">"Anna"</span>;
+<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">saluto</span> <span class="op">=</span> <span class="st">"Ciao "</span> <span class="op">+</span> <span class="nm">nome</span> <span class="op">+</span> <span class="st">"!"</span>;   <span class="cm">// concatenazione con +</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">saluto</span>;      <span class="cm">// Ciao Anna!</span>
+
+<span class="kw">if</span> (<span class="nm">nome</span> <span class="op">==</span> <span class="st">"Anna"</span>) {      <span class="cm">// confronto diretto con ==  (comodo!)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Ciao Anna"</span>;
+}
+<span class="nm">saluto</span> <span class="op">+=</span> <span class="st">" Benvenuta"</span>;   <span class="cm">// += aggiunge in fondo</span></pre>
+    </div>
+    <div class="f-note">
+      Bello e naturale: <code>+</code> concatena, <code>+=</code> aggiunge, <code>==</code> e <code>!=</code>
+      confrontano il contenuto. <mark>Con le vecchie <code>char*</code> nulla di tutto ciò funziona</mark>:
+      <code>==</code> confronterebbe gli <em>indirizzi</em>, non il testo, e concatenare richiederebbe funzioni
+      apposite e attenzione alla memoria. Ecco, in una riga, perché <code>std::string</code> ha vinto. Puoi anche
+      confrontare con <code>&lt;</code>/<code>&gt;</code> (ordine alfabetico) — utile per ordinare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>Indici, lunghezza, sottostringhe</h2>
+
+  <p class="lead">
+    Una stringa è una sequenza di caratteri: puoi accedere a ogni carattere per <b>indice</b> (da 0), chiederne la
+    <b>lunghezza</b> ed estrarne <b>pezzi</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Accedere e sezionare <span class="tag">[] · length · substr</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::<span class="ns">string</span> <span class="nm">s</span> <span class="op">=</span> <span class="st">"Programmare"</span>;
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">s</span>[<span class="nm">0</span>];         <span class="cm">// 'P'  (indice da 0, come stringhe/vector)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">s</span><span class="op">.</span><span class="fn">length</span>();  <span class="cm">// 11  (numero di caratteri)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">s</span><span class="op">.</span><span class="fn">substr</span>(<span class="nm">0</span>, <span class="nm">4</span>);  <span class="cm">// "Prog"  (da indice 0, lunghezza 4)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">s</span><span class="op">.</span><span class="fn">substr</span>(<span class="nm">3</span>);     <span class="cm">// "grammare"  (da indice 3 alla fine)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">s[i]</span> — un carattere</dt>
+        <dd>accede al carattere all'indice <code>i</code> (un <code>char</code>). Da 0, come vector e come le
+            stringhe di ogni linguaggio.</dd>
+        <dt><span class="mono">s.length()</span> (o <span class="mono">s.size()</span>)</dt>
+        <dd>il numero di caratteri. I due nomi sono equivalenti.</dd>
+        <dt><span class="mono">s.substr(inizio, lunghezza)</span></dt>
+        <dd>estrae una <b>sottostringa</b>: da <code>inizio</code>, per <code>lunghezza</code> caratteri. Omettendo
+            la lunghezza, va fino alla fine. <mark>Nota: in C++ il secondo argomento è la <b>lunghezza</b></mark>,
+            non l'indice finale (attenzione se vieni da Python, dove lo slicing usa l'indice finale).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <div class="widget" id="w-str">
+    <div class="w-head">
+      <span>Indici e substr su una std::string</span>
+      <span class="hint">muovi inizio e lunghezza di substr</span>
+    </div>
+    <div class="w-stage" style="min-height:170px">
+      <div id="wst-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.8rem; justify-content:center; flex-wrap:wrap">
+      <label style="font-size:.85rem; color:var(--ink-soft)">inizio</label>
+      <input type="range" id="wst-a" min="0" max="10" step="1" value="0" style="width:140px">
+      <label style="font-size:.85rem; color:var(--ink-soft)">lunghezza</label>
+      <input type="range" id="wst-n" min="0" max="11" step="1" value="4" style="width:140px">
+    </div>
+    <div class="w-readout" id="wst-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>Metodi utili</h2>
+
+  <p class="lead">
+    <code>std::string</code> ha molti metodi pronti per le operazioni comuni sul testo. Ecco quelli che userai più
+    spesso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Metodi comuni <span class="tag">find, replace, empty…</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">s.find("gram")</span></dt>
+        <dd>trova la posizione della sottostringa (l'indice dove inizia), o un valore speciale
+            (<code>std::string::npos</code>) se non c'è. Per «contiene?»: <code>if (s.find("x") != std::string::npos)</code>.</dd>
+        <dt><span class="mono">s.empty()</span></dt>
+        <dd><code>true</code> se la stringa è vuota (<code>""</code>). Più chiaro di <code>s.length() == 0</code>.</dd>
+        <dt><span class="mono">s.push_back('!')</span> e <span class="mono">+=</span></dt>
+        <dd>aggiungono un carattere/testo in fondo (la stringa cresce, come un vector).</dd>
+        <dt><span class="mono">std::to_string(42)</span> e <span class="mono">std::stoi("42")</span></dt>
+        <dd>convertono <b>numero → stringa</b> (<code>to_string</code>) e <b>stringa → intero</b> (<code>stoi</code>).
+            Utilissimi per costruire messaggi o leggere numeri da testo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota culturale: <code>std::string</code> non ha un metodo <code>.upper()</code> «pronto» come Python — per
+      trasformare in maiuscolo si usa un piccolo ciclo con <code>std::toupper</code>, o algoritmi della STL
+      (Cap. 13). <mark>Il C++ ti dà i mattoni, a volte devi comporli tu</mark>: un filo meno «batterie incluse» di
+      Python sul testo, ma con <code>std::string</code> il grosso è comodo e sicuro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Leggere righe intere</h2>
+
+  <p class="lead">
+    Un dettaglio pratico che confonde molti principianti: <code>std::cin &gt;&gt; s</code> legge <b>una sola
+    parola</b> (si ferma al primo spazio). Per leggere <b>un'intera riga</b> con gli spazi serve
+    <code>std::getline</code>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">cin &gt;&gt; vs getline <span class="tag">una parola vs una riga</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::<span class="ns">string</span> <span class="nm">riga</span>;
+
+<span class="cm">// cin >> riga;   →  se scrivi "Mario Rossi", legge solo "Mario"!</span>
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Nome completo: "</span>;
+<span class="ns">std</span>::getline(<span class="ns">std</span>::<span class="ns">cin</span>, <span class="nm">riga</span>);   <span class="cm">// legge TUTTA la riga, spazi inclusi</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Ciao "</span> <span class="op">&lt;&lt;</span> <span class="nm">riga</span>;   <span class="cm">// "Ciao Mario Rossi"</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::cin &gt;&gt; s</span></dt>
+        <dd>legge <b>una parola</b>: si ferma al primo spazio o a-capo. Va bene per un nome singolo, un numero — ma
+            <mark>tronca le frasi con spazi</mark>.</dd>
+        <dt><span class="mono">std::getline(std::cin, s)</span></dt>
+        <dd>legge <b>tutta la riga</b> fino all'invio, spazi compresi, e la mette in <code>s</code>. È ciò che serve
+            per nomi completi, frasi, indirizzi.</dd>
+        <dt><mark>la trappola: mischiare i due</mark></dt>
+        <dd>usare <code>cin &gt;&gt;</code> e poi <code>getline</code> nella stessa esecuzione crea un problema
+            classico (il <code>&gt;&gt;</code> lascia un a-capo «in sospeso» che getline raccoglie come riga vuota).
+            Se ti capita, sappi che serve «pulire» il buffer — un dettaglio noto, cercabile all'occorrenza.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Laboratorio: analizzare del testo</h2>
+
+  <p class="lead">
+    Costruiamo un programma che legge una frase intera e ne ricava informazioni: lunghezza, prima e ultima lettera,
+    e se contiene una certa parola. Mette insieme getline, indici e find.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>analizza.cpp</code> <span class="tag">getline + metodi</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">analizza.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">frase</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Scrivi una frase: "</span>;
+    <span class="ns">std</span>::getline(<span class="ns">std</span>::<span class="ns">cin</span>, <span class="nm">frase</span>);
+
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Lunghezza: "</span> <span class="op">&lt;&lt;</span> <span class="nm">frase</span><span class="op">.</span><span class="fn">length</span>() <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    <span class="kw">if</span> (<span class="op">!</span><span class="nm">frase</span><span class="op">.</span><span class="fn">empty</span>()) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Prima lettera: "</span> <span class="op">&lt;&lt;</span> <span class="nm">frase</span>[<span class="nm">0</span>] <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Ultima lettera: "</span> <span class="op">&lt;&lt;</span> <span class="nm">frase</span>[<span class="nm">frase</span><span class="op">.</span><span class="fn">length</span>() <span class="op">-</span> <span class="nm">1</span>] <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    }
+    <span class="kw">if</span> (<span class="nm">frase</span><span class="op">.</span><span class="fn">find</span>(<span class="st">"C++"</span>) <span class="op">!=</span> <span class="ns">std</span>::<span class="ns">string</span>::npos) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Parli di C++! 🎉\n"</span>;
+    }
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Nota <code>frase[frase.length() - 1]</code> per l'ultima lettera: gli indici vanno da 0 a length-1, quindi
+      l'ultimo è a <code>length() - 1</code> (in C++ non c'è l'indice negativo <code>[-1]</code> di Python). E
+      <code>find("C++") != std::string::npos</code> è l'idioma per «contiene»: <mark><code>npos</code> è il valore
+      «non trovato»</mark>. Compila con <code>g++ analizza.cpp -o analizza</code> e prova frasi diverse. Vedi
+      convergere getline (leggere la riga), i metodi (<code>length</code>, <code>empty</code>, <code>find</code>) e
+      gli indici — il testo, gestito con comodità.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>Usa <b><code>std::string</code></b> (<code>#include &lt;string&gt;</code>), non le <code>char*</code>
+          grezze del C: gestisce memoria e lunghezza, ed è sicura (§9.1).</li>
+      <li><code>+</code> concatena, <code>+=</code> aggiunge, <code>==</code>/<code>!=</code> confrontano il
+          contenuto (§9.2). <code>s[i]</code>, <code>s.length()</code>, <code>s.substr(inizio, lunghezza)</code>
+          (la <b>lunghezza</b>, non l'indice finale!) (§9.3).</li>
+      <li>Metodi: <code>find</code> (+ <code>npos</code> per «contiene»), <code>empty</code>; conversioni
+          <code>to_string</code>/<code>stoi</code> (§9.4).</li>
+      <li><code>cin &gt;&gt; s</code> legge <b>una parola</b>; <code>std::getline(std::cin, s)</code> legge <b>tutta
+          la riga</b> con gli spazi (§9.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con vector e string, hai visto il lato «comodo» del C++ moderno — e non è un caso: entrambi sono <b>classi</b>
+    della libreria standard, oggetti che uniscono dati e metodi. È ora di imparare a costruire i <b>tuoi</b> tipi
+    così. Nel <strong>Capitolo 10</strong> arriva la <b>programmazione a oggetti</b> del C++: le <code>struct</code>
+    (dati insieme) e le <code>class</code> (dati + metodi), l'incapsulamento con <code>public</code> e
+    <code>private</code>, i <b>costruttori</b> che preparano gli oggetti e i <b>distruttori</b> che li puliscono. È
+    il passo che ti fa passare da «usare le classi degli altri» a «progettare le tue» — il cuore del C++ come
+    linguaggio a oggetti.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Perché in C++ moderno si preferisce <code>std::string</code> alle stringhe C grezze (<code>char*</code>)?
+      Cita almeno due motivi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Data <code>std::string s = "Ciao mondo";</code>, cosa danno <code>s.length()</code>, <code>s[0]</code>,
+      <code>s.substr(5, 5)</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Vuoi leggere il nome completo di una persona («Mario Rossi») in una <code>std::string</code>. Perché
+      <code>cin &gt;&gt; nome</code> non basta? Cosa usi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi codice che, data <code>std::string email</code>, controlla se contiene una <code>@</code> (con
+      <code>find</code> e <code>npos</code>) e stampa «valida» o «manca la @».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-8"><span class="secnum">Sezione 9.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      Perché <code>std::string</code> <b>gestisce la memoria e la lunghezza automaticamente</b> (niente buffer
+      overflow), permette operazioni naturali (<code>+</code>, <code>==</code>, metodi comodi) ed è <b>sicura</b>. Le
+      <code>char*</code> grezze richiedono di gestire manualmente memoria e terminatore <code>'\0'</code>, non si
+      confrontano/concatenano con gli operatori normali, e sono la causa storica di molte falle di sicurezza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      <code>s.length()</code> → <b>10</b> (10 caratteri, spazio incluso); <code>s[0]</code> → <b>'C'</b>;
+      <code>s.substr(5, 5)</code> → <b>"mondo"</b> (da indice 5, per 5 caratteri).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>cin &gt;&gt; nome</code> legge <b>solo una parola</b> (si ferma al primo spazio): otterresti solo
+      «Mario». Per leggere l'intera riga con lo spazio si usa <code>std::getline(std::cin, nome)</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">email.cpp</div>
+      <pre><span class="kw">if</span> (<span class="nm">email</span><span class="op">.</span><span class="fn">find</span>(<span class="st">'@'</span>) <span class="op">!=</span> <span class="ns">std</span>::<span class="ns">string</span>::npos) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"valida"</span>;
+} <span class="kw">else</span> {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"manca la @"</span>;
+}</pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.3 — std::string: indici e substr(inizio, lunghezza)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wst-view');
+  if (!view) return;
+  const out = document.getElementById('wst-out');
+  const sA = document.getElementById('wst-a');
+  const sN = document.getElementById('wst-n');
+  const S = 'Programmare';   // 11 caratteri
+  sA.addEventListener('input', draw); sN.addEventListener('input', draw);
+
+  function draw() {
+    let a = +sA.value, n = +sN.value;
+    if (a > S.length) a = S.length;
+    const end = Math.min(a + n, S.length);   // substr non sfora
+    let cells = '';
+    for (let i = 0; i < S.length; i++) {
+      const inSub = i >= a && i < end;
+      cells += `<div style="display:inline-block; text-align:center; margin:0 1px">
+        <div style="width:34px; height:42px; display:grid; place-items:center; border:2px solid ${inSub ? 'var(--accent)' : 'var(--rule)'}; border-radius:7px; background:${inSub ? 'color-mix(in srgb,var(--accent) 16%,transparent)' : 'var(--paper)'}; font-family:var(--mono); font-size:1.1rem; font-weight:700; color:${inSub ? 'var(--accent)' : 'var(--ink)'}">${S[i]}</div>
+        <div style="font-family:var(--mono); font-size:.68rem; color:var(--ink-faint); margin-top:.15rem">${i}</div>
+      </div>`;
+    }
+    const result = S.substr(a, n);
+    view.innerHTML = `<div style="margin-bottom:.7rem">${cells}</div>
+      <div style="font-family:var(--mono); font-size:1.05rem">s.substr(<span style="color:var(--accent)">${a}</span>, <span style="color:var(--accent)">${n}</span>) = <span style="color:var(--green); font-weight:700">"${result}"</span></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">Da indice <b>' + a + '</b>, prende <b>' + n + '</b> caratteri (la <b>lunghezza</b>, non l\'indice finale!). <mark>Attento se vieni da Python</mark>, dove lo slicing usa l\'indice finale. Se la lunghezza supera la fine, substr si ferma alla fine.</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

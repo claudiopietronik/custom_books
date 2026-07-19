@@ -19,7 +19,7 @@ Contenuto originale scritto ex novo.
 - [x] 6 — Le funzioni
 - [x] 7 — Puntatori e riferimenti
 - [x] 8 — Array e vector
-- [ ] 9 — Le stringhe
+- [x] 9 — Le stringhe
 - [ ] 10 — Struct e classi
 - [ ] 11 — Ereditarietà e polimorfismo
 - [ ] 12 — La memoria: stack, heap, RAII
