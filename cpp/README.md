@@ -16,7 +16,7 @@ Contenuto originale scritto ex novo.
 - [x] 3 — Operatori ed espressioni
 - [x] 4 — Prendere decisioni
 - [x] 5 — I cicli
-- [ ] 6 — Le funzioni
+- [x] 6 — Le funzioni
 - [ ] 7 — Puntatori e riferimenti
 - [ ] 8 — Array e vector
 - [ ] 9 — Le stringhe

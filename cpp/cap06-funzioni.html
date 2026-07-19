@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Le funzioni — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Le funzioni</h1>
+    <p class="standfirst">
+      Le <b>funzioni</b> danno un nome a un blocco di codice per riusarlo a comando: sono lo strumento di
+      organizzazione per eccellenza, in C++ come ovunque. Ma il C++ aggiunge una distinzione che rende esplicita una
+      cosa fondamentale — <mark>quando passi un dato a una funzione, glielo dai in <b>copia</b> o glielo
+      <b>presti</b>?</mark> È la differenza tra passaggio <b>per valore</b> e <b>per riferimento</b>, e decide se la
+      funzione può o no <em>modificare</em> i dati che riceve. Capirla è il ponte diretto verso il cuore del C++: i
+      puntatori (prossimo capitolo). In questo capitolo vediamo come si dichiarano e definiscono le funzioni, i
+      parametri, l'overloading, e come organizzarle in file header.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Dichiarare e definire</b> una funzione (§6.1), tipo di ritorno e parametri (§6.2), il passaggio
+      <b>per valore vs per riferimento</b> (§6.3), <b>overloading e valori di default</b> (§6.4), e come si
+      organizzano le dichiarazioni negli <b>header</b> (§6.5). Nel laboratorio (§6.6) costruisci una libreria di
+      funzioni.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: organizzare, e capire la memoria</div>
+    <p style="margin-bottom:0">
+      Le funzioni scompongono i problemi in pezzi gestibili e riutilizzabili — la competenza che trasforma «script»
+      in programmi ordinati. Ma in C++ le funzioni insegnano anche qualcosa di più profondo: <mark>il passaggio per
+      valore/riferimento è il primo assaggio di come il C++ ragiona sulla memoria</mark> — copie vs prestiti,
+      efficienza, effetti collaterali. È il concetto che apre la porta a puntatori e riferimenti, il tratto più
+      caratteristico e potente del linguaggio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Dichiarare e definire</h2>
+
+  <p class="lead">
+    In C++ una funzione si scrive indicando il <b>tipo di ritorno</b>, il <b>nome</b>, i <b>parametri</b> (con i
+    loro tipi) e il <b>corpo</b>. Tutto è tipizzato, come le variabili.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Definire una funzione <span class="tag">tipo nome(parametri) { … return … }</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">area_rettangolo</span>(<span class="ty">int</span> <span class="nm">base</span>, <span class="ty">int</span> <span class="nm">altezza</span>) {   <span class="cm">// tipo ritorno, nome, parametri tipati</span>
+    <span class="kw">return</span> <span class="nm">base</span> <span class="op">*</span> <span class="nm">altezza</span>;
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">a</span> <span class="op">=</span> <span class="fn">area_rettangolo</span>(<span class="nm">4</span>, <span class="nm">3</span>);   <span class="cm">// chiamata: base=4, altezza=3</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;    <span class="cm">// 12</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">int area_rettangolo(int base, int altezza)</span></dt>
+        <dd>il <b>tipo di ritorno</b> (<code>int</code>) davanti, poi nome e <b>parametri con il loro tipo</b>.
+            Ogni parametro dichiara tipo e nome, separati da virgole.</dd>
+        <dt><span class="mono">return valore;</span></dt>
+        <dd>restituisce un valore <b>del tipo dichiarato</b> e termina la funzione. Il compilatore verifica che il
+            tipo combaci: restituire un tipo sbagliato è un errore.</dd>
+        <dt><mark>l'ordine conta: definire prima di usare</mark></dt>
+        <dd>in C++ una funzione va <b>dichiarata prima</b> del punto in cui la chiami. Per questo
+            <code>area_rettangolo</code> sta <b>sopra</b> <code>main</code>. (In alternativa si mette una
+            «dichiarazione anticipata» in cima — §6.5.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Una funzione che «fa qualcosa» ma non restituisce nulla ha tipo di ritorno <code>void</code>:
+      <code>void saluta() { std::cout &lt;&lt; "Ciao"; }</code>. <mark><code>void</code> = «nessun valore di
+      ritorno»</mark> — per funzioni che compiono un'azione (stampare, salvare) senza «dare indietro» un risultato.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Tipo di ritorno e parametri</h2>
+
+  <p class="lead">
+    Ogni funzione è un piccolo contratto tipizzato: dichiara <b>cosa riceve</b> (i parametri, coi loro tipi) e
+    <b>cosa restituisce</b> (il tipo di ritorno). Il compilatore fa rispettare il contratto.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il contratto della funzione</div>
+    <p style="margin-bottom:0">
+      La «firma» di una funzione (nome + tipi dei parametri + tipo di ritorno) è un contratto: chi la chiama deve
+      passare argomenti dei tipi giusti, e riceverà un risultato del tipo dichiarato. <mark>Se sbagli — passi un
+      testo dove serve un numero, o usi male il valore restituito — il compilatore te lo dice subito</mark>, prima
+      dell'esecuzione. È di nuovo la sicurezza della tipizzazione statica (Cap. 2), applicata alle funzioni. Un
+      parametro può essere di qualsiasi tipo: <code>int</code>, <code>double</code>, <code>std::string</code>
+      (Cap. 9), o strutture più complesse. E una funzione può non avere parametri: <code>int main()</code> ne è
+      l'esempio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Passaggio per valore e per riferimento</h2>
+
+  <p class="lead">
+    Ecco il concetto <b>chiave</b> del capitolo, tipico del C++. Quando passi un argomento, per default ne viene
+    fatta una <b>copia</b> (per valore). Ma puoi anche passare l'<b>originale</b> (per riferimento), permettendo
+    alla funzione di modificarlo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Per valore vs per riferimento <span class="tag">copia o originale?</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">void</span> <span class="fn">raddoppia_copia</span>(<span class="ty">int</span> <span class="nm">x</span>) {     <span class="cm">// PER VALORE: x è una copia</span>
+    <span class="nm">x</span> <span class="op">=</span> <span class="nm">x</span> <span class="op">*</span> <span class="nm">2</span>;                  <span class="cm">// modifica solo la copia locale</span>
+}
+
+<span class="ty">void</span> <span class="fn">raddoppia_rif</span>(<span class="ty">int</span><span class="op">&amp;</span> <span class="nm">x</span>) {     <span class="cm">// PER RIFERIMENTO: la & !  x è l'originale</span>
+    <span class="nm">x</span> <span class="op">=</span> <span class="nm">x</span> <span class="op">*</span> <span class="nm">2</span>;                  <span class="cm">// modifica la variabile del chiamante</span>
+}
+
+<span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="nm">5</span>;
+<span class="fn">raddoppia_copia</span>(<span class="nm">n</span>);    <span class="cm">// n resta 5  (modificata solo la copia)</span>
+<span class="fn">raddoppia_rif</span>(<span class="nm">n</span>);      <span class="cm">// n diventa 10  (modificato l'originale)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>per valore</b> (default): <span class="mono">int x</span></dt>
+        <dd>la funzione riceve una <b>copia</b> dell'argomento. Modificarla <b>non</b> tocca la variabile originale
+            del chiamante. Sicuro, ma per dati grandi costa (copiare).</dd>
+        <dt><b>per riferimento</b>: <span class="mono">int&amp; x</span> (la <code>&amp;</code>!)</dt>
+        <dd>la <code>&amp;</code> dopo il tipo significa «riferimento»: la funzione lavora sull'<b>originale</b>, non
+            su una copia. Modificarla <mark>cambia la variabile del chiamante</mark>. Potente — e da usare con
+            consapevolezza.</dd>
+        <dt><b>riferimento const</b>: <span class="mono">const int&amp; x</span></dt>
+        <dd>il meglio dei due mondi per i dati grandi: passi l'originale (niente copia costosa) ma <code>const</code>
+            <b>impedisce di modificarlo</b>. È la scelta idiomatica per passare oggetti pesanti (stringhe, vettori)
+            in sola lettura, in modo efficiente.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-ref">
+    <div class="w-head">
+      <span>Copia o originale? per valore vs per riferimento</span>
+      <span class="hint">chiama le due funzioni e guarda n</span>
+    </div>
+    <div class="w-stage" style="min-height:170px">
+      <div id="wrf-view" style="padding:1rem; text-align:center"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wrf-val">raddoppia_copia(n)</button>
+      <button class="w-btn" id="wrf-ref">raddoppia_rif(n)</button>
+      <button class="w-btn" id="wrf-reset">↺ n = 5</button>
+    </div>
+    <div class="w-readout" id="wrf-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché è importante</div>
+    <p style="margin-bottom:0">
+      Il passaggio per riferimento serve a due scopi: <b>modificare</b> i dati del chiamante (es. una funzione
+      <code>ordina(vettore)</code> che riordina la lista originale), e <b>evitare copie costose</b> (passare un
+      grosso oggetto per riferimento const, invece di copiarlo). <mark>In Python questa distinzione è nascosta; il
+      C++ la mette in mano a te</mark> — più potere, ma anche più responsabilità. E la <code>&amp;</code> che hai
+      appena visto è imparentata con la stessa <code>&amp;</code> dei puntatori (Cap. 7): stai già mettendo le mani
+      sulla memoria.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Overloading e default</h2>
+
+  <p class="lead">
+    Due comodità del C++: puoi avere <b>più funzioni con lo stesso nome</b> ma parametri diversi (overloading), e
+    dare ai parametri dei <b>valori di default</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Overloading e default <span class="tag">stesso nome · parametri opzionali</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="cm">// OVERLOADING: stesso nome, tipi di parametri diversi</span>
+<span class="ty">int</span> <span class="fn">somma</span>(<span class="ty">int</span> <span class="nm">a</span>, <span class="ty">int</span> <span class="nm">b</span>) { <span class="kw">return</span> <span class="nm">a</span> <span class="op">+</span> <span class="nm">b</span>; }
+<span class="ty">double</span> <span class="fn">somma</span>(<span class="ty">double</span> <span class="nm">a</span>, <span class="ty">double</span> <span class="nm">b</span>) { <span class="kw">return</span> <span class="nm">a</span> <span class="op">+</span> <span class="nm">b</span>; }
+<span class="cm">// somma(2, 3) usa la prima; somma(2.5, 1.5) usa la seconda: il compilatore sceglie</span>
+
+<span class="cm">// VALORI DI DEFAULT: parametri opzionali</span>
+<span class="ty">void</span> <span class="fn">saluta</span>(<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">nome</span>, <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">saluto</span> <span class="op">=</span> <span class="st">"Ciao"</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">saluto</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span> <span class="op">&lt;&lt;</span> <span class="nm">nome</span>;
+}
+<span class="fn">saluta</span>(<span class="st">"Anna"</span>);              <span class="cm">// Ciao Anna  (usa il default)</span>
+<span class="fn">saluta</span>(<span class="st">"Marco"</span>, <span class="st">"Salve"</span>);   <span class="cm">// Salve Marco</span></pre>
+    </div>
+    <div class="f-note">
+      L'<b>overloading</b> permette funzioni con lo stesso nome ma «firme» diverse (tipi/numero di parametri): il
+      compilatore sceglie quella giusta in base agli argomenti. Utile per operazioni concettualmente uguali su tipi
+      diversi. I <b>valori di default</b> rendono un parametro opzionale (<mark>i parametri con default vanno alla
+      fine</mark>). Sono le stesse idee che, «da fuori», rendono comode tante funzioni della libreria standard.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Dichiarazioni e header</h2>
+
+  <p class="lead">
+    Nei progetti veri, il codice si divide in più file. Il C++ usa una distinzione tra <b>dichiarazione</b> (la
+    «firma», senza corpo) e <b>definizione</b> (col corpo), e i file <b>header</b> per condividere le dichiarazioni.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Prototipo, header, definizione</div>
+    <p style="margin-bottom:0">
+      Una <b>dichiarazione</b> (o «prototipo») dice al compilatore che una funzione <em>esiste</em>, con quale firma,
+      senza darne il corpo: <code>int somma(int a, int b);</code> (nota il <code>;</code>, niente graffe). Serve per
+      poter chiamare una funzione <b>prima</b> che sia definita, o definita in un altro file. La <b>definizione</b>
+      è quella completa, col corpo. <mark>Nei progetti, le dichiarazioni si mettono in un file <code>.h</code> (o
+      <code>.hpp</code>, l'header)</mark> che gli altri file <code>#include</code>ono, e le definizioni in un file
+      <code>.cpp</code>. Così un file può usare le funzioni di un altro conoscendone solo le firme. È lo stesso
+      <code>#include &lt;iostream&gt;</code> del Capitolo 1: stai includendo l'header della libreria di I/O! Per ora
+      non ti serve organizzare tutto così, ma sapere cos'è un header ti farà capire la struttura dei progetti C++.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Laboratorio: una libreria di funzioni</h2>
+
+  <p class="lead">
+    Costruiamo alcune funzioni utili che <b>collaborano</b> — una che chiama l'altra — e usiamo il passaggio per
+    riferimento per uno scopo concreto: scambiare due valori.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Funzioni che collaborano <span class="tag">e uno scambio per riferimento</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">utili.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">bool</span> <span class="fn">e_pari</span>(<span class="ty">int</span> <span class="nm">n</span>) {
+    <span class="kw">return</span> <span class="nm">n</span> <span class="op">%</span> <span class="nm">2</span> <span class="op">==</span> <span class="nm">0</span>;
+}
+
+<span class="cm">// scambia due valori: SERVE il passaggio per riferimento!</span>
+<span class="ty">void</span> <span class="fn">scambia</span>(<span class="ty">int</span><span class="op">&amp;</span> <span class="nm">a</span>, <span class="ty">int</span><span class="op">&amp;</span> <span class="nm">b</span>) {
+    <span class="ty">int</span> <span class="nm">tmp</span> <span class="op">=</span> <span class="nm">a</span>;
+    <span class="nm">a</span> <span class="op">=</span> <span class="nm">b</span>;
+    <span class="nm">b</span> <span class="op">=</span> <span class="nm">tmp</span>;
+}
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">x</span> <span class="op">=</span> <span class="nm">3</span>, <span class="nm">y</span> <span class="op">=</span> <span class="nm">8</span>;
+    <span class="fn">scambia</span>(<span class="nm">x</span>, <span class="nm">y</span>);          <span class="cm">// ora x=8, y=3</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"x="</span> <span class="op">&lt;&lt;</span> <span class="nm">x</span> <span class="op">&lt;&lt;</span> <span class="st">" y="</span> <span class="op">&lt;&lt;</span> <span class="nm">y</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"8 pari? "</span> <span class="op">&lt;&lt;</span> <span class="fn">e_pari</span>(<span class="nm">8</span>) <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;   <span class="cm">// 1 (true)</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      La funzione <code>scambia</code> è l'esempio perfetto del <b>perché serve il riferimento</b>: se
+      <code>a</code> e <code>b</code> fossero <b>copie</b> (per valore), scambieremmo le copie e le variabili
+      originali <code>x</code>, <code>y</code> resterebbero invariate — la funzione sarebbe <b>inutile</b>! Con
+      <code>int&amp;</code> lavoriamo sugli originali, e lo scambio funziona davvero. <mark>Nota che
+      <code>e_pari(8)</code> stampa <code>1</code>, non «true»: cout mostra i bool come 1/0</mark> (per vedere
+      true/false serve un piccolo trucco, <code>std::boolalpha</code>). Compila con <code>g++ utili.cpp -o utili</code>.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>Una funzione: <code>tipo nome(parametri) { … return … }</code>, tutto tipizzato; <code>void</code> se non
+          restituisce nulla. Va <b>dichiarata prima</b> dell'uso (§6.1-6.2).</li>
+      <li><mark>Per valore</mark> (default, <code>int x</code>): la funzione riceve una <b>copia</b>, l'originale non
+          cambia. <mark>Per riferimento</mark> (<code>int&amp; x</code>): lavora sull'<b>originale</b> e può
+          modificarlo. <code>const int&amp;</code> per passare grandi dati senza copiarli, in sola lettura (§6.3).</li>
+      <li><b>Overloading</b>: più funzioni con lo stesso nome, parametri diversi. <b>Default</b>: parametri opzionali
+          (§6.4).</li>
+      <li><b>Dichiarazione</b> (firma, con <code>;</code>) vs <b>definizione</b> (col corpo); gli <b>header</b>
+          <code>.h</code> condividono le firme tra file (§6.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La <code>&amp;</code> del passaggio per riferimento non è un caso isolato: è la punta dell'iceberg del tratto più
+    distintivo — e temuto — del C++. Come fa un riferimento a «essere» la variabile originale? Dove vivono davvero i
+    dati in memoria, e come li si può raggiungere direttamente? Nel <strong>Capitolo 7</strong> affrontiamo i
+    <b>puntatori e i riferimenti</b>: cos'è un indirizzo di memoria, gli operatori <code>&amp;</code> (indirizzo di)
+    e <code>*</code> (contenuto di), e perché i puntatori sono al tempo stesso il super-potere e il tallone d'Achille
+    del C++. È il capitolo che, una volta capito, ti fa <em>vedere</em> come funziona davvero un computer.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Scrivi una funzione <code>int quadrato(int n)</code> che restituisce n al quadrato, e chiamala in
+      <code>main</code> per stampare il quadrato di 7.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>void f(int x)</code> e <code>void f(int&amp; x)</code>? In quale dei due una
+      modifica a <code>x</code> dentro la funzione si vede fuori?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Perché la funzione <code>scambia</code> <b>deve</b> ricevere i parametri per riferimento? Cosa accadrebbe con
+      il passaggio per valore?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi <code>void incrementa(int&amp; x, int quanto = 1)</code> che aumenta <code>x</code> di
+      <code>quanto</code> (default 1). Provala chiamandola con e senza il secondo argomento.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-8"><span class="secnum">Sezione 6.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">quadrato.cpp</div>
+      <pre><span class="ty">int</span> <span class="fn">quadrato</span>(<span class="ty">int</span> <span class="nm">n</span>) { <span class="kw">return</span> <span class="nm">n</span> <span class="op">*</span> <span class="nm">n</span>; }
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="fn">quadrato</span>(<span class="nm">7</span>) <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;   <span class="cm">// 49</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      <code>void f(int x)</code> passa <b>per valore</b>: <code>x</code> è una copia, e modificarla <b>non</b> si vede
+      fuori. <code>void f(int&amp; x)</code> passa <b>per riferimento</b>: <code>x</code> è l'originale, e una modifica
+      <b>si vede</b> nel chiamante. La modifica «esce» solo nel secondo caso (con la <code>&amp;</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Perché deve modificare le variabili <b>originali</b> del chiamante. Con il passaggio <b>per valore</b>,
+      <code>a</code> e <code>b</code> sarebbero copie: la funzione scambierebbe le copie, mentre <code>x</code> e
+      <code>y</code> resterebbero invariate — lo scambio sarebbe inutile. Il riferimento (<code>int&amp;</code>)
+      permette di agire sugli originali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">incrementa.cpp</div>
+      <pre><span class="ty">void</span> <span class="fn">incrementa</span>(<span class="ty">int</span><span class="op">&amp;</span> <span class="nm">x</span>, <span class="ty">int</span> <span class="nm">quanto</span> <span class="op">=</span> <span class="nm">1</span>) {
+    <span class="nm">x</span> <span class="op">+=</span> <span class="nm">quanto</span>;
+}
+
+<span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="nm">10</span>;
+<span class="fn">incrementa</span>(<span class="nm">n</span>);       <span class="cm">// n = 11  (default +1)</span>
+<span class="fn">incrementa</span>(<span class="nm">n</span>, <span class="nm">5</span>);    <span class="cm">// n = 16  (+5)</span></pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.3 — per valore vs per riferimento
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wrf-view');
+  if (!view) return;
+  const out = document.getElementById('wrf-out');
+  let n = 5, msg = 'La variabile <code>n</code> vale 5. Chiama le due funzioni e osserva la differenza.';
+
+  document.getElementById('wrf-val').addEventListener('click', () => {
+    // per valore: n non cambia
+    msg = '<code>raddoppia_copia(n)</code> riceve una <b>copia</b> di n: raddoppia la copia (5→10) ma <mark>l\'originale n resta 5</mark>. La modifica non esce dalla funzione.';
+    draw();
+  });
+  document.getElementById('wrf-ref').addEventListener('click', () => {
+    n = n * 2;
+    msg = '<code>raddoppia_rif(n)</code> riceve <b>l\'originale</b> (int&amp;): raddoppia proprio n. <mark>Ora n vale ' + n + '</mark>: la modifica si vede fuori!';
+    draw();
+  });
+  document.getElementById('wrf-reset').addEventListener('click', () => { n = 5; msg = 'Reimpostata: n = 5.'; draw(); });
+
+  function draw() {
+    view.innerHTML = `
+      <div style="display:inline-block; padding:1rem 1.6rem; border:2px solid var(--accent); border-radius:14px; background:color-mix(in srgb,var(--accent) 8%,transparent)">
+        <div style="font-family:var(--mono); color:var(--ink-soft); font-size:.85rem">variabile del chiamante</div>
+        <div style="font-family:var(--mono); font-size:2rem; font-weight:700; color:var(--accent)">int n = ${n}</div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

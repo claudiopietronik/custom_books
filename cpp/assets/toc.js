@@ -92,7 +92,7 @@ const TOC = [
     n: 6,
     titolo: "Le funzioni",
     file: "cap06-funzioni.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Dichiarare e definire" },
       { id: "s6-2", n: "6.2", t: "Tipo di ritorno e parametri" },
