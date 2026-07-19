@@ -30,7 +30,7 @@ const TOC = [
     n: 2,
     titolo: "NumPy: l'array n-dimensionale",
     file: "cap02-numpy-array.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Perché non bastano le liste" },
       { id: "s2-2", n: "2.2", t: "Creare array" },
