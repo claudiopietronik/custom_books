@@ -12,7 +12,7 @@ Contenuto originale scritto ex novo.
 ## Stato
 
 - [x] 1 — Il web e i suoi tre linguaggi
-- [ ] 2 — HTML: la struttura
+- [x] 2 — HTML: la struttura
 - [ ] 3 — I tag del testo
 - [ ] 4 — Link, immagini e liste
 - [ ] 5 — Form e input

@@ -28,7 +28,7 @@ const TOC = [
     n: 2,
     titolo: "HTML: la struttura",
     file: "cap02-html-struttura.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "L'anatomia di un documento" },
       { id: "s2-2", n: "2.2", t: "Elementi, tag, attributi" },
