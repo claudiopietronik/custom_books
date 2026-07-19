@@ -133,7 +133,7 @@ const TOC = [
     n: 9,
     titolo: "Risolvere i conflitti",
     file: "cap09-conflitti.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Perché nascono i conflitti" },
       { id: "s9-2", n: "9.2", t: "Leggere i marcatori di conflitto" },

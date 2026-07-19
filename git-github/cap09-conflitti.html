@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Risolvere i conflitti — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>Risolvere i conflitti</h1>
+    <p class="standfirst">
+      Finora i merge sono andati lisci, perché le modifiche dei due branch non si sovrapponevano. Ma cosa succede se
+      due branch cambiano <b>la stessa riga</b> dello stesso file, in modi diversi? Git non può sapere quale versione
+      sia quella «giusta» — sarebbe come chiedere a un correttore automatico di decidere tra due frasi opposte. Allora
+      si ferma e chiede aiuto a <b>te</b>: nasce un <b>conflitto di merge</b>. Per molti principianti la parola
+      «conflitto» suona come un disastro; in realtà è una situazione <b>normale e gestibile</b>, che si risolve con
+      calma in pochi passi. Git ti segnala esattamente <em>dove</em> è il problema (con dei marcatori nel file), tu
+      decidi quale versione tenere (o come combinarle), e concludi il merge. In questo capitolo: perché nascono i
+      conflitti (§9.1), come leggere i marcatori (§9.2), come risolverli e completare il merge (§9.3), e come
+      <b>evitarli</b> con buone abitudini (§9.4). <mark>Dopo questo capitolo, i conflitti smetteranno di farti paura:
+      saranno solo un passo in più, ogni tanto.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché nascono i conflitti (§9.1), leggere i <b>marcatori</b> (§9.2), <b>risolvere</b> e completare il merge
+      (§9.3), <b>evitarli</b> con buone abitudini (§9.4). Nel laboratorio (§9.5) risolvi un conflitto passo per passo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la paura numero uno dei principianti</div>
+    <p style="margin-bottom:0">
+      «E se creo un conflitto?» è il timore che blocca chi inizia a collaborare. <mark>Ma un conflitto non rompe
+      nulla</mark>: Git mette in pausa il merge e aspetta la tua decisione, senza toccare le tue commit. Imparare a
+      risolverli — sono più semplici di quanto sembri — ti dà la <b>tranquillità</b> per collaborare davvero, che è il
+      punto di tutto GitHub (prossimi capitoli).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>Perché nascono i conflitti</h2>
+
+  <p class="lead">
+    Un conflitto nasce da una situazione precisa: <b>due branch modificano la stessa parte dello stesso file</b>, in
+    modo incompatibile. Al momento del merge, Git non sa quale delle due versioni scegliere.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Quando Git può decidere da solo, e quando no</div>
+    <p style="margin-bottom:0">
+      Ricorda dal Cap. 8: nel merge, Git fonde le modifiche <b>file per file, riga per riga</b>. Se i due branch hanno
+      toccato <b>parti diverse</b> (file diversi, o righe diverse dello stesso file), <mark>Git le combina
+      automaticamente</mark>, senza problemi — è il caso normale. Il conflitto scatta <b>solo</b> quando entrambi
+      hanno cambiato <b>le stesse righe</b> in modo diverso: lì Git non ha una regola per scegliere, quindi si ferma e
+      <b>chiede a te</b>. In un progetto ben organizzato i conflitti sono <b>rari</b> (perché le persone lavorano su
+      parti diverse), ma prima o poi capitano — ed è giusto saperli affrontare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Leggere i marcatori di conflitto</h2>
+
+  <p class="lead">
+    Quando un merge produce un conflitto, Git modifica il file «conteso» inserendo dei <b>marcatori</b> speciali che
+    mostrano <b>entrambe</b> le versioni, una sotto l'altra. Imparare a leggerli è metà del lavoro.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">titolo.txt — come appare durante un conflitto</div>
+    <pre><span class="out">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+# Il mio diario di viaggio        <span class="c">&lt;- la TUA versione (branch attuale)</span>
+<span class="out">=======</span>
+# Diario 2026                     <span class="c">&lt;- l'ALTRA versione (branch che unisci)</span>
+<span class="out">&gt;&gt;&gt;&gt;&gt;&gt;&gt; aggiungi-titolo</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I tre marcatori <span class="tag">&lt;&lt;&lt;&lt;&lt;&lt;&lt; ======= &gt;&gt;&gt;&gt;&gt;&gt;&gt;</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span></dt>
+        <dd>segna l'inizio della <b>tua</b> versione (quella del branch su cui sei, <code>HEAD</code>). Tutto ciò che
+            segue, fino a <code>=======</code>, è «ciò che avevi tu».</dd>
+        <dt><span class="mono">=======</span></dt>
+        <dd>il <b>separatore</b>: divide le due versioni. Sopra la tua, sotto quella dell'altro branch.</dd>
+        <dt><span class="mono">&gt;&gt;&gt;&gt;&gt;&gt;&gt; nome-branch</span></dt>
+        <dd>segna la fine della versione dell'<b>altro</b> branch (quello che stai unendo). Tutto tra
+            <code>=======</code> e questo marcatore è «ciò che aveva l'altro».</dd>
+        <dt>cosa devi fare</dt>
+        <dd><mark>decidere come deve restare quel pezzo</mark>: tenere la tua, tenere l'altra, o combinarle. Poi
+            <b>cancellare i marcatori</b> e lasciare solo il testo finale corretto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il punto chiave: <mark>Git non ha «sbagliato», ti sta <b>mostrando</b> le due alternative</mark> perché tu
+      scelga. Il file, con i marcatori, è temporaneamente «non valido» (contiene entrambe le versioni + i simboli): il
+      tuo compito è renderlo di nuovo valido, decidendo cosa tenere. <code>git status</code> durante un conflitto ti
+      elenca i file «both modified» che aspettano la tua decisione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>Risolvere e completare il merge</h2>
+
+  <p class="lead">
+    Risolvere un conflitto è un processo in tre passi semplici: <b>modifica</b> il file lasciando la versione giusta,
+    <b>aggiungi</b> alla staging, <b>committa</b> per concludere il merge.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — i tre passi per risolvere</div>
+    <pre><span class="c"># 1) apri il file nell'editor e SISTEMA il conflitto:</span>
+<span class="c">#    cancella i marcatori (&lt;&lt;&lt;, ===, &gt;&gt;&gt;) e lascia solo il testo finale che vuoi</span>
+
+<span class="c"># 2) segna il conflitto come risolto aggiungendo il file</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">titolo.txt</span>
+
+<span class="c"># 3) completa il merge con una commit (Git propone un messaggio adatto)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span>
+<span class="out">[main a9b8c7d] Merge branch 'aggiungi-titolo'</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il processo di risoluzione <span class="tag">modifica → add → commit</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>modifica il file</b></dt>
+        <dd>apri il file nell'editor, guarda le due versioni tra i marcatori, e <b>lascia il testo finale corretto</b>
+            (la tua, l'altra, o una combinazione). <mark>Fondamentale: cancella <b>tutti</b> e tre i marcatori</mark>
+            (<code>&lt;&lt;&lt;</code>, <code>===</code>, <code>&gt;&gt;&gt;</code>). Ripeti per ogni conflitto nel file.</dd>
+        <dt>2 · <span class="mono">git add nomefile</span></dt>
+        <dd>aggiungere il file <b>segnala a Git che il conflitto è risolto</b>. <mark>È il modo di dire «ho
+            sistemato»</mark>. Fallo per ogni file che era in conflitto.</dd>
+        <dt>3 · <span class="mono">git commit</span></dt>
+        <dd>conclude il merge creando il <b>merge commit</b> (Cap. 8). Git propone già un messaggio adatto («Merge
+            branch…»): di solito lo accetti. <mark>Fatto: il merge è completo</mark>, il conflitto risolto.</dd>
+        <dt>via d'uscita: <span class="mono">git merge --abort</span></dt>
+        <dd>se ti sei confuso e vuoi <b>annullare tutto</b> e tornare a prima del merge: <code>git merge --abort</code>.
+            <mark>Nessun danno: torni al punto di partenza</mark> e puoi riprovare con calma.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota che <b>non c'è un comando magico</b> che risolve il conflitto: la decisione è <b>umana</b> (solo tu sai cosa
+      deve dire davvero quel codice). Git ti dà gli strumenti — ti mostra le alternative e attende — ma la scelta è
+      tua. <mark>Ed è giusto così</mark>: un conflitto è, in fondo, una decisione di merito («quale versione è
+      corretta?») che nessun automatismo può prendere al posto tuo. Prova a risolverne uno nel widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-conf">
+    <div class="w-head">
+      <span>Risolvi un conflitto</span>
+      <span class="hint">scegli quale versione tenere</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:500px; margin:0 auto">
+        <div class="term" style="margin:0; max-width:100%"><div class="t-head file" id="cf-fname">titolo.txt (in conflitto)</div><pre id="cf-file" style="margin:0; min-height:100px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-pick="mine">tieni la TUA versione</button>
+      <button class="btn" data-pick="theirs">tieni l'ALTRA</button>
+      <button class="btn" data-pick="both">tieni ENTRAMBE</button>
+      <button class="btn ghost" id="cf-reset">reset (torna in conflitto)</button>
+    </div>
+    <div class="w-readout" id="cf-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>Evitare i conflitti (buone abitudini)</h2>
+
+  <p class="lead">
+    I conflitti si risolvono facilmente, ma è ancora meglio <b>ridurne</b> la frequenza. Poche abitudini, soprattutto
+    quando lavori in team, li rendono rari.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Come tenerli al minimo <span class="tag">commit piccole · sincronizza spesso · dividi il lavoro</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>commit piccole e frequenti</b></dt>
+        <dd>modifiche piccole si fondono più facilmente di enormi blocchi cambiati insieme. <mark>Meno superficie di
+            sovrapposizione</mark>, meno conflitti (Cap. 13).</dd>
+        <dt><b>sincronizzati spesso</b></dt>
+        <dd>in team, aggiorna spesso il tuo branch con le ultime modifiche di <code>main</code> (con <code>pull</code>,
+            Cap. 11): così i tuoi cambiamenti restano «vicini» a quelli degli altri, e le divergenze non si accumulano.</dd>
+        <dt><b>dividi bene il lavoro</b></dt>
+        <dd>se ognuno lavora su file o aree diverse del progetto, le sovrapposizioni sono naturalmente poche.
+            <mark>Una buona organizzazione previene i conflitti alla radice.</mark></dd>
+        <dt><b>branch di vita breve</b></dt>
+        <dd>un branch che vive giorni, non settimane, diverge meno da <code>main</code>. Finisci una funzionalità,
+            uniscila, cancella il branch — e ricomincia (il flusso del Cap. 8).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il messaggio da portare a casa: <mark>i conflitti sono un sintomo normale del lavoro parallelo, non un errore</mark>.
+      Puoi ridurli con le buone abitudini, ma non eliminarli del tutto — ed è ok, perché ora sai risolverli. Non aver
+      paura di creare branch e fare merge per timore dei conflitti: sarebbe come non guidare per paura di parcheggiare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Laboratorio: risolvi un conflitto</h2>
+
+  <p class="lead">
+    Creiamo un conflitto <b>di proposito</b> (il modo migliore per imparare) e risolviamolo. Servono due branch che
+    cambiano la stessa riga.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — creare e risolvere un conflitto</div>
+    <pre><span class="c"># su main: crea un file e committa</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"colore preferito: blu"</span> &gt; <span class="ar">gusti.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi i gusti"</span>
+
+<span class="c"># crea un branch e cambia la riga in modo diverso</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">altro-colore</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"colore preferito: verde"</span> &gt; <span class="ar">gusti.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Cambia colore in verde"</span>
+
+<span class="c"># torna su main e cambia la STESSA riga in modo diverso ancora</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"colore preferito: rosso"</span> &gt; <span class="ar">gusti.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Cambia colore in rosso"</span>
+
+<span class="c"># ora unisci: CONFLITTO! (entrambi hanno cambiato la stessa riga)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">merge</span> <span class="ar">altro-colore</span>
+<span class="out">CONFLICT (content): Merge conflict in gusti.txt
+Automatic merge failed; fix conflicts and then commit the result.</span>
+
+<span class="c"># apri gusti.txt, scegli la versione giusta, cancella i marcatori, poi:</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">gusti.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span>          <span class="c"># completa il merge</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato</div>
+    <p style="margin-bottom:0">
+      Hai creato un conflitto e l'hai risolto: <b>modifica</b> il file (scegli la versione, togli i marcatori),
+      <b>add</b>, <b>commit</b>. <mark>È tutto qui</mark>: nessun disastro, solo una decisione da prendere e tre passi da
+      seguire. Se durante la risoluzione ti fossi confuso, <code>git merge --abort</code> ti avrebbe riportato al
+      punto di partenza. Ora hai completato le <b>fondamenta di Git</b>: sai versionare, esplorare, correggere,
+      ramificare, unire e risolvere conflitti — tutto in locale, sul tuo computer. È il momento di aprirsi al mondo:
+      dal prossimo capitolo entra in scena <b>GitHub</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>conflitto</b> nasce quando due branch cambiano <b>le stesse righe</b> in modo diverso: Git non può
+          scegliere e chiede a te. È normale, non un disastro (§9.1).</li>
+      <li>Git inserisce i <b>marcatori</b> <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> (la tua) / <code>=======</code> /
+          <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; branch</code> (l'altra) nel file conteso (§9.2).</li>
+      <li>Risolvi in 3 passi: <b>modifica</b> (scegli, togli i marcatori) → <code>git add</code> → <code>git commit</code>.
+          <code>git merge --abort</code> annulla tutto (§9.3).</li>
+      <li>Riduci i conflitti con: commit piccole, sincronizzazione frequente, lavoro ben diviso, branch di vita breve
+          (§9.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai completato le fondamenta di Git: tutto ciò che serve per versionare un progetto sul tuo computer. Ma Git dà il
+    meglio quando i progetti vivono <b>online</b> e più persone vi collaborano. È il momento di <b>GitHub</b>. Nel
+    <strong>Capitolo 10</strong> scopriamo cos'è un <b>repository remoto</b>, come creare un account e un repo su
+    GitHub, e come <b>collegare</b> il tuo repository locale a quello online. Da lì, la collaborazione: push, pull e
+    pull request. La seconda metà del libro comincia qui.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      In quale situazione precisa Git genera un conflitto di merge? E quando invece riesce a fondere tutto
+      automaticamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Cosa rappresentano, in un file in conflitto, la parte tra <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> e
+      <code>=======</code>, e quella tra <code>=======</code> e <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; nome-branch</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Elenca i tre passi per risolvere un conflitto. Cosa <b>non</b> devi dimenticare di fare al file prima di
+      aggiungerlo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Ti sei confuso nel bel mezzo di un merge conflittuale e vuoi ricominciare da capo. Quale comando ti riporta allo
+      stato precedente al merge?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      Git genera un conflitto quando i due branch hanno modificato <b>le stesse righe dello stesso file</b> in modo
+      diverso: non ha una regola per decidere quale versione tenere, quindi si ferma e chiede a te. Riesce invece a
+      fondere <b>automaticamente</b> quando le modifiche riguardano <b>parti diverse</b> (file diversi, o righe diverse
+      dello stesso file): non c'è sovrapposizione, quindi Git le combina senza ambiguità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      La parte tra <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> e <code>=======</code> è la <b>tua</b> versione: quella del
+      branch su cui ti trovi (<code>HEAD</code>). La parte tra <code>=======</code> e
+      <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; nome-branch</code> è la versione dell'<b>altro</b> branch, quello che stai unendo. Git
+      te le mostra entrambe perché tu scelga cosa tenere.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      I tre passi: <b>1)</b> <b>modifica il file</b> scegliendo il testo finale (la tua versione, l'altra, o una
+      combinazione); <b>2)</b> <code>git add nomefile</code> per segnare il conflitto come risolto; <b>3)</b>
+      <code>git commit</code> per completare il merge. Al file, prima di aggiungerlo, non devi dimenticare di
+      <b>cancellare tutti i marcatori</b> (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>,
+      <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>): devono restare solo le righe di testo valide.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      <code>git merge --abort</code>: annulla il merge in corso e riporta il repository allo stato <b>precedente</b>
+      all'inizio del merge, come se non l'avessi mai avviato. Nessuna commit viene persa: puoi riprovare con calma. È
+      la «via d'uscita» sicura quando un merge conflittuale ti ha confuso.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.3 — risolvi un conflitto: scegli mine/theirs/both, il file si "risolve"
+   ========================================================================= */
+(function () {
+  const fileEl = document.getElementById('cf-file');
+  if (!fileEl) return;
+  const fname = document.getElementById('cf-fname');
+  const out = document.getElementById('cf-out');
+
+  const MINE = '# Il mio diario di viaggio';
+  const THEIRS = '# Diario 2026';
+
+  function conflictView() {
+    return '<span class="out">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>\n' +
+      '<span style="color:#8fd0ff">' + MINE + '</span>          <span class="cm"># la TUA versione</span>\n' +
+      '<span class="out">=======</span>\n' +
+      '<span style="color:#f6b45f">' + THEIRS + '</span>                     <span class="cm"># l\'ALTRA versione</span>\n' +
+      '<span class="out">&gt;&gt;&gt;&gt;&gt;&gt;&gt; aggiungi-titolo</span>';
+  }
+
+  function resolved(text) {
+    return '<span style="color:#5fd18a">' + text + '</span>';
+  }
+
+  function note(c, html) {
+    const col = c === 'green' ? 'var(--green)' : 'var(--ink-soft)';
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  function reset() {
+    fileEl.innerHTML = conflictView();
+    fname.textContent = 'titolo.txt (in conflitto)';
+    out.innerHTML = note('', 'Il file è <b>in conflitto</b>: Git mostra entrambe le versioni tra i marcatori. <b>Scegli</b> cosa tenere con i pulsanti: il file si «risolve» (marcatori via). Poi, in un vero merge, faresti <code>git add</code> + <code>git commit</code>.');
+  }
+
+  document.querySelectorAll('#w-conf .btn[data-pick]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const k = b.getAttribute('data-pick');
+      let text, desc;
+      if (k === 'mine') { text = MINE; desc = 'Hai tenuto la <b>tua</b> versione (HEAD).'; }
+      else if (k === 'theirs') { text = THEIRS; desc = 'Hai tenuto la versione dell\'<b>altro</b> branch.'; }
+      else { text = MINE + '\n' + THEIRS; desc = 'Hai tenuto <b>entrambe</b> le righe (a volte è la scelta giusta).'; }
+      fileEl.innerHTML = resolved(text);
+      fname.textContent = 'titolo.txt (risolto ✔)';
+      out.innerHTML = note('green', '✔ Conflitto <b>risolto</b>: ' + desc + ' I marcatori sono spariti, resta solo il testo valido. Ora <code>git add titolo.txt</code> segnala «risolto» e <code>git commit</code> completa il merge.');
+    });
+  });
+  document.getElementById('cf-reset').addEventListener('click', reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>
