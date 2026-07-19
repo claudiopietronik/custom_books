@@ -13,7 +13,7 @@ const TOC = [
     n: 1,
     titolo: "Cos'è il controllo di versione",
     file: "cap01-controllo-versione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Il problema: tenere traccia dei cambiamenti" },
       { id: "s1-2", n: "1.2", t: "Cosa fa un sistema di versioning" },

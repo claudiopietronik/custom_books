@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Cos'è il controllo di versione — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 1</div>
+    <h1>Cos'è il controllo di versione</h1>
+    <p class="standfirst">
+      Hai presente le cartelle piene di file chiamati <code>tesi_definitiva.doc</code>,
+      <code>tesi_definitiva_v2.doc</code>, <code>tesi_definitiva_v2_QUESTA.doc</code>? È il modo in cui, senza gli
+      strumenti giusti, cerchiamo di «tenere traccia» delle versioni — ed è un disastro: caotico, pieno di copie, e
+      quando qualcosa si rompe non sai più tornare indietro. Per il codice (e non solo) esiste una soluzione infinitamente
+      migliore: il <b>controllo di versione</b>, e il suo strumento dominante si chiama <b>Git</b>. Git registra
+      <b>ogni</b> modifica come un'istantanea nel tempo, ti lascia tornare a qualsiasi versione passata, lavorare su
+      più idee in parallelo senza confusione, e — insieme a <b>GitHub</b> — collaborare con altri in tutto il mondo.
+      In questo primo capitolo capiamo il <b>problema</b> che risolve (§1.1), cosa fa un sistema di versioning (§1.2),
+      la differenza tra Git e GitHub (§1.3) e come Git ragiona (§1.4). <mark>È la mappa mentale su cui costruiremo,
+      comando dopo comando, una competenza che userai per tutta la tua carriera.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema dei cambiamenti (§1.1), cosa fa il <b>versioning</b> (§1.2), <b>Git ≠ GitHub</b> (§1.3), come
+      lavora Git (§1.4). Nel laboratorio (§1.5) fissi la mappa mentale prima di installare Git nel prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la competenza che tutti danno per scontata</div>
+    <p style="margin-bottom:0">
+      Git è ovunque: ogni azienda, ogni progetto open source, ogni team di sviluppo lo usa. <mark>Saperlo usare non è
+      «un plus»: è un prerequisito</mark>, spesso richiesto ancor prima di saper programmare bene. Eppure viene
+      raramente insegnato con calma. Impararlo davvero — capendo <em>cosa</em> succede, non solo memorizzando comandi
+      — ti dà sicurezza, ti salva da disastri, e ti apre la porta della collaborazione. Vale ogni minuto.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">Sezione 1.1</span>Il problema: tenere traccia dei cambiamenti</h2>
+
+  <p class="lead">
+    Ogni progetto — un programma, un sito, un documento — <b>cambia nel tempo</b>. Aggiungi cose, correggi errori,
+    provi idee, a volte torni sui tuoi passi. Senza uno strumento apposito, gestire questi cambiamenti diventa
+    presto ingestibile.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il metodo «copie con nomi diversi» non funziona</div>
+    <p style="margin-bottom:0">
+      Provare a versionare a mano — salvando copie come <code>progetto_v1</code>, <code>progetto_v2</code>,
+      <code>progetto_FINALE</code> — porta a una lista di problemi concreti: <b>(1)</b> non ricordi mai <em>cosa</em> è
+      cambiato tra una copia e l'altra; <b>(2)</b> le copie occupano spazio e generano confusione; <b>(3)</b> se
+      lavori in due sullo stesso file, come fondete le vostre modifiche? A mano, copincollando? <b>(4)</b> se una
+      modifica rompe tutto, ritrovare l'ultima versione «buona» è un incubo. <mark>Manca uno strumento che registri
+      la storia in modo ordinato, sicuro e navigabile.</mark> Quello strumento è il controllo di versione.
+    </p>
+  </div>
+
+  <div class="widget" id="w-time">
+    <div class="w-head">
+      <span>La macchina del tempo di un progetto</span>
+      <span class="hint">scorri le versioni: torni a qualsiasi punto</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:480px; margin:0 auto">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-bottom:.7rem">
+          <span style="font-size:.85rem; color:var(--ink-soft)">versione</span>
+          <input type="range" id="tm-slider" min="0" max="3" value="3" style="flex:1">
+          <span id="tm-label" style="font-family:var(--mono); font-size:.85rem; min-width:130px; text-align:right"></span>
+        </div>
+        <div class="term" style="margin:0; max-width:100%"><div class="t-head file" id="tm-fhead">saluto.py</div><pre id="tm-code" style="margin:0; min-height:90px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="tm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">Sezione 1.2</span>Cosa fa un sistema di versioning</h2>
+
+  <p class="lead">
+    Un <b>sistema di controllo di versione</b> (in inglese <em>version control system</em>, VCS) è uno strumento che
+    registra <b>ogni cambiamento</b> ai tuoi file nel tempo, così puoi rivederli, confrontarli e tornare a qualsiasi
+    versione precedente. Git è il VCS più usato al mondo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cosa ti dà un VCS <span class="tag">le superpotenze del versioning</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>una storia completa</b></dt>
+        <dd>ogni modifica è registrata come un'<b>istantanea</b> (snapshot) con data, autore e una descrizione.
+            <mark>Puoi rivedere <em>tutta</em> l'evoluzione del progetto</mark>, riga per riga, per sempre.</dd>
+        <dt><b>tornare indietro</b></dt>
+        <dd>hai rotto qualcosa? Torni a una versione precedente che funzionava, in un istante. <mark>Sperimentare non
+            fa più paura</mark>: c'è sempre una via di ritorno.</dd>
+        <dt><b>lavorare in parallelo</b></dt>
+        <dd>con i <b>branch</b> (Cap. 7) provi un'idea «di lato», senza toccare la versione principale, e la unisci
+            solo quando è pronta.</dd>
+        <dt><b>collaborare senza pestarsi i piedi</b></dt>
+        <dd>più persone lavorano sugli stessi file; il VCS <b>fonde</b> le modifiche e segnala i (rari) conflitti da
+            risolvere (Cap. 9). <mark>Fine del copincolla manuale.</mark></dd>
+        <dt><b>chi ha fatto cosa</b></dt>
+        <dd>ogni cambiamento è attribuito a un autore. Utile per capire, dare credito, e — quando serve — trovare
+            <em>quando</em> è entrato un bug.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il concetto chiave è lo <b>snapshot</b> (istantanea): ogni volta che «salvi» in Git (una <b>commit</b>, Cap. 4),
+      registri una fotografia completa dello stato del progetto in quel momento, con un'etichetta. <mark>La storia del
+      progetto diventa una sequenza di snapshot navigabili</mark> — proprio la «macchina del tempo» del widget qui
+      sopra. Tutto il resto del libro è imparare a creare, leggere e gestire questi snapshot.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">Sezione 1.3</span>Git e GitHub: non sono la stessa cosa</h2>
+
+  <p class="lead">
+    Due nomi che si assomigliano e che i principianti confondono di continuo — ma sono cose <b>diverse</b> e
+    complementari. Chiarirlo subito ti eviterà tanta confusione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Git vs GitHub <span class="tag">lo strumento vs il servizio</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Git</b> — lo <b>strumento</b></dt>
+        <dd>un programma che gira sul <b>tuo computer</b> e fa il controllo di versione: registra le commit, gestisce
+            i branch, tiene la storia. <mark>Funziona anche completamente offline</mark>, da solo. È gratuito e open
+            source, creato nel 2005.</dd>
+        <dt><b>GitHub</b> — il <b>servizio</b></dt>
+        <dd>un <b>sito web</b> (un'azienda) che <b>ospita</b> i repository Git online, per condividerli e collaborare.
+            <mark>Aggiunge alla base di Git funzioni sociali</mark>: pull request, code review, issue, pagine di
+            progetto (Cap. 10-12). Non è l'unico: esistono anche GitLab, Bitbucket…</dd>
+        <dt>l'analogia</dt>
+        <dd><mark>Git sta a GitHub come la fotografia sta a un social di foto</mark>: Git «scatta» e organizza le
+            versioni (lo fai sul tuo PC); GitHub è il luogo online dove le carichi per condividerle e lavorarci in
+            gruppo. Puoi usare Git <b>senza</b> GitHub; GitHub <b>ha bisogno</b> di Git.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In questo libro impariamo <b>prima Git</b> (Cap. 2-9), lavorando sul nostro computer: le fondamenta. <b>Poi
+      GitHub</b> (Cap. 10-14), per portare i progetti online e collaborare. <mark>Questo ordine non è casuale</mark>:
+      capire Git da solo rende GitHub facilissimo; partire da GitHub senza capire Git genera solo confusione (è
+      l'errore più comune di chi «impara Git cliccando su GitHub»).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">Sezione 1.4</span>Come lavora Git (panoramica)</h2>
+
+  <p class="lead">
+    Prima di installarlo, fissiamo il modello mentale di come Git ragiona. Non serve capire tutto ora — solo
+    familiarizzare con tre parole che torneranno di continuo: <b>repository</b>, <b>commit</b>, <b>branch</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre concetti fondamentali <span class="tag">repository · commit · branch</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>repository</b> (o «repo»)</dt>
+        <dd>la cartella del tuo progetto <b>più</b> tutta la sua storia, gestita da Git. <mark>È il contenitore di
+            tutto</mark>: i file attuali e ogni loro versione passata (Cap. 3).</dd>
+        <dt>la <b>commit</b></dt>
+        <dd>uno <b>snapshot</b> salvato: una fotografia del progetto in un dato momento, con un messaggio che descrive
+            cosa hai cambiato. <mark>La storia è una sequenza di commit</mark> (Cap. 4). È l'unità base di Git.</dd>
+        <dt>il <b>branch</b> (ramo)</dt>
+        <dd>una <b>linea di sviluppo</b> indipendente. Il principale si chiama di solito <code>main</code>. Puoi
+            creare altri branch per lavorare su idee separate e poi <b>unirle</b> (Cap. 7-8). <mark>È ciò che rende Git
+            potente per sperimentare e collaborare.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il flusso base che imparerai è semplice e ripetitivo: <b>modifichi</b> dei file, ne <b>fai una commit</b> (uno
+      snapshot con descrizione), e ripeti. Ogni tanto crei un <b>branch</b> per un'idea, ci lavori, e lo
+      <b>unisci</b>. Con GitHub, <b>spingi</b> (push) le commit online per condividerle. <mark>Tutto qui: il resto
+      sono dettagli e comodità</mark> attorno a questo ciclo. Nei prossimi capitoli lo costruiamo, un pezzo alla
+      volta, partendo dall'installazione.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">Sezione 1.5</span>Laboratorio: la mappa mentale</h2>
+
+  <p class="lead">
+    Questo primo «laboratorio» è concettuale: non ci sono ancora comandi da eseguire (Git lo installiamo nel Cap. 2).
+    Ma vale la pena fissare la mappa mentale, perché renderà tutto il resto più facile.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧭</span> La mappa da tenere a mente</div>
+    <p style="margin-bottom:.6rem">Mentre procedi nel libro, tieni presente questa gerarchia di idee:</p>
+    <ul style="margin-bottom:0">
+      <li><b>Controllo di versione</b> = registrare la storia dei cambiamenti per poterla rivedere e navigare.</li>
+      <li><b>Git</b> = lo strumento che lo fa, sul tuo computer (offline).</li>
+      <li><b>Repository</b> = il progetto + la sua storia gestita da Git.</li>
+      <li><b>Commit</b> = uno snapshot salvato, con un messaggio.</li>
+      <li><b>Branch</b> = una linea di sviluppo parallela.</li>
+      <li><b>GitHub</b> = il servizio online dove condividere il repository e collaborare.</li>
+    </ul>
+    <p style="margin:.6rem 0 0">
+      <mark>Se questi sei punti ti sono chiari, hai la struttura portante dell'intero libro.</mark> Ogni capitolo
+      aggiungerà i comandi concreti per realizzarli. Torna a questa lista quando ti senti perso: quasi sempre, la
+      confusione nasce dal non ricordare «a quale di questi livelli» appartiene una certa parola.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>controllo di versione</b> registra la storia dei cambiamenti: storia completa, ritorno indietro,
+          lavoro in parallelo, collaborazione (§1.1-1.2).</li>
+      <li>Il concetto base è lo <b>snapshot</b> (istantanea): la storia è una sequenza di snapshot navigabili (§1.2).</li>
+      <li><b>Git ≠ GitHub</b>: Git è lo <b>strumento</b> sul tuo PC (offline); GitHub è il <b>servizio online</b> per
+          condividere e collaborare. Git può stare senza GitHub, non viceversa (§1.3).</li>
+      <li>Tre parole chiave: <b>repository</b> (progetto + storia), <b>commit</b> (snapshot), <b>branch</b> (linea di
+          sviluppo) (§1.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai la mappa: sai <em>cosa</em> è il controllo di versione e <em>perché</em> serve. È ora di passare alla pratica.
+    Nel <strong>Capitolo 2</strong> installiamo Git sul tuo computer, lo configuriamo con la tua identità (nome ed
+    email, che finiranno in ogni commit) e prendiamo confidenza col terminale — il luogo dove Git vive. Dal prossimo
+    capitolo, si comincia a digitare comandi veri.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">Sezione 1.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.1</div>
+    <p style="margin-bottom:0">
+      Elenca almeno tre problemi del «versionare a mano» salvando copie con nomi diversi
+      (<code>progetto_v1</code>, <code>progetto_FINALE</code>…).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.2</div>
+    <p style="margin-bottom:0">
+      Con parole tue, cos'è uno <b>snapshot</b> (una commit) in Git? Cosa contiene oltre ai file?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <b>Git</b> e <b>GitHub</b>? È possibile usare Git senza GitHub? E GitHub senza Git?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.4</div>
+    <p style="margin-bottom:0">
+      Abbina ogni termine alla sua definizione: <b>(a)</b> repository, <b>(b)</b> commit, <b>(c)</b> branch —
+      <b>(1)</b> uno snapshot salvato con un messaggio, <b>(2)</b> il progetto più la sua storia, <b>(3)</b> una linea
+      di sviluppo parallela.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">Sezione 1.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.1</div>
+    <p style="margin-bottom:0">
+      Tra i problemi: <b>(1)</b> non sai <b>cosa</b> è cambiato tra una copia e l'altra (nessuna descrizione);
+      <b>(2)</b> le copie <b>occupano spazio</b> e creano <b>confusione</b> (quale è davvero l'ultima?); <b>(3)</b> è
+      quasi impossibile <b>fondere</b> le modifiche di due persone; <b>(4)</b> tornare a una versione funzionante dopo
+      un errore è difficile e rischioso. In sintesi: manca una storia ordinata, sicura e navigabile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.2</div>
+    <p style="margin-bottom:0">
+      Uno <b>snapshot</b> (commit) è una <b>fotografia completa</b> dello stato del progetto in un dato momento,
+      salvata da Git. Oltre ai file (nella loro versione di quel momento), contiene dei <b>metadati</b>: l'<b>autore</b>,
+      la <b>data</b>, un <b>messaggio</b> che descrive cosa è cambiato, e un identificatore univoco. La storia del
+      progetto è la sequenza di questi snapshot.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.3</div>
+    <p style="margin-bottom:0">
+      <b>Git</b> è lo <b>strumento</b> di controllo di versione che gira sul tuo computer (anche offline); <b>GitHub</b>
+      è un <b>servizio online</b> che ospita i repository Git per condividerli e collaborare. Sì, puoi usare <b>Git
+      senza GitHub</b> (versioni i tuoi progetti in locale, da solo). <b>GitHub senza Git</b> invece no: GitHub serve
+      proprio a ospitare repository Git, quindi si appoggia a Git.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.4</div>
+    <p style="margin-bottom:0">
+      <b>(a) repository → (2)</b> il progetto più la sua storia; <b>(b) commit → (1)</b> uno snapshot salvato con un
+      messaggio; <b>(c) branch → (3)</b> una linea di sviluppo parallela. Sono i tre concetti fondamentali su cui si
+      regge tutto Git.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §1.1 — macchina del tempo: scorri le versioni di un file (le commit)
+   ========================================================================= */
+(function () {
+  const slider = document.getElementById('tm-slider');
+  if (!slider) return;
+  const code = document.getElementById('tm-code');
+  const label = document.getElementById('tm-label');
+  const out = document.getElementById('tm-out');
+
+  const VERSIONI = [
+    { msg: 'primo abbozzo', code: '<span class="kw">def</span> <span class="fn">saluta</span>():\n    <span class="bi">print</span>(<span class="st">"ciao"</span>)' },
+    { msg: 'aggiungo il nome', code: '<span class="kw">def</span> <span class="fn">saluta</span>(nome):\n    <span class="bi">print</span>(<span class="st">"ciao "</span> <span class="op">+</span> nome)' },
+    { msg: 'uso un f-string', code: '<span class="kw">def</span> <span class="fn">saluta</span>(nome):\n    <span class="bi">print</span>(<span class="st">f"Ciao, {nome}!"</span>)' },
+    { msg: 'gestisco il nome vuoto', code: '<span class="kw">def</span> <span class="fn">saluta</span>(nome<span class="op">=</span><span class="st">"amico"</span>):\n    <span class="bi">print</span>(<span class="st">f"Ciao, {nome}!"</span>)' }
+  ];
+
+  function render() {
+    const i = +slider.value;
+    const v = VERSIONI[i];
+    code.innerHTML = v.code;
+    label.textContent = 'commit ' + (i + 1) + '/' + VERSIONI.length;
+    const ultima = i === VERSIONI.length - 1;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' +
+      'Stai guardando la <b>commit ' + (i + 1) + '</b>: «<i>' + v.msg + '</i>». ' +
+      (ultima
+        ? 'È l\'ultima versione. Ma con Git puoi <b>tornare</b> a qualsiasi commit precedente scorrendo indietro — la storia non si perde.'
+        : 'Sei <b>tornato indietro nel tempo</b>: il file appare com\'era a quella commit. Con Git è una cosa reale, non una copia manuale.') +
+      ' Ogni commit ha un <b>messaggio</b> che dice cosa è cambiato.</div>';
+  }
+  slider.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>
