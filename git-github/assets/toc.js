@@ -178,7 +178,7 @@ const TOC = [
     n: 12,
     titolo: "Pull request e code review",
     file: "cap12-pull-request.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Il workflow a feature branch" },
       { id: "s12-2", n: "12.2", t: "Aprire una pull request" },

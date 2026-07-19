@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Pull request e code review — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Pull request e code review</h1>
+    <p class="standfirst">
+      Sai pushare e pullare — ma in un team pushare direttamente su <code>main</code> è pericoloso: chiunque potrebbe
+      rompere il ramo principale, e nessuno controllerebbe il codice prima che entri. Il flusso professionale usa un
+      meccanismo elegante, che GitHub ha reso lo standard mondiale: la <b>pull request</b> (PR). L'idea: invece di
+      unire tu stesso il tuo branch in <code>main</code>, <b>proponi</b> le tue modifiche e chiedi al team di
+      revisionarle. I colleghi le leggono, commentano, suggeriscono, approvano — è la <b>code review</b> — e solo dopo
+      le modifiche vengono unite. È così che il codice migliora, la conoscenza si condivide, e <code>main</code> resta
+      sano. In questo capitolo: il <b>workflow a feature branch</b> (§12.1), aprire una PR (§12.2), la code review
+      (§12.3) e il merge della PR (§12.4). <mark>È il cuore della collaborazione moderna: come lavorano davvero i team
+      di software.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>workflow a feature branch</b> (§12.1), aprire una <b>pull request</b> (§12.2), la <b>code review</b>
+      (§12.3), fare il <b>merge</b> della PR (§12.4). Nel laboratorio (§12.5) segui il ciclo completo di una PR.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è come si lavora nel mondo reale</div>
+    <p style="margin-bottom:0">
+      Praticamente ogni team di sviluppo, e ogni progetto open source, lavora con le pull request. <mark>Saperle usare
+      è un requisito professionale</mark>, non un optional: al primo giorno di lavoro ti verrà chiesto di aprirne una.
+      E la code review non è burocrazia: è il modo principale con cui si trovano i bug prima che arrivino agli utenti e
+      con cui si impara dai colleghi. Padroneggiare questo flusso ti rende un collaboratore vero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Il workflow a feature branch</h2>
+
+  <p class="lead">
+    Alla base della pull request c'è un'abitudine che già conosci (Cap. 7-8): <b>non lavorare mai direttamente su
+    <code>main</code></b>. Ogni modifica nasce su un branch dedicato, e <code>main</code> resta la versione «buona»,
+    sempre funzionante.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il feature branch workflow <span class="tag">branch → push → PR → review → merge</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · crea un <b>branch</b> per la modifica</dt>
+        <dd><code>git switch -c aggiungi-login</code>: un branch dedicato alla funzionalità o correzione. <mark>main
+            resta intatto.</mark></dd>
+        <dt>2 · <b>lavora e committa</b>, poi <b>pusha il branch</b></dt>
+        <dd>fai le tue commit sul branch e lo mandi su GitHub: <code>git push -u origin aggiungi-login</code>.
+            <mark>Il tuo branch è ora anche sul remoto</mark>, pronto per la proposta.</dd>
+        <dt>3 · apri una <b>pull request</b></dt>
+        <dd>su GitHub, proponi di unire il tuo branch in <code>main</code> (§12.2). Parte la revisione.</dd>
+        <dt>4 · <b>review</b> e <b>merge</b></dt>
+        <dd>i colleghi revisionano (§12.3); dopo l'approvazione, la PR viene <b>unita</b> in <code>main</code> (§12.4),
+            e il branch si può cancellare. <mark>main cresce solo con codice revisionato.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riconosci il ciclo del Cap. 8 (ramifica → lavora → unisci), ora con due aggiunte: il lavoro passa da <b>GitHub</b>
+      (push del branch) e c'è un momento di <b>revisione</b> prima dell'unione. <mark>Questo trasforma il merge da atto
+      solitario a decisione condivisa</mark>. È la differenza tra «Git per me» e «Git per il team».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Aprire una pull request</h2>
+
+  <p class="lead">
+    Una <b>pull request</b> è, letteralmente, una richiesta: «per favore, unite (pull) le mie modifiche in
+    <code>main</code>». Si apre dal sito di GitHub, non da un comando Git, e diventa un luogo di discussione attorno al
+    tuo codice.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Cosa contiene una pull request</div>
+    <p style="margin-bottom:0">
+      Dopo aver pushato il tuo branch, su GitHub compare un pulsante «Compare &amp; pull request». Aprendola, indichi:
+      il branch <b>di partenza</b> (il tuo, es. <code>aggiungi-login</code>) e quello di <b>destinazione</b> (di solito
+      <code>main</code>); un <b>titolo</b> e una <b>descrizione</b> di cosa hai fatto e perché. <mark>GitHub mostra
+      automaticamente il <b>diff</b> di tutte le tue modifiche</mark> (le righe +verdi/−rosse del Cap. 5) e l'elenco
+      delle tue commit. La PR diventa una «pagina» dedicata alla tua proposta, dove il team può leggere il codice,
+      commentarlo riga per riga, e discutere — prima che venga unito. È come dire: «ecco cosa vorrei aggiungere, che ne
+      pensate?».
+    </p>
+  </div>
+
+  <div class="widget" id="w-pr">
+    <div class="w-head">
+      <span>Il ciclo di vita di una pull request</span>
+      <span class="hint">segui i passi fino al merge</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div id="pr-steps" style="display:flex; justify-content:space-between; gap:.3rem; margin-bottom:1rem; flex-wrap:wrap"></div>
+      <div class="term" style="margin:0 auto; max-width:100%"><div class="t-head" id="pr-head">pull request</div><pre id="pr-body" style="margin:0; min-height:90px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="pr-next">▶ passo successivo</button>
+      <button class="btn ghost" id="pr-reset">reset</button>
+    </div>
+    <div class="w-readout" id="pr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>La code review</h2>
+
+  <p class="lead">
+    Il cuore della pull request è la <b>code review</b>: uno o più colleghi leggono le tue modifiche e danno un
+    feedback. Non è un giudizio su di te — è un lavoro di squadra per rendere il codice migliore.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Come funziona una review <span class="tag">commenti · richieste · approvazione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>commenti riga per riga</b></dt>
+        <dd>il revisore può commentare <b>una riga specifica</b> del diff: «qui manca un controllo», «bel modo di
+            gestirlo», «e se la lista è vuota?». <mark>La discussione è ancorata al codice</mark>, precisa e utile.</dd>
+        <dt><b>richieste di modifica</b></dt>
+        <dd>se qualcosa va sistemato, il revisore chiede modifiche. <mark>Tu aggiorni il branch</mark> (nuove commit +
+            push) e la PR si aggiorna da sola: il revisore rivede solo le novità.</dd>
+        <dt><b>approvazione</b></dt>
+        <dd>quando il codice va bene, il revisore <b>approva</b> la PR. Molti team richiedono almeno un'approvazione
+            prima di poter unire. <mark>È il «via libera».</mark></dd>
+        <dt>discussione e apprendimento</dt>
+        <dd>la review è anche un momento di <b>scambio</b>: si spiega perché una scelta è migliore, si condividono
+            trucchi, si allineano gli stili. <mark>Si impara tantissimo leggendo e ricevendo review.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché la review conta così tanto? Perché <mark>trova i problemi <b>prima</b> che arrivino agli utenti</mark>
+      (quattro occhi vedono più di due), diffonde la conoscenza nel team (nessuno resta l'unico a capire una parte), e
+      alza la qualità nel tempo. Ricevere feedback sul proprio codice all'inizio può intimidire, ma è una delle cose
+      più formative del mestiere: accoglilo come un regalo, non come una critica personale.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Fare il merge della PR</h2>
+
+  <p class="lead">
+    Approvata la review, la pull request può essere <b>unita</b>: le modifiche del branch entrano in <code>main</code>.
+    Su GitHub si fa con un pulsante — niente comandi — e poi si fa pulizia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Concludere la pull request <span class="tag">merge · cancella branch · pull in locale</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>«Merge pull request»</b></dt>
+        <dd>il pulsante su GitHub che <b>unisce</b> il branch in <code>main</code>, direttamente sul remoto. <mark>Da
+            questo momento le tue modifiche sono nella versione ufficiale.</mark></dd>
+        <dt><b>cancella il branch</b></dt>
+        <dd>GitHub offre di cancellare il branch della feature, ormai unito (come il <code>git branch -d</code> del
+            Cap. 8, ma sul remoto). <mark>Pulizia: la lista dei branch resta ordinata.</mark></dd>
+        <dt><b>aggiorna il tuo locale</b></dt>
+        <dd>torna sul tuo computer, vai su <code>main</code> e fai <code>git pull</code>: <mark>scarichi la tua
+            stessa modifica ora unita in main</mark> (più eventuali altre). Sei di nuovo allineato, pronto per la
+            prossima feature.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il ciclo completo, che ripeterai a ogni funzionalità: <mark><code>switch -c feature</code> → lavori → push del
+      branch → apri PR → review → merge su GitHub → <code>git switch main</code> + <code>git pull</code> →
+      cancella il branch locale</mark>. All'inizio sembra lungo, ma diventa naturale e velocissimo. È il ritmo del
+      lavoro professionale, e ora lo conosci per intero.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Laboratorio: una pull request</h2>
+
+  <p class="lead">
+    Fai una pull request completa sul tuo repo <code>diario</code> (su GitHub). Anche da solo puoi aprire e unire una
+    PR: sarai tu il proponente <em>e</em> il revisore — perfetto per imparare il flusso.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale + GitHub — il flusso a PR</div>
+    <pre><span class="c"># --- nel terminale ---</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">aggiungi-copertina</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"# Il mio diario"</span> &gt; <span class="ar">copertina.md</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi la copertina"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">aggiungi-copertina</span>
+
+<span class="c"># --- su github.com ---</span>
+<span class="c"># 1. compare "Compare & pull request": cliccalo</span>
+<span class="c"># 2. scrivi titolo e descrizione, poi "Create pull request"</span>
+<span class="c"># 3. (review: leggi il diff; se da solo, approva o unisci direttamente)</span>
+<span class="c"># 4. "Merge pull request" -> "Confirm merge" -> "Delete branch"</span>
+
+<span class="c"># --- torna nel terminale, allineati ---</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>          <span class="c"># ora main locale ha la copertina</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">aggiungi-copertina</span>   <span class="c"># pulisci il branch locale</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il flusso professionale, tuo</div>
+    <p style="margin-bottom:0">
+      Hai completato una <b>pull request</b> dall'inizio alla fine: branch → push → PR → (review) → merge → pull →
+      pulizia. <mark>Questo è, letteralmente, come lavorano i team di software di tutto il mondo</mark> — GitHub, le
+      aziende, i progetti open source. Da solo hai fatto sia il proponente sia il revisore; in un team, i ruoli si
+      dividono, ma il flusso è identico. Nota come <code>main</code> non venga mai toccato «a mano»: cresce solo
+      attraverso PR revisionate. Questa disciplina è ciò che tiene sano un progetto con tante persone. Ti manca solo
+      un capitolo di «igiene» (cosa non committare, .gitignore) e poi metteremo tutto insieme.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>Feature branch workflow</b>: mai lavorare su <code>main</code> direttamente. Ogni modifica su un branch
+          dedicato, pushato su GitHub (§12.1).</li>
+      <li>Una <b>pull request</b> propone di unire il tuo branch in <code>main</code>: mostra il diff e le commit,
+          diventa il luogo della discussione (§12.2).</li>
+      <li>La <b>code review</b>: i colleghi commentano riga per riga, chiedono modifiche, approvano. Trova bug,
+          condivide conoscenza, alza la qualità (§12.3).</li>
+      <li>Dopo l'approvazione: <b>merge</b> della PR (pulsante), cancella il branch, e <code>git pull</code> in locale
+          per allinearti (§12.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai collaborare col flusso professionale a pull request. Prima di mettere tutto insieme in un progetto completo,
+    c'è un capitolo di «igiene» che fa la differenza tra un repository pulito e uno pasticciato: cosa <b>non</b>
+    committare (file temporanei, segreti, dipendenze) e come escluderli con il <code>.gitignore</code>, più le buone
+    pratiche sui messaggi e sulle commit. Nel <strong>Capitolo 13</strong> impariamo a tenere un repository ordinato —
+    piccola accortezza, grande differenza nel tempo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Perché nel feature branch workflow non si lavora direttamente su <code>main</code>? Cosa garantisce questa
+      disciplina?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Cos'è una pull request e cosa mostra a chi la deve revisionare? Da dove si apre, dal terminale o dal sito di
+      GitHub?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Elenca due benefici della code review. Se un revisore chiede una modifica, cosa fai per aggiornare la pull
+      request?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Dopo che una pull request è stata unita su GitHub, quali comandi esegui nel tuo repository locale per allinearti
+      e fare pulizia del branch?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Non si lavora direttamente su <code>main</code> per tenerlo <b>sempre stabile e funzionante</b>: ogni modifica
+      cresce isolata su un branch dedicato e viene integrata solo dopo la revisione. Questa disciplina garantisce che
+      in <code>main</code> entri <b>solo codice revisionato e approvato</b>, riducendo il rischio di rompere la
+      versione principale e permettendo il controllo di qualità (code review) prima dell'unione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      Una <b>pull request</b> è una richiesta di unire un branch (con le tue modifiche) in un altro (di solito
+      <code>main</code>). A chi la revisiona mostra il <b>diff</b> completo delle modifiche (righe aggiunte/rimosse),
+      l'elenco delle <b>commit</b>, e uno spazio per titolo, descrizione e commenti. Si apre dal <b>sito di GitHub</b>
+      (non da un comando Git), dopo aver pushato il branch.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      Due benefici della code review: <b>(1)</b> trova <b>bug e problemi</b> prima che arrivino agli utenti (più occhi
+      controllano); <b>(2)</b> <b>condivide conoscenza</b> nel team e alza la qualità/coerenza del codice (si impara
+      dai colleghi). Se un revisore chiede una modifica, la applichi sul branch con <b>nuove commit</b> e fai
+      <b>push</b>: la pull request si <b>aggiorna automaticamente</b> con le nuove modifiche, e il revisore rivede solo
+      le novità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">nome-del-branch</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Torni su <code>main</code>, fai <code>pull</code> per scaricare le modifiche ormai
+      unite (inclusa la tua), e cancelli il branch locale ormai concluso.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.2 — ciclo di vita di una PR: push branch -> apri -> review -> merge
+   ========================================================================= */
+(function () {
+  const stepsEl = document.getElementById('pr-steps');
+  if (!stepsEl) return;
+  const headEl = document.getElementById('pr-head');
+  const bodyEl = document.getElementById('pr-body');
+  const out = document.getElementById('pr-out');
+
+  const STEPS = [
+    { label: 'push branch', head: 'terminale',
+      body: '<span class="p">$</span> <span class="cmd">git push -u origin</span> <span class="ar">aggiungi-login</span>\n<span class="out">... branch \'aggiungi-login\' su GitHub</span>',
+      msg: '1 · Hai <b>pushato il branch</b> su GitHub. Ora compare l\'invito ad aprire una pull request.' },
+    { label: 'apri PR', head: 'pull request #7 · aperta',
+      body: '<span class="ar">aggiungi-login</span> → <span class="ar">main</span>\n\n<span style="color:#8fd0ff">Titolo:</span> Aggiungi il login con Google\n<span style="color:#8fd0ff">Diff:</span> +42 −3  ·  2 commit',
+      msg: '2 · <b>Pull request aperta</b>: proponi di unire il tuo branch in main. GitHub mostra diff e commit. Il team può leggere e commentare.' },
+    { label: 'review', head: 'pull request #7 · in review',
+      body: '💬 <span class="out">Luca (riga 12):</span> «e se il token scade? aggiungi un controllo»\n\n<span class="out">→ tu aggiorni: nuova commit + push</span>\n💬 <span style="color:#5fd18a">Luca: cambiamenti richiesti risolti</span>',
+      msg: '3 · <b>Code review</b>: Luca commenta una riga e chiede una modifica. Tu aggiorni il branch (commit + push) e la PR si aggiorna da sola.' },
+    { label: 'approvata', head: 'pull request #7 · approvata ✔',
+      body: '<span style="color:#5fd18a">✔ Luca ha approvato questa pull request</span>\n\n<span class="out">Tutti i controlli passati. Pronta per il merge.</span>',
+      msg: '4 · <b>Approvata!</b> Il revisore dà il via libera. Ora la PR può essere unita in main.' },
+    { label: 'merge', head: 'pull request #7 · unita 🎉',
+      body: '<span style="color:#b299d6">🔀 Pull request unita in main</span>\n<span class="out">Branch \'aggiungi-login\' cancellato.</span>\n\n<span class="out">$ git switch main && git pull   (per allineare il locale)</span>',
+      msg: '5 · <b>Merge!</b> Le modifiche sono in main (revisionate!). Branch cancellato. Torni in locale, git pull, e sei pronto per la prossima feature. 🎉' }
+  ];
+  let step = 0;
+
+  function draw() {
+    stepsEl.innerHTML = STEPS.map(function (s, i) {
+      const done = i < step, cur = i === step;
+      const bg = done ? 'var(--green)' : (cur ? 'var(--accent)' : 'var(--paper-3)');
+      const fg = (done || cur) ? '#fff' : 'var(--ink-soft)';
+      return '<div style="flex:1; min-width:60px; text-align:center; font-size:.68rem; padding:.3rem .2rem; border-radius:6px; background:' + bg + '; color:' + fg + '">' + (done ? '✔ ' : (i + 1) + '· ') + s.label + '</div>';
+    }).join('');
+    const s = STEPS[step];
+    headEl.textContent = s.head;
+    bodyEl.innerHTML = s.body;
+    out.innerHTML = '<div style="color:' + (step === STEPS.length - 1 ? 'var(--green)' : 'var(--ink-soft)') + '; font-size:.9rem; text-align:left">' + s.msg + '</div>';
+  }
+
+  document.getElementById('pr-next').addEventListener('click', function () {
+    if (step < STEPS.length - 1) { step++; draw(); }
+    else out.innerHTML = '<div style="color:var(--green); font-size:.9rem; text-align:left">Ciclo completo! Premi <b>reset</b> per rivederlo. Questo è il flusso a pull request usato da ogni team.</div>';
+  });
+  document.getElementById('pr-reset').addEventListener('click', function () { step = 0; draw(); });
+
+  draw();
+})();
+</script>
+</body>
+</html>
