@@ -300,7 +300,7 @@ const TOC = [
     n: 20,
     titolo: "Un progetto completo",
     file: "cap20-progetto-completo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s20-1", n: "20.1", t: "Il problema e i dati" },
       { id: "s20-2", n: "20.2", t: "Esplorazione e preparazione" },

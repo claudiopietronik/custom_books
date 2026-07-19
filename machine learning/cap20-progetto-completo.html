@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20 · Un progetto completo — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="20">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 20 · Gran finale</div>
+    <h1>Un progetto completo</h1>
+    <p class="standfirst">
+      Ci siamo. In diciannove capitoli hai costruito, mattone dopo mattone, un'intera cassetta degli attrezzi:
+      regressione e classificazione, alberi ed ensemble, clustering e riduzione delle dimensioni, valutazione onesta e
+      pipeline pulite. In questo capitolo finale <b>mettiamo tutto insieme</b> percorrendo un <b>progetto completo</b>
+      come si affronta nella realtà, dall'inizio alla fine, con un caso concreto: <mark>prevedere quali clienti stanno
+      per abbandonare un servizio</mark> (il famoso «churn»). Non impareremo tecniche nuove: <b>rivedremo</b> tutte
+      quelle già apprese, ma stavolta al lavoro <b>insieme</b>, nel loro ordine naturale — perché saper usare i pezzi è
+      una cosa, orchestrarli in un flusso sensato è l'abilità che davvero conta. Percorreremo: capire il problema e i
+      dati (§20.1), esplorarli e prepararli (§20.2), scegliere e confrontare i modelli (§20.3), valutare e interpretare i
+      risultati (§20.4), il tutto in un laboratorio end-to-end (§20.5). E infine — §20.6 — <b>dove andare da qui</b>: la
+      strada che si apre davanti a te. Con la solita cura, un ultimo giro con calma.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>problema e i dati</b> (§20.1), <b>esplorazione e preparazione</b> (§20.2), <b>scelta e confronto dei
+      modelli</b> (§20.3), <b>valutazione e interpretazione</b> (§20.4), il <b>laboratorio end-to-end</b> (§20.5),
+      <b>dove andare da qui</b> (§20.6). L'intero libro in un unico filo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal sapere al saper fare</div>
+    <p style="margin-bottom:0">
+      Conoscere i modelli non basta: il valore vero è saperli <b>mettere in fila</b> per rispondere a una domanda reale.
+      <mark>Questo capitolo è la prova che sai farlo</mark> — e ti lascia uno schema mentale, un «canovaccio», da
+      riusare su qualsiasi progetto futuro. È il momento in cui tutti i fili si annodano.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-1"><span class="secnum">Sezione 20.1</span>Il problema e i dati</h2>
+
+  <p class="lead">
+    Ogni progetto comincia — sempre — <b>non</b> con i dati o il codice, ma con una <b>domanda chiara</b>. Saltare
+    questo passo è l'errore numero uno.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Prima la domanda, poi tutto il resto</div>
+    <p style="margin-bottom:0">
+      Il nostro caso: <mark>una società di telefonia vuole sapere <b>quali clienti rischiano di disdire</b> nel prossimo
+      mese</mark>, per offrirgli in tempo uno sconto e trattenerli. Da questa frase deriva già tutto: è un problema di
+      <b>classificazione binaria</b> (abbandonerà / non abbandonerà); la classe che interessa (chi abbandona) è
+      probabilmente <b>rara</b> e <b>sbilanciata</b> (per fortuna la maggioranza resta); e — decisione cruciale — quale
+      errore è più costoso? <b>Mancare un cliente che se ne va</b> (falso negativo: perdi il cliente) o <b>sprecare uno
+      sconto su chi sarebbe rimasto comunque</b> (falso positivo: costo modesto)? Qui <b>mancare chi abbandona costa di
+      più</b>, quindi punteremo sul <b>recall</b> (cap. 18). <mark>Capire il problema decide fin d'ora quale metrica
+      useremo per giudicare.</mark>
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Conoscere i dati che hai</div>
+    <p style="margin-bottom:0">
+      Poi guardiamo i dati disponibili: per ogni cliente abbiamo, poniamo, <b>anni di anzianità</b>, <b>spesa mensile</b>,
+      <b>tipo di contratto</b> (mensile/annuale), <b>numero di reclami</b>, <b>servizi attivi</b>, e — l'etichetta — se
+      nel passato ha <b>disdetto</b> o no. Mescolanza tipica: alcune caratteristiche <b>numeriche</b> (anzianità, spesa),
+      altre <b>categoriche</b> (tipo di contratto). Già sappiamo che ci serviranno scaling per le prime ed encoding per
+      le seconde (cap. 19).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-2"><span class="secnum">Sezione 20.2</span>Esplorazione e preparazione</h2>
+
+  <p class="lead">
+    Prima di modellare, si <b>guardano</b> i dati. Questa fase — l'analisi esplorativa — è spesso trascurata dai
+    principianti e adorata dagli esperti, perché è dove nascono le intuizioni migliori.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔍</span> Guardare prima di modellare (EDA)</div>
+    <p style="margin-bottom:0">
+      L'<b>analisi esplorativa</b> (EDA, «Exploratory Data Analysis») serve a <b>capire</b> i dati con grafici e
+      statistiche semplici, prima di ogni modello. Ci si chiede: <mark>quanto è sbilanciata la classe? (magari solo il
+      15% ha disdetto). Ci sono valori mancanti, o assurdi (un'anzianità negativa)? Quali caratteristiche sembrano
+      legate all'abbandono?</mark> (Un grafico può rivelare subito che chi ha contratto mensile e molti reclami disdice
+      molto di più.) Questa fase spesso suggerisce il <b>feature engineering</b>: dai dati grezzi creiamo caratteristiche
+      più parlanti (per esempio «reclami per anno di anzianità»). È investigazione, e ripaga sempre.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧹</span> Preparare, senza barare</div>
+    <p style="margin-bottom:0">
+      Poi si prepara. Prima di tutto: <mark><b>si mette da parte il test set</b> e non lo si tocca più</mark> fino alla
+      fine (cap. 18). Sul resto costruiamo la nostra <b>pipeline</b> (cap. 19): imputiamo i valori mancanti (mediana per
+      i numeri, categoria più frequente per il resto), facciamo <b>one-hot encoding</b> delle categorie,
+      <b>standardizziamo</b> le numeriche. Tutto dentro la pipeline, così le trasformazioni <b>imparano solo dal
+      training</b> e niente data leakage. Se la classe è molto sbilanciata, possiamo anche pesare di più la classe rara
+      (molti modelli hanno <code>class_weight="balanced"</code>) per non farla ignorare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-3"><span class="secnum">Sezione 20.3</span>Scelta e confronto dei modelli</h2>
+
+  <p class="lead">
+    Ora la parte che tutti aspettano: i modelli. Ma con un approccio maturo — non «quale userò?», bensì «<b>proviamone
+    diversi e confrontiamoli</b> con onestà».
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Dal semplice al complesso, sempre confrontando</div>
+    <p style="margin-bottom:0">
+      La strategia sensata: <mark>partire da un modello <b>semplice</b> come riferimento, poi provarne di più potenti e
+      vedere se valgono davvero la complessità in più.</mark> Per il nostro churn: <b>(1)</b> una <b>regressione
+      logistica</b> — veloce, interpretabile, il riferimento onesto (cap. 8); <b>(2)</b> una <b>Random Forest</b> —
+      robusta e quasi sempre buona senza fatica (cap. 13); <b>(3)</b> un <b>Gradient Boosting</b> — di solito il più
+      accurato sui dati a tabella, se regolato bene (cap. 14). Ognuno valutato in <b>cross-validation</b> con la metrica
+      giusta (qui il <b>recall</b> o l'<b>F1</b>, <b>non</b> l'accuratezza!), e i suoi iperparametri cercati con
+      <b>Grid/Random Search</b> (cap. 19). <mark>Si confrontano i punteggi e si sceglie il vincitore</mark> — spesso il
+      boosting, ma non sempre: se la logistica va quasi uguale, la sua semplicità e interpretabilità possono valere di
+      più.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Il modello più accurato non sempre vince»</div>
+    <p style="margin-bottom:0">
+      Una lezione da professionista: la scelta finale non guarda <b>solo</b> il punteggio. Contano anche
+      <b>interpretabilità</b> (in banca o in medicina devi spesso spiegare <b>perché</b> il modello ha deciso così),
+      <b>velocità</b>, <b>semplicità di manutenzione</b>, <b>robustezza</b>. <mark>Un modello un filo meno accurato ma
+      che sai spiegare e mantenere può essere la scelta migliore</mark> per un sistema reale. Il numero non è tutto: il
+      <b>contesto</b> comanda.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-4"><span class="secnum">Sezione 20.4</span>Valutazione e interpretazione</h2>
+
+  <p class="lead">
+    Scelto il modello, arriva il verdetto vero e — altrettanto importante — la <b>spiegazione</b> di cosa ha imparato.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il giudizio finale sul test sigillato</div>
+    <p style="margin-bottom:0">
+      Solo <b>ora</b>, a modello scelto e messo a punto, tiriamo fuori il <b>test set</b> tenuto da parte e lo valutiamo
+      lì, <b>una volta sola</b>. <mark>Quel numero è la stima onesta delle prestazioni sul mondo reale</mark>, perché
+      quei dati non hanno mai influenzato nulla. Guardiamo la <b>matrice di confusione</b> (quanti abbandoni presi,
+      quanti mancati, quanti falsi allarmi), il <b>recall</b> (la nostra metrica principe: quanti clienti a rischio
+      individuiamo), la <b>precision</b> e l'<b>AUC</b> (cap. 18). E scegliamo la <b>soglia</b> di decisione in base al
+      compromesso di business: quanto ci costa uno sconto sprecato contro un cliente perso?
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">💬</span> Interpretare: cosa ha imparato il modello</div>
+    <p style="margin-bottom:0">
+      Un modello che <b>non sai spiegare</b> è difficile da fidarsi e da migliorare. Perciò guardiamo l'<b>importanza
+      delle caratteristiche</b> (cap. 13): <mark>quali fattori pesano di più sull'abbandono?</mark> Se scopriamo che
+      contano soprattutto «tipo di contratto mensile» e «numero di reclami», abbiamo <b>due risultati</b>: un modello
+      che prevede <b>e</b> una conoscenza azionabile (spingere sui contratti annuali, curare chi reclama). <mark>Il
+      valore di un progetto di ML non è solo la previsione, ma anche la <b>comprensione</b> che regala.</mark> Chiude il
+      cerchio: dai dati alla domanda, e dalla risposta a una decisione migliore.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-5"><span class="secnum">Sezione 20.5</span>Laboratorio: end-to-end</h2>
+
+  <p class="lead">
+    Nel widget confronti i tre modelli sul churn, come faresti davvero: ogni barra è il punteggio (recall) di un modello
+    in cross-validation. <b>Clicca</b> una barra per leggere pregi e contro, e individua il vincitore.
+  </p>
+
+  <div class="widget" id="w-cmp">
+    <div class="w-head">
+      <span>Confronto dei modelli sul churn</span>
+      <span class="hint">clicca una barra per i dettagli</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="cm-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+    </div>
+    <div class="w-readout" id="cm-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">progetto_churn.py</div>
+    <pre><span class="kw">from</span> sklearn.compose <span class="kw">import</span> ColumnTransformer
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler, OneHotEncoder
+<span class="kw">from</span> sklearn.impute <span class="kw">import</span> SimpleImputer
+<span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> GradientBoostingClassifier
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split, cross_val_score
+
+<span class="cm"># 1. metti da parte il test set (e non toccarlo fino alla fine)</span>
+X_tr, X_te, y_tr, y_te <span class="op">=</span> <span class="fn">train_test_split</span>(X, y, test_size<span class="op">=</span><span class="nm">0.2</span>, stratify<span class="op">=</span>y)
+
+<span class="cm"># 2. prepara numeriche e categoriche in modi diversi, dentro la pipeline</span>
+prep <span class="op">=</span> <span class="fn">ColumnTransformer</span>([
+    (<span class="st">"num"</span>, <span class="fn">Pipeline</span>([(<span class="st">"imp"</span>,<span class="fn">SimpleImputer</span>(strategy<span class="op">=</span><span class="st">"median"</span>)),(<span class="st">"sc"</span>,<span class="fn">StandardScaler</span>())]), num_cols),
+    (<span class="st">"cat"</span>, <span class="fn">OneHotEncoder</span>(handle_unknown<span class="op">=</span><span class="st">"ignore"</span>), cat_cols),
+])
+modello <span class="op">=</span> <span class="fn">Pipeline</span>([(<span class="st">"prep"</span>,prep), (<span class="st">"clf"</span>,<span class="fn">GradientBoostingClassifier</span>())])
+
+<span class="cm"># 3. confronta in cross-validation con la metrica GIUSTA (recall, non accuracy)</span>
+<span class="bi">print</span>(<span class="fn">cross_val_score</span>(modello, X_tr, y_tr, cv<span class="op">=</span><span class="nm">5</span>, scoring<span class="op">=</span><span class="st">"recall"</span>).<span class="fn">mean</span>())
+
+<span class="cm"># 4. allena il vincitore e giudica UNA volta sul test sigillato</span>
+modello.<span class="fn">fit</span>(X_tr, y_tr)
+<span class="bi">print</span>(modello.<span class="fn">score</span>(X_te, y_te))</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: i tre modelli a confronto sulla metrica giusta (recall), con il vincitore in evidenza — di solito il
+      boosting, ma con la logistica sorprendentemente vicina (e più semplice da spiegare). Nel codice: il flusso
+      completo di un progetto reale — dividi e <b>sigilla il test</b>, prepara numeriche e categoriche dentro una
+      pipeline (niente leakage), confronta in cross-validation con <code>scoring="recall"</code>, e giudica il vincitore
+      <b>una volta sola</b> sul test. <mark>Questo è tutto il libro, in un unico filo che funziona.</mark> Hai chiuso il
+      cerchio: dai dati grezzi a una previsione onesta e a una decisione di business informata.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-6"><span class="secnum">Sezione 20.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Sei arrivato in fondo. Fermiamoci un attimo a guardare quanta strada hai fatto — e quella che ti si apre davanti.
+  </p>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🎓</span> Cosa sai fare, ora</div>
+    <p style="margin-bottom:0">
+      Non è poco. Sai <b>impostare</b> un problema di apprendimento (supervisionato o no); conosci e capisci —
+      <b>matematicamente</b>, non a scatola chiusa — la regressione (lineare, regolarizzata, non lineare), la
+      classificazione (LDA/QDA, logistica, Naive Bayes, k-NN, SVM), i metodi kernel, gli alberi e i loro potenti ensemble
+      (Random Forest, boosting), il clustering (k-means, DBSCAN, GMM) e la riduzione delle dimensioni (PCA). Sai
+      <b>valutare</b> con onestà, evitare le trappole delle metriche, costruire <b>pipeline</b> pulite e cercare gli
+      iperparametri. <mark>Hai una comprensione solida e trasversale del machine learning classico</mark> — quella che
+      regge tutto il resto.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🚀</span> Le strade che si aprono</div>
+    <ul style="margin:0">
+      <li style="margin-bottom:.5rem"><b>Deep learning e reti neurali.</b> Per immagini, testo, audio, sequenze — dove i
+          modelli classici cedono il passo. E hai già le fondamenta: la <b>discesa del gradiente</b> (cap. 8), la
+          <b>log-loss</b>, la regressione logistica (che <b>è</b> un neurone!). Il salto sarà più naturale di quanto
+          pensi.</li>
+      <li style="margin-bottom:.5rem"><b>Pratica, pratica, pratica.</b> Nessun libro sostituisce il mettere le mani su
+          dati veri. Prendi dataset pubblici, partecipa a competizioni, riproduci progetti. <mark>Il machine learning si
+          impara facendolo.</mark></li>
+      <li style="margin-bottom:.5rem"><b>Approfondire la teoria.</b> Se questo libro ti ha acceso la curiosità
+          matematica, i testi classici (come <em>The Elements of Statistical Learning</em>, che ha ispirato la nostra
+          scaletta) ti aspettano per andare più a fondo.</li>
+      <li><b>Portare i modelli nel mondo (MLOps).</b> Mettere un modello in produzione, monitorarlo, aggiornarlo: un
+          intero mestiere che comincia dove finisce questo libro.</li>
+    </ul>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">💛</span> Un saluto, e un grazie</div>
+    <p style="margin-bottom:0">
+      Abbiamo attraversato insieme un territorio vasto, prendendo ogni formula per mano, entrando nel <b>significato</b>
+      di ogni simbolo, senza mai dare nulla per scontato. Spero che ora il machine learning non ti sembri più una
+      scatola magica, ma un insieme di idee <b>comprensibili, eleganti e collegate</b> — quasi sempre riconducibili a
+      poche intuizioni profonde (il compromesso bias-varianza, la somiglianza, la media che stabilizza, il correggere
+      gli errori) che hai visto tornare, travestite, in ogni capitolo. <mark>Questa è la vera padronanza: non ricordare
+      le formule, ma riconoscere le idee.</mark> Grazie per il viaggio. Ora tocca a te: vai, e costruisci qualcosa.
+    </p>
+  </div>
+
+  <p class="closing">
+    <b>Fine del libro.</b> Hai completato «Machine Learning»: venti capitoli dal cuore matematico, dalla regressione
+    lineare al gradient boosting, dal clustering alla PCA, spiegati passo dopo passo e con un widget interattivo per
+    ciascuno. Che sia il punto di partenza per tutto quello che costruirai. 🎉
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-7"><span class="secnum">Sezione 20.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.1</div>
+    <p style="margin-bottom:0">
+      Perché il primo passo di un progetto è definire chiaramente la domanda, e non guardare subito i dati o scegliere
+      un modello? Nell'esempio del churn, come influisce la domanda sulla scelta della metrica?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.2</div>
+    <p style="margin-bottom:0">
+      Cos'è l'analisi esplorativa (EDA) e a cosa serve prima di modellare? Cita due cose che si controllano in questa
+      fase.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.3</div>
+    <p style="margin-bottom:0">
+      Perché conviene partire da un modello semplice come riferimento invece di usare subito il più potente? In quali
+      casi si potrebbe preferire un modello un po' meno accurato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 20.4</div>
+    <p style="margin-bottom:0">
+      In quale momento esatto del progetto si valuta sul test set, e perché non prima? Oltre alla previsione, quale
+      «prodotto» prezioso può dare un progetto di ML?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s20-8"><span class="secnum">Sezione 20.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.1</div>
+    <p style="margin-bottom:0">
+      Perché la domanda determina <b>tutto</b> ciò che segue: il tipo di problema (classificazione/regressione), i dati
+      rilevanti, e soprattutto la <b>metrica</b> con cui giudicare il successo. Senza una domanda chiara si rischia di
+      costruire un modello tecnicamente valido ma inutile per la decisione reale. Nell'esempio del churn, la domanda
+      («individuare chi sta per abbandonare, dove mancarne uno costa più di un falso allarme») ci dice che la metrica da
+      privilegiare è il <b>recall</b> — non l'accuratezza, che con una classe rara ingannerebbe.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.2</div>
+    <p style="margin-bottom:0">
+      L'<b>analisi esplorativa</b> (EDA) è l'esame dei dati con grafici e statistiche semplici <b>prima</b> di
+      modellare, per capirli e trovare intuizioni. Due controlli tipici: <b>lo sbilanciamento delle classi</b> (quanto è
+      rara la classe di interesse) e la presenza di <b>valori mancanti o anomali</b> (buchi, valori impossibili). Spesso
+      rivela anche relazioni utili tra caratteristiche ed esito, che suggeriscono il feature engineering.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.3</div>
+    <p style="margin-bottom:0">
+      Conviene partire da un modello semplice (es. regressione logistica) perché fornisce un <b>riferimento</b> onesto e
+      veloce: se un modello complesso non lo batte in modo significativo, la sua complessità in più non è giustificata.
+      Si potrebbe preferire un modello meno accurato quando altri fattori contano di più: <b>interpretabilità</b>
+      (dover spiegare le decisioni, es. in banca o medicina), <b>velocità</b>, <b>semplicità di manutenzione</b> o
+      <b>robustezza</b>. Un piccolo calo di accuratezza può valere un grande guadagno in trasparenza e affidabilità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 20.4</div>
+    <p style="margin-bottom:0">
+      Si valuta sul test set <b>solo alla fine</b>, dopo aver scelto e messo a punto il modello, e <b>una volta sola</b>:
+      così quei dati non hanno mai influenzato le scelte e la stima delle prestazioni è onesta (rappresentativa dei dati
+      nuovi del mondo reale). Valutare prima, o più volte adattandosi al test, lo contaminerebbe con data leakage. Oltre
+      alla previsione, un progetto di ML può dare <b>comprensione</b>: attraverso l'importanza delle caratteristiche,
+      rivela <b>quali fattori</b> guidano il fenomeno, producendo conoscenza azionabile per prendere decisioni migliori.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §20.5 — confronto di 3 modelli sul churn (recall in CV). Barre
+   cliccabili con pro/contro. Punteggi sintetici. SVG raw.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('cm-svg');
+  if (!svg) return;
+  const out = document.getElementById('cm-out');
+  const NS='http://www.w3.org/2000/svg';
+
+  const MODELS=[
+    {nome:'Regressione logistica', recall:0.71, col:'var(--accent)', pro:'velocissima, <b>interpretabile</b> (spieghi ogni decisione), ottimo riferimento.', con:'meno accurata sui pattern complessi.'},
+    {nome:'Random Forest',         recall:0.79, col:'var(--green)',  pro:'robusta, poche impostazioni, dà l\'<b>importanza delle feature</b>.', con:'meno accurata del boosting ben regolato.'},
+    {nome:'Gradient Boosting',     recall:0.84, col:'var(--warm)',   pro:'di solito il <b>più accurato</b> sui dati a tabella.', con:'va regolato con cura; meno interpretabile; overfitta se strapazzato.'},
+  ];
+  let best=0; MODELS.forEach(function(m,i){ if(m.recall>MODELS[best].recall) best=i; });
+
+  const X0=150, Y0=40, BW=190, BH=46, GAP=34;
+  function el(t,a){ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); return e; }
+
+  function build(){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const tt=el('text',{x:230,y:22,'text-anchor':'middle','font-size':13,fill:'var(--ink)','font-weight':'700'}); tt.textContent='Recall in cross-validation (più alto = meglio)'; svg.appendChild(tt);
+    MODELS.forEach(function(m,i){
+      const y=Y0+i*(BH+GAP);
+      const lab=el('text',{x:X0-10,y:y+BH/2+4,'text-anchor':'end','font-size':11.5,fill:'var(--ink)'}); lab.textContent=m.nome; svg.appendChild(lab);
+      // barra di fondo
+      svg.appendChild(el('rect',{x:X0,y:y,width:BW,height:BH,rx:6,fill:'var(--grid)',opacity:0.4}));
+      // barra valore
+      const w=BW*m.recall;
+      const bar=el('rect',{x:X0,y:y,width:w,height:BH,rx:6,fill:m.col,style:'cursor:pointer'});
+      bar.addEventListener('click', function(){ select(i); });
+      svg.appendChild(bar);
+      const val=el('text',{x:X0+w+8,y:y+BH/2+4,'font-size':12,fill:'var(--ink)','font-weight':'700','pointer-events':'none'}); val.textContent=m.recall.toFixed(2); svg.appendChild(val);
+      if(i===best){ const st=el('text',{x:X0+w-18,y:y+BH/2+6,'font-size':17,'pointer-events':'none'}); st.textContent='⭐'; svg.appendChild(st); }
+    });
+  }
+  function select(i){
+    const m=MODELS[i]; const isBest=(i===best);
+    out.innerHTML='<div style="font-size:.9rem; text-align:left"><b>'+m.nome+'</b> — recall <b>'+m.recall.toFixed(2)+'</b>. '+
+      '<b style="color:var(--green)">Pro:</b> '+m.pro+' <b style="color:var(--warm)">Contro:</b> '+m.con+' '+
+      (isBest? '⭐ <b>Vince sul recall</b> — ma valuta anche interpretabilità e manutenzione prima di decidere.' : '')+'</div>';
+  }
+  build();
+  out.innerHTML='<div style="font-size:.9rem; text-align:left">Tre modelli confrontati sul churn con la metrica <b>giusta</b> (recall, non accuracy). <b>Clicca</b> una barra per pregi e contro. La ⭐ è il più accurato — ma il migliore «in assoluto» dipende anche da interpretabilità e contesto.</div>';
+})();
+</script>
+</body>
+</html>

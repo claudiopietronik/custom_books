@@ -32,4 +32,4 @@ usano Python/scikit-learn.
 - [x] 17 — Riduzione della dimensionalità: PCA
 - [x] 18 — Valutare i modelli
 - [x] 19 — Feature engineering e pipeline
-- [ ] 20 — Un progetto completo
+- [x] 20 — Un progetto completo
