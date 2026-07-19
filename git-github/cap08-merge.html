@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Unire i branch: il merge — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>Unire i branch: il merge</h1>
+    <p class="standfirst">
+      Un branch «di lato» ha senso solo se, a lavoro finito, puoi riportarne il risultato nel ramo principale. Questa
+      operazione — fondere una linea di sviluppo in un'altra — si chiama <b>merge</b>, ed è il gesto che chiude il
+      ciclo fondamentale di Git: <b>ramifica → lavora → unisci</b>. Il merge prende le commit fatte su un branch e le
+      integra in un altro, così le tue modifiche sperimentali diventano parte del progetto ufficiale. Git gestisce due
+      situazioni: quando l'unione è banale (il <b>fast-forward</b>) e quando i due branch sono davvero divergenti (il
+      <b>merge commit</b>). Capire la differenza ti fa leggere la storia con occhi nuovi. In questo capitolo:
+      riportare il lavoro su <code>main</code> (§8.1), il fast-forward (§8.2), il merge commit (§8.3) e come
+      <b>cancellare</b> un branch ormai unito (§8.4). <mark>Completiamo così il ciclo branch-e-merge, il modo in cui si
+      lavora davvero — da soli e, presto, in team.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Riportare il lavoro sul branch principale con <code>git merge</code> (§8.1), il <b>fast-forward</b> (§8.2), il
+      <b>merge commit</b> (§8.3), cancellare un branch finito (§8.4). Nel laboratorio (§8.5) crei e unisci un branch.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: chiude il ciclo di lavoro</div>
+    <p style="margin-bottom:0">
+      Creare branch senza saperli unire sarebbe metà del lavoro. <mark>Il merge è ciò che rende utili i branch</mark>:
+      trasforma un esperimento isolato in un miglioramento del progetto. Ed è l'operazione dietro le <b>pull request</b>
+      (Cap. 12), il cuore della collaborazione. Capirla bene — inclusi i suoi due «modi» — ti rende padrone del flusso
+      di lavoro completo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Riportare il lavoro sul branch principale</h2>
+
+  <p class="lead">
+    Il merge ha una regola di direzione da tenere a mente: <b>ti sposti sul branch che vuoi far crescere</b> (di
+    solito <code>main</code>) e da lì «tiri dentro» l'altro branch. In altre parole: «unisci <em>verso</em> dove sei».
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — unire feature dentro main</div>
+    <pre><span class="c"># 1) spostati sul branch che riceve (la destinazione)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+
+<span class="c"># 2) unisci l'altro branch dentro quello attuale</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">merge</span> <span class="ar">nuova-funzione</span>
+<span class="out">Updating a1b2c3d..e4f5g6h
+Fast-forward
+ funzione.txt | 3 +++</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La direzione del merge <span class="tag">vai sulla destinazione, poi merge</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <span class="mono">git switch main</span></dt>
+        <dd>vai sul branch <b>destinazione</b>, quello che vuoi arricchire con il lavoro dell'altro. <mark>Il merge
+            aggiorna il branch su cui <b>ti trovi</b>.</mark></dd>
+        <dt>2 · <span class="mono">git merge nuova-funzione</span></dt>
+        <dd>«porta le commit di <code>nuova-funzione</code> dentro il branch attuale (<code>main</code>)». Dopo questo,
+            <code>main</code> contiene anche il lavoro fatto sull'altro branch.</dd>
+        <dt>l'errore da evitare</dt>
+        <dd><mark>invertire la direzione</mark>: fare <code>merge main</code> mentre sei su <code>nuova-funzione</code>
+            porterebbe main <em>dentro</em> la funzione, non il contrario. Ricorda: <b>prima vai dove vuoi ricevere,
+            poi unisci l'altro.</b></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il risultato del merge dipende da come sono messi i due branch. Se <code>main</code> non è avanzato da quando hai
+      creato il branch, Git fa un <b>fast-forward</b> (§8.2); se invece <em>entrambi</em> hanno nuove commit, crea un
+      <b>merge commit</b> (§8.3). <mark>Non devi scegliere tu: Git capisce da solo</mark> quale caso è. Ma conoscere i
+      due ti fa leggere meglio la storia.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>Il fast-forward</h2>
+
+  <p class="lead">
+    Il caso più semplice. Se dopo aver creato il branch <b>non hai più fatto commit su <code>main</code></b>, allora
+    <code>main</code> è «rimasto indietro» e il branch è semplicemente più avanti sulla stessa linea. Unire significa
+    solo <b>far avanzare l'etichetta <code>main</code></b> fino al branch.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">⏩</span> Fast-forward: spostare l'etichetta in avanti</div>
+    <p style="margin-bottom:0">
+      Ricordi che un branch è un'etichetta mobile (Cap. 7)? Nel fast-forward, poiché <code>main</code> non ha commit
+      «sue» dopo la biforcazione, non c'è nulla da «fondere» davvero: <mark>Git fa semplicemente scivolare l'etichetta
+      <code>main</code> in avanti fino a raggiungere l'ultima commit del branch</mark>. La storia resta una linea
+      dritta, come se avessi fatto quelle commit direttamente su main. Il messaggio di Git lo dice esplicitamente:
+      «<code>Fast-forward</code>». È il caso tipico quando lavori da solo e nessun altro ha toccato <code>main</code>
+      nel frattempo. Semplice, pulito, nessun «nodo» nella storia.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Il merge commit</h2>
+
+  <p class="lead">
+    Il caso più interessante. Se <b>entrambi</b> i branch hanno accumulato nuove commit da quando si sono separati (tu
+    sul tuo branch, qualcun altro — o tu stesso — su <code>main</code>), le due linee sono <b>davvero divergenti</b>.
+    Git le fonde creando una commit speciale: il <b>merge commit</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il merge commit <span class="tag">una commit con due «genitori»</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>cos'è</dt>
+        <dd>una nuova commit che <b>unisce</b> le due linee divergenti. <mark>Ha <b>due</b> commit «genitori»</mark>
+            (una per branch), invece di una sola: è il «nodo» dove i due rami si ricongiungono.</dd>
+        <dt>cosa contiene</dt>
+        <dd>il risultato della <b>combinazione</b> delle modifiche di entrambi i branch. Git le fonde
+            automaticamente file per file. <mark>Se le modifiche non si sovrappongono, tutto è automatico</mark>; se
+            invece toccano le stesse righe, nasce un <b>conflitto</b> (Cap. 9!).</dd>
+        <dt>nella storia</dt>
+        <dd>con <code>git log --graph</code> vedi le due linee che si separano e poi si ricongiungono al merge commit.
+            <mark>La storia «ramifica e si riunisce»</mark> — la forma tipica dei progetti collaborativi.</dd>
+        <dt>il messaggio</dt>
+        <dd>Git propone un messaggio automatico («Merge branch 'nuova-funzione'»); di solito lo accetti così com'è.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La differenza in una frase: <mark>fast-forward = «main scivola in avanti», nessuna commit nuova; merge commit =
+      «le due linee si fondono» in una commit apposita con due genitori</mark>. Entrambi portano il lavoro del branch
+      in main; cambia solo la forma della storia. Prova il widget qui sotto per <b>vedere</b> i due casi.
+    </div>
+  </div>
+
+  <div class="widget" id="w-merge">
+    <div class="w-head">
+      <span>Merge dal vivo: fast-forward o merge commit?</span>
+      <span class="hint">a seconda di come sono i branch</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div id="mg-graph" style="min-height:130px; font-family:var(--mono)"></div>
+      <div id="mg-where" style="text-align:center; margin-top:.5rem; font-family:var(--mono); font-size:.85rem; color:var(--accent)"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="mg-cfeat">commit su feature</button>
+      <button class="btn" id="mg-cmain">commit su main</button>
+      <button class="btn" id="mg-merge">git switch main; git merge feature</button>
+      <button class="btn ghost" id="mg-reset">reset</button>
+    </div>
+    <div class="w-readout" id="mg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Cancellare un branch finito</h2>
+
+  <p class="lead">
+    Una volta che un branch è stato unito, il suo scopo è esaurito: le sue commit ora vivono anche in
+    <code>main</code>. È buona pratica <b>cancellarlo</b> per tenere la lista dei branch pulita.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — cancellare un branch unito</div>
+    <pre><span class="c"># dopo aver fatto il merge in main:</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">nuova-funzione</span>
+<span class="out">Deleted branch nuova-funzione (was e4f5g6h).</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Cancellare un branch <span class="tag">-d (sicuro) vs -D (forzato)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git branch -d nome</span></dt>
+        <dd>cancella il branch, <b>ma solo se è già stato unito</b>. <mark>È la versione sicura</mark>: se il branch ha
+            commit non ancora unite (che andrebbero perse), Git si <b>rifiuta</b> e ti avvisa.</dd>
+        <dt><span class="mono">git branch -D nome</span> (D maiuscola)</dt>
+        <dd>cancella <b>comunque</b>, anche se non unito. <mark>Da usare con cautela</mark>: butti via le commit di
+            quel branch. Serve quando vuoi davvero abbandonare un esperimento fallito.</dd>
+        <dt>cosa non cancelli</dt>
+        <dd>cancellare un branch <b>non cancella le commit</b> già unite in altri branch: quelle restano in
+            <code>main</code>. <mark>Butti via solo l'etichetta</mark> (e, con <code>-D</code>, le eventuali commit non
+            unite). I file uniti sono al sicuro.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il flusso completo, che ripeterai in continuazione: <mark><code>switch -c feature</code> → lavori e committi →
+      <code>switch main</code> → <code>merge feature</code> → <code>branch -d feature</code></mark>. Ramifica, lavora,
+      unisci, pulisci. È il ritmo dello sviluppo con Git — e, con GitHub, diventerà il flusso a pull request (Cap. 12).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Laboratorio: crea e unisci un branch</h2>
+
+  <p class="lead">
+    Facciamo il ciclo completo: crea un branch, lavoraci, uniscilo in <code>main</code>, cancellalo. È il flusso che
+    userai ogni giorno.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — il ciclo branch-e-merge completo</div>
+    <pre><span class="c"># 1) crea un branch per una nuova funzionalità e spostati</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">aggiungi-titolo</span>
+
+<span class="c"># 2) lavora e committa (sul branch)</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"# Il mio diario"</span> &gt; <span class="ar">titolo.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il titolo del diario"</span>
+
+<span class="c"># 3) torna su main e unisci</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">merge</span> <span class="ar">aggiungi-titolo</span>
+<span class="out">Fast-forward ...</span>          <span class="c"># titolo.txt ora è in main!</span>
+
+<span class="c"># 4) pulisci: cancella il branch ormai unito</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-d</span> <span class="ar">aggiungi-titolo</span>
+
+<span class="c"># 5) verifica la storia</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">log</span> <span class="fl">--oneline</span> <span class="fl">--graph</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il ciclo che padroneggi ora</div>
+    <p style="margin-bottom:0">
+      Hai completato il ciclo <b>ramifica → lavora → unisci → pulisci</b>: creato un branch, fatto una commit lì,
+      unita in <code>main</code>, cancellato il branch. <mark>Questo è il flusso di lavoro fondamentale di Git</mark>,
+      lo stesso che usano i team di tutto il mondo (con qualche passo in più per la collaborazione, che vedremo). Prova
+      a rifarlo creando anche una commit su <code>main</code> <em>prima</em> del merge: otterrai un <b>merge commit</b>
+      invece di un fast-forward — guardalo con <code>git log --graph</code>. Sperimenta: ora hai la rete di sicurezza
+      del Cap. 6 se qualcosa va storto.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>merge</b> unisce un branch in un altro. Regola di direzione: <b>vai sulla destinazione</b>
+          (<code>git switch main</code>), poi <code>git merge nome-branch</code> (§8.1).</li>
+      <li><b>Fast-forward</b>: se main non è avanzato, l'etichetta <code>main</code> scivola in avanti; storia dritta,
+          nessuna commit nuova (§8.2).</li>
+      <li><b>Merge commit</b>: se entrambi i branch hanno nuove commit, Git crea una commit con <b>due genitori</b> che
+          fonde le linee. Se toccano le stesse righe → conflitto (Cap. 9) (§8.3).</li>
+      <li>Dopo l'unione, <code>git branch -d nome</code> cancella il branch (sicuro; <code>-D</code> forza). Butti
+          l'etichetta, non le commit già unite (§8.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai unire branch — e finora è andato tutto liscio, perché le modifiche non si sovrapponevano. Ma cosa succede
+    quando due branch cambiano <b>le stesse righe</b> dello stesso file in modi diversi? Git non può decidere da solo
+    quale tenere: nasce un <b>conflitto</b>. Sembra spaventoso, ma è normale e si risolve con calma. Nel
+    <strong>Capitolo 9</strong> impariamo a leggere e risolvere i conflitti di merge — l'ultima abilità «di base» di
+    Git prima di passare a GitHub e alla collaborazione vera.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Vuoi unire il branch <code>login</code> dentro <code>main</code>. Scrivi la sequenza corretta di comandi. Su
+      quale branch devi trovarti prima di eseguire il merge?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un <b>fast-forward</b> e un <b>merge commit</b>? In quale situazione avviene ciascuno?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Quante commit «genitori» ha un normale merge commit? Perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>git branch -d</code> e <code>git branch -D</code>? Cancellare un branch già unito
+      fa perdere le sue commit?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">merge</span> <span class="ar">login</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Devi trovarti sul branch <b>destinazione</b> (<code>main</code>) prima del merge,
+      perché il merge aggiorna il branch su cui sei. Poi «tiri dentro» <code>login</code>.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      Il <b>fast-forward</b> avviene quando il branch destinazione (es. <code>main</code>) <b>non ha nuove commit</b>
+      dopo la biforcazione: Git fa semplicemente avanzare la sua etichetta fino al branch, senza creare commit; la
+      storia resta una linea dritta. Il <b>merge commit</b> avviene quando <b>entrambi</b> i branch hanno accumulato
+      nuove commit (sono davvero divergenti): Git crea una commit apposita che fonde le due linee.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      <b>Due</b> genitori. Un merge commit rappresenta il punto in cui <b>due linee di sviluppo si ricongiungono</b>:
+      per questo ha due commit precedenti (una per ciascun branch unito), a differenza di una commit normale che ne ha
+      una sola. È proprio ciò che «segna» nella storia il ricongiungimento dei due rami.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      <code>git branch -d</code> è la versione <b>sicura</b>: cancella il branch <b>solo se è già stato unito</b>
+      (altrimenti si rifiuta, per non farti perdere commit). <code>git branch -D</code> (D maiuscola) <b>forza</b> la
+      cancellazione anche se il branch non è unito. Cancellare un branch <b>già unito non fa perdere le sue commit</b>:
+      quelle vivono ora anche in <code>main</code>; si elimina solo l'etichetta del branch, non il lavoro integrato.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.3 — merge: committa su feature e/o main, poi merge -> FF o merge commit
+   ========================================================================= */
+(function () {
+  const graph = document.getElementById('mg-graph');
+  if (!graph) return;
+  const whereEl = document.getElementById('mg-where');
+  const out = document.getElementById('mg-out');
+
+  // commit di partenza: main c1, c2 ; feature parte da c2
+  let mainC = ['c1', 'c2'];
+  let featC = [];         // commit proprie di feature (dopo la biforcazione)
+  let mainAfter = [];     // commit su main dopo la biforcazione
+  let merged = false;
+  let mergeType = null;
+  let seed = 2;
+  function nid() { seed++; return 'c' + seed; }
+
+  const CM = '#2f5d8c', CF = '#a8452c', CMG = '#6b4b8a';
+
+  function dotRow(label, list, color, extra) {
+    const dots = list.map(function (c) {
+      const isMerge = c.merge;
+      return '<span style="width:26px;height:26px;border-radius:50%;background:' + (isMerge ? CMG : color) + ';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem" title="' + (isMerge ? 'merge commit' : '') + '">' + c.id + '</span>';
+    }).join('<span style="color:var(--ink-faint)"> ── </span>');
+    const tag = '<span style="background:' + color + ';color:#fff;border-radius:5px;padding:.1rem .5rem;font-size:.72rem;font-weight:700">' + label + '</span>';
+    return '<div style="display:flex;align-items:center;gap:.6rem;margin:.5rem 0">' + tag + '<span style="color:var(--ink-faint)">:</span>' + dots + (extra || '') + '</div>';
+  }
+
+  function draw() {
+    // main line = mainC + mainAfter + (mergeCommit se merge commit)
+    let mainLine = mainC.concat(mainAfter).map(function (id) { return { id: id }; });
+    if (merged) {
+      if (mergeType === 'ff') {
+        // main scivola: aggiunge le commit di feature
+        mainLine = mainLine.concat(featC.map(function (id) { return { id: id }; }));
+      } else {
+        mainLine.push({ id: 'M' + seed, merge: true });
+      }
+    }
+    let html = dotRow('main', mainLine, CM);
+    if (featC.length && !(merged && mergeType === 'ff')) {
+      html += '<div style="border-left:2px dashed var(--ink-soft);height:12px;margin-left:34px"></div>';
+      html += dotRow('feature', featC.map(function (id) { return { id: id }; }), CF);
+    }
+    graph.innerHTML = html;
+    whereEl.innerHTML = merged ? ('merge fatto: <b>' + (mergeType === 'ff' ? 'fast-forward ⏩' : 'merge commit 🔀') + '</b>') : 'costruisci i branch, poi unisci';
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('mg-cfeat').addEventListener('click', function () {
+    if (merged) { out.innerHTML = note('warm', 'Merge già fatto. Premi reset per ricominciare.'); return; }
+    featC.push(nid()); draw();
+    out.innerHTML = note('green', 'Commit su <b>feature</b>. La linea feature avanza, in isolamento da main.');
+  });
+  document.getElementById('mg-cmain').addEventListener('click', function () {
+    if (merged) { out.innerHTML = note('warm', 'Merge già fatto. Premi reset.'); return; }
+    mainAfter.push(nid()); draw();
+    out.innerHTML = note('green', 'Commit su <b>main</b>. Ora anche main è avanzato: se unisci, servirà un <b>merge commit</b> (le linee divergono).');
+  });
+  document.getElementById('mg-merge').addEventListener('click', function () {
+    if (merged) { out.innerHTML = note('warm', 'Già unito.'); return; }
+    if (!featC.length) { out.innerHTML = note('warm', '⚠ Non c\'è nulla da unire: fai prima almeno un «commit su feature».'); return; }
+    merged = true;
+    if (mainAfter.length === 0) {
+      mergeType = 'ff';
+      draw();
+      out.innerHTML = note('green', '⏩ <b>Fast-forward!</b> main non aveva nuove commit, quindi la sua etichetta è semplicemente <b>scivolata in avanti</b> fino a feature. Storia dritta, nessuna commit di merge.');
+    } else {
+      mergeType = 'mc'; seed++;
+      draw();
+      out.innerHTML = note('green', '🔀 <b>Merge commit!</b> Entrambi i branch avevano nuove commit (divergenza), quindi Git ha creato una <b>commit di merge</b> (viola) con <b>due genitori</b> che fonde le due linee.');
+    }
+  });
+  document.getElementById('mg-reset').addEventListener('click', function () {
+    mainC = ['c1', 'c2']; featC = []; mainAfter = []; merged = false; mergeType = null; seed = 2;
+    draw(); out.innerHTML = note('', 'Reset: main con 2 commit, nessun branch feature ancora.');
+  });
+
+  draw();
+  out.innerHTML = note('', 'Fai «commit su feature» (una o più). Poi: se <b>NON</b> committi su main e unisci → <b>fast-forward</b>. Se committi <b>anche</b> su main e unisci → <b>merge commit</b>. Prova entrambi!');
+})();
+</script>
+</body>
+</html>

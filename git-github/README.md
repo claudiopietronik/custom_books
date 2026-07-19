@@ -19,7 +19,7 @@ nessun linguaggio di programmazione richiesto.
 - [x] 5 — La storia del progetto
 - [x] 6 — Annullare e correggere
 - [x] 7 — I branch
-- [ ] 8 — Unire i branch: il merge
+- [x] 8 — Unire i branch: il merge
 - [ ] 9 — Risolvere i conflitti
 - [ ] 10 — GitHub: il repository remoto
 - [ ] 11 — Collaborare: push, pull, fetch

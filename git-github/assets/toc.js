@@ -118,7 +118,7 @@ const TOC = [
     n: 8,
     titolo: "Unire i branch: il merge",
     file: "cap08-merge.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Riportare il lavoro sul branch principale" },
       { id: "s8-2", n: "8.2", t: "Il fast-forward" },
