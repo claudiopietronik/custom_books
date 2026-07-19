@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Installare software — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Installare software</h1>
+    <p class="standfirst">
+      Su Windows o macOS, per installare un programma scarichi un file dal web e ci clicchi sopra. Su Linux funziona
+      diversamente — e molto meglio: c'è un sistema <b>centralizzato e ordinato</b> chiamato <b>gestore di pacchetti</b>.
+      Invece di cercare installer sparsi per il web (con i rischi di sicurezza che comporta), chiedi al gestore di
+      installare un programma dal nome, e lui lo scarica da un archivio ufficiale (il «repository»), risolve tutto ciò
+      che serve, e lo configura — con un comando. Lo stesso gestore aggiorna e rimuove il software, tenendo il sistema
+      pulito e sicuro. È uno dei grandi vantaggi di Linux. C'è un dettaglio: <b>ogni famiglia di distribuzioni ha il
+      suo gestore</b> (il Cap. 1: è l'unica cosa che cambia davvero tra distro). Il più comune è <b>apt</b>
+      (Debian/Ubuntu). In questo capitolo: cos'è un gestore di pacchetti (§11.1), <code>apt</code> nel dettaglio
+      (§11.2), gli altri gestori (§11.3), e come aggiornare il sistema (§11.4). <mark>È la chiave che ti dà accesso a
+      migliaia di programmi, in modo pulito.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I <b>gestori di pacchetti</b> (§11.1), <b>apt</b> per Debian/Ubuntu (§11.2), altri gestori: <b>dnf, pacman</b>
+      (§11.3), <b>aggiornare</b> il sistema (§11.4). Nel laboratorio (§11.5) installi un programma.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il software, in modo pulito e sicuro</div>
+    <p style="margin-bottom:0">
+      Installare software è un'operazione costante: strumenti, librerie, aggiornamenti. <mark>Farlo col gestore di
+      pacchetti — invece di scaricare eseguibili a caso — è più semplice, più pulito e molto più sicuro</mark> (i
+      pacchetti vengono da fonti verificate). Ed è indispensabile sui server, dove installi e aggiorni tutto da
+      terminale. Un concetto semplice con un impatto enorme sulla sicurezza e sull'ordine del sistema.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>I gestori di pacchetti</h2>
+
+  <p class="lead">
+    Un <b>gestore di pacchetti</b> è un sistema che installa, aggiorna e rimuove software in modo centralizzato,
+    attingendo a <b>repository</b> ufficiali: archivi online di programmi verificati e pronti all'uso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Come funziona <span class="tag">pacchetto · repository · dipendenze</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>un <b>pacchetto</b></dt>
+        <dd>un programma (o una libreria) confezionato per l'installazione, con un nome (es. <code>htop</code>,
+            <code>git</code>). <mark>Chiedi il pacchetto per nome</mark>, non cerchi un file da scaricare.</dd>
+        <dt>i <b>repository</b></dt>
+        <dd>gli archivi online, ufficiali e curati, da cui il gestore scarica i pacchetti. <mark>Fonte verificata e
+            sicura</mark>: non installi «roba a caso» presa dal web, ma software controllato dalla tua distribuzione.</dd>
+        <dt>le <b>dipendenze</b>, risolte in automatico</dt>
+        <dd>un programma spesso ne richiede altri per funzionare. <mark>Il gestore li installa <b>automaticamente</b></mark>
+            per te (come <code>pip</code> per Python, se hai fatto quel libro): tu chiedi <code>htop</code>, lui prende
+            tutto ciò che serve.</dd>
+        <dt>i vantaggi in una riga</dt>
+        <dd><b>un comando</b> per installare, aggiornare, rimuovere; software <b>sicuro</b> (fonti ufficiali);
+            dipendenze <b>automatiche</b>; sistema <b>pulito</b> (nessun file «orfano» sparso). <mark>Molto meglio del
+            «scarica ed esegui».</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il concetto è universale, ma <b>il comando cambia con la distribuzione</b> (Cap. 1): le distro basate su
+      Debian/Ubuntu usano <code>apt</code>; quelle basate su Fedora/Red Hat usano <code>dnf</code>; Arch usa
+      <code>pacman</code>. <mark>Imparato uno, gli altri sono varianti dello stesso schema</mark> (installa, rimuovi,
+      aggiorna, cerca): cambiano le parole, non l'idea. Ci concentriamo su <code>apt</code>, il più diffuso, e vediamo
+      la corrispondenza con gli altri.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>apt (Debian/Ubuntu)</h2>
+
+  <p class="lead">
+    <b>apt</b> è il gestore di pacchetti di Debian, Ubuntu e delle loro derivate — le distribuzioni più comuni, specie
+    sui server. Poche operazioni coprono quasi tutto. (Sono azioni di sistema, quindi con <code>sudo</code>, Cap. 7.)
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — le operazioni di apt</div>
+    <pre><span class="c"># aggiorna l'elenco dei pacchetti disponibili (fallo PRIMA di installare)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">update</span>
+
+<span class="c"># installa un programma (per nome)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">install</span> <span class="ar">htop</span>
+
+<span class="c"># rimuovi un programma</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">remove</span> <span class="ar">htop</span>
+
+<span class="c"># cerca un pacchetto (se non ricordi il nome esatto)</span>
+<span class="p">$</span> <span class="cmd">apt</span> <span class="ar">search</span> <span class="ar">editor</span>
+
+<span class="c"># aggiorna TUTTI i programmi installati alle ultime versioni</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">upgrade</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le operazioni di apt <span class="tag">update · install · remove · search · upgrade</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">apt update</span></dt>
+        <dd>aggiorna l'<b>elenco</b> dei pacchetti disponibili (non i programmi, l'elenco!). <mark>Va fatto prima di
+            installare</mark>, per avere le informazioni aggiornate. Non installa nulla, solo «rinfresca» il catalogo.</dd>
+        <dt><span class="mono">apt install nome</span></dt>
+        <dd>installa il pacchetto (con le sue dipendenze). Puoi installarne più insieme: <code>apt install git htop
+            curl</code>.</dd>
+        <dt><span class="mono">apt remove nome</span></dt>
+        <dd>disinstalla un programma. (<code>apt purge</code> rimuove anche i file di configurazione.)</dd>
+        <dt><span class="mono">apt search parola</span></dt>
+        <dd>cerca tra i pacchetti disponibili quelli che riguardano una parola. <mark>Utile quando non sai il nome
+            esatto.</mark> (Non serve sudo: è solo una ricerca.)</dd>
+        <dt><span class="mono">apt upgrade</span></dt>
+        <dd>aggiorna <b>tutti</b> i programmi installati alle ultime versioni. <mark>La coppia <code>apt update &amp;&amp;
+            apt upgrade</code></mark> è la manutenzione classica per tenere il sistema aggiornato e sicuro.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota la differenza sottile ma importante tra <code>update</code> e <code>upgrade</code>: <mark><code>update</code>
+      aggiorna l'<b>elenco</b> (il catalogo), <code>upgrade</code> aggiorna i <b>programmi</b></mark>. Si usano
+      insieme, in quest'ordine: prima rinfreschi il catalogo, poi aggiorni. È una delle prime cose che si fanno su un
+      sistema nuovo (l'hai visto nel deploy del libro «Backend»: <code>apt update &amp;&amp; apt upgrade</code>).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Altri gestori: dnf, pacman</h2>
+
+  <p class="lead">
+    Se usi una distribuzione non basata su Debian, il gestore cambia — ma le operazioni sono le stesse, con parole
+    diverse. Ecco la corrispondenza per le altre due famiglie principali.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Lo stesso concetto, tre dialetti <span class="tag">apt · dnf · pacman</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">la tabella di corrispondenza</div>
+      <pre>operazione        apt (Debian/Ubuntu)   dnf (Fedora)       pacman (Arch)
+-----------       -------------------   ---------------    -------------
+installa          apt install X         dnf install X      pacman -S X
+rimuovi           apt remove X          dnf remove X       pacman -R X
+aggiorna elenco   apt update            (automatico)       pacman -Sy
+aggiorna tutto    apt upgrade           dnf upgrade        pacman -Su
+cerca             apt search X          dnf search X       pacman -Ss X</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>dnf</b> (Fedora, Red Hat, CentOS)</dt>
+        <dd>molto simile ad apt nella logica e nei nomi (<code>install</code>, <code>remove</code>, <code>upgrade</code>).
+            <mark>Se sai apt, dnf è quasi immediato.</mark></dd>
+        <dt><b>pacman</b> (Arch e derivate)</dt>
+        <dd>usa opzioni con lettere (<code>-S</code> installa, <code>-R</code> rimuove). Più criptico ma potente.
+            <mark>La logica è la stessa</mark>: installa/rimuovi/aggiorna/cerca.</dd>
+        <dt>come sapere quale hai?</dt>
+        <dd>dipende dalla tua distribuzione. <mark>Se non sai quale distro usi</mark>: prova <code>cat
+            /etc/os-release</code> (lo mostra), o semplicemente prova il comando (se <code>apt</code> non esiste,
+            probabilmente hai dnf o pacman).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il messaggio da portare a casa: <mark>non «imparare tutti i gestori», ma capire il <b>modello</b></mark>
+      (installa/rimuovi/aggiorna/cerca da repository ufficiali) e sapere che ogni distro ha il suo comando. Quando ti
+      trovi su un sistema nuovo, chiedi (o cerca) «qual è il gestore di pacchetti?» e applichi lo schema che già
+      conosci. La tabella qui sopra è un utile promemoria. Prova il «traduttore» nel widget.
+    </div>
+  </div>
+
+  <div class="widget" id="w-pkg">
+    <div class="w-head">
+      <span>Traduttore dei gestori di pacchetti</span>
+      <span class="hint">stessa operazione, tre distro</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:460px; margin:0 auto; text-align:center; margin-bottom:.7rem">
+        <span style="font-size:.85rem; color:var(--ink-soft)">voglio</span>
+        <select id="pk-op" style="margin:0 .3rem; padding:.35rem .5rem; border-radius:6px; background:var(--paper); color:var(--ink); border:1px solid var(--ink-soft)">
+          <option value="install">installare</option>
+          <option value="remove">rimuovere</option>
+          <option value="upgrade">aggiornare tutto</option>
+          <option value="search">cercare</option>
+        </select>
+        <span id="pk-arg" style="font-size:.85rem; color:var(--ink-soft)"><code>htop</code></span>
+      </div>
+      <div id="pk-cards" style="display:flex; flex-direction:column; gap:.5rem"></div>
+    </div>
+    <div class="w-readout" id="pk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Aggiornare il sistema</h2>
+
+  <p class="lead">
+    Tenere il software aggiornato non è solo per avere le ultime funzionalità: è soprattutto una questione di
+    <b>sicurezza</b>. Gli aggiornamenti correggono vulnerabilità, e un sistema non aggiornato è un bersaglio.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔒</span> Aggiornare = mettere in sicurezza</div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head">terminale — la manutenzione classica (Debian/Ubuntu)</div>
+      <pre><span class="c"># rinfresca l'elenco, poi aggiorna tutti i programmi</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">update</span> && <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">upgrade</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Questo comando (<code>update</code> per aggiornare il catalogo, poi <code>upgrade</code> per aggiornare i
+      programmi) è la <b>manutenzione di base</b> di ogni sistema Linux. <mark>Gli aggiornamenti includono le <b>patch
+      di sicurezza</b></mark>: una volta che una vulnerabilità è nota, chi non aggiorna resta esposto (l'hai visto nel
+      libro «Backend», parlando di sicurezza dei server). Farlo con regolarità — sul tuo PC e ancor più sui server —
+      è una delle abitudini più importanti. Su un server si possono anche configurare <b>aggiornamenti automatici</b>
+      per le patch di sicurezza critiche. Ricorda: <mark>un software che non si aggiorna diventa, col tempo,
+      vulnerabile.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Laboratorio: installare un programma</h2>
+
+  <p class="lead">
+    Installiamo <code>htop</code> (il monitor dei processi «colorato» del Cap. 8) e vediamo il gestore di pacchetti
+    all'opera. (Serve una distribuzione Debian/Ubuntu; adatta il comando alla tua se diversa.)
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — installare htop (Debian/Ubuntu)</div>
+    <pre><span class="c"># 1) rinfresca l'elenco dei pacchetti</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">update</span>
+
+<span class="c"># 2) installa htop</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">install</span> <span class="ar">htop</span>
+<span class="out">... htop installato con successo</span>
+
+<span class="c"># 3) usalo! (monitor dei processi migliorato)</span>
+<span class="p">$</span> <span class="cmd">htop</span>          <span class="c"># q per uscire</span>
+
+<span class="c"># 4) (facoltativo) rimuovilo, se vuoi</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">remove</span> <span class="ar">htop</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai <b>installato</b> un programma dal gestore di pacchetti (con <code>update</code> + <code>install</code>), lo
+      hai <b>usato</b>, e sai come <b>rimuoverlo</b>. <mark>Nota quanto è pulito e semplice</mark>: nessun file da
+      scaricare a mano, nessun installer, nessuna dipendenza da cercare — solo il nome del programma. Questo è il modo
+      «Linux» di gestire il software, ed è uno dei suoi punti di forza. Con questo, hai completato gli strumenti di
+      base per usare e amministrare un sistema: navigare, gestire file e permessi, processi, comporre comandi,
+      installare software. Nel prossimo capitolo facciamo il grande salto verso l'<b>automazione</b>: scrivere i tuoi
+      <b>script</b> per far eseguire al computer sequenze di comandi da solo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>gestore di pacchetti</b> installa/aggiorna/rimuove software da <b>repository ufficiali</b> (sicuri),
+          risolvendo le dipendenze in automatico. Meglio del «scarica ed esegui» (§11.1).</li>
+      <li><b>apt</b> (Debian/Ubuntu): <code>update</code> (rinfresca elenco), <code>install</code>, <code>remove</code>,
+          <code>search</code>, <code>upgrade</code>. Con <code>sudo</code> (§11.2).</li>
+      <li>Altri gestori: <b>dnf</b> (Fedora, simile ad apt), <b>pacman</b> (Arch, con <code>-S</code>/<code>-R</code>).
+          Stesso schema, parole diverse (§11.3).</li>
+      <li><b>Aggiornare</b> è sicurezza: <code>sudo apt update &amp;&amp; sudo apt upgrade</code> con regolarità. Le
+          patch chiudono le vulnerabilità (§11.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai tutti gli strumenti di base di Linux. È ora del salto che rende il terminale davvero potente:
+    l'<b>automazione</b>. Finora hai dato comandi uno per uno; ma puoi metterli in un file — uno <b>script</b> — e
+    farli eseguire tutti insieme, ripetutamente, da soli. Nel <strong>Capitolo 12</strong> impariamo le basi del
+    <b>bash scripting</b>: cos'è uno script, come si scrive e si esegue, le variabili — i primi passi per far lavorare
+    il computer al posto tuo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Elenca due vantaggi di installare software con un gestore di pacchetti rispetto a scaricare ed eseguire un file
+      dal web.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>apt update</code> e <code>apt upgrade</code>? In quale ordine si usano di solito?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Scrivi i comandi (con apt) per installare il pacchetto <code>curl</code> e poi rimuoverlo. Perché serve
+      <code>sudo</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Il concetto di gestore di pacchetti è lo stesso su tutte le distro, ma il comando cambia. Qual è l'equivalente di
+      <code>apt install X</code> su una distribuzione che usa <code>pacman</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      Due vantaggi: <b>(1)</b> <b>sicurezza</b> — i pacchetti provengono da repository ufficiali e verificati, non da
+      file «a caso» presi dal web (che potrebbero contenere malware); <b>(2)</b> <b>dipendenze automatiche</b> — il
+      gestore installa da solo tutto ciò che il programma richiede, e tiene traccia di cosa è installato (così puoi
+      rimuoverlo pulito). In più: un solo comando, aggiornamenti centralizzati, sistema ordinato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      <code>apt update</code> aggiorna l'<b>elenco</b> dei pacchetti disponibili (il catalogo), senza installare nulla;
+      <code>apt upgrade</code> aggiorna i <b>programmi</b> installati alle ultime versioni. Si usano in quest'ordine:
+      prima <code>update</code> (per avere il catalogo aggiornato), poi <code>upgrade</code> (per applicare gli
+      aggiornamenti) — spesso in un colpo: <code>sudo apt update &amp;&amp; sudo apt upgrade</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">install</span> <span class="ar">curl</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">apt</span> <span class="ar">remove</span> <span class="ar">curl</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Serve <code>sudo</code> perché installare e rimuovere software modifica il
+      <b>sistema</b> (per tutti gli utenti), quindi richiede i poteri di amministratore (Cap. 7).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      Su una distribuzione con <code>pacman</code> (come Arch), l'equivalente di <code>apt install X</code> è
+      <code>sudo pacman -S X</code> (l'opzione <code>-S</code> = «sync/install»). Il concetto — installare il pacchetto
+      X dai repository — è identico; cambia solo la sintassi del comando.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.3 — traduttore gestori: operazione -> comando apt/dnf/pacman
+   ========================================================================= */
+(function () {
+  const opEl = document.getElementById('pk-op');
+  if (!opEl) return;
+  const argEl = document.getElementById('pk-arg');
+  const cardsEl = document.getElementById('pk-cards');
+  const out = document.getElementById('pk-out');
+
+  const CMDS = {
+    install: { apt: 'sudo apt install htop', dnf: 'sudo dnf install htop', pacman: 'sudo pacman -S htop', arg: '<code>htop</code>' },
+    remove:  { apt: 'sudo apt remove htop',  dnf: 'sudo dnf remove htop',  pacman: 'sudo pacman -R htop', arg: '<code>htop</code>' },
+    upgrade: { apt: 'sudo apt update && sudo apt upgrade', dnf: 'sudo dnf upgrade', pacman: 'sudo pacman -Syu', arg: '(tutti i pacchetti)' },
+    search:  { apt: 'apt search editor', dnf: 'dnf search editor', pacman: 'pacman -Ss editor', arg: '<code>editor</code>' }
+  };
+  const DISTRO = [['apt', 'Debian / Ubuntu', '#a8452c'], ['dnf', 'Fedora / Red Hat', '#2f5d8c'], ['pacman', 'Arch', '#6b4b8a']];
+
+  function render() {
+    const c = CMDS[opEl.value];
+    argEl.innerHTML = c.arg;
+    cardsEl.innerHTML = DISTRO.map(function (d) {
+      return '<div style="border:1px solid var(--ink-soft); border-radius:8px; padding:.5rem .7rem; display:flex; align-items:center; gap:.7rem; flex-wrap:wrap">' +
+        '<span style="background:' + d[2] + '; color:#fff; border-radius:5px; padding:.15rem .5rem; font-size:.72rem; font-weight:700; min-width:64px; text-align:center">' + d[0] + '</span>' +
+        '<span style="font-family:var(--mono); font-size:.85rem"><span style="color:var(--green)">$</span> ' + c[d[0]] + '</span>' +
+        '<span style="font-size:.72rem; color:var(--ink-soft); margin-left:auto">' + d[1] + '</span></div>';
+    }).join('');
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">La stessa operazione (<b>' + opEl.options[opEl.selectedIndex].text + '</b>) su tre distro diverse: cambia il <b>comando</b>, non il <b>concetto</b>. Impara lo schema (install/remove/upgrade/search) e sai usare qualsiasi gestore.</div>';
+  }
+  opEl.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -164,7 +164,7 @@ const TOC = [
     n: 11,
     titolo: "Installare software",
     file: "cap11-pacchetti.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "I gestori di pacchetti" },
       { id: "s11-2", n: "11.2", t: "apt (Debian/Ubuntu)" },
