@@ -16,7 +16,7 @@ Internet** e **Il Web**.
 - [x] 2 — HTTP e le API REST
 - [x] 3 — Preparare l'ambiente Python
 - [x] 4 — Il primo server con FastAPI
-- [ ] 5 — Rotte e parametri
+- [x] 5 — Rotte e parametri
 - [ ] 6 — Ricevere dati: Pydantic
 - [ ] 7 — Un'API CRUD completa
 - [ ] 8 — I database relazionali

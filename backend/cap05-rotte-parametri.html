@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Rotte e parametri — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>Rotte e parametri</h1>
+    <p class="standfirst">
+      Un endpoint che risponde sempre allo stesso modo serve a poco. Il bello inizia quando la risposta <b>dipende
+      dalla richiesta</b>: «dammi il prodotto <em>numero 42</em>», «cerca gli articoli che contengono <em>questa</em>
+      parola», «mostrami solo <em>i primi 10</em> risultati». Questi «dettagli» viaggiano nell'URL come <b>parametri</b>,
+      di due tipi: quelli di <b>percorso</b> (parte dell'indirizzo, per identificare <em>quale</em> risorsa) e quelli
+      di <b>query</b> (dopo il <code>?</code>, per filtrare o modulare la richiesta). FastAPI li riceve per te e — qui
+      sta la magia — usa i <b>tipi</b> di Python che dichiari per <b>validarli automaticamente</b>: se qualcuno chiede
+      il prodotto «<em>banana</em>» invece di un numero, FastAPI rifiuta la richiesta con un errore chiaro, prima
+      ancora che il tuo codice giri. <mark>È il superpotere che ti fa scrivere meno controlli e più logica.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>path operation</b> (§5.1), i parametri di <b>percorso</b> (§5.2), i parametri di <b>query</b> (§5.3), e la
+      <b>validazione automatica</b> dei tipi (§5.4). Nel laboratorio (§5.5) costruisci un'API che accetta e valida
+      parametri.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: qui l'API diventa utile</div>
+    <p style="margin-bottom:0">
+      Ricevere input dal client è ciò che rende un backend <b>interattivo</b>: ricerche, filtri, paginazione,
+      dettagli di una risorsa. <mark>E la validazione automatica dei tipi è, forse, la ragione numero uno per cui si
+      sceglie FastAPI</mark>: elimina un'intera categoria di bug e di codice difensivo noioso. Impararla bene ti farà
+      risparmiare tempo per tutto il resto del libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Le path operation</h2>
+
+  <p class="lead">
+    Ricapitoliamo il vocabolario, ora con un nome preciso. Ogni coppia «decoratore + funzione» che gestisce una
+    richiesta si chiama, in gergo FastAPI, <b>path operation</b>: un'<b>operazione</b> (il metodo: get, post…) su un
+    <b>percorso</b> (path).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di una path operation <span class="tag">operazione + percorso + funzione</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">main.py</div>
+      <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/prodotti"</span>)      <span class="cm"># operazione GET, percorso /prodotti</span>
+<span class="kw">def</span> <span class="fn">elenca_prodotti</span>():
+    <span class="kw">return</span> [{<span class="st">"id"</span>: <span class="nm">1</span>}, {<span class="st">"id"</span>: <span class="nm">2</span>}]</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>l'<b>operazione</b>: <span class="mono">@app.get</span>, <span class="mono">.post</span>, <span class="mono">.put</span>, <span class="mono">.delete</span></dt>
+        <dd>il metodo HTTP (Cap. 2). Determina <b>quando</b> la funzione scatta.</dd>
+        <dt>il <b>percorso</b>: <span class="mono">"/prodotti"</span></dt>
+        <dd>l'indirizzo, sempre a partire da <code>/</code>. Può contenere <b>segnaposto</b> tra graffe (§5.2).</dd>
+        <dt>la <b>funzione</b> sottostante</dt>
+        <dd>la logica che produce la risposta. I suoi <b>parametri</b> (tra le parentesi) sono la porta d'ingresso
+            dei dati della richiesta — è il tema di tutto il capitolo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'idea chiave che sblocca il capitolo: <mark>i parametri che dichiari nella <b>funzione</b> Python dicono a
+      FastAPI quali dati aspettarsi dalla richiesta</mark>, e da dove prenderli. FastAPI li «inietta» al posto giusto.
+      Vediamo i due tipi principali di parametro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Parametri di percorso</h2>
+
+  <p class="lead">
+    Un <b>parametro di percorso</b> è un pezzo <b>variabile</b> dell'URL, usato per identificare una risorsa
+    specifica: il <code>42</code> in <code>/prodotti/42</code>. Lo dichiari mettendo un segnaposto <code>{…}</code>
+    nel percorso e un parametro con lo stesso nome nella funzione.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/prodotti/{id_prodotto}"</span>)     <span class="cm"># {id_prodotto} è il "buco"</span>
+<span class="kw">def</span> <span class="fn">leggi_prodotto</span>(id_prodotto: <span class="ty">int</span>):  <span class="cm"># stesso nome, tipo int</span>
+    <span class="kw">return</span> {<span class="st">"id"</span>: id_prodotto, <span class="st">"nome"</span>: <span class="st">"Tazza"</span>}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Come funziona <span class="tag">{segnaposto} → parametro della funzione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il segnaposto <span class="mono">{id_prodotto}</span> nel percorso</dt>
+        <dd>marca la parte <b>variabile</b> dell'URL. Chiamando <code>/prodotti/42</code>, il <code>42</code> finisce
+            in <code>id_prodotto</code>. <mark>Il nome tra graffe deve combaciare col nome del parametro</mark> nella
+            funzione.</dd>
+        <dt>il parametro <span class="mono">id_prodotto: int</span></dt>
+        <dd>FastAPI ci mette dentro il valore preso dall'URL. Il <code>: int</code> è l'<b>annotazione di tipo</b>:
+            dice «questo dev'essere un numero intero». <mark>FastAPI lo converte e lo valida</mark> (§5.4).</dd>
+        <dt>dentro la funzione</dt>
+        <dd><code>id_prodotto</code> è una normale variabile Python con quel valore. Nel libro, presto, lo useremo per
+            cercare la riga giusta nel database.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota il salto rispetto al Cap. 4: là il <code>{nome}</code> era una stringa; qui <code>id_prodotto: int</code>
+      dice a FastAPI di aspettarsi (e restituire) un <b>numero</b>. Chiamando <code>/prodotti/42</code>,
+      <code>id_prodotto</code> arriva come l'intero <code>42</code>, non la stringa <code>"42"</code> — la conversione
+      è automatica. <mark>Usa i parametri di percorso per <b>identificare</b> una risorsa precisa</mark> (il «quale»);
+      per tutto il resto ci sono i parametri di query.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Parametri di query</h2>
+
+  <p class="lead">
+    Un <b>parametro di query</b> è un'informazione aggiuntiva che viaggia <b>dopo il <code>?</code></b> nell'URL,
+    nella forma <code>chiave=valore</code>, separati da <code>&amp;</code>. Serve a <b>filtrare, cercare, paginare</b>:
+    non identifica <em>quale</em> risorsa, ma <em>come</em> vuoi i dati.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/prodotti"</span>)
+<span class="kw">def</span> <span class="fn">cerca_prodotti</span>(q: <span class="ty">str</span> <span class="op">=</span> <span class="kw">None</span>, limite: <span class="ty">int</span> <span class="op">=</span> <span class="nm">10</span>):
+    <span class="kw">return</span> {<span class="st">"cerca"</span>: q, <span class="st">"limite"</span>: limite}</pre>
+  </div>
+
+  <p>Con questa funzione, l'URL <code>/prodotti?q=tazza&amp;limite=5</code> produce la risposta
+     <code>{"cerca": "tazza", "limite": 5}</code>.</p>
+
+  <div class="formula">
+    <div class="f-head">Query param: la regola del valore di default <span class="tag">parametro = default</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>parametri <b>non</b> nel percorso</dt>
+        <dd><mark>Ecco la regola d'oro di FastAPI: se un parametro della funzione <b>non</b> compare tra le graffe del
+            percorso, è automaticamente un <b>parametro di query</b>.</mark> Qui <code>q</code> e <code>limite</code>
+            non sono nel path <code>/prodotti</code>, quindi sono query param.</dd>
+        <dt><span class="mono">q: str = None</span></dt>
+        <dd>il <code>= None</code> gli dà un <b>valore di default</b>: rende il parametro <b>facoltativo</b>. Chiamare
+            <code>/prodotti</code> senza <code>q</code> è valido (<code>q</code> vale <code>None</code>).</dd>
+        <dt><span class="mono">limite: int = 10</span></dt>
+        <dd>facoltativo con default <code>10</code>: se non lo passi, vale 10. Se passi <code>?limite=5</code>, vale 5
+            (convertito a intero). <mark>I default rendono le API comode</mark>: il chiamante specifica solo ciò che
+            gli serve.</dd>
+        <dt>obbligatorio vs facoltativo</dt>
+        <dd>un query param <b>senza</b> default (es. <code>q: str</code>) diventa <b>obbligatorio</b>: ometterlo dà
+            errore. Con il default, è opzionale. Sta a te scegliere.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riassumendo la distinzione: <b>percorso</b> = «<em>quale</em> risorsa» (<code>/prodotti/42</code>), fa parte
+      dell'identità dell'indirizzo, di solito obbligatorio. <b>Query</b> = «<em>come</em> filtrare/modulare»
+      (<code>?q=…&amp;limite=…</code>), spesso facoltativo. <mark>Puoi combinarli</mark>: una funzione può avere sia
+      un parametro di percorso sia dei query param, e FastAPI smista ciascuno alla fonte giusta guardando se il nome è
+      tra le graffe.
+    </div>
+  </div>
+
+  <div class="widget" id="w-params">
+    <div class="w-head">
+      <span>Costruttore di URL → chiamata di funzione</span>
+      <span class="hint">vedi come FastAPI smista i parametri</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:480px; margin:0 auto; text-align:left">
+        <div style="font-family:var(--mono); font-size:.82rem; color:var(--ink-soft); margin-bottom:.5rem">Componi la richiesta:</div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:.5rem .6rem; align-items:center; font-size:.9rem">
+          <label style="color:var(--ink-soft)">id prodotto (path)</label>
+          <input type="text" id="pp-id" value="42" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">q (query, testo)</label>
+          <input type="text" id="pp-q" value="tazza" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">limite (query, int)</label>
+          <input type="text" id="pp-lim" value="5" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center">
+      <button class="btn" id="pp-go">▶ invia la richiesta</button>
+    </div>
+    <div class="w-readout" id="pp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>Tipi e validazione automatica</h2>
+
+  <p class="lead">
+    Arriviamo al superpotere. Le annotazioni di tipo (<code>: int</code>, <code>: str</code>…) non sono decorazioni:
+    FastAPI le usa per <b>validare e convertire</b> ogni parametro in arrivo. Se il dato non rispetta il tipo, la
+    richiesta viene <b>respinta automaticamente</b> con un errore chiaro — senza che tu scriva un solo controllo.
+  </p>
+
+  <div class="term">
+    <div class="t-head">cosa succede se il tipo non torna</div>
+    <pre><span class="c"># l'endpoint: def leggi_prodotto(id_prodotto: int)</span>
+
+<span class="p">$</span> <span class="cmd">curl</span> <span class="ar">http://127.0.0.1:8000/prodotti/42</span>
+<span class="out">{ "id": 42, "nome": "Tazza" }</span>          <span class="c"># ok: 42 è un intero valido</span>
+
+<span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-i</span> <span class="ar">http://127.0.0.1:8000/prodotti/banana</span>
+<span class="hl">HTTP/1.1 422 Unprocessable Entity</span>       <span class="c"># respinto! "banana" non è un int</span>
+<span class="out">{ "detail": [ { "msg": "Input should be a valid integer", ... } ] }</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Validazione «gratis»: cosa fa FastAPI per te</div>
+    <p style="margin-bottom:0">
+      Dichiarando <code>id_prodotto: int</code>, hai detto a FastAPI «questo dev'essere un intero». Da quel momento,
+      per <b>ogni</b> richiesta, FastAPI: <b>(1)</b> prende il valore grezzo dall'URL (sempre testo); <b>(2)</b> prova
+      a <b>convertirlo</b> nel tipo dichiarato; <b>(3)</b> se ci riesce, passa alla tua funzione il valore già del
+      tipo giusto; <b>(4)</b> se <b>non</b> ci riesce (come «banana» → int), <b>blocca tutto</b> e risponde
+      <code>422</code> con un messaggio d'errore preciso, <b>senza mai eseguire la tua funzione</b>. <mark>Il tuo
+      codice riceve solo dati già validi</mark>: niente più <code>if not isinstance(...)</code> sparsi ovunque. Questa
+      garanzia, moltiplicata per ogni parametro di ogni endpoint, è una quantità enorme di lavoro e di bug
+      risparmiati. Funziona con <code>int</code>, <code>float</code>, <code>bool</code>, <code>str</code>, e (dal
+      Cap. 6, con Pydantic) con interi oggetti complessi.
+    </p>
+  </div>
+
+  <div class="box viola">
+    <div class="box-title"><span class="ico">💜</span> Il codice di stato giusto: 422</div>
+    <p style="margin-bottom:0">
+      Nota il <code>422 Unprocessable Entity</code>: è un errore <b>4xx</b>, cioè «colpa del client» (Cap. 2) — ed è
+      corretto, perché è il client ad aver mandato dati malformati. FastAPI sceglie il codice giusto <b>da solo</b> e
+      spiega <b>cosa</b> non andava nel campo <code>detail</code>. <mark>Comunicazione impeccabile verso chi usa la
+      tua API</mark>, senza che tu abbia scritto nulla.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Laboratorio: un'API con parametri</h2>
+
+  <p class="lead">
+    Costruiamo un piccolo «catalogo» che usa entrambi i tipi di parametro. Aggiungi questo al tuo
+    <code>main.py</code> e provalo — soprattutto, prova a <b>rompere</b> la validazione, per vederla in azione.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py (aggiunte)</div>
+    <pre><span class="c"># un piccolo "catalogo" finto in memoria</span>
+CATALOGO <span class="op">=</span> {
+    <span class="nm">1</span>: {<span class="st">"nome"</span>: <span class="st">"Tazza"</span>, <span class="st">"prezzo"</span>: <span class="nm">9.9</span>},
+    <span class="nm">2</span>: {<span class="st">"nome"</span>: <span class="st">"Quaderno"</span>, <span class="st">"prezzo"</span>: <span class="nm">4.5</span>},
+}
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/prodotti/{id_prodotto}"</span>)    <span class="cm"># parametro di percorso</span>
+<span class="kw">def</span> <span class="fn">leggi_prodotto</span>(id_prodotto: <span class="ty">int</span>):
+    <span class="kw">return</span> CATALOGO.<span class="fn">get</span>(id_prodotto, {<span class="st">"errore"</span>: <span class="st">"non trovato"</span>})
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/prodotti"</span>)                 <span class="cm"># parametri di query</span>
+<span class="kw">def</span> <span class="fn">cerca</span>(prezzo_max: <span class="ty">float</span> <span class="op">=</span> <span class="nm">100</span>):
+    <span class="kw">return</span> [p <span class="kw">for</span> p <span class="kw">in</span> CATALOGO.<span class="fn">values</span>() <span class="kw">if</span> p[<span class="st">"prezzo"</span>] <span class="op">&lt;=</span> prezzo_max]</pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — provalo (e provalo a rompere)</div>
+    <pre><span class="p">$</span> <span class="cmd">curl</span> <span class="ar">http://127.0.0.1:8000/prodotti/1</span>
+<span class="out">{ "nome": "Tazza", "prezzo": 9.9 }</span>
+
+<span class="p">$</span> <span class="cmd">curl</span> <span class="ar">"http://127.0.0.1:8000/prodotti?prezzo_max=5"</span>
+<span class="out">[ { "nome": "Quaderno", "prezzo": 4.5 } ]</span>      <span class="c"># solo i prodotti <= 5</span>
+
+<span class="p">$</span> <span class="cmd">curl</span> <span class="fl">-i</span> <span class="ar">"http://127.0.0.1:8000/prodotti?prezzo_max=caro"</span>
+<span class="hl">HTTP/1.1 422</span> <span class="out">Unprocessable Entity</span>            <span class="c"># "caro" non è un float!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔬</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      <code>/prodotti/1</code> usa il <b>percorso</b> per identificare il prodotto; <code>/prodotti?prezzo_max=5</code>
+      usa la <b>query</b> per filtrare. Cambiando <code>prezzo_max</code> vedi la lista restringersi. E chiedendo un
+      <code>prezzo_max</code> non numerico, FastAPI risponde <b>422</b> da solo. <mark>Nota le virgolette attorno
+      all'URL con il <code>?</code></mark>: nel terminale servono a evitare che la shell interpreti caratteri come
+      <code>?</code> e <code>&amp;</code>. Apri anche <code>/docs</code>: vedrai i campi dei parametri già pronti da
+      compilare, con l'indicazione del tipo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li>Una <b>path operation</b> = operazione (metodo) + percorso + funzione; i <b>parametri della funzione</b>
+          sono la porta dei dati della richiesta (§5.1).</li>
+      <li><b>Parametro di percorso</b>: segnaposto <code>{…}</code> nel path + parametro omonimo nella funzione;
+          identifica <em>quale</em> risorsa (§5.2).</li>
+      <li><b>Parametro di query</b>: ogni parametro della funzione <b>non</b> nel percorso; dopo il <code>?</code>;
+          con un <code>= default</code> diventa facoltativo (§5.3).</li>
+      <li>Le <b>annotazioni di tipo</b> attivano la <b>validazione automatica</b>: dato del tipo giusto → convertito e
+          passato; tipo sbagliato → <b>422</b> automatico, funzione non eseguita (§5.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai ricevere <b>singoli valori</b> — un id, una parola, un numero. Ma per <b>creare</b> una risorsa (un nuovo
+    utente, un ordine) serve inviare un intero <b>oggetto strutturato</b>: nome, email, età, indirizzo… tutti
+    insieme, nel corpo della richiesta. Come si riceve e si valida un dato così ricco? Con i <b>modelli Pydantic</b>,
+    il cuore del <strong>Capitolo 6</strong> — dove la validazione automatica che hai appena assaggiato diventa uno
+    strumento potentissimo per definire e proteggere la forma dei tuoi dati.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Distingui: quale di questi è un parametro di <b>percorso</b> e quale di <b>query</b>?
+      (a) <code>/utenti/7</code> &nbsp; (b) <code>/utenti?attivi=true</code>. Per ciascuno, a cosa serve tipicamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      Scrivi una path operation <code>GET /citta/{nome}</code> che riceve il nome della città (stringa) e restituisce
+      <code>{"citta": nome}</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Nella funzione <code>def cerca(pagina: int = 1)</code>, il parametro <code>pagina</code> è di percorso o di
+      query? È obbligatorio o facoltativo? Perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      Un endpoint dichiara <code>quantita: int</code>. Un client chiama con <code>?quantita=abc</code>. Cosa fa
+      FastAPI? La tua funzione viene eseguita?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      (a) <code>/utenti/7</code>: il <code>7</code> è un parametro di <b>percorso</b> — <b>identifica</b> quale utente
+      (una risorsa precisa). (b) <code>/utenti?attivi=true</code>: <code>attivi=true</code> è un parametro di
+      <b>query</b> — <b>filtra</b> la collezione (mostra solo gli utenti attivi). Percorso = quale; query = come
+      filtrare/modulare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">main.py</div>
+      <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/citta/{nome}"</span>)
+<span class="kw">def</span> <span class="fn">leggi_citta</span>(nome: <span class="ty">str</span>):
+    <span class="kw">return</span> {<span class="st">"citta"</span>: nome}</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p style="margin-bottom:0">
+      È un parametro di <b>query</b>, perché <code>pagina</code> non compare tra graffe in un percorso (la regola del
+      §5.3). Ed è <b>facoltativo</b>, perché ha un valore di default (<code>= 1</code>): se il client non passa
+      <code>?pagina=…</code>, vale 1. È il pattern tipico della <b>paginazione</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <p style="margin-bottom:0">
+      FastAPI prova a convertire <code>"abc"</code> in <code>int</code>, non ci riesce, e <b>respinge la richiesta</b>
+      con un errore <code>422 Unprocessable Entity</code>, indicando nel dettaglio che <code>quantita</code> doveva
+      essere un intero. La tua funzione <b>non viene eseguita affatto</b>: la validazione avviene <em>prima</em>. È
+      esattamente la protezione «gratuita» che ti evita di controllare i tipi a mano.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.3 — costruttore URL: mostra path+query, la chiamata di funzione
+   equivalente, e la validazione (limite non intero → 422)
+   ========================================================================= */
+(function () {
+  const out = document.getElementById('pp-out');
+  if (!out) return;
+  const idEl  = document.getElementById('pp-id');
+  const qEl   = document.getElementById('pp-q');
+  const limEl = document.getElementById('pp-lim');
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function isInt(s){ return /^-?\d+$/.test(String(s).trim()); }
+
+  function go() {
+    const id = idEl.value.trim();
+    const q = qEl.value.trim();
+    const lim = limEl.value.trim();
+
+    // costruisci l'URL
+    const query = [];
+    if (q) query.push('q=' + encodeURIComponent(q));
+    if (lim !== '') query.push('limite=' + encodeURIComponent(lim));
+    const url = '/prodotti/' + encodeURIComponent(id) + (query.length ? '?' + query.join('&') : '');
+
+    // validazione: id e limite devono essere interi
+    const idBad = !isInt(id);
+    const limBad = lim !== '' && !isInt(lim);
+
+    let head = '<div class="term" style="margin:.2rem auto; max-width:100%"><div class="t-head">richiesta</div>' +
+               '<pre><span class="hl">GET</span> ' + esc(url) + '</pre></div>';
+
+    if (idBad || limBad) {
+      const campo = idBad ? 'id_prodotto' : 'limite';
+      const val = idBad ? id : lim;
+      out.innerHTML = head +
+        '<div class="term" style="margin:.2rem auto 0; max-width:100%"><div class="t-head">risposta</div>' +
+        '<pre><span class="out">HTTP/1.1</span> <span style="color:#e0654f; font-weight:700">422 Unprocessable Entity</span>\n\n' +
+        '<span class="out">{ "detail": [ { "loc": ["' + (idBad?'path':'query') + '", "' + campo + '"],\n' +
+        '  "msg": "Input should be a valid integer",\n  "input": "' + esc(val) + '" } ] }</span></pre></div>' +
+        '<div style="color:var(--warm); font-size:.9rem; text-align:left; margin-top:.4rem">⚠ «' + esc(val) + '» non è un intero: FastAPI respinge con <b>422</b>, <b>senza eseguire</b> la funzione. Metti un numero in «' + campo + '».</div>';
+      return;
+    }
+
+    // chiamata di funzione equivalente + risposta ok
+    out.innerHTML = head +
+      '<div style="margin:.5rem 0; color:var(--ink); font-size:.92rem; text-align:left">FastAPI chiama la tua funzione così:</div>' +
+      '<div class="term" style="margin:0 auto; max-width:100%"><div class="t-head file">esecuzione</div>' +
+      '<pre><span class="fn">cerca_prodotti</span>(id_prodotto<span class="op">=</span><span class="nm">' + esc(id) + '</span>, ' +
+        'q<span class="op">=</span>' + (q ? '<span class="st">"' + esc(q) + '"</span>' : '<span class="kw">None</span>') + ', ' +
+        'limite<span class="op">=</span><span class="nm">' + (lim === '' ? '10' : esc(lim)) + '</span>)</pre></div>' +
+      '<div class="term" style="margin:.2rem auto 0; max-width:100%"><div class="t-head">risposta</div>' +
+      '<pre><span class="out">HTTP/1.1</span> <span style="color:#5fb96d; font-weight:700">200 OK</span>\n\n' +
+      '<span class="st">{ "cerca": ' + (q ? '"' + esc(q) + '"' : 'null') + ', "limite": ' + (lim === '' ? '10' : esc(lim)) + ' }</span></pre></div>' +
+      '<div style="color:var(--ink-soft); font-size:.88rem; text-align:left; margin-top:.4rem">Nota: <b>id</b> viene dal <b>percorso</b>; <b>q</b> e <b>limite</b> dalla <b>query</b> (dopo il <code>?</code>). Un limite vuoto usa il default 10.</div>';
+  }
+
+  document.getElementById('pp-go').addEventListener('click', go);
+  [idEl, qEl, limEl].forEach(function (e) {
+    e.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') go(); });
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Componi id, q e limite, poi «invia». Vedrai l\'URL, come FastAPI smista i parametri nella chiamata di funzione, e la risposta. <b>Prova a mettere «abc» nel limite</b> per vedere la validazione 422 in azione.</div>';
+})();
+</script>
+</body>
+</html>

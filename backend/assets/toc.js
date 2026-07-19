@@ -76,7 +76,7 @@ const TOC = [
     n: 5,
     titolo: "Rotte e parametri",
     file: "cap05-rotte-parametri.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Le path operation" },
       { id: "s5-2", n: "5.2", t: "Parametri di percorso" },
