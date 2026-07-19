@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Annullare e correggere — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Annullare e correggere</h1>
+    <p class="standfirst">
+      Uno dei più grandi doni di Git è questo: <b>sbagliare non fa più paura</b>. Hai modificato un file e vuoi tornare
+      com'era? Hai messo in staging la cosa sbagliata? Hai scritto un messaggio di commit con un errore? Hai fatto una
+      commit che non doveva esistere? Per <em>ognuno</em> di questi casi Git ha una risposta pulita e sicura. La
+      difficoltà, per i principianti, non è che manchino gli strumenti — è <b>sapere quale usare</b>, perché Git ne ha
+      diversi che sembrano simili ma agiscono su aree diverse. In questo capitolo li mettiamo in ordine, guidati dalle
+      tre aree del Cap. 3: scartare modifiche non salvate con <code>restore</code> (§6.1), togliere qualcosa dallo
+      staging (§6.2), correggere l'ultima commit con <code>amend</code> (§6.3), e annullare in sicurezza una commit
+      già condivisa con <code>revert</code> (§6.4). <mark>Alla fine avrai una «rete di sicurezza» mentale: per ogni
+      errore, saprai esattamente quale comando ti salva.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Scartare modifiche non salvate (<code>restore</code>, §6.1), togliere dallo staging (§6.2), correggere l'ultima
+      commit (<code>amend</code>, §6.3), annullare una commit pubblica (<code>revert</code>, §6.4). Nel laboratorio
+      (§6.5) rimedi ad alcuni errori tipici.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la libertà di sperimentare</div>
+    <p style="margin-bottom:0">
+      Sapere di poter <b>tornare indietro</b> cambia il modo in cui lavori: provi idee, fai modifiche audaci, senza il
+      terrore di rompere tutto. <mark>La rete di sicurezza di Git è ciò che rende la programmazione meno stressante</mark>
+      e più creativa. Ma va usata con criterio: alcuni comandi «riscrivono» la storia (pericolosi se il lavoro è già
+      condiviso), altri no. Capire la differenza è la chiave — e questo capitolo te la dà.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Scartare modifiche non salvate (restore)</h2>
+
+  <p class="lead">
+    Il caso più semplice: hai modificato un file nella working directory, non ti piace, e vuoi <b>riportarlo com'era
+    all'ultima commit</b>. Lo strumento è <code>git restore</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — scartare le modifiche di un file</div>
+    <pre><span class="c"># hai modificato saluto.py e vuoi annullare le modifiche NON committate</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">restore</span> <span class="ar">saluto.py</span>
+
+<span class="c"># il file torna com'era all'ultima commit. La modifica è persa.</span></pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Questa modifica non torna indietro</div>
+    <p style="margin-bottom:0">
+      <code>git restore nomefile</code> <b>butta via</b> le modifiche non salvate di quel file, riportandolo
+      all'ultima versione committata. <mark>Attenzione: le modifiche scartate sono <b>perse</b> per sempre</mark> (non
+      erano in nessuna commit, quindi Git non le può recuperare). Usalo solo quando sei <b>sicuro</b> di voler buttare
+      via quel lavoro. È il rovescio della medaglia della sua semplicità: comodo, ma definitivo. Se hai dubbi,
+      committa prima (o usa <code>git stash</code>, un «cassetto temporaneo» per mettere da parte modifiche — un
+      comando avanzato che potrai approfondire).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Togliere dallo staging</h2>
+
+  <p class="lead">
+    Un altro caso comune: hai fatto <code>git add</code> di un file, ma ti accorgi che <b>non</b> volevi includerlo
+    nella prossima commit. Vuoi toglierlo dallo staging <b>senza</b> perdere le modifiche.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — togliere dallo staging (senza perdere il lavoro)</div>
+    <pre><span class="c"># hai fatto per sbaglio: git add config.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">restore</span> <span class="fl">--staged</span> <span class="ar">config.txt</span>
+
+<span class="c"># il file esce dallo staging ma le sue modifiche RESTANO nella working directory</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">restore vs restore --staged <span class="tag">due azioni diverse, stessa parola</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git restore nomefile</span></dt>
+        <dd>agisce sulla <b>working directory</b>: <mark>scarta le modifiche</mark> del file (le perde). §6.1.</dd>
+        <dt><span class="mono">git restore --staged nomefile</span></dt>
+        <dd>agisce sulla <b>staging area</b>: <mark>toglie il file dallo staging</mark> ma <b>conserva</b> le modifiche
+            nella working directory. Non perdi nulla — annulli solo l'<code>add</code>.</dd>
+        <dt>ricorda le tre aree</dt>
+        <dd>la differenza è <b>quale area</b> tocchi: <code>--staged</code> = staging (annulla l'add);
+            senza = working (scarta la modifica). <mark>Git te lo suggerisce sempre in <code>git status</code></mark>,
+            che indica il comando esatto per ogni situazione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve memorizzare la sintassi a memoria: <mark>quando fai <code>git status</code>, Git ti mostra il comando
+      da usare</mark> sia per «togliere dallo staging» sia per «scartare le modifiche». È il vantaggio di controllare
+      spesso lo stato: Git ti guida. La cosa da capire (e ricordare) è il <b>concetto</b>: c'è un modo per annullare
+      l'<code>add</code> senza perdere il lavoro, e uno per buttare via davvero le modifiche.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Correggere l'ultima commit (amend)</h2>
+
+  <p class="lead">
+    Hai appena fatto una commit e ti accorgi di un errore: un refuso nel messaggio, o hai dimenticato di includere un
+    file. <code>git commit --amend</code> ti lascia <b>correggere l'ultima commit</b> invece di farne una nuova.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — correggere l'ultima commit</div>
+    <pre><span class="c"># CASO A: solo correggere il messaggio dell'ultima commit</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">--amend</span> <span class="fl">-m</span> <span class="ar">"Messaggio corretto"</span>
+
+<span class="c"># CASO B: hai dimenticato un file? Aggiungilo e "fondilo" nell'ultima commit</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">file-dimenticato.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">--amend</span> <span class="fl">--no-edit</span>   <span class="c"># --no-edit: tieni il messaggio com'è</span></pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> amend riscrive la storia: solo su commit non condivise</div>
+    <p style="margin-bottom:0">
+      <code>--amend</code> non «modifica» la commit: ne crea una <b>nuova</b> che la sostituisce (con un hash diverso).
+      Questo si chiama <b>riscrivere la storia</b>. <mark>Va bene <b>solo</b> se la commit è ancora locale, non ancora
+      condivisa</mark> (non «pushata» su GitHub, Cap. 10). Se la commit è già stata condivisa con altri, riscriverla
+      crea disallineamenti e confusione per chi l'aveva già scaricata. La regola d'oro: <b>amend liberamente le
+      commit locali; mai quelle già pubblicate.</b> Per quelle pubbliche c'è <code>revert</code> (§6.4).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Annullare una commit pubblica (revert)</h2>
+
+  <p class="lead">
+    E se una commit già <b>condivisa</b> ha introdotto un problema? Non puoi riscriverla (danneggeresti gli altri). La
+    soluzione pulita è <code>git revert</code>: crea una <b>nuova</b> commit che <b>annulla</b> gli effetti di quella
+    problematica, lasciando la storia intatta.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — annullare in sicurezza una commit</div>
+    <pre><span class="c"># la commit a1b2c3d ha introdotto un bug. Annulliamone gli effetti:</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">revert</span> <span class="ar">a1b2c3d</span>
+
+<span class="c"># Git crea una NUOVA commit che disfa le modifiche di a1b2c3d.</span>
+<span class="c"># La storia ora ha: ...a1b2c3d (il bug) ... + una commit "Revert" che lo annulla.</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">revert vs amend/reset <span class="tag">annullare aggiungendo, non cancellando</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git revert &lt;hash&gt;</span></dt>
+        <dd>crea una <b>nuova commit</b> che fa l'<b>opposto</b> di quella indicata, annullandone gli effetti.
+            <mark>Non cancella nulla dalla storia</mark>: la aggiunge. Per questo è <b>sicuro anche su commit
+            pubbliche</b> — non riscrive il passato, lo corregge andando avanti.</dd>
+        <dt>perché è la scelta giusta per il lavoro condiviso</dt>
+        <dd>chi ha già scaricato la storia riceverà semplicemente <b>una commit in più</b> (il revert), senza
+            disallineamenti. <mark>Nessuno viene «tradito» da un passato cambiato.</mark></dd>
+        <dt>e <span class="mono">git reset</span>?</dt>
+        <dd>esiste anche <code>git reset</code>, che «sposta indietro» il branch <b>cancellando</b> commit — potente
+            ma <b>pericoloso</b> e riservato a commit locali (riscrive la storia). <mark>Per i principianti: usa
+            <code>revert</code> per annullare commit, ed evita <code>reset</code> finché non ne capisci bene i
+            rischi.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La distinzione fondamentale del capitolo: <mark>alcuni comandi <b>riscrivono</b> la storia (amend, reset),
+      altri la <b>estendono</b> (revert)</mark>. Riscrivere va bene solo in locale, prima di condividere; una volta che
+      il lavoro è pubblico, si annulla <b>aggiungendo</b> (revert), non cancellando. Tieni questa regola come bussola:
+      ti eviterà i guai più seri con Git. Il widget qui sotto ti aiuta a scegliere lo strumento giusto per ogni
+      situazione.
+    </div>
+  </div>
+
+  <div class="widget" id="w-undo">
+    <div class="w-head">
+      <span>Quale comando mi salva?</span>
+      <span class="hint">scegli la situazione, trova la cura</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:500px; margin:0 auto; text-align:left">
+        <div style="font-size:.85rem; color:var(--ink-soft); margin-bottom:.5rem">Ho combinato questo…</div>
+        <select id="un-scenario" style="width:100%; padding:.5rem .6rem; border-radius:7px; background:var(--paper); color:var(--ink); border:1px solid var(--ink-soft); font-size:.9rem">
+          <option value="modwork">Ho modificato un file ma voglio riportarlo com'era (non committato)</option>
+          <option value="staged">Ho fatto git add di un file per sbaglio, ma voglio tenere le modifiche</option>
+          <option value="msg">Ho appena committato con un messaggio sbagliato (non pushato)</option>
+          <option value="forgot">Ho committato ma ho dimenticato un file (non pushato)</option>
+          <option value="pubbug">Una commit GIÀ pushata ha introdotto un bug</option>
+        </select>
+      </div>
+    </div>
+    <div class="w-readout" id="un-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Laboratorio: rimediare agli errori</h2>
+
+  <p class="lead">
+    Proviamo due dei rimedi più comuni sul repository <code>diario</code>: scartare una modifica e correggere il
+    messaggio dell'ultima commit.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — due rimedi in pratica</div>
+    <pre><span class="c"># --- Scartare una modifica non voluta ---</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"riga sbagliata"</span> &gt;&gt; <span class="ar">giorno1.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>          <span class="c"># mostra giorno1.txt come "modified"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">restore</span> <span class="ar">giorno1.txt</span>   <span class="c"># torna com'era: la riga sparisce</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>          <span class="c"># "working tree clean" di nuovo</span>
+
+<span class="c"># --- Correggere il messaggio dell'ultima commit ---</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">--amend</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il primo giorno del diario"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">log</span> <span class="fl">--oneline</span>   <span class="c"># il messaggio ora è quello corretto</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> La tua rete di sicurezza</div>
+    <p style="margin-bottom:0">
+      Hai visto due rimedi in azione: <code>restore</code> per buttare via una modifica non voluta, e
+      <code>--amend</code> per correggere l'ultima commit locale. <mark>Ricorda la regola d'oro</mark>: correggi
+      liberamente ciò che è ancora <b>solo tuo</b> (locale); per annullare qualcosa di <b>già condiviso</b>, usa
+      <code>revert</code> (che aggiunge, non riscrive). Con questi strumenti, sbagliare non è più un dramma: c'è
+      sempre una via d'uscita ordinata. E ricorda che <code>git status</code> ti suggerisce quasi sempre il comando
+      giusto per la situazione.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li><code>git restore nomefile</code>: scarta le modifiche <b>non committate</b> di un file (le perde) (§6.1).</li>
+      <li><code>git restore --staged nomefile</code>: toglie dallo <b>staging</b> ma <b>conserva</b> le modifiche
+          (annulla l'add) (§6.2).</li>
+      <li><code>git commit --amend</code>: corregge l'<b>ultima</b> commit (messaggio o file dimenticato).
+          <b>Riscrive</b> la storia → solo su commit <b>locali</b> (§6.3).</li>
+      <li><code>git revert &lt;hash&gt;</code>: annulla una commit <b>aggiungendone</b> una opposta. Sicuro anche su
+          commit <b>pubbliche</b>. Regola: riscrivi solo il locale, annulla il pubblico con revert (§6.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai una rete di sicurezza per correggere gli errori su una singola linea di sviluppo. Ma il vero superpotere di
+    Git — quello che lo rende insostituibile per sperimentare e collaborare — sono i <b>branch</b>: linee di sviluppo
+    <b>parallele</b>, dove provare idee in totale isolamento senza toccare il lavoro principale. Nel
+    <strong>Capitolo 7</strong> entriamo nel mondo dei branch: cosa sono, come si creano, come ci si sposta tra loro.
+    È il concetto che apre la seconda metà di Git.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>git restore file.txt</code> e <code>git restore --staged file.txt</code>? In
+      quale dei due <b>perdi</b> delle modifiche?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Hai appena committato (in locale, non pushato) e ti accorgi di aver dimenticato un file. Quali comandi usi per
+      includerlo nella stessa commit, senza crearne una nuova?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>git commit --amend</code> non va usato su una commit già condivisa con altri (già pushata)? Cosa si
+      usa invece in quel caso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>git revert &lt;hash&gt;</code>? Perché è «sicuro» annullare così una commit pubblica, mentre
+      riscrivere la storia non lo è?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      <code>git restore file.txt</code> agisce sulla <b>working directory</b>: scarta le modifiche non committate del
+      file, riportandolo all'ultima commit — <b>perdi</b> quelle modifiche. <code>git restore --staged file.txt</code>
+      agisce sulla <b>staging area</b>: toglie il file dallo staging (annulla l'<code>add</code>) ma <b>conserva</b> le
+      modifiche nella working directory — <b>non perdi</b> nulla. In sintesi: la versione senza <code>--staged</code>
+      butta via le modifiche; quella con <code>--staged</code> annulla solo la preparazione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">file-dimenticato.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">--amend</span> <span class="fl">--no-edit</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Aggiungi il file allo staging, poi <code>--amend --no-edit</code> lo «fonde»
+      nell'ultima commit mantenendo il messaggio invariato.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>--amend</code> <b>riscrive la storia</b>: crea una nuova commit (con hash diverso) che sostituisce
+      l'ultima. Se quella commit era già stata condivisa (pushata), chi l'aveva scaricata si ritrova con una storia
+      <b>divergente</b>, e nascono disallineamenti e conflitti fastidiosi. Su una commit già pubblica si usa invece
+      <code>git revert</code>, che <b>aggiunge</b> una commit di annullamento senza toccare il passato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      <code>git revert &lt;hash&gt;</code> crea una <b>nuova commit</b> che fa l'<b>opposto</b> di quella indicata,
+      annullandone gli effetti (senza cancellarla dalla storia). È «sicuro» su una commit pubblica perché <b>non
+      riscrive il passato</b>: chi ha già scaricato la storia riceve semplicemente una commit in più (il revert),
+      senza disallineamenti. Riscrivere la storia (amend/reset), invece, cambia commit già viste da altri, causando
+      divergenze — per questo è sconsigliato su ciò che è già condiviso.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.4 — "quale comando mi salva?": scenario -> comando giusto + spiegazione
+   ========================================================================= */
+(function () {
+  const sel = document.getElementById('un-scenario');
+  if (!sel) return;
+  const out = document.getElementById('un-out');
+
+  const CURE = {
+    modwork: {
+      cmd: 'git restore nomefile',
+      area: 'working directory',
+      rischio: 'perdi le modifiche non salvate',
+      warn: true,
+      spieg: 'Riporta il file all\'ultima commit, <b>scartando</b> le modifiche non committate. Comodo ma <b>definitivo</b>: quelle modifiche non erano in nessuna commit, quindi sono perse.'
+    },
+    staged: {
+      cmd: 'git restore --staged nomefile',
+      area: 'staging area',
+      rischio: 'nessuno: le modifiche restano',
+      warn: false,
+      spieg: 'Toglie il file dallo <b>staging</b> (annulla l\'<code>add</code>) ma <b>conserva</b> le modifiche nella working directory. Non perdi nulla.'
+    },
+    msg: {
+      cmd: 'git commit --amend -m "Messaggio corretto"',
+      area: 'ultima commit (locale)',
+      rischio: 'riscrive la storia: solo se NON pushata',
+      warn: true,
+      spieg: 'Sostituisce l\'ultima commit con una corretta. <b>Riscrive la storia</b> → usalo solo se la commit non è ancora stata condivisa (pushata).'
+    },
+    forgot: {
+      cmd: 'git add file-dimenticato.txt\ngit commit --amend --no-edit',
+      area: 'ultima commit (locale)',
+      rischio: 'riscrive la storia: solo se NON pushata',
+      warn: true,
+      spieg: 'Aggiungi il file dimenticato e «fondilo» nell\'ultima commit (<code>--no-edit</code> tiene il messaggio). Anche questo <b>riscrive la storia</b>: solo su commit locali.'
+    },
+    pubbug: {
+      cmd: 'git revert <hash-della-commit>',
+      area: 'nuova commit (sicuro anche in pubblico)',
+      rischio: 'nessuno: aggiunge, non riscrive',
+      warn: false,
+      spieg: 'Crea una <b>nuova commit</b> che annulla gli effetti di quella problematica, <b>senza toccare il passato</b>. È la scelta giusta per commit <b>già condivise</b>: sicura per tutti.'
+    }
+  };
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const c = CURE[sel.value];
+    const col = c.warn ? 'var(--warm)' : 'var(--green)';
+    out.innerHTML =
+      '<div class="term" style="margin:.2rem auto; max-width:100%"><div class="t-head">il comando</div>' +
+      '<pre>' + c.cmd.split('\n').map(function (l) { return '<span class="p">$</span> <span class="cmd">' + esc(l) + '</span>'; }).join('\n') + '</pre></div>' +
+      '<div style="font-size:.92rem; text-align:left; margin-top:.4rem; color:var(--ink)">' + c.spieg + '</div>' +
+      '<div style="font-size:.86rem; text-align:left; margin-top:.4rem; color:' + col + '"><b>Area:</b> ' + esc(c.area) + ' · <b>Rischio:</b> ' + esc(c.rischio) + '</div>';
+  }
+  sel.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>

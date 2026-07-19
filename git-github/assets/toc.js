@@ -88,7 +88,7 @@ const TOC = [
     n: 6,
     titolo: "Annullare e correggere",
     file: "cap06-annullare.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Scartare modifiche non salvate (restore)" },
       { id: "s6-2", n: "6.2", t: "Togliere dallo staging" },
