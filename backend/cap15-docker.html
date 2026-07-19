@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Docker: impacchettare l'app — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>Docker: impacchettare l'app</h1>
+    <p class="standfirst">
+      Il nostro backend funziona… <em>sul nostro computer</em>. Ma quando proverai a metterlo su un server, o a
+      passarlo a un collega, incontrerai il tormentone più famoso dell'informatica: «<b>sul mio computer
+      funzionava!</b>». Versioni di Python diverse, librerie mancanti, sistemi operativi differenti: mille dettagli
+      che rendono il software fragile e difficile da spostare. La soluzione moderna è <b>Docker</b>: uno strumento che
+      chiude la tua applicazione — codice, dipendenze, configurazione, persino una fetta di sistema operativo — in un
+      <b>contenitore</b> isolato e portabile, che gira <b>identico</b> ovunque. In questo capitolo capisci il problema
+      che Docker risolve (§15.1), la differenza tra <b>immagini</b> e <b>container</b> (§15.2), come descrivere il tuo
+      pacchetto con un <b>Dockerfile</b> (§15.3) e come costruirlo ed eseguirlo (§15.4). <mark>È il passo che
+      trasforma «funziona da me» in «funziona ovunque», e apre la strada al deploy vero.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema «sul mio PC funziona» (§15.1), <b>immagini e container</b> (§15.2), il <b>Dockerfile</b> (§15.3),
+      <b>costruire ed eseguire</b> (§15.4). Nel laboratorio (§15.5) impacchetti la tua app FastAPI in un container.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal codice al software spedibile</div>
+    <p style="margin-bottom:0">
+      Un backend che gira solo sul tuo portatile non serve a nessuno: deve poter essere <b>spostato</b> — su un
+      server, nel cloud, sulla macchina di un collega — e funzionare <b>allo stesso modo</b>. <mark>Docker è lo
+      standard con cui oggi si distribuisce e si esegue il software</mark>. È anche il fondamento di tutto ciò che
+      resta: mettere insieme più servizi (Cap. 16) e andare in produzione (Cap. 18). Impararlo è indispensabile per
+      chiunque porti codice nel mondo reale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Il problema «sul mio PC funziona»</h2>
+
+  <p class="lead">
+    Il tuo codice non gira nel vuoto: dipende da un <b>ambiente</b>. La versione di Python, le librerie installate
+    (Cap. 3), variabili di sistema, persino il sistema operativo. Se anche uno solo di questi dettagli è diverso
+    altrove, l'app può rompersi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'ambiente è invisibile finché non cambia</div>
+    <p style="margin-bottom:0">
+      Sul tuo computer «tutto funziona» perché l'ambiente è quello giusto — ma spesso non te ne rendi conto: è
+      invisibile. Sposta il codice su un server con una versione di Python diversa, o dove manca una libreria di
+      sistema, e all'improvviso <b>crolla</b>. <mark>Il problema non è il codice, è l'<b>ambiente</b> che non
+      combacia.</mark> Gli ambienti virtuali (Cap. 3) risolvono una parte (le librerie Python), ma non tutto: restano
+      la versione di Python, le librerie di sistema, la configurazione. Docker risolve il problema alla radice:
+      <b>impacchetta l'intero ambiente insieme al codice</b>, così ciò che gira da te gira identico ovunque.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📦</span> Container vs macchina virtuale</div>
+    <p style="margin-bottom:0">
+      Forse conosci le <b>macchine virtuali</b> (VM): simulano un intero computer, sistema operativo compreso —
+      potenti ma <b>pesanti</b> (lente, tanta RAM e disco). I <b>container</b> di Docker sono più <b>leggeri</b>:
+      condividono il kernel del sistema ospite e isolano solo ciò che serve (processi, file, rete). <mark>Risultato:
+      partono in secondi, occupano poco, e ne puoi far girare tanti insieme.</mark> Per distribuire applicazioni, i
+      container hanno largamente sostituito le VM.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Immagini e container</h2>
+
+  <p class="lead">
+    Due parole al cuore di Docker, spesso confuse: <b>immagine</b> e <b>container</b>. La distinzione è semplice e
+    fondamentale — è come quella tra una classe e un oggetto, o tra una ricetta e il piatto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Immagine vs container <span class="tag">il modello vs l'istanza in esecuzione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>l'<b>immagine</b> (image)</dt>
+        <dd>il <b>pacchetto</b> immutabile: contiene il tuo codice, le dipendenze, il runtime, tutto l'ambiente.
+            <mark>È il «modello» congelato</mark>, che puoi salvare, condividere e scaricare. Non «gira»: è un file
+            (a strati).</dd>
+        <dt>il <b>container</b></dt>
+        <dd>un'<b>istanza in esecuzione</b> di un'immagine: l'app effettivamente avviata e viva. <mark>Da una sola
+            immagine puoi avviare tanti container identici</mark> — utile per scalare (Cap. 18).</dd>
+        <dt>l'analogia</dt>
+        <dd><b>immagine : container = classe : oggetto</b> (Cap. Python/C++), o <b>ricetta : piatto cucinato</b>.
+            L'immagine descrive; il container esegue.</dd>
+        <dt>il <b>registry</b> (accenno)</dt>
+        <dd>le immagini si condividono tramite «registri» come <b>Docker Hub</b>: da lì hai scaricato
+            <code>postgres</code> e <code>minio</code> nei capitoli scorsi. <mark>Immagini pronte per migliaia di
+            software.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nei capitoli 9 e 14 hai già <b>usato</b> immagini pronte (<code>docker run postgres</code>,
+      <code>docker run minio/minio</code>): hai scaricato un'immagine e avviato un container da essa. Ora impari a
+      creare l'immagine della <b>tua</b> app. <mark>Il flusso è: scrivi un Dockerfile → costruisci l'immagine → avvii
+      container da essa.</mark>
+    </div>
+  </div>
+
+  <div class="widget" id="w-docker">
+    <div class="w-head">
+      <span>Dal Dockerfile all'immagine ai container</span>
+      <span class="hint">costruisci, poi avvia (anche più di uno)</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:220px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🧱 immagine (a strati)</div>
+        <div id="dk-image" style="border:2px dashed var(--ink-soft); border-radius:10px; padding:.5rem; min-height:140px; display:flex; flex-direction:column-reverse; gap:.3rem; justify-content:flex-end"></div>
+      </div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">📦 container in esecuzione</div>
+        <div id="dk-containers" style="display:flex; flex-wrap:wrap; gap:.4rem; min-height:140px; align-content:flex-start"></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="dk-build">🔨 docker build</button>
+      <button class="btn" id="dk-run">▶ docker run</button>
+      <button class="btn ghost" id="dk-reset">reset</button>
+    </div>
+    <div class="w-readout" id="dk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Il Dockerfile</h2>
+
+  <p class="lead">
+    Il <b>Dockerfile</b> è un file di testo che descrive, passo per passo, <b>come costruire l'immagine</b> della tua
+    app: da quale base partire, cosa copiare, cosa installare, come avviarla. È la «ricetta» dell'immagine.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">Dockerfile — per la nostra app FastAPI</div>
+    <pre><span class="kw">FROM</span> <span class="ar">python:3.12-slim</span>          <span class="cm"># 1) parti da un'immagine con Python</span>
+
+<span class="kw">WORKDIR</span> <span class="ar">/app</span>                     <span class="cm"># 2) cartella di lavoro dentro il container</span>
+
+<span class="kw">COPY</span> <span class="ar">requirements.txt .</span>        <span class="cm"># 3) copia l'elenco delle dipendenze</span>
+<span class="kw">RUN</span> <span class="ar">pip install -r requirements.txt</span>   <span class="cm"># 4) installale</span>
+
+<span class="kw">COPY</span> <span class="ar">. .</span>                       <span class="cm"># 5) copia tutto il resto del codice</span>
+
+<span class="kw">CMD</span> <span class="ar">["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]</span>  <span class="cm"># 6) comando d'avvio</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le istruzioni del Dockerfile <span class="tag">FROM · WORKDIR · COPY · RUN · CMD</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">FROM python:3.12-slim</span></dt>
+        <dd>la <b>base</b> da cui partire: un'immagine ufficiale con Python già pronto. <mark>Non parti da zero</mark>:
+            costruisci sopra un'immagine esistente (<code>slim</code> = versione leggera).</dd>
+        <dt><span class="mono">WORKDIR /app</span></dt>
+        <dd>imposta la cartella di lavoro dentro il container: i comandi successivi girano lì.</dd>
+        <dt><span class="mono">COPY</span> + <span class="mono">RUN</span></dt>
+        <dd><code>COPY</code> porta file dal tuo PC dentro l'immagine; <code>RUN</code> esegue un comando durante la
+            costruzione (qui <code>pip install</code>). <mark>Nota l'ordine furbo</mark>: copiare e installare le
+            dipendenze <b>prima</b> del resto del codice sfrutta la cache (se il codice cambia ma le dipendenze no,
+            non le reinstalla).</dd>
+        <dt><span class="mono">CMD [...]</span></dt>
+        <dd>il comando che parte quando il container si <b>avvia</b>: qui uvicorn che lancia la nostra app.
+            <mark>Nota <code>--host 0.0.0.0</code></mark>: dentro un container serve per accettare connessioni
+            dall'esterno del container.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ogni istruzione crea uno <b>strato</b> (layer) dell'immagine, impilato sul precedente — l'hai visto nel widget.
+      <mark>Il Dockerfile rende l'ambiente <b>codice</b></mark>: versionabile, riproducibile, condivisibile. Chiunque
+      abbia il tuo Dockerfile può ricostruire <b>esattamente</b> lo stesso ambiente. È la fine del «sul mio PC
+      funziona». Aggiungi anche un file <code>.dockerignore</code> (come <code>.gitignore</code>) per escludere dal
+      pacchetto cose come <code>.venv</code> e i file temporanei.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Costruire ed eseguire</h2>
+
+  <p class="lead">
+    Con il Dockerfile pronto, due comandi: <b>build</b> per creare l'immagine, <b>run</b> per avviare un container da
+    essa.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — build ed esecuzione</div>
+    <pre><span class="c"># costruisci l'immagine, dandole un nome ("tag") con -t</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">build</span> <span class="fl">-t</span> <span class="ar">mia-api</span> <span class="ar">.</span>
+<span class="out">... Successfully built · Successfully tagged mia-api:latest</span>
+
+<span class="c"># avvia un container dall'immagine, mappando la porta 80 del container sulla 8000 del PC</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">run</span> <span class="fl">-p</span> <span class="ar">8000:80</span> <span class="ar">mia-api</span>
+<span class="out">INFO:  Uvicorn running on http://0.0.0.0:80  (dentro il container)</span>
+<span class="c"># ora apri http://localhost:8000 -> la tua API risponde, dal container!</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I due comandi smontati <span class="tag">build -t · run -p</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">docker build -t mia-api .</span></dt>
+        <dd>costruisce l'immagine seguendo il Dockerfile. <code>-t mia-api</code> le dà un <b>nome</b> (tag); il
+            <code>.</code> finale è la cartella dove cercare il Dockerfile (quella corrente). <mark>Fai questo dopo
+            ogni modifica al codice.</mark></dd>
+        <dt><span class="mono">docker run -p 8000:80 mia-api</span></dt>
+        <dd>avvia un container dall'immagine. <code>-p 8000:80</code> collega la porta <b>80 del container</b> alla
+            <b>8000 del tuo PC</b>: <mark>senza questa mappatura, il container sarebbe irraggiungibile</mark> (è
+            isolato). L'hai già usata per Postgres e MinIO.</dd>
+        <dt>comandi utili</dt>
+        <dd><code>docker ps</code> (container attivi), <code>docker stop &lt;id&gt;</code> (fermane uno),
+            <code>docker images</code> (le immagini), <code>docker logs &lt;id&gt;</code> (i log di un container).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota la <b>doppia porta</b> <code>8000:80</code>: «esterna:interna». Dentro il container uvicorn ascolta sulla
+      80; tu, fuori, la raggiungi sulla 8000. È lo stesso schema di Postgres (<code>5432:5432</code>) e MinIO
+      (<code>9000:9000</code>) dei capitoli scorsi. <mark>Il container è una scatola isolata: le porte sono le sue
+      «finestre» verso il mondo</mark>, che apri esplicitamente.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio: l'app in un container</h2>
+
+  <p class="lead">
+    Impacchettiamo <b>davvero</b> la nostra API FastAPI. Ti serve Docker installato (<code>docker.com</code>) e la
+    cartella del progetto con <code>main.py</code> e <code>requirements.txt</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — i passi</div>
+    <pre><span class="c"># 1) nella cartella del progetto, crea il file "Dockerfile" (§15.3)</span>
+<span class="c">#    e un ".dockerignore" con dentro: .venv</span>
+
+<span class="c"># 2) assicurati che requirements.txt includa uvicorn:</span>
+<span class="p">$</span> <span class="cmd">pip</span> <span class="ar">freeze</span> &gt; <span class="ar">requirements.txt</span>
+
+<span class="c"># 3) costruisci l'immagine</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">build</span> <span class="fl">-t</span> <span class="ar">mia-api</span> <span class="ar">.</span>
+
+<span class="c"># 4) avvia il container</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">run</span> <span class="fl">-p</span> <span class="ar">8000:80</span> <span class="ar">mia-api</span>
+
+<span class="c"># 5) nel browser: http://localhost:8000/docs  -> la tua API, dal container!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai ottenuto</div>
+    <p style="margin-bottom:0">
+      La tua applicazione ora vive in un'<b>immagine</b> autosufficiente: contiene Python, le dipendenze e il codice,
+      pronta a girare su <b>qualsiasi</b> macchina con Docker — il tuo PC, quello di un collega, un server nel cloud —
+      <mark>sempre allo stesso modo</mark>. Puoi fermarla, riavviarla, avviarne più copie. Hai trasformato il tuo
+      codice in <b>software spedibile</b>. Un difetto resta però evidente: la nostra app ha bisogno anche di Postgres
+      e MinIO, che finora avviamo <b>a mano</b> in container separati. Coordinare tutti questi pezzi con comandi
+      sciolti è scomodo — ed è esattamente il problema che risolve il prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>Docker risolve «sul mio PC funziona» impacchettando <b>codice + ambiente</b> insieme. I container sono più
+          <b>leggeri</b> delle macchine virtuali (§15.1).</li>
+      <li><b>Immagine</b> = pacchetto immutabile (il modello); <b>container</b> = istanza in esecuzione. Da un'immagine,
+          tanti container (§15.2).</li>
+      <li>Il <b>Dockerfile</b> descrive come costruire l'immagine: <code>FROM</code>, <code>WORKDIR</code>,
+          <code>COPY</code>, <code>RUN</code>, <code>CMD</code> (§15.3).</li>
+      <li><code>docker build -t nome .</code> crea l'immagine; <code>docker run -p esterna:interna nome</code> avvia
+          un container e ne espone la porta (§15.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai impacchettare <b>un</b> servizio. Ma il nostro backend è fatto di <b>più</b> servizi che devono lavorare
+    insieme: l'app FastAPI, il database Postgres, lo storage MinIO. Avviarli e collegarli uno per uno, a mano, con
+    tanti <code>docker run</code>, è scomodo e fragile. Nel <strong>Capitolo 16</strong> conosciamo <b>Docker
+    Compose</b>: uno strumento per descrivere <b>tutto lo stack</b> — app, database, storage e le loro connessioni —
+    in un unico file, e avviarlo con un solo comando. Il nostro backend diventerà un sistema coordinato, pronto per il
+    deploy finale.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Con parole tue, qual è il problema che Docker risolve? Perché gli ambienti virtuali (Cap. 3) da soli non
+      bastano?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Spiega la differenza tra <b>immagine</b> e <b>container</b> con un'analogia. Da una sola immagine, quanti
+      container puoi avviare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Nel Dockerfile, a cosa servono le istruzioni <code>FROM</code>, <code>COPY</code> e <code>CMD</code>? Perché si
+      copiano e installano le dipendenze <b>prima</b> di copiare il resto del codice?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Nel comando <code>docker run -p 8000:80 mia-api</code>, cosa significano i due numeri <code>8000</code> e
+      <code>80</code>? Cosa succederebbe se omettessi del tutto l'opzione <code>-p</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Docker risolve il problema del «<b>funziona da me ma non altrove</b>»: impacchetta l'applicazione insieme a
+      <b>tutto il suo ambiente</b> (versione di Python, librerie, configurazione, sistema di base), così gira identica
+      ovunque. Gli ambienti virtuali (venv) isolano solo le <b>librerie Python</b>, ma non la versione di Python
+      stessa, le librerie di sistema o la configurazione del sistema operativo: Docker copre <b>tutto</b> l'ambiente,
+      non solo una parte.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      Un'<b>immagine</b> è come una <b>ricetta</b> (o una classe): un modello immutabile, che descrive l'app e il suo
+      ambiente. Un <b>container</b> è come il <b>piatto cucinato</b> (o un oggetto): un'istanza in esecuzione creata a
+      partire dall'immagine. Da una sola immagine puoi avviare <b>quanti container vuoi</b>, tutti identici — utile,
+      per esempio, per gestire più traffico avviando più copie dell'app.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      <code>FROM</code> indica l'<b>immagine di base</b> da cui partire (es. Python già pronto); <code>COPY</code>
+      porta file dal tuo PC dentro l'immagine; <code>CMD</code> definisce il <b>comando d'avvio</b> del container. Si
+      copiano/installano le dipendenze prima del resto del codice per sfruttare la <b>cache di Docker</b>: se il
+      codice cambia ma le dipendenze no, Docker non le reinstalla, rendendo le ricostruzioni molto più veloci.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      In <code>-p 8000:80</code>, <code>8000</code> è la porta sul <b>tuo computer</b> (esterna) e <code>80</code> è
+      la porta <b>dentro il container</b> (interna, dove ascolta uvicorn): il comando le collega, così visitando
+      <code>localhost:8000</code> raggiungi l'app nel container. Se omettessi <code>-p</code>, il container girerebbe
+      ma la sua porta <b>non sarebbe esposta</b>: l'app risulterebbe <b>irraggiungibile</b> dall'esterno del
+      container.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.2 — build (strati dell'immagine) + run (container dall'immagine)
+   ========================================================================= */
+(function () {
+  const imgEl = document.getElementById('dk-image');
+  if (!imgEl) return;
+  const contEl = document.getElementById('dk-containers');
+  const out = document.getElementById('dk-out');
+
+  const LAYERS = [
+    { t: 'FROM python:3.12-slim', c: '#5b7fb0' },
+    { t: 'WORKDIR /app', c: '#5fa38a' },
+    { t: 'COPY requirements.txt .', c: '#a88a4f' },
+    { t: 'RUN pip install -r ...', c: '#a8674f' },
+    { t: 'COPY . .', c: '#8a5c9a' },
+    { t: 'CMD uvicorn main:app', c: '#5b7fb0' }
+  ];
+  let built = false;
+  let step = 0;
+  let contN = 0;
+
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'blue' ? 'var(--accent)' : 'var(--green)');
+    return '<div style="color:' + col + '; font-size:.92rem; text-align:left">' + html + '</div>';
+  }
+
+  function drawImg() {
+    imgEl.innerHTML = LAYERS.slice(0, step).map(function (l, i) {
+      return '<div style="background:' + l.c + '; color:#fff; padding:.32rem .55rem; border-radius:5px; font-family:var(--mono); font-size:.72rem">strato ' + (i + 1) + ': ' + l.t + '</div>';
+    }).join('');
+    if (step === 0) imgEl.innerHTML = '<div style="color:var(--ink-soft); font-size:.85rem; margin:auto; text-align:center">Nessuna immagine.<br>Premi «docker build».</div>';
+  }
+
+  document.getElementById('dk-build').addEventListener('click', function () {
+    if (built) { out.innerHTML = note('blue', 'Immagine già costruita. Premi «docker run» per avviare container, o «reset».'); return; }
+    if (step < LAYERS.length) {
+      step++;
+      drawImg();
+      if (step < LAYERS.length) {
+        out.innerHTML = note('', '🔨 <b>build</b>: eseguo lo strato ' + step + '/' + LAYERS.length + ' (<code>' + LAYERS[step-1].t + '</code>). Ogni istruzione del Dockerfile aggiunge uno <b>strato</b>. Premi ancora.');
+      } else {
+        built = true;
+        out.innerHTML = note('green', '✅ <b>Immagine costruita</b> (' + LAYERS.length + ' strati). È il pacchetto immutabile: codice + ambiente. Ora «docker run» per avviare uno o più <b>container</b> da essa.');
+      }
+    }
+  });
+
+  document.getElementById('dk-run').addEventListener('click', function () {
+    if (!built) { out.innerHTML = note('warm', '⚠ Prima devi costruire l\'immagine con «docker build».'); return; }
+    contN++;
+    const el = document.createElement('div');
+    el.style.cssText = 'background:color-mix(in srgb, var(--green) 15%, var(--paper)); border:1.5px solid var(--green); border-radius:8px; padding:.5rem .6rem; font-size:.8rem; text-align:center';
+    el.innerHTML = '📦<br><b>mia-api</b><br><span style="font-family:var(--mono); font-size:.7rem; color:var(--ink-soft)">porta ' + (8000 + contN - 1) + '</span>';
+    contEl.appendChild(el);
+    out.innerHTML = note('green', '▶ <b>docker run</b>: avviato il container #' + contN + ' dalla <b>stessa</b> immagine. ' +
+      (contN === 1 ? 'Un\'istanza in esecuzione della tua app.' : 'Da una sola immagine puoi avviare <b>tanti</b> container identici — è così che si scala!'));
+  });
+
+  document.getElementById('dk-reset').addEventListener('click', function () {
+    built = false; step = 0; contN = 0; contEl.innerHTML = ''; drawImg();
+    out.innerHTML = note('', 'Reset. Premi «docker build» per costruire l\'immagine strato per strato, poi «docker run».');
+  });
+
+  drawImg();
+  out.innerHTML = note('', 'Premi <b>docker build</b> (più volte) per costruire l\'immagine strato per strato dal Dockerfile, poi <b>docker run</b> per avviare container da essa — anche più di uno, tutti identici.');
+})();
+</script>
+</body>
+</html>

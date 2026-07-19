@@ -227,7 +227,7 @@ const TOC = [
     n: 15,
     titolo: "Docker: impacchettare l'app",
     file: "cap15-docker.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Il problema «sul mio PC funziona»" },
       { id: "s15-2", n: "15.2", t: "Immagini e container" },
