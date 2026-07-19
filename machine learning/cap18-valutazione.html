@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 · Valutare i modelli — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="18">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 18</div>
+    <h1>Valutare i modelli</h1>
+    <p class="standfirst">
+      Sai costruire una gran varietà di modelli. Ma come fai a sapere se un modello è <b>davvero</b> buono? Sembra
+      banale — «guarda quante volte indovina» — e invece è una delle parti più insidiose e sottovalutate del machine
+      learning, dove anche i professionisti scivolano. Un modello che sembra bravissimo può nascondere trappole che lo
+      rendono <b>inutile o pericoloso</b> nel mondo reale. L'esempio classico: un modello che diagnostica una malattia
+      rara dicendo <b>sempre</b> «sano» è accurato al 99% (perché il 99% delle persone è sano)… e non individua
+      <b>nessun</b> malato. <mark>L'accuratezza, la metrica più ovvia, è spesso quella più ingannevole.</mark> In questo
+      capitolo impariamo a valutare onestamente: perché non basta l'errore sul training e come misurare le vere
+      prestazioni (§18.1), la <b>validazione incrociata</b> per stime affidabili (§18.2), le metriche giuste —
+      <b>precision, recall, F1</b> — e quando usarle (§18.3), e le curve <b>ROC/AUC</b> (§18.4). È il capitolo che
+      trasforma chi «fa girare modelli» in chi sa <b>giudicarli</b>. Ogni concetto, come sempre, dal principio.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>problema della valutazione</b> (§18.1), la <b>cross-validation</b> (§18.2), le metriche <b>precision, recall,
+      F1</b> (§18.3), le <b>curve ROC e AUC</b> (§18.4). Nel laboratorio (§18.5) muovi la soglia e guardi la matrice di
+      confusione cambiare.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: distinguere il buono dall'illusorio</div>
+    <p style="margin-bottom:0">
+      Saper valutare è ciò che separa un modello che <b>funziona in produzione</b> da uno che sembrava perfetto e poi
+      delude. <mark>La metrica sbagliata può farti scegliere il modello peggiore convinto che sia il migliore.</mark>
+      Capire precision, recall e validazione ti mette al riparo dagli errori più comuni e costosi — quelli che non danno
+      errore a schermo, ma rovinano le decisioni reali.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-1"><span class="secnum">Sezione 18.1</span>Il problema della valutazione</h2>
+
+  <p class="lead">
+    Cominciamo dalla regola d'oro, quella che regge tutto il resto. La abbiamo già incontrata (cap. 3), ma qui diventa
+    il fondamento pratico di ogni valutazione.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Mai giudicare sui dati di allenamento</div>
+    <p style="margin-bottom:0">
+      Un modello ha <b>visto</b> i dati di allenamento e potrebbe averli in parte <b>memorizzati</b>: il suo errore su
+      di essi è ottimisticamente basso e <b>non dice nulla</b> su come se la caverà con dati nuovi. <mark>La domanda che
+      conta è sempre: quanto è bravo su dati che <b>non</b> ha mai visto?</mark> Per questo si mette da parte un
+      <b>test set</b> — una fetta di dati «sigillata», mai usata per allenare — e si giudica il modello lì sopra. È come
+      preparare uno studente sugli esercizi del libro (training) ma valutarlo con un compito <b>nuovo</b> (test): solo
+      così scopri se ha <b>capito</b> o solo <b>memorizzato</b>.
+    </p>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">💥</span> Quando l'accuratezza mente: i dati sbilanciati</div>
+    <p style="margin-bottom:.5rem">
+      L'<b>accuratezza</b> è la frazione di previsioni corrette. Intuitiva, ma <b>traditrice</b> quando le classi sono
+      <b>sbilanciate</b> (una molto più rara dell'altra). Riprendiamo l'esempio, perché è il cuore del capitolo:
+    </p>
+    <p style="margin-bottom:0">
+      malattia che colpisce l'1% delle persone. Un modello «pigro» che dice <b>sempre «sano»</b> ha accuratezza del
+      <b>99%</b> — un numero splendido! — ma è <b>totalmente inutile</b>: non trova neanche un malato, cioè fallisce
+      esattamente nell'unico compito che conta. <mark>L'accuratezza alta nasconde il disastro perché la classe che ci
+      interessa (i malati) è rara e la sua sorte non incide quasi sul totale.</mark> Ci servono metriche che guardino la
+      classe rara <b>negli occhi</b>, non annegata nella media. Le costruiamo nel §18.3.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-2"><span class="secnum">Sezione 18.2</span>Cross-validation</h2>
+
+  <p class="lead">
+    Un test set singolo ha un problema: la stima dipende da <b>quali</b> dati sono finiti, per caso, nel test. Con
+    sfortuna, un test «facile» o «difficile» ti dà un giudizio distorto. La <b>validazione incrociata</b> risolve con
+    un'idea semplice e furba.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La k-fold: a turno tutti fanno da test</div>
+    <p style="margin-bottom:.5rem">
+      La <b>validazione incrociata k-fold</b> funziona così:
+    </p>
+    <ol style="margin:0 0 .6rem 1.1rem">
+      <li style="margin-bottom:.3rem"><b>Dividi</b> i dati in $k$ parti uguali (i «fold»), per esempio 5.</li>
+      <li style="margin-bottom:.3rem"><b>Allena</b> su 4 parti e <b>valuta</b> sulla quinta (quella tenuta da parte).</li>
+      <li style="margin-bottom:.3rem"><b>Ripeti</b> cambiando ogni volta quale parte fa da test: <mark>così ogni fold, a
+          turno, fa da test esattamente una volta</mark>, e ogni dato viene usato sia per allenare sia (una volta) per
+          valutare.</li>
+      <li><b>Media</b> i $k$ risultati: ottieni una stima delle prestazioni molto più <b>stabile e affidabile</b> di un
+          singolo test, e anche un'idea di <b>quanto varia</b> (la sua incertezza).</li>
+    </ol>
+    <p style="margin-bottom:0">
+      <mark>È il modo standard per stimare onestamente un modello e per <b>scegliere gli iperparametri</b></mark> (il
+      grado del polinomio, il $k$ del k-NN, il $C$ dell'SVM…): si prova ogni impostazione in cross-validation e si tiene
+      quella con la media migliore. Una raffinatezza utile: la versione <b>stratificata</b> mantiene in ogni fold le
+      stesse proporzioni tra le classi — importante proprio con i dati sbilanciati.
+    </p>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> La regola sacra: il test non si tocca mai</div>
+    <p style="margin-bottom:0">
+      Un errore gravissimo e frequente è il <b>data leakage</b> (fuga di informazione): lasciare che il modello «sbirci»,
+      anche indirettamente, i dati di test durante l'allenamento. Succede in modi subdoli — per esempio standardizzando
+      usando la media calcolata su <b>tutti</b> i dati (test compreso) prima di dividere. <mark>Qualsiasi calcolo che
+      «impara» qualcosa dai dati va fatto <b>solo</b> sul training</mark> e poi applicato al test. Se il test viene
+      contaminato, la tua stima sarà falsamente ottimista e crollerà nel mondo reale. Lo eviteremo con le pipeline
+      (cap. 19).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-3"><span class="secnum">Sezione 18.3</span>Metriche: precision, recall, F1</h2>
+
+  <p class="lead">
+    Ecco le metriche che vedono la classe rara. Per costruirle serve prima una piccola tabella che classifica i quattro
+    esiti possibili di una previsione. Andiamo con calma: una volta capita questa, il resto è facile.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La matrice di confusione: i quattro esiti</div>
+    <p style="margin-bottom:.5rem">
+      Prendiamo la classe che ci interessa (i «positivi», es. i malati). Ogni previsione cade in uno di quattro casi:
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>✅ <b>Veri Positivi</b> (TP) — malati previsti malati</dt>
+        <dd>previsione «positivo», realtà «positivo». <mark>Azzeccato.</mark></dd>
+        <dt>✅ <b>Veri Negativi</b> (TN) — sani previsti sani</dt>
+        <dd>previsione «negativo», realtà «negativo». <mark>Azzeccato.</mark></dd>
+        <dt>❌ <b>Falsi Positivi</b> (FP) — sani previsti malati («falso allarme»)</dt>
+        <dd>previsione «positivo», realtà «negativo». <mark>Allarme ingiustificato.</mark></dd>
+        <dt>❌ <b>Falsi Negativi</b> (FN) — malati previsti sani («mancato allarme»)</dt>
+        <dd>previsione «negativo», realtà «positivo». <mark>Il caso più pericoloso in medicina: un malato lasciato
+            andare.</mark></dd>
+      </dl>
+    </div>
+    <p style="margin-bottom:0">
+      Questa tabella 2×2 (TP, TN, FP, FN) è la <b>matrice di confusione</b>. <mark>Tutte le metriche che contano si
+      leggono da qui.</mark></p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Precision e Recall: due domande diverse <span class="tag">non confonderle mai</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">
+      $$ \text{Precision} = \frac{TP}{TP + FP} \qquad\qquad \text{Recall} = \frac{TP}{TP + FN} $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt><b>Precision</b> — «quando dico positivo, quanto ci azzecco?»</dt>
+        <dd>dei casi che il modello ha <b>chiamato positivi</b> ($TP+FP$), quanti lo erano davvero ($TP$)?
+            <mark>Misura la <b>affidabilità degli allarmi</b>: alta precision = pochi falsi allarmi.</mark> Conta quando
+            un falso allarme è costoso (es. segnalare spam un'email importante: non vuoi perderla).</dd>
+        <dt><b>Recall</b> (sensibilità) — «quanti positivi veri riesco a prendere?»</dt>
+        <dd>dei casi <b>realmente positivi</b> ($TP+FN$), quanti ne ha trovati il modello ($TP$)? <mark>Misura la
+            <b>capacità di non farsi sfuggire i positivi</b>: alto recall = pochi mancati allarmi.</mark> Conta quando
+            mancare un positivo è grave (es. non individuare un malato, una frode).</dd>
+        <dt>il compromesso inevitabile</dt>
+        <dd><mark>precision e recall <b>tirano in direzioni opposte</b>.</mark> Se abbassi la soglia per «prendere tutti
+            i malati» (recall su), catturi anche più falsi allarmi (precision giù). Se la alzi per essere sicuro
+            (precision su), ti sfuggono dei malati (recall giù). Non puoi massimizzarle entrambe: devi <b>scegliere il
+            bilanciamento</b> giusto per il tuo problema. Lo vedrai muovere nel laboratorio.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quando vuoi <b>un solo numero</b> che riassuma entrambe, si usa l'<b>F1</b>: la media armonica di precision e
+      recall, $F1 = 2\cdot\frac{\text{Precision}\cdot\text{Recall}}{\text{Precision}+\text{Recall}}$. <mark>La media
+      armonica è «severa»: resta alta solo se <b>entrambe</b> sono alte</mark> (se una crolla, F1 crolla). È la metrica
+      di riferimento per i dati sbilanciati, molto più onesta dell'accuratezza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-4"><span class="secnum">Sezione 18.4</span>Curve ROC e AUC</h2>
+
+  <p class="lead">
+    Precision e recall dipendono da <b>dove</b> metti la soglia di decisione. Ma un classificatore, prima della soglia,
+    produce un <b>punteggio</b> continuo (una probabilità). La curva ROC valuta il modello a <b>tutte le soglie insieme</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La curva ROC: il modello a ogni soglia</div>
+    <p style="margin-bottom:0">
+      Un classificatore probabilistico (come la logistica) dà a ogni caso un punteggio; poi una <b>soglia</b> decide
+      «da qui in su, positivo». Spostando la soglia da severissima a permissivissima cambi il bilancio tra prendere veri
+      positivi e generare falsi allarmi. La <b>curva ROC</b> traccia, al variare della soglia, quanti veri positivi
+      prendi (in alto) contro quanti falsi allarmi generi (a destra). <mark>Una curva che sale ripida verso l'angolo in
+      alto a sinistra = modello che prende quasi tutti i positivi con pochissimi falsi allarmi: eccellente.</mark> Una
+      curva che segue la diagonale = modello che tira a indovinare (inutile).
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📏</span> L'AUC: un voto complessivo da 0,5 a 1</div>
+    <p style="margin-bottom:0">
+      L'<b>AUC</b> («Area Under the Curve», area sotto la curva ROC) riassume tutta la curva in <b>un numero</b>:
+      <mark>1,0 = classificatore perfetto; 0,5 = tira a indovinare (come lanciare una moneta).</mark> Ha
+      un'interpretazione elegante: <b>è la probabilità che il modello dia a un positivo preso a caso un punteggio più
+      alto che a un negativo preso a caso</b> — cioè quanto sa <b>ordinare</b> correttamente i casi per rischio,
+      indipendentemente dalla soglia scelta. È utilissima per <b>confrontare</b> due modelli con un solo numero robusto,
+      poco sensibile allo sbilanciamento. Regola pratica: usa <b>F1</b> quando ti serve una decisione a una soglia
+      fissata; usa <b>AUC</b> per giudicare la qualità complessiva del ranking di un modello.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-5"><span class="secnum">Sezione 18.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget muovi la <b>soglia</b> di decisione e guarda in tempo reale la <b>matrice di confusione</b> e le metriche
+    cambiare: vedrai coi tuoi occhi il tiro alla fune tra precision e recall.
+  </p>
+
+  <div class="widget" id="w-eval">
+    <div class="w-head">
+      <span>La soglia decide: precision contro recall</span>
+      <span class="hint">sposta la soglia e osserva il compromesso</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="ev-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>soglia di decisione <input type="range" id="ev-t" min="0" max="1" step="0.01" value="0.5"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="ev-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">valutazione.py</div>
+    <pre><span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> cross_val_score
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> classification_report, roc_auc_score, confusion_matrix
+
+<span class="cm"># stima affidabile con 5-fold cross-validation (usa F1, non accuracy, se sbilanciato)</span>
+punteggi <span class="op">=</span> <span class="fn">cross_val_score</span>(modello, X, y, cv<span class="op">=</span><span class="nm">5</span>, scoring<span class="op">=</span><span class="st">"f1"</span>)
+<span class="bi">print</span>(punteggi.<span class="fn">mean</span>(), punteggi.<span class="fn">std</span>())   <span class="cm"># media ± incertezza</span>
+
+<span class="cm"># sul test set: il quadro completo</span>
+<span class="bi">print</span>(<span class="fn">confusion_matrix</span>(y_test, y_pred))         <span class="cm"># TP, FP, FN, TN</span>
+<span class="bi">print</span>(<span class="fn">classification_report</span>(y_test, y_pred))     <span class="cm"># precision, recall, F1 per classe</span>
+<span class="bi">print</span>(<span class="fn">roc_auc_score</span>(y_test, y_prob))          <span class="cm"># AUC: qualità del ranking</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: abbassando la soglia «prendi» più malati (recall su) ma con più falsi allarmi (precision giù);
+      alzandola sei più sicuro (precision su) ma ti sfuggono dei malati (recall giù). <b>Non esiste una soglia che
+      accontenti tutti</b>: la scegli in base a cosa costa di più nel tuo problema (un falso allarme o un malato
+      mancato). Nel codice: <code>cross_val_score</code> con <code>scoring="f1"</code> (non accuracy!),
+      <code>confusion_matrix</code>, <code>classification_report</code> e <code>roc_auc_score</code>. Ora sai
+      <b>giudicare</b> un modello con onestà. Nel prossimo capitolo impariamo a <b>costruirlo bene</b> end-to-end, con le
+      pipeline che prevengono proprio il data leakage di cui abbiamo parlato.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 18</div>
+    <ol style="margin-bottom:0">
+      <li>Valuta <b>sempre</b> su dati mai visti (test set), <b>mai</b> sul training. L'<b>accuratezza inganna</b> con
+          classi sbilanciate (il modello «sempre sano» è al 99% e inutile) (§18.1).</li>
+      <li>La <b>cross-validation k-fold</b> dà stime stabili (ogni fold fa da test a turno, poi media) ed è lo standard
+          per scegliere gli iperparametri. Mai far «sbirciare» il test (data leakage) (§18.2).</li>
+      <li>Dalla <b>matrice di confusione</b> (TP/FP/FN/TN): <b>precision</b> = affidabilità degli allarmi;
+          <b>recall</b> = quanti positivi prendi. Tirano in direzioni opposte; <b>F1</b> le combina (severa) (§18.3).</li>
+      <li>La <b>curva ROC</b> valuta a tutte le soglie; l'<b>AUC</b> (0,5 = caso, 1 = perfetto) misura la qualità del
+          <b>ranking</b>, robusta e ottima per confrontare modelli (§18.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora sai giudicare un modello con l'occhio critico del professionista, evitando le trappole delle metriche
+    ingannevoli. Ma un modello reale non è mai un blocco unico: è una <b>catena</b> di passaggi — pulire i dati,
+    standardizzare, ridurre le dimensioni, addestrare — e ognuno di questi passaggi, se fatto nell'ordine sbagliato,
+    può rovinare tutto (proprio con quel data leakage che abbiamo temuto). Nel <strong>Capitolo 19</strong> impariamo a
+    orchestrare tutto in modo pulito e sicuro con le <b>pipeline</b> e il <b>feature engineering</b>: l'arte di
+    preparare i dati e incatenare le operazioni senza commettere gli errori classici.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-6"><span class="secnum">Sezione 18.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.1</div>
+    <p style="margin-bottom:0">
+      Perché non si deve giudicare un modello guardando l'errore sui dati di allenamento? Cosa si usa al suo posto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.2</div>
+    <p style="margin-bottom:0">
+      Spiega perché l'accuratezza può essere ingannevole con classi sbilanciate, usando l'esempio della malattia rara.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.3</div>
+    <p style="margin-bottom:0">
+      Descrivi come funziona la validazione incrociata k-fold e perché dà una stima più affidabile di un singolo test
+      set. Cos'è il «data leakage» e perché è pericoloso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.4</div>
+    <p style="margin-bottom:0">
+      Definisci precision e recall a partire da TP, FP, FN. Per un test di screening oncologico, quale delle due
+      privilegeresti, e perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 18.5</div>
+    <p style="margin-bottom:0">
+      Cosa misura l'AUC e quali sono i suoi valori estremi? Qual è la sua interpretazione in termini di «ordinare» i
+      casi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s18-7"><span class="secnum">Sezione 18.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.1</div>
+    <p style="margin-bottom:0">
+      Perché il modello ha già visto i dati di allenamento e può averli in parte memorizzati: il suo errore su di essi è
+      ottimisticamente basso e non riflette le prestazioni su dati nuovi (potrebbe essere in overfitting). Al suo posto
+      si valuta su un <b>test set</b> tenuto da parte, mai usato per allenare, che simula i dati «nuovi» del mondo reale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.2</div>
+    <p style="margin-bottom:0">
+      Con una malattia che colpisce l'1% delle persone, un modello che dice <b>sempre «sano»</b> è corretto sul 99% dei
+      casi (tutti i sani), quindi ha accuratezza del 99%: un valore apparentemente ottimo. Ma non individua <b>nessun</b>
+      malato, fallendo nell'unico compito utile. L'accuratezza inganna perché la classe che interessa (i malati) è così
+      rara che la sua sorte incide pochissimo sulla percentuale totale: il numero alto nasconde il fallimento sulla
+      classe importante. Servono metriche (recall, F1) che guardino la classe rara direttamente.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.3</div>
+    <p style="margin-bottom:0">
+      La k-fold divide i dati in $k$ parti; a turno una parte fa da test e le altre da training, ripetendo finché ogni
+      parte è stata test una volta; poi si mediano i $k$ risultati. È più affidabile di un singolo test set perché non
+      dipende da quali dati siano finiti per caso nell'unico test: usa tutti i dati per valutare (a turno) e fornisce
+      anche una misura di quanto la stima varia. Il <b>data leakage</b> è quando informazione del test «trapela»
+      nell'allenamento (es. standardizzare usando statistiche calcolate anche sul test): è pericoloso perché gonfia
+      artificialmente le prestazioni stimate, che poi crollano sui dati reali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.4</div>
+    <p style="margin-bottom:0">
+      Precision $=\frac{TP}{TP+FP}$: dei casi previsti positivi, quanti lo erano davvero (affidabilità degli allarmi).
+      Recall $=\frac{TP}{TP+FN}$: dei positivi reali, quanti ne sono stati trovati (capacità di non farseli sfuggire).
+      In uno screening oncologico privilegerei il <b>recall</b>: mancare un malato (falso negativo) è molto più grave di
+      un falso allarme, che verrà chiarito con esami successivi. Meglio qualche allarme in più (precision minore) che
+      lasciarsi sfuggire dei tumori.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 18.5</div>
+    <p style="margin-bottom:0">
+      L'AUC è l'area sotto la curva ROC e misura la qualità complessiva del classificatore <b>a tutte le soglie</b>: vale
+      <b>1,0</b> per un classificatore perfetto e <b>0,5</b> per uno che tira a indovinare (moneta). Interpretazione: è
+      la probabilità che il modello assegni a un caso positivo scelto a caso un punteggio più alto che a un negativo
+      scelto a caso, cioè quanto bene sa <b>ordinare</b> i casi dal più al meno «positivo», indipendentemente dalla
+      soglia.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §18.5 — soglia di decisione → matrice di confusione + precision/recall.
+   Punti positivi/negativi con punteggi; la soglia decide chi è "positivo".
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('ev-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('ev-out');
+  const sT = document.getElementById('ev-t');
+
+  // punteggi: positivi (classe 1) tendenzialmente alti, negativi bassi, con sovrapposizione
+  const POS=[], NEG=[];
+  for(let i=0;i<24;i++){ POS.push(0.62 + Math.sin(i*12.9)*0.22); }   // attorno a 0.4..0.85
+  for(let i=0;i<24;i++){ NEG.push(0.38 + Math.sin(i*7.3)*0.22); }    // attorno a 0.15..0.6
+  const clamp=function(v){ return Math.max(0.02,Math.min(0.98,v)); };
+  for(let i=0;i<POS.length;i++) POS[i]=clamp(POS[i]);
+  for(let i=0;i<NEG.length;i++) NEG[i]=clamp(NEG[i]);
+  const XMIN=0, XMAX=1, YMIN=0, YMAX=1;
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const th=+sT.value;
+    let TP=0,FP=0,FN=0,TN=0;
+    POS.forEach(function(s){ if(s>=th) TP++; else FN++; });
+    NEG.forEach(function(s){ if(s>=th) FP++; else TN++; });
+    const prec = (TP+FP)? TP/(TP+FP):0;
+    const rec  = (TP+FN)? TP/(TP+FN):0;
+    const f1   = (prec+rec)? 2*prec*rec/(prec+rec):0;
+
+    p.clear(); p.grid(0.25,0.25); p.axes({ numbers:false });
+    // banda a destra della soglia = "previsti positivi"
+    p.line(th,YMIN,th,YMAX,{ color:'var(--ink)', width:2.4 });
+    p.text(th,YMAX,'soglia',{ size:11, color:'var(--ink)', anchor:'middle', dy:-4, bold:true });
+    p.text(0.5,0.06,'← previsti negativi',{ size:10, color:'var(--ink-soft)', anchor:'middle' });
+    // punti: positivi in alto (y~0.7 con jitter), negativi in basso (y~0.3)
+    POS.forEach(function(s,i){ const y=0.68+((i%5)-2)*0.045; const ok=s>=th; p.dot(s,y,{ color:'var(--warm)', r:4.5, stroke:ok?'var(--green)':'var(--red)', sw:2 }); });
+    NEG.forEach(function(s,i){ const y=0.32+((i%5)-2)*0.045; const ok=s<th; p.dot(s,y,{ color:'var(--accent)', r:4.5, stroke:ok?'var(--green)':'var(--red)', sw:2 }); });
+
+    out.innerHTML='<div style="font-size:.88rem; text-align:left">'+
+      'Soglia <b>'+th.toFixed(2)+'</b> → '+
+      'TP <b>'+TP+'</b> · FP <b>'+FP+'</b> · FN <b>'+FN+'</b> · TN <b>'+TN+'</b>. '+
+      'Precision <b>'+prec.toFixed(2)+'</b> · Recall <b>'+rec.toFixed(2)+'</b> · F1 <b>'+f1.toFixed(2)+'</b>. '+
+      '<span style="color:var(--ink-soft)">Arancio = malati (positivi), blu = sani. Bordo verde = azzeccato, rosso = errore. Abbassa la soglia: recall su, precision giù.</span></div>';
+  }
+  sT.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>

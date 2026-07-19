@@ -270,7 +270,7 @@ const TOC = [
     n: 18,
     titolo: "Valutare i modelli",
     file: "cap18-valutazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s18-1", n: "18.1", t: "Il problema della valutazione" },
       { id: "s18-2", n: "18.2", t: "Cross-validation" },
