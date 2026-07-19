@@ -13,7 +13,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 ## Capitoli
 
 - [x] 1 — Cos'è Linux
-- [ ] 2 — Il terminale e la shell
+- [x] 2 — Il terminale e la shell
 - [ ] 3 — Il filesystem
 - [ ] 4 — File e cartelle
 - [ ] 5 — Leggere e cercare nei file

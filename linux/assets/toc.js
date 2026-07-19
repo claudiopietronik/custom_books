@@ -29,7 +29,7 @@ const TOC = [
     n: 2,
     titolo: "Il terminale e la shell",
     file: "cap02-terminale-shell.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "Cos'è la shell" },
       { id: "s2-2", n: "2.2", t: "Leggere il prompt" },

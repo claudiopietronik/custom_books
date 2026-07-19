@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Il terminale e la shell — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>Il terminale e la shell</h1>
+    <p class="standfirst">
+      Nel capitolo scorso hai «parlato» con Linux dando qualche comando. Ora capiamo <b>com'è fatto</b> lo strumento
+      con cui lo faremo per tutto il libro. Attenzione a una distinzione utile: il <b>terminale</b> è la finestra (il
+      contenitore), mentre la <b>shell</b> è il programma <em>dentro</em> di essa che legge i tuoi comandi e li
+      esegue — la più diffusa si chiama <b>bash</b>. Impareremo a leggere il <b>prompt</b> (la scritta che ti dà il
+      benvenuto, piena di informazioni), a scomporre un comando nelle sue parti (nome, opzioni, argomenti) — così
+      smetterai di digitarli «a memoria» e inizierai a capirli — e a chiedere <b>aiuto</b>: come scoprire cosa fa un
+      comando e quali opzioni ha, senza dover cercare online. In questo capitolo: la shell (§2.1), il prompt (§2.2),
+      l'anatomia di un comando (§2.3), e l'aiuto con <code>man</code> e <code>--help</code> (§2.4). <mark>È il momento
+      in cui il terminale smette di essere una scatola nera e diventa uno strumento che sai leggere.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è la <b>shell</b> (§2.1), leggere il <b>prompt</b> (§2.2), l'<b>anatomia di un comando</b> (§2.3), chiedere
+      <b>aiuto</b> con <code>man</code>/<code>--help</code> (§2.4). Nel laboratorio (§2.5) esplori i comandi da solo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire, non memorizzare</div>
+    <p style="margin-bottom:0">
+      Chi «subisce» il terminale impara i comandi a memoria e si blocca appena qualcosa cambia. Chi lo <b>capisce</b>
+      — sa leggere il prompt, scomporre un comando, chiedere aiuto — <mark>può esplorare e risolvere da solo</mark>,
+      senza cercare tutto online. Questo capitolo ti dà proprio questa autonomia: le poche idee che rendono
+      comprensibile <em>qualunque</em> comando incontrerai.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>Cos'è la shell</h2>
+
+  <p class="lead">
+    Distinguiamo due cose che spesso si chiamano entrambe «terminale»: il <b>terminale</b> e la <b>shell</b>. Sono
+    diverse, e capirlo aiuta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Terminale, shell, bash <span class="tag">la finestra, il programma, il tipo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>terminale</b> (l'app/la finestra)</dt>
+        <dd>il programma che ti mostra lo schermo testuale: raccoglie ciò che digiti e visualizza le risposte. <mark>È
+            il «contenitore»</mark>, la finestra nera. Da solo non «capisce» i comandi: li passa alla shell.</dd>
+        <dt>la <b>shell</b> (l'interprete)</dt>
+        <dd>il programma <b>dentro</b> il terminale che <b>legge</b> i tuoi comandi, li <b>interpreta</b> e li
+            <b>esegue</b>, poi ti mostra il risultato. <mark>È il vero motore</mark>: traduce le tue parole in azioni
+            del sistema.</dd>
+        <dt><b>bash</b> (una shell specifica)</dt>
+        <dd>la shell più diffusa su Linux si chiama <b>bash</b> («Bourne Again SHell»). Ne esistono altre (zsh, fish…)
+            con piccole differenze, ma <mark>i comandi di base sono gli stessi</mark>. In questo libro usiamo bash — la
+            più comune.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un'analogia: il <b>terminale</b> è come la <b>cornetta del telefono</b> (lo strumento con cui parli), la
+      <b>shell</b> è come la <b>persona all'altro capo</b> che ascolta e agisce. <mark>Nella pratica userai
+      «terminale» e «shell» quasi come sinonimi</mark> — va benissimo — ma sapere che sono due cose distinte chiarisce
+      perché a volte si parla di «cambiare shell» pur restando nello stesso terminale.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>Leggere il prompt</h2>
+
+  <p class="lead">
+    Il <b>prompt</b> è la scritta che la shell mostra all'inizio di ogni riga, in attesa dei tuoi comandi. Non è solo
+    decorazione: contiene informazioni utili su <b>chi sei</b> e <b>dove sei</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">un prompt tipico, smontato</div>
+    <pre><span class="hl">anna</span>@<span class="hl">mio-pc</span>:<span class="hl">~/progetti</span><span class="hl">$</span> <span class="cmd">_</span>
+ ↑       ↑         ↑        ↑
+utente  computer  dove sei  simbolo</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le parti del prompt <span class="tag">utente@host:percorso$</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">anna</span> — l'utente</dt>
+        <dd>chi sei nel sistema (il tuo nome utente). Cambia se «diventi» un altro utente (Cap. 7).</dd>
+        <dt><span class="mono">mio-pc</span> — il computer (host)</dt>
+        <dd>il nome della macchina su cui sei. <mark>Utilissimo quando ti colleghi a server remoti</mark> (SSH): il
+            prompt ti ricorda «su quale computer» stai lavorando, per non confonderti.</dd>
+        <dt><span class="mono">~/progetti</span> — dove sei</dt>
+        <dd>la cartella corrente (Cap. 3). La <b>tilde</b> <code>~</code> è un'abbreviazione della tua «home» (la tua
+            cartella personale). <mark>Il prompt ti dice sempre in quale cartella ti trovi</mark>.</dd>
+        <dt><span class="mono">$</span> — il simbolo</dt>
+        <dd>indica che la shell è pronta per un comando. <mark>Un <code>$</code> = utente normale; un <code>#</code> =
+            utente amministratore (root, Cap. 7)</mark> — un promemoria visivo dei tuoi «poteri». Nei nostri esempi il
+            <code>$</code> segna «qui digiti tu».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il prompt è <b>personalizzabile</b> (colori, informazioni mostrate): quello che vedi tu potrebbe apparire un po'
+      diverso. Ma la sostanza è quella. <mark>Prendi l'abitudine di «leggere» il prompt prima di dare un comando</mark>:
+      ti dice chi sei e dove sei — le due cose che contano di più per non fare pasticci. Nei blocchi di codice del
+      libro semplifichiamo il prompt al solo <code>$</code>, per concentrarci sul comando.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>Anatomia di un comando</h2>
+
+  <p class="lead">
+    Ogni comando segue una struttura fissa e semplice. Riconoscerne le parti è la chiave per capire — e non
+    memorizzare — qualsiasi comando: <b>comando</b>, <b>opzioni</b>, <b>argomenti</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">un comando, smontato</div>
+    <pre><span class="cmd">ls</span> <span class="fl">-l</span> <span class="ar">/home/anna</span>
+ ↑    ↑      ↑
+comando opzione argomento</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le tre parti <span class="tag">comando [opzioni] [argomenti]</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>comando</b> (es. <span class="mono">ls</span>)</dt>
+        <dd>il programma da eseguire: <b>cosa</b> vuoi fare. <code>ls</code> = «list» (elenca), <code>cp</code> =
+            «copy», <code>rm</code> = «remove»… <mark>Spesso abbreviazioni inglesi</mark>: capirne l'origine aiuta a
+            ricordarli.</dd>
+        <dt>le <b>opzioni</b> (es. <span class="mono">-l</span>)</dt>
+        <dd>modificano <b>come</b> il comando si comporta. Iniziano con un trattino: <code>-l</code> («long», elenco
+            dettagliato), <code>-a</code> («all», mostra anche i nascosti). <mark>Le opzioni lunghe usano due
+            trattini</mark>: <code>--help</code>, <code>--all</code>. Si possono combinare: <code>ls -la</code>.</dd>
+        <dt>gli <b>argomenti</b> (es. <span class="mono">/home/anna</span>)</dt>
+        <dd>su <b>cosa</b> agisce il comando: un file, una cartella, un testo. <code>ls /home/anna</code> = «elenca il
+            contenuto di quella cartella». <mark>Molti comandi hanno un argomento «di default»</mark> se non lo indichi
+            (per <code>ls</code>, la cartella corrente).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La struttura <code>comando [opzioni] [argomenti]</code> vale per <b>quasi tutti</b> i comandi Linux. <mark>Una
+      volta interiorizzata, ogni comando nuovo diventa leggibile</mark>: riconosci il verbo (comando), gli avverbi
+      (opzioni) e i complementi (argomenti). Le parentesi quadre nella documentazione (<code>[opzioni]</code>)
+      significano «facoltativo». Prova il widget qui sotto per allenare l'occhio a scomporre i comandi.
+    </div>
+  </div>
+
+  <div class="widget" id="w-anat">
+    <div class="w-head">
+      <span>Scomponi un comando</span>
+      <span class="hint">riconosci comando, opzioni, argomenti</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div id="an-cmd" style="text-align:center; font-family:var(--mono); font-size:1.15rem; margin-bottom:1rem; word-break:break-word"></div>
+      <div style="max-width:460px; margin:0 auto; display:flex; gap:.6rem; justify-content:center; font-size:.8rem; flex-wrap:wrap">
+        <span style="display:flex; align-items:center; gap:.3rem"><span style="width:14px; height:14px; border-radius:3px; background:#82aaff; display:inline-block"></span> comando</span>
+        <span style="display:flex; align-items:center; gap:.3rem"><span style="width:14px; height:14px; border-radius:3px; background:#8ab8ff; display:inline-block; opacity:.7"></span> opzione</span>
+        <span style="display:flex; align-items:center; gap:.3rem"><span style="width:14px; height:14px; border-radius:3px; background:#ffca85; display:inline-block"></span> argomento</span>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-c="0">ls -la /home</button>
+      <button class="btn" data-c="1">cp -r foto backup</button>
+      <button class="btn" data-c="2">grep -i errore log.txt</button>
+      <button class="btn" data-c="3">rm file.txt</button>
+    </div>
+    <div class="w-readout" id="an-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>Aiuto: man e --help</h2>
+
+  <p class="lead">
+    Nessuno ricorda tutti i comandi e tutte le opzioni a memoria — e non serve. Linux ha un <b>aiuto integrato</b>:
+    due modi rapidi per scoprire cosa fa un comando e quali opzioni offre, senza uscire dal terminale.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — chiedere aiuto</div>
+    <pre><span class="c"># aiuto rapido: cosa fa e quali opzioni ha</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">--help</span>
+<span class="out">Usage: ls [OPTION]... [FILE]...
+  -a, --all      do not ignore entries starting with .
+  -l             use a long listing format
+  ...</span>
+
+<span class="c"># manuale completo (più dettagliato)</span>
+<span class="p">$</span> <span class="cmd">man</span> <span class="ar">ls</span>
+<span class="out">LS(1)   User Commands   ...
+NAME  ls - list directory contents ...</span>
+<span class="c"># (premi q per uscire dal manuale)</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I due aiuti <span class="tag">--help (rapido) · man (completo)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">comando --help</span></dt>
+        <dd>stampa un <b>riassunto rapido</b>: la sintassi d'uso e l'elenco delle opzioni con una breve descrizione.
+            <mark>Il modo più veloce</mark> per ricordare «com'era quell'opzione». Funziona per quasi tutti i comandi.</dd>
+        <dt><span class="mono">man comando</span></dt>
+        <dd>apre il <b>manuale completo</b> («manual»): descrizione dettagliata, tutte le opzioni, esempi.
+            <mark>Più approfondito</mark> di <code>--help</code>. Si sfoglia con le frecce; si esce con <code>q</code>
+            (come per <code>git log</code>, se hai fatto quel libro).</dd>
+        <dt>quando usare quale</dt>
+        <dd><code>--help</code> per un promemoria veloce; <code>man</code> quando vuoi capire a fondo un comando o
+            cercare un'opzione che non ricordi. <mark>Insieme, ti rendono autonomo</mark>: non devi memorizzare, devi
+            saper chiedere.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa è forse la lezione più liberatoria del capitolo: <mark>non devi sapere tutto a memoria, devi sapere <b>come
+      scoprirlo</b></mark>. Anche i professionisti con vent'anni di esperienza usano <code>man</code> e
+      <code>--help</code> di continuo. Un altro comando utile: <code>man -k parola</code> (o <code>apropos parola</code>)
+      cerca tra i manuali i comandi che riguardano un argomento — utile quando <em>non sai</em> quale comando ti serve.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>Laboratorio: esplorare i comandi</h2>
+
+  <p class="lead">
+    Alleniamoci a scomporre comandi e a usare l'aiuto — le due abilità che ti renderanno autonomo. Apri il terminale e
+    prova.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — esplorare in autonomia</div>
+    <pre><span class="c"># scopri cosa fa un comando che non conosci</span>
+<span class="p">$</span> <span class="cmd">cal</span> <span class="fl">--help</span>          <span class="c"># (cal mostra un calendario!)</span>
+<span class="p">$</span> <span class="cmd">cal</span>
+<span class="out">    Luglio 2026
+lu ma me gi ve sa do
+       1  2  3  4  5
+ 6  7  8  9 10 11 12 ...</span>
+
+<span class="c"># leggi il manuale di un comando che già conosci: quante opzioni ha ls!</span>
+<span class="p">$</span> <span class="cmd">man</span> <span class="ar">ls</span>          <span class="c"># sfoglia con le frecce, esci con q</span>
+
+<span class="c"># prova a leggere questo comando PRIMA di eseguirlo: sai scomporlo?</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-l</span> <span class="fl">--all</span>       <span class="c"># comando=ls, opzioni=-l e --all, argomento=(nessuno -> cartella corrente)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Le due abilità che ti rendono autonomo</div>
+    <p style="margin-bottom:0">
+      Hai praticato le due cose che contano davvero: <b>scomporre</b> un comando (riconoscere comando, opzioni,
+      argomenti) e <b>chiedere aiuto</b> (<code>--help</code>, <code>man</code>). <mark>Con queste, non sei mai
+      bloccato</mark>: incontri un comando nuovo? Lo leggi e ne chiedi il manuale. Non ricordi un'opzione? Un
+      <code>--help</code> e ce l'hai. È l'atteggiamento del terminale: non «sapere tutto», ma «saper esplorare». Con
+      questa autonomia, nel prossimo capitolo affrontiamo il concetto su cui poggia tutto Linux — il <b>filesystem</b>:
+      come sono organizzati i file in un albero di cartelle, e come muoverti al suo interno.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>terminale</b> è la finestra; la <b>shell</b> (spesso <b>bash</b>) è il programma dentro che interpreta
+          i comandi (§2.1).</li>
+      <li>Il <b>prompt</b> <code>utente@host:percorso$</code> dice chi sei e dove sei; <code>$</code> = utente normale,
+          <code>#</code> = root (§2.2).</li>
+      <li>Un comando ha tre parti: <b>comando</b> (cosa), <b>opzioni</b> (come, con <code>-</code>/<code>--</code>),
+          <b>argomenti</b> (su cosa). Riconoscerle = capire ogni comando (§2.3).</li>
+      <li>Chiedi <b>aiuto</b> con <code>comando --help</code> (rapido) e <code>man comando</code> (completo, esci con
+          <code>q</code>). Non memorizzare: sapere come scoprire (§2.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai leggere e interrogare lo strumento. Ora serve un terreno su cui agire: i <b>file</b>. In Linux, file e cartelle
+    sono organizzati in un grande <b>albero</b>, e tutto — persino i dischi e i dispositivi — vi trova posto. Nel
+    <strong>Capitolo 3</strong> esploriamo il <b>filesystem</b>: com'è strutturato, la differenza tra percorsi
+    assoluti e relativi, e i tre comandi per muoverti (<code>pwd</code>, <code>ls</code>, <code>cd</code>). È la mappa
+    del mondo in cui vivrai da qui in poi.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra il <b>terminale</b> e la <b>shell</b>? Come si chiama la shell più diffusa su Linux?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Dato il prompt <code>luca@server1:~/web$</code>, indica: chi è l'utente, su quale computer si trova, e in quale
+      cartella. Cosa indicherebbe un <code>#</code> al posto del <code>$</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Scomponi il comando <code>cp -r documenti backup</code> nelle sue tre parti (comando, opzione/i, argomento/i).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      Non ricordi cosa fa il comando <code>wc</code>. Quali due modi hai per scoprirlo dal terminale, senza cercare
+      online?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      Il <b>terminale</b> è la finestra/applicazione che mostra lo schermo testuale (il contenitore); la <b>shell</b>
+      è il programma <em>dentro</em> il terminale che legge, interpreta ed esegue i tuoi comandi (il motore). La shell
+      più diffusa su Linux è <b>bash</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      L'utente è <b>luca</b>, il computer è <b>server1</b>, la cartella corrente è <b><code>~/web</code></b> (cioè la
+      cartella <code>web</code> dentro la home di luca). Un <code>#</code> al posto del <code>$</code> indicherebbe che
+      sei l'utente <b>amministratore (root)</b>, con pieni poteri sul sistema (Cap. 7).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      <b>Comando</b>: <code>cp</code> (copia). <b>Opzione</b>: <code>-r</code> (ricorsivo, per copiare anche il
+      contenuto delle cartelle). <b>Argomenti</b>: <code>documenti</code> (la sorgente) e <code>backup</code> (la
+      destinazione). Struttura: <code>comando [opzioni] [argomenti]</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      Due modi: <b>(1)</b> <code>wc --help</code> — stampa un riassunto rapido di cosa fa e delle sue opzioni; <b>(2)</b>
+      <code>man wc</code> — apre il manuale completo (si esce con <code>q</code>). Entrambi funzionano offline, dal
+      terminale. (<code>wc</code>, tra l'altro, conta righe, parole e caratteri di un file.)
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.3 — scomponi un comando: evidenzia comando/opzioni/argomenti
+   ========================================================================= */
+(function () {
+  const cmdEl = document.getElementById('an-cmd');
+  if (!cmdEl) return;
+  const out = document.getElementById('an-out');
+
+  // ogni token: {t: testo, k: 'cmd'|'opt'|'arg'}
+  const CMDS = [
+    { tokens: [['ls', 'cmd'], ['-la', 'opt'], ['/home', 'arg']], desc: '<b>ls</b> elenca; <b>-la</b> = opzioni combinate (l=dettaglio, a=nascosti); <b>/home</b> = la cartella da elencare.' },
+    { tokens: [['cp', 'cmd'], ['-r', 'opt'], ['foto', 'arg'], ['backup', 'arg']], desc: '<b>cp</b> copia; <b>-r</b> = ricorsivo (anche il contenuto delle cartelle); <b>foto</b> = sorgente, <b>backup</b> = destinazione.' },
+    { tokens: [['grep', 'cmd'], ['-i', 'opt'], ['errore', 'arg'], ['log.txt', 'arg']], desc: '<b>grep</b> cerca testo; <b>-i</b> = ignora maiuscole/minuscole; <b>errore</b> = cosa cercare, <b>log.txt</b> = dove cercarlo.' },
+    { tokens: [['rm', 'cmd'], ['file.txt', 'arg']], desc: '<b>rm</b> rimuove; nessuna opzione; <b>file.txt</b> = il file da cancellare. (Nessuna opzione: tutto di default.)' }
+  ];
+
+  const COL = { cmd: '#82aaff', opt: '#8ab8ff', arg: '#ffca85' };
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function show(i) {
+    const c = CMDS[i];
+    cmdEl.innerHTML = c.tokens.map(function (t) {
+      const bg = COL[t[1]];
+      const op = t[1] === 'opt' ? '; opacity:.85' : '';
+      return '<span style="background:' + bg + '; color:#12141d; border-radius:5px; padding:.15rem .5rem; margin:.15rem' + op + '">' + esc(t[0]) + '</span>';
+    }).join(' ');
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + c.desc +
+      ' <br><span style="font-size:.85rem">Struttura: <b>comando</b> → <b>opzioni</b> (con <code>-</code>) → <b>argomenti</b> (su cosa agisce).</span></div>';
+  }
+
+  document.querySelectorAll('#w-anat .btn[data-c]').forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-c')); });
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>
