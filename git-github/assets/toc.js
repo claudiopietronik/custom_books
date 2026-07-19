@@ -193,7 +193,7 @@ const TOC = [
     n: 13,
     titolo: "Ignorare file e buone pratiche",
     file: "cap13-gitignore-pratiche.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Il file .gitignore" },
       { id: "s13-2", n: "13.2", t: "Cosa non mettere mai in un repo" },

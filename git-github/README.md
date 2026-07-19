@@ -24,5 +24,5 @@ nessun linguaggio di programmazione richiesto.
 - [x] 10 — GitHub: il repository remoto
 - [x] 11 — Collaborare: push, pull, fetch
 - [x] 12 — Pull request e code review
-- [ ] 13 — Ignorare file e buone pratiche
+- [x] 13 — Ignorare file e buone pratiche
 - [ ] 14 — Un flusso di lavoro completo

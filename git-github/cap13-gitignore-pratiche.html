@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Ignorare file e buone pratiche — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Ignorare file e buone pratiche</h1>
+    <p class="standfirst">
+      Sai versionare e collaborare. Questo capitolo è di «igiene»: piccole accortezze che fanno la differenza tra un
+      repository pulito e professionale e uno pasticciato. Prima cosa: non <em>tutti</em> i file di un progetto vanno
+      versionati. File temporanei, dipendenze scaricabili, e soprattutto <b>segreti</b> (password, chiavi) <b>non</b>
+      devono finire nel repository — e Git offre un meccanismo apposta per escluderli, il file <b>.gitignore</b>. Poi
+      le buone abitudini che rendono la storia una risorsa e non un caos: messaggi di commit efficaci e commit piccole
+      e frequenti. Sono cose semplici, spesso trascurate, che i team apprezzano moltissimo. In questo capitolo: il
+      <code>.gitignore</code> (§13.1), cosa non committare mai (§13.2), messaggi efficaci (§13.3) e commit ben
+      dimensionate (§13.4). <mark>La differenza tra «so usare Git» e «uso Git bene» sta spesso in questi dettagli.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il file <b>.gitignore</b> (§13.1), cosa <b>non</b> mettere in un repo — segreti in primis (§13.2), <b>messaggi</b>
+      di commit efficaci (§13.3), <b>commit piccole e frequenti</b> (§13.4). Nel laboratorio (§13.5) crei un
+      .gitignore e fai pulizia.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: reputazione e sicurezza</div>
+    <p style="margin-bottom:0">
+      Un repository ordinato, senza file spazzatura e senza segreti, è il biglietto da visita di uno sviluppatore
+      serio. <mark>E committare un segreto per errore è uno degli incidenti di sicurezza più comuni</mark> (e
+      imbarazzanti): una chiave API finita in un repo pubblico può essere sfruttata in minuti. Queste buone pratiche
+      ti proteggono e migliorano il lavoro di tutto il team.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Il file .gitignore</h2>
+
+  <p class="lead">
+    Il <code>.gitignore</code> è un file di testo, nella radice del progetto, in cui elenchi i file e le cartelle che
+    Git deve <b>ignorare</b>: non li traccerà, non li mostrerà come «untracked», non li includerà nelle commit.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">.gitignore — un esempio</div>
+    <pre><span class="cm"># ambienti e dipendenze (si ricreano, non si versionano)</span>
+.venv/
+node_modules/
+
+<span class="cm"># file di configurazione con segreti</span>
+.env
+
+<span class="cm"># file temporanei e di sistema</span>
+*.log
+.DS_Store
+__pycache__/</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La sintassi del .gitignore <span class="tag">nomi · cartelle · jolly · commenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.env</span> — un nome</dt>
+        <dd>ignora il file con quel nome esatto, ovunque nel progetto.</dd>
+        <dt><span class="mono">node_modules/</span> — una cartella</dt>
+        <dd>la barra finale indica una <b>cartella</b>: ignora quella cartella e tutto il suo contenuto.
+            <mark>Tipico per le dipendenze</mark> (enormi e scaricabili: non si versionano).</dd>
+        <dt><span class="mono">*.log</span> — un jolly</dt>
+        <dd>l'asterisco è un carattere jolly: <code>*.log</code> = «tutti i file che finiscono in <code>.log</code>».
+            Utile per intere categorie di file.</dd>
+        <dt><span class="mono"># commento</span></dt>
+        <dd>le righe che iniziano con <code>#</code> sono commenti, per organizzare il file. <mark>Il
+            <code>.gitignore</code> stesso <b>va</b> committato</mark> (è utile a tutto il team).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un dettaglio importante: <mark>il <code>.gitignore</code> funziona solo sui file <b>non ancora tracciati</b></mark>.
+      Se hai già committato un file per sbaglio, aggiungerlo al <code>.gitignore</code> <b>non</b> lo rimuove dalla
+      storia — devi toglierlo esplicitamente (<code>git rm --cached nomefile</code>) e committare. Per questo conviene
+      creare il <code>.gitignore</code> <b>all'inizio</b> del progetto. Esistono <code>.gitignore</code> pronti per ogni
+      linguaggio (GitHub li propone quando crei un repo): un ottimo punto di partenza.
+    </div>
+  </div>
+
+  <div class="widget" id="w-ignore">
+    <div class="w-head">
+      <span>.gitignore: cosa traccia Git, cosa ignora</span>
+      <span class="hint">modifica le regole, guarda l'effetto</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:190px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">.gitignore (modificabile)</div>
+        <textarea id="ig-rules" style="width:100%; height:120px; padding:.5rem; border:1px solid var(--ink-soft); border-radius:8px; background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:.82rem; resize:vertical">.env
+node_modules/
+*.log</textarea>
+      </div>
+      <div style="flex:1; min-width:190px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">i file del progetto</div>
+        <ul id="ig-files" style="list-style:none; padding:0; margin:0"></ul>
+      </div>
+    </div>
+    <div class="w-readout" id="ig-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Cosa non mettere mai in un repo</h2>
+
+  <p class="lead">
+    Alcune categorie di file <b>non</b> vanno mai versionate. Riconoscerle è parte del mestiere; la più critica sono i
+    <b>segreti</b>, per ragioni di sicurezza.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le categorie da escludere <span class="tag">segreti · dipendenze · generati · temporanei</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>🔴 <b>segreti</b> (la priorità assoluta)</dt>
+        <dd>password, chiavi API, token, certificati, il file <code>.env</code>. <mark>Mai nel repository</mark>: una
+            volta committati restano nella storia (Cap. 10), e su un repo pubblico chiunque li vede. Vanno in variabili
+            d'ambiente o file esclusi dal <code>.gitignore</code>.</dd>
+        <dt><b>dipendenze</b> scaricabili</dt>
+        <dd><code>node_modules/</code>, <code>.venv/</code>: enormi e <b>ricreabili</b> da un file di elenco
+            (<code>requirements.txt</code>, <code>package.json</code>). <mark>Versioni la ricetta, non gli
+            ingredienti.</mark></dd>
+        <dt><b>file generati</b></dt>
+        <dd>output di compilazione, build, cache (<code>__pycache__/</code>, <code>dist/</code>). Si <b>rigenerano</b>
+            dal codice sorgente: versionarli è inutile e crea rumore.</dd>
+        <dt><b>file di sistema/editor</b></dt>
+        <dd><code>.DS_Store</code> (macOS), file temporanei dell'editor. Non riguardano il progetto: solo confusione.</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> Se committi un segreto, consideralo compromesso</div>
+      <p style="margin-bottom:0">
+        Se una password o chiave finisce per errore in un repository (anche privato, anche se la rimuovi subito),
+        <mark>la regola è: cambiala</mark>. Rimuoverla dalla storia è complicato e non garantisce che nessuno l'abbia
+        già copiata (specie su un repo pubblico, indicizzato in secondi). Prevenire con il <code>.gitignore</code> è
+        l'unica strategia affidabile. Questa è la trappola di sicurezza numero uno per chi inizia: prendi l'abitudine
+        di <b>non far mai entrare i segreti nel repo</b>.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Messaggi di commit efficaci</h2>
+
+  <p class="lead">
+    Torniamo sui messaggi di commit (Cap. 4), ora con un occhio al team. Messaggi buoni rendono la storia una risorsa
+    consultabile; messaggi pigri la rendono inutile per tutti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regole per messaggi utili <span class="tag">il riassunto del Cap. 4, + il contesto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>prima riga breve e chiara</b></dt>
+        <dd>~50 caratteri, all'imperativo presente («Aggiungi…», «Correggi…»), specifica. È il «titolo» della commit,
+            quello che si legge nel <code>git log</code> e nelle PR.</dd>
+        <dt><b>spiega il «perché», se serve</b></dt>
+        <dd>per modifiche non ovvie, dopo una riga vuota aggiungi il <b>contesto</b>: perché hai fatto questa scelta,
+            quale problema risolve. <mark>Il «cosa» si vede dal diff; il «perché» no</mark> — ed è spesso la parte più
+            preziosa a distanza di tempo.</dd>
+        <dt><b>una commit, un tema</b></dt>
+        <dd>se un messaggio deve dire «faccio X <em>e</em> Y <em>e</em> Z», probabilmente andavano <b>più commit</b>
+            (§13.4). Un messaggio chiaro nasce da una commit coerente.</dd>
+        <dt>convenzioni di team</dt>
+        <dd>alcuni team usano prefissi (<code>fix:</code>, <code>feat:</code>) o riferimenti a ticket. <mark>Adatta lo
+            stile al progetto</mark>: la coerenza col team conta più della «regola perfetta».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché insistere tanto? Perché <mark>i messaggi sono l'unico modo per capire una modifica senza rileggere tutto
+      il codice</mark>. Quando cercherai «quando e perché è entrato questo bug» (con <code>git log</code>), ti
+      ritroverai a benedire chi ha scritto messaggi chiari — o a maledire chi ha scritto «fix» venti volte di fila. Sii
+      il primo tipo di collega.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>Commit piccole e frequenti</h2>
+
+  <p class="lead">
+    Un'ultima abitudine che semplifica tutto: fare commit <b>piccole</b> (una per «unità logica» di lavoro) e
+    <b>frequenti</b>, invece di poche commit gigantesche.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Perché piccolo è meglio <span class="tag">leggibilità · reversibilità · meno conflitti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>più leggibili</b></dt>
+        <dd>una commit che fa <b>una</b> cosa è facile da capire (nel log, nelle review). Una che ne fa venti è un
+            muro impenetrabile. <mark>Commit piccole = storia comprensibile.</mark></dd>
+        <dt><b>più facili da annullare</b></dt>
+        <dd>se una modifica va tolta (<code>revert</code>, Cap. 6), meglio che sia isolata in una sua commit, non
+            impastata con dieci altre cose che vuoi tenere.</dd>
+        <dt><b>meno conflitti</b></dt>
+        <dd>modifiche piccole e frequenti si fondono più facilmente (Cap. 9): meno superficie di sovrapposizione con
+            il lavoro altrui.</dd>
+        <dt>la regola pratica</dt>
+        <dd><mark>una commit per ogni «passo» completo e coerente</mark>: una funzionalità aggiunta, un bug corretto,
+            un refactoring. Non a metà di un lavoro (rischi commit «rotte»), non alla fine di tutto (commit
+            monstre).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'equilibrio con l'esperienza viene naturale: <mark>«abbastanza piccola da spiegarsi in una frase, abbastanza
+      completa da funzionare»</mark>. Insieme ai messaggi chiari (§13.3), le commit ben dimensionate rendono la storia
+      del progetto un vero <b>diario</b> leggibile — che è tutto il punto del controllo di versione. Queste due
+      abitudini, semplici, ti distingueranno subito come collaboratore attento.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Laboratorio: pulizia e .gitignore</h2>
+
+  <p class="lead">
+    Aggiungi un <code>.gitignore</code> a un progetto e verifica che i file da escludere spariscano dal radar di Git.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — creare e verificare un .gitignore</div>
+    <pre><span class="c"># in un repository, crea alcuni file (uno da ignorare)</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"CHIAVE=segreta123"</span> &gt; <span class="ar">.env</span>       <span class="c"># un segreto: NON deve entrare!</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"log del programma"</span> &gt; <span class="ar">app.log</span>
+
+<span class="c"># senza .gitignore, Git li vedrebbe come untracked:</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">Untracked files: .env  app.log  ...</span>
+
+<span class="c"># crea il .gitignore per escluderli</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">".env"</span> &gt; <span class="ar">.gitignore</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"*.log"</span> &gt;&gt; <span class="ar">.gitignore</span>
+
+<span class="c"># ora Git NON vede più .env e app.log (ma vede il .gitignore, da committare):</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">Untracked files: </span><span class="hl">.gitignore</span><span class="out">   (niente .env, niente app.log!)</span>
+
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.gitignore</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi .gitignore"</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai ottenuto</div>
+    <p style="margin-bottom:0">
+      Hai protetto il progetto: <code>.env</code> (il segreto) e <code>app.log</code> (rumore) ora sono <b>invisibili</b>
+      a Git — non rischi di committarli per sbaglio. <mark>Il <code>.gitignore</code>, invece, va committato</mark>
+      perché serve a tutto il team. Nota l'ordine giusto: creare il <code>.gitignore</code> <b>prima</b> di committare
+      i file da escludere. Con questa accortezza, più i messaggi chiari e le commit piccole, il tuo repository è pulito
+      e professionale. Ora hai tutti gli strumenti e le buone pratiche: nel capitolo finale li mettiamo insieme in un
+      flusso di lavoro completo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li><b>.gitignore</b>: elenca file/cartelle da ignorare (<code>.env</code>, <code>node_modules/</code>,
+          <code>*.log</code>). Va committato; funziona solo sui file non ancora tracciati (§13.1).</li>
+      <li>Non committare mai: <b>segreti</b> (priorità!), dipendenze scaricabili, file generati, file di sistema. Un
+          segreto committato va considerato <b>compromesso</b> → cambialo (§13.2).</li>
+      <li><b>Messaggi efficaci</b>: prima riga breve/imperativa/specifica; il «perché» nel corpo se serve; una commit,
+          un tema (§13.3).</li>
+      <li><b>Commit piccole e frequenti</b>: più leggibili, più facili da annullare, meno conflitti. «Piccola da
+          spiegare in una frase, completa da funzionare» (§13.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai tutti gli strumenti (commit, branch, merge, remoto, PR) e tutte le buone pratiche (igiene, messaggi, commit
+    dimensionate). È il momento di <b>metterli insieme</b>. Nel <strong>Capitolo 14</strong>, il gran finale:
+    percorriamo un <b>flusso di lavoro completo</b> dall'inizio alla fine — dal clone di un progetto alla pull request
+    unita — come si fa nel lavoro reale, e vediamo dove andare per continuare a crescere con Git. Tutto ciò che hai
+    imparato, in un unico percorso.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      A cosa serve il file <code>.gitignore</code>? Scrivi le righe per ignorare: il file <code>.env</code>, la
+      cartella <code>build/</code>, e tutti i file <code>.tmp</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Perché le <b>dipendenze</b> (come <code>node_modules/</code> o <code>.venv/</code>) non si versionano? Cosa si
+      versiona al loro posto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Hai committato per errore un file <code>.env</code> con una password in un repository pubblico, e te ne accorgi
+      subito. Basta rimuoverlo con una nuova commit? Qual è la cosa più importante da fare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Elenca due vantaggi di fare commit piccole e frequenti invece di poche commit molto grandi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:.5rem">
+      Il <code>.gitignore</code> elenca i file e le cartelle che Git deve <b>ignorare</b> (non tracciare né
+      committare).
+    </p>
+    <div class="term" style="margin:.3rem auto 0">
+      <div class="t-head file">.gitignore</div>
+      <pre>.env
+build/
+*.tmp</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Le dipendenze non si versionano perché sono <b>enormi</b> e <b>ricreabili</b>: si possono riscaricare/reinstallare
+      in qualsiasi momento a partire da un file di elenco. Versionarle gonfierebbe il repository inutilmente. Al loro
+      posto si versiona la <b>«ricetta»</b>: il file che elenca le dipendenze e le loro versioni (es.
+      <code>requirements.txt</code> per Python, <code>package.json</code> per Node), da cui chiunque può ricreare
+      l'ambiente.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      <b>No</b>, non basta rimuoverlo con una nuova commit: la password resta comunque nella <b>storia</b> (nelle commit
+      precedenti), e su un repo pubblico potrebbe essere già stata copiata o indicizzata. La cosa più importante è
+      <b>cambiare immediatamente la password</b> (o rigenerare la chiave): va considerata <b>compromessa</b>. Poi si può
+      ripulire la storia (operazione avanzata) e, soprattutto, aggiungere il file al <code>.gitignore</code> per evitare
+      che ricapiti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Due vantaggi: <b>(1)</b> sono più <b>leggibili</b> — una commit che fa una sola cosa è facile da capire nel log e
+      nelle review, mentre una enorme è un muro; <b>(2)</b> sono più facili da <b>annullare</b> selettivamente (con
+      <code>revert</code>) senza toccare altro lavoro. In più generano <b>meno conflitti</b> (minore sovrapposizione) e
+      permettono messaggi di commit più chiari e specifici.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.1 — .gitignore playground: quali file traccia Git, quali ignora
+   ========================================================================= */
+(function () {
+  const rulesEl = document.getElementById('ig-rules');
+  if (!rulesEl) return;
+  const filesEl = document.getElementById('ig-files');
+  const out = document.getElementById('ig-out');
+
+  const FILES = ['main.py', '.env', 'app.log', 'errori.log', 'README.md', 'node_modules/', 'style.css', '.gitignore'];
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function isIgnored(file, rules) {
+    for (const raw of rules) {
+      const r = raw.trim();
+      if (!r || r[0] === '#') continue;
+      if (r.endsWith('/')) {                     // cartella
+        if (file === r || file === r.slice(0, -1) || file.indexOf(r) === 0) return true;
+      } else if (r.indexOf('*') >= 0) {          // jolly semplice *.ext
+        const re = new RegExp('^' + r.replace(/[.]/g, '\\.').replace(/\*/g, '.*') + '$');
+        if (re.test(file)) return true;
+      } else {                                    // nome esatto
+        if (file === r) return true;
+      }
+    }
+    return false;
+  }
+
+  function render() {
+    const rules = rulesEl.value.split('\n');
+    let nIgn = 0, hasSecret = false;
+    filesEl.innerHTML = FILES.map(function (f) {
+      const ign = isIgnored(f, rules);
+      if (ign) nIgn++;
+      if ((f === '.env') && ign) hasSecret = true;
+      const color = ign ? 'var(--ink-faint)' : 'var(--green)';
+      const badge = ign
+        ? '<span style="font-size:.68rem; background:var(--paper-3); color:var(--ink-soft); border-radius:4px; padding:.05rem .4rem">ignorato</span>'
+        : '<span style="font-size:.68rem; background:color-mix(in srgb, var(--green) 20%, var(--paper)); color:var(--green); border-radius:4px; padding:.05rem .4rem">tracciato</span>';
+      return '<li style="display:flex; justify-content:space-between; align-items:center; padding:.35rem .5rem; margin-bottom:.3rem; border:1px solid var(--ink-soft); border-radius:6px; font-family:var(--mono); font-size:.82rem; color:' + color + (ign ? '; text-decoration:line-through; opacity:.7' : '') + '">' +
+        '<span>' + esc(f) + '</span>' + badge + '</li>';
+    }).join('');
+    const secretMsg = FILES.indexOf('.env') >= 0
+      ? (isIgnored('.env', rules)
+          ? '✅ <code>.env</code> è <b>ignorato</b>: il segreto è protetto.'
+          : '🔴 <b>Attenzione: <code>.env</code> è tracciato!</b> Un segreto sta per entrare nel repo. Aggiungi <code>.env</code> alle regole.')
+      : '';
+    out.innerHTML = '<div style="color:' + (FILES.indexOf('.env') >= 0 && !isIgnored('.env', rules) ? 'var(--warm)' : 'var(--ink-soft)') + '; font-size:.9rem; text-align:left">I file <b>barrati</b> sono ignorati da Git (non entreranno nelle commit); quelli <span style="color:var(--green)">verdi</span> verranno tracciati. ' + secretMsg + ' Prova a togliere <code>.env</code> dalle regole per vedere il pericolo, o ad aggiungere <code>*.log</code>.</div>';
+  }
+
+  rulesEl.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>
