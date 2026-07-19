@@ -234,7 +234,7 @@ const TOC = [
     n: 15,
     titolo: "File e I/O",
     file: "cap15-file-io.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Gli stream" },
       { id: "s15-2", n: "15.2", t: "Scrivere su file (ofstream)" },

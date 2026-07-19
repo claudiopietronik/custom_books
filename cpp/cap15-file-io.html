@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · File e I/O — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>File e I/O</h1>
+    <p class="standfirst">
+      Tutto ciò che un programma elabora <b>svanisce</b> alla chiusura, a meno di salvarlo su disco. Dare ai
+      programmi una <b>memoria che dura</b> è il compito dell'input/output su file. E c'è una bella sorpresa: in
+      C++, leggere e scrivere file usa la <b>stessa idea</b> che conosci fin dal Capitolo 1 — gli <b>stream</b>.
+      <code>std::cout</code> è uno stream verso lo schermo, <code>std::cin</code> uno stream dalla tastiera; un file
+      è semplicemente un altro stream. <mark>Impari <code>ofstream</code> per scrivere e <code>ifstream</code> per
+      leggere, con gli stessi operatori <code>&lt;&lt;</code> e <code>&gt;&gt;</code> di sempre</mark> — e grazie a
+      RAII (Cap. 12) i file si chiudono da soli. È l'ultimo strumento pratico prima di mettere tutto insieme nel
+      progetto finale.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il concetto di <b>stream</b> (§15.1), <b>scrivere su file</b> con <code>ofstream</code> (§15.2),
+      <b>leggere</b> con <code>ifstream</code> (§15.3), leggere <b>riga per riga</b> (§15.4). Nel laboratorio
+      (§15.5) salvi e ricarichi dei dati.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: memoria persistente</div>
+    <p style="margin-bottom:0">
+      Salvare e caricare dati è indispensabile in quasi ogni programma reale: impostazioni, archivi, log, risultati.
+      <mark>Senza file, un programma dimentica tutto ad ogni avvio</mark>. In C++ farlo è sorprendentemente semplice
+      grazie all'astrazione degli stream, coerente con l'I/O che già usi. E imparerai un'ultima, elegante
+      applicazione di RAII: i file si aprono con un oggetto e si chiudono automaticamente quando quell'oggetto muore.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Gli stream</h2>
+
+  <p class="lead">
+    Il C++ tratta ogni sorgente/destinazione di dati come uno <b>stream</b>: un «flusso» da cui si legge o su cui si
+    scrive, sempre con la stessa interfaccia. Schermo, tastiera, file: tutti stream.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Un'unica idea per tutto l'I/O</div>
+    <p style="margin-bottom:0">
+      Uno <b>stream</b> è un flusso ordinato di dati. Ne conosci già due: <code>std::cout</code> (stream di
+      <b>output</b> verso lo schermo, si usa con <code>&lt;&lt;</code>) e <code>std::cin</code> (stream di
+      <b>input</b> dalla tastiera, con <code>&gt;&gt;</code>). <mark>La bellezza: un file è solo un altro
+      stream</mark>. Per scrivere su file usi un <code>std::ofstream</code> («output file stream») con lo stesso
+      <code>&lt;&lt;</code>; per leggere, un <code>std::ifstream</code> («input file stream») con lo stesso
+      <code>&gt;&gt;</code>. Impari l'I/O su schermo (Cap. 1-2), e sai già l'I/O su file: cambia solo «dove va» il
+      flusso. È un design elegante che rende il codice uniforme. Richiede <code>#include &lt;fstream&gt;</code>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Scrivere su file (ofstream)</h2>
+
+  <p class="lead">
+    Per salvare dati, apri un <code>ofstream</code> su un nome di file e ci «spingi» dentro il testo con
+    <code>&lt;&lt;</code>, esattamente come faresti con <code>cout</code>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Scrivere con ofstream <span class="tag">come cout, ma su file</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">scrivi.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;fstream&gt;</span>
+
+<span class="ns">std</span>::ofstream <span class="nm">file</span>(<span class="st">"dati.txt"</span>);   <span class="cm">// apre (crea/sovrascrive) il file in scrittura</span>
+
+<span class="nm">file</span> <span class="op">&lt;&lt;</span> <span class="st">"Prima riga\n"</span>;         <span class="cm">// scrivi con << (come cout!)</span>
+<span class="nm">file</span> <span class="op">&lt;&lt;</span> <span class="st">"Numero: "</span> <span class="op">&lt;&lt;</span> <span class="nm">42</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+
+<span class="cm">// niente file.close(): si chiude DA SOLO quando "file" esce dall'ambito (RAII!)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::ofstream file("dati.txt")</span></dt>
+        <dd>crea uno stream verso il file <code>dati.txt</code>, aprendolo in <b>scrittura</b>. Se il file non
+            esiste lo crea; se esiste, <mark>lo <b>sovrascrive</b></mark> (come la modalità <code>"w"</code> di
+            Python). Per <b>aggiungere</b> in fondo: <code>std::ofstream file("dati.txt", std::ios::app)</code>.</dd>
+        <dt>scrivere con <span class="mono">&lt;&lt;</span></dt>
+        <dd>identico a <code>cout</code>: <code>file &lt;&lt; testo &lt;&lt; numero</code>. Puoi mischiare testo e
+            valori, usare <code>"\n"</code> per andare a capo.</dd>
+        <dt>chiusura automatica (RAII!)</dt>
+        <dd>quando l'oggetto <code>file</code> esce dall'ambito (fine funzione/blocco), il suo <b>distruttore chiude
+            il file da solo</b> — svuotando i dati sul disco. <mark>Non devi ricordarti <code>close()</code>: è RAII
+            (Cap. 12) in azione</mark>. (Puoi chiuderlo prima con <code>file.close()</code> se serve.)</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Leggere da file (ifstream)</h2>
+
+  <p class="lead">
+    Speculare: apri un <code>ifstream</code> e ne «estrai» i dati con <code>&gt;&gt;</code>, come da
+    <code>cin</code>. Ma attento a controllare che il file si sia aperto davvero.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Leggere con ifstream <span class="tag">come cin, ma da file</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">leggi.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;fstream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ns">std</span>::ifstream <span class="nm">file</span>(<span class="st">"dati.txt"</span>);   <span class="cm">// apre il file in lettura</span>
+
+<span class="kw">if</span> (<span class="op">!</span><span class="nm">file</span>) {                     <span class="cm">// controlla: si è aperto? (magari il file non c'è)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Impossibile aprire il file\n"</span>;
+    <span class="kw">return</span> <span class="nm">1</span>;
+}
+
+<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">parola</span>;
+<span class="kw">while</span> (<span class="nm">file</span> <span class="op">&gt;&gt;</span> <span class="nm">parola</span>) {          <span class="cm">// legge parola per parola finché ce ne sono</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">parola</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::ifstream file("dati.txt")</span></dt>
+        <dd>apre il file in <b>lettura</b>. Come per <code>ofstream</code>, si chiude da solo (RAII).</dd>
+        <dt><mark>controlla sempre l'apertura</mark></dt>
+        <dd><code>if (!file)</code> verifica se l'apertura è <b>fallita</b> (file inesistente, permessi…). <b>Saltare
+            questo controllo è un errore classico</b>: se il file non c'è e non te ne accorgi, leggeresti dati
+            inesistenti.</dd>
+        <dt><span class="mono">while (file &gt;&gt; parola)</span></dt>
+        <dd>legge dallo stream <b>finché ci sono dati</b>: l'espressione <code>file &gt;&gt; parola</code> è «vera»
+            finché la lettura riesce, «falsa» a fine file. È l'idioma per scorrere tutto il contenuto parola per
+            parola. Come <code>cin</code>, <code>&gt;&gt;</code> si ferma agli spazi.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-file">
+    <div class="w-head">
+      <span>ofstream scrive, ifstream rilegge</span>
+      <span class="hint">scrivi delle righe e rileggile dal "file"</span>
+    </div>
+    <div class="w-stage" style="min-height:190px">
+      <div id="wfl-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <input id="wfl-in" type="text" placeholder="una riga da salvare…" style="padding:.4rem .6rem; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); font:inherit; font-size:.9rem">
+      <button class="w-btn" id="wfl-write">file &lt;&lt; riga</button>
+      <button class="w-btn" id="wfl-read">rileggi il file</button>
+      <button class="w-btn" id="wfl-reset">↺</button>
+    </div>
+    <div class="w-readout" id="wfl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Leggere riga per riga</h2>
+
+  <p class="lead">
+    <code>&gt;&gt;</code> legge una «parola» alla volta (si ferma agli spazi). Per leggere <b>righe intere</b> — il
+    caso più comune con i file di testo — si usa di nuovo <code>std::getline</code> (Cap. 9).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">getline su un file <span class="tag">una riga alla volta</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">righe.cpp</div>
+      <pre><span class="ns">std</span>::ifstream <span class="nm">file</span>(<span class="st">"testo.txt"</span>);
+<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">riga</span>;
+
+<span class="kw">while</span> (<span class="ns">std</span>::getline(<span class="nm">file</span>, <span class="nm">riga</span>)) {   <span class="cm">// legge una RIGA intera per volta</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"&gt; "</span> <span class="op">&lt;&lt;</span> <span class="nm">riga</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      <code>std::getline(file, riga)</code> legge <b>fino all'a-capo</b>, spazi inclusi, e mette il tutto in
+      <code>riga</code>. Il <code>while</code> continua finché ci sono righe (getline «diventa falso» a fine file).
+      <mark>Questo è il modo standard di leggere un file di testo riga per riga</mark> — per elaborare un log, un
+      CSV, un elenco. La stessa <code>getline</code> del Cap. 9, applicata a uno stream di file invece che a
+      <code>cin</code>: ecco di nuovo l'eleganza degli stream, un'unica idea per schermo, tastiera e file.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio: salvare dati</h2>
+
+  <p class="lead">
+    Uniamo scrittura e lettura in una mini-app che <b>salva</b> una lista di nomi su file e poi la <b>rilegge</b> —
+    lo schema «persisti e ricarica» che sta dietro moltissimi programmi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>rubrica.cpp</code> <span class="tag">scrivi, poi rileggi</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">rubrica.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;fstream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ns">std</span>::<span class="ns">string</span><span class="op">&gt;</span> <span class="nm">nomi</span> <span class="op">=</span> {<span class="st">"Anna"</span>, <span class="st">"Marco"</span>, <span class="st">"Bea"</span>};
+
+    <span class="cm">// SCRIVE i nomi, uno per riga</span>
+    {
+        <span class="ns">std</span>::ofstream <span class="nm">out</span>(<span class="st">"nomi.txt"</span>);
+        <span class="kw">for</span> (<span class="kw">const</span> <span class="ns">std</span>::<span class="ns">string</span><span class="op">&amp;</span> <span class="nm">n</span> : <span class="nm">nomi</span>) {
+            <span class="nm">out</span> <span class="op">&lt;&lt;</span> <span class="nm">n</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+        }
+    }   <span class="cm">// "out" esce dall'ambito qui → file chiuso e salvato (RAII)</span>
+
+    <span class="cm">// RILEGGE e stampa</span>
+    <span class="ns">std</span>::ifstream <span class="nm">in</span>(<span class="st">"nomi.txt"</span>);
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">riga</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Rubrica:\n"</span>;
+    <span class="kw">while</span> (<span class="ns">std</span>::getline(<span class="nm">in</span>, <span class="nm">riga</span>)) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"- "</span> <span class="op">&lt;&lt;</span> <span class="nm">riga</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    }
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Output: «Rubrica:» seguito da «- Anna / - Marco / - Bea» — dati <b>letti dal file appena scritto</b>. Nota il
+      <b>blocco <code>{ }</code></b> attorno alla scrittura: serve a far uscire <code>out</code> dall'ambito
+      <em>prima</em> di rileggere, così RAII <b>chiude e salva</b> il file (garantendo che i dati siano su disco
+      prima della rilettura). <mark>Questo schema «scrivi → chiudi → rileggi» è il fondamento della persistenza</mark>.
+      Compila con <code>g++ rubrica.cpp -o rubrica</code>. Estendilo: leggi i nomi dall'utente prima di salvarli, o
+      aggiungi (modalità <code>app</code>) invece di sovrascrivere.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>Uno <b>stream</b> è un flusso di dati; <code>cout</code>/<code>cin</code> e i file usano la <b>stessa
+          interfaccia</b> (<code>&lt;&lt;</code>/<code>&gt;&gt;</code>). Serve <code>#include &lt;fstream&gt;</code>
+          (§15.1).</li>
+      <li><code>std::ofstream file("nome")</code> scrive (con <code>&lt;&lt;</code>), sovrascrivendo (o
+          <code>std::ios::app</code> per aggiungere) (§15.2). <code>std::ifstream</code> legge (con <code>&gt;&gt;</code>);
+          <mark>controlla sempre <code>if (!file)</code></mark> (§15.3).</li>
+      <li>Leggi righe intere con <code>std::getline(file, riga)</code> in un <code>while</code> (§15.4).</li>
+      <li>I file si <b>chiudono da soli</b> (RAII) a fine ambito; lo schema <b>scrivi → chiudi → rileggi</b> dà
+          persistenza (§15.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ci siamo: hai tutti gli strumenti del C++ — sintassi, tipi, funzioni, puntatori, memoria, OOP, template, STL,
+    eccezioni, file. È il momento di <b>metterli insieme</b>. Nel <strong>Capitolo 16</strong>, il gran finale,
+    costruiamo dall'inizio alla fine un <b>progetto completo</b>: non un esempio isolato, ma un piccolo programma
+    vero, dalla progettazione delle classi al codice funzionante, passando per la compilazione, le prove e le
+    rifiniture. Vedrai tutti i pezzi che hai imparato collaborare in un'unica applicazione — <mark>e ti renderai
+    conto di quanta strada hai fatto dal primo <code>cout &lt;&lt; "Ciao, mondo!"</code>.</mark>
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Cos'hanno in comune <code>std::cout</code>, <code>std::cin</code> e i file? Come si chiama questa astrazione, e
+      quali operatori usa?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Perché dopo aver aperto un <code>ifstream</code> conviene controllare <code>if (!file)</code>? Cosa potrebbe
+      essere andato storto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra leggere un file con <code>file &gt;&gt; parola</code> e con
+      <code>std::getline(file, riga)</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi il codice per aprire <code>log.txt</code> in modalità <b>append</b> e aggiungere in fondo la
+      riga «avvio». Perché usi l'append e non la scrittura normale?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Sono tutti <b>stream</b> (flussi di dati): l'astrazione unica del C++ per l'I/O. Si usano con gli operatori
+      <code>&lt;&lt;</code> (output, «spingi dentro lo stream») e <code>&gt;&gt;</code> (input, «estrai dallo
+      stream»). Cambia solo la destinazione/sorgente (schermo, tastiera, file), non il modo di usarli.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      Perché l'apertura può <b>fallire</b>: il file potrebbe non esistere, o mancare i permessi. <code>if (!file)</code>
+      rileva l'apertura fallita, così puoi avvisare/uscire invece di proseguire leggendo dati inesistenti (che
+      darebbe risultati sbagliati). È un controllo essenziale prima di leggere.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      <code>file &gt;&gt; parola</code> legge <b>una parola alla volta</b> (si ferma agli spazi e agli a-capo);
+      <code>std::getline(file, riga)</code> legge <b>un'intera riga</b> (fino all'a-capo), spazi inclusi. Per file di
+      testo «a righe» (log, elenchi) si usa getline; per token separati da spazi, <code>&gt;&gt;</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">log.cpp</div>
+      <pre><span class="ns">std</span>::ofstream <span class="nm">log</span>(<span class="st">"log.txt"</span>, <span class="ns">std</span>::ios::app);
+<span class="nm">log</span> <span class="op">&lt;&lt;</span> <span class="st">"avvio\n"</span>;</pre>
+    </div>
+    <p style="margin:.5rem 0 0">L'<b>append</b> (<code>std::ios::app</code>) <b>aggiunge in fondo</b> senza cancellare
+      le righe precedenti: per un log vuoi conservare lo storico. La scrittura normale (senza <code>app</code>)
+      <b>sovrascriverebbe</b> il file, perdendo tutto ciò che c'era.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.2 — ofstream scrive, ifstream rilegge (file simulato)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wfl-view');
+  if (!view) return;
+  const out = document.getElementById('wfl-out');
+  const inp = document.getElementById('wfl-in');
+  let fileLines = [], readOut = [], msg = 'Scrivi righe col pulsante «file &lt;&lt; riga»: vanno nel file. Poi «rileggi» per estrarle con ifstream.';
+
+  const write = () => { const v = inp.value.trim(); if (!v) { msg = 'Riga vuota: niente da scrivere.'; draw(); return; } fileLines.push(v); inp.value = ''; readOut = []; msg = '<code>out &lt;&lt; "' + v + '\\n"</code>: la riga è stata <b>scritta nel file</b> (ofstream).'; draw(); };
+  document.getElementById('wfl-write').addEventListener('click', write);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') write(); });
+  document.getElementById('wfl-read').addEventListener('click', () => { readOut = fileLines.slice(); msg = readOut.length ? '<code>while (getline(in, riga))</code>: l\'ifstream ha <b>riletto</b> tutte le ' + readOut.length + ' righe dal file. <mark>I dati persistono!</mark>' : 'Il file è vuoto: niente da leggere.'; draw(); });
+  document.getElementById('wfl-reset').addEventListener('click', () => { fileLines = []; readOut = []; msg = 'File svuotato.'; draw(); });
+
+  function draw() {
+    const fileBox = fileLines.length ? fileLines.map(l => '<div style="font-family:var(--mono); font-size:.85rem; color:#c3e88d">' + l.replace(/</g, '&lt;') + '</div>').join('') : '<span style="color:var(--ink-faint); font-size:.85rem">(vuoto)</span>';
+    const readBox = readOut.length ? readOut.map(l => '<div style="font-family:var(--mono); font-size:.85rem; color:var(--accent)">&gt; ' + l.replace(/</g, '&lt;') + '</div>').join('') : '<span style="color:var(--ink-faint); font-size:.85rem">(premi «rileggi»)</span>';
+    view.innerHTML = `
+      <div style="display:flex; gap:1.2rem; justify-content:center; flex-wrap:wrap; align-items:flex-start">
+        <div style="min-width:180px">
+          <div style="color:var(--ink-soft); font-size:.78rem; margin-bottom:.3rem">📄 nomi.txt (sul disco)</div>
+          <div style="background:#14161c; padding:.6rem .8rem; border-radius:9px; min-height:60px; text-align:left">${fileBox}</div>
+        </div>
+        <div style="min-width:180px">
+          <div style="color:var(--ink-soft); font-size:.78rem; margin-bottom:.3rem">🖥 letto con ifstream</div>
+          <div style="border:1px dashed var(--rule); padding:.6rem .8rem; border-radius:9px; min-height:60px; text-align:left">${readBox}</div>
+        </div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

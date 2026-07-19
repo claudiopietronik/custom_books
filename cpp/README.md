@@ -25,7 +25,7 @@ Contenuto originale scritto ex novo.
 - [x] 12 — La memoria: stack, heap, RAII
 - [x] 13 — Template e la STL
 - [x] 14 — Gestione degli errori
-- [ ] 15 — File e I/O
+- [x] 15 — File e I/O
 - [ ] 16 — Un progetto completo
 
 ## La collana
