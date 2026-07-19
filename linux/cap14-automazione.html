@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Automazione e ambiente — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Automazione e ambiente</h1>
+    <p class="standfirst">
+      Sai scrivere script che ragionano e ripetono. Manca l'ultimo tocco per renderli davvero comodi e <b>autonomi</b>:
+      integrarli nel tuo ambiente e — la parte più magica — farli girare <b>da soli</b>, a orari prestabiliti, senza
+      che tu li debba lanciare. In questo capitolo vediamo come «personalizzare» il tuo terminale: le <b>variabili
+      d'ambiente</b> (impostazioni condivise, come il <code>PATH</code> che dice dove trovare i comandi), gli
+      <b>alias</b> (scorciatoie per comandi lunghi) e il file <code>.bashrc</code> che li rende permanenti. E poi il
+      pezzo forte: <b>cron</b>, lo schedulatore di Linux, che esegue i tuoi script automaticamente — ogni notte, ogni
+      ora, ogni lunedì — mentre tu dormi. È il coronamento dell'automazione: non solo «il computer fa il lavoro al
+      posto tuo», ma «lo fa <em>quando</em> deve, senza che tu ci pensi». In questo capitolo: variabili d'ambiente e
+      PATH (§14.1), alias e <code>.bashrc</code> (§14.2), pianificare con <b>cron</b> (§14.3), e rendere gli script
+      comodi (§14.4). <mark>È dove Linux inizia davvero a lavorare per te.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Variabili d'ambiente</b> e PATH (§14.1), <b>alias</b> e <code>.bashrc</code> (§14.2), pianificare con
+      <b>cron</b> (§14.3), rendere gli script <b>comodi</b> (§14.4). Nel laboratorio (§14.5) automatizzi un compito.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal fare al far fare</div>
+    <p style="margin-bottom:0">
+      Un backup che parte ogni notte, un rapporto generato ogni lunedì, una pulizia periodica: <mark>l'automazione
+      schedulata è ciò che fa lavorare il sistema mentre tu fai altro</mark>. È il cuore dell'amministrazione dei
+      server (dove cron fa girare manutenzioni e controlli in continuazione) e una comodità enorme anche sul PC. E gli
+      alias/`.bashrc` rendono il terminale «tuo», adattato al tuo modo di lavorare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Variabili d'ambiente e PATH</h2>
+
+  <p class="lead">
+    Le <b>variabili d'ambiente</b> sono variabili «globali» del sistema, disponibili a tutti i programmi. Contengono
+    impostazioni importanti — la più famosa è il <b>PATH</b>, che dice al sistema dove cercare i comandi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — le variabili d'ambiente</div>
+    <pre><span class="c"># mostra tutte le variabili d'ambiente</span>
+<span class="p">$</span> <span class="cmd">env</span>
+
+<span class="c"># mostra una variabile specifica (es. la tua home, o il PATH)</span>
+<span class="p">$</span> <span class="bi">echo</span> <span class="rs">$HOME</span>
+<span class="out">/home/anna</span>
+<span class="p">$</span> <span class="bi">echo</span> <span class="rs">$PATH</span>
+<span class="out">/usr/local/bin:/usr/bin:/bin:...</span>
+
+<span class="c"># imposta una variabile d'ambiente (per questa sessione)</span>
+<span class="p">$</span> <span class="cmd">export</span> <span class="ar">NOME_APP</span><span class="op">=</span><span class="st">"MioProgetto"</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Variabili d'ambiente e PATH <span class="tag">env · $HOME · $PATH · export</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>variabili come <span class="mono">$HOME</span>, <span class="mono">$USER</span></dt>
+        <dd>impostazioni utili disponibili ovunque: <code>$HOME</code> (la tua cartella), <code>$USER</code> (il tuo
+            nome). <mark>I programmi le leggono per adattarsi</mark> a te. Nei libri «Backend» hai visto i «segreti»
+            messi in variabili d'ambiente: stesso concetto.</dd>
+        <dt>il <b>PATH</b>: dove trovare i comandi</dt>
+        <dd>una lista di cartelle (separate da <code>:</code>) dove il sistema <b>cerca i comandi</b> che digiti.
+            <mark>Quando scrivi <code>ls</code>, il sistema lo cerca in queste cartelle</mark> e lo trova (in
+            <code>/bin</code>). Se un comando «non si trova», spesso è perché non è nel PATH.</dd>
+        <dt><span class="mono">export VAR=valore</span></dt>
+        <dd>imposta una variabile d'ambiente. <mark>Vale solo per la sessione corrente</mark> (e i programmi che avvii
+            da lì); per renderla permanente, va messa nel <code>.bashrc</code> (§14.2).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il <b>PATH</b> spiega un mistero: perché puoi digitare <code>ls</code> e funziona, ma per uno script tuo devi
+      scrivere <code>./script.sh</code>? <mark>Perché <code>ls</code> è in una cartella del PATH, il tuo script no</mark>
+      (la cartella corrente non è nel PATH, per sicurezza — Cap. 12). Se aggiungessi la cartella dei tuoi script al
+      PATH, potresti lanciarli col solo nome. Le variabili d'ambiente sono il «pannello di controllo» condiviso del tuo
+      ambiente Linux.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Alias e .bashrc</h2>
+
+  <p class="lead">
+    Un <b>alias</b> è una scorciatoia: un nome breve per un comando lungo che usi spesso. E il file <b>.bashrc</b> è
+    dove metti alias e impostazioni perché siano <b>permanenti</b>, caricati a ogni apertura del terminale.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — alias</div>
+    <pre><span class="c"># crea un alias: "ll" al posto del più lungo "ls -la"</span>
+<span class="p">$</span> <span class="cmd">alias</span> <span class="ar">ll</span><span class="op">=</span><span class="st">"ls -la"</span>
+
+<span class="c"># ora "ll" fa "ls -la"</span>
+<span class="p">$</span> <span class="cmd">ll</span>
+<span class="out">... elenco dettagliato ...</span>
+
+<span class="c"># un altro esempio comodo</span>
+<span class="p">$</span> <span class="cmd">alias</span> <span class="ar">..</span><span class="op">=</span><span class="st">"cd .."</span>          <span class="c"># ".." per salire di un livello</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Alias e il file .bashrc <span class="tag">scorciatoie permanenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">alias nome="comando"</span></dt>
+        <dd>crea una scorciatoia: da lì in poi, digitando <code>nome</code> esegui quel comando. <mark>Comodo per
+            comandi lunghi</mark> che ripeti (opzioni complesse, percorsi lunghi).</dd>
+        <dt>il file <span class="mono">~/.bashrc</span></dt>
+        <dd>un file nascosto nella tua home (nota il punto: file nascosto, Cap. 3) che bash <b>esegue a ogni apertura</b>
+            del terminale. <mark>Ciò che metti qui è permanente</mark>: alias, variabili (<code>export</code>),
+            personalizzazioni del prompt.</dd>
+        <dt>rendere permanente un alias</dt>
+        <dd>un alias creato al volo sparisce chiudendo il terminale. <mark>Per tenerlo, aggiungi la riga
+            <code>alias ll="ls -la"</code> al <code>.bashrc</code></mark> (con nano, Cap. 10), poi <code>source
+            ~/.bashrc</code> (o riapri il terminale) per applicarlo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il <code>.bashrc</code> è dove il terminale diventa «tuo»: <mark>ci accumuli le scorciatoie e le impostazioni che
+      rendono il tuo flusso di lavoro più veloce</mark>. Molti sviluppatori curano il proprio <code>.bashrc</code> con
+      decine di alias personali. È anche il posto dove aggiungere una cartella al PATH
+      (<code>export PATH="$HOME/scripts:$PATH"</code>) per lanciare i tuoi script col solo nome. Piccole comodità che,
+      moltiplicate per anni d'uso, fanno una grande differenza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Pianificare con cron</h2>
+
+  <p class="lead">
+    Ecco il pezzo forte: <b>cron</b> è il sistema che esegue comandi e script <b>automaticamente, a orari
+    prestabiliti</b>. Definisci «cosa» eseguire e «quando», e cron ci pensa — anche se il terminale è chiuso, anche
+    mentre dormi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — programmare un task con cron</div>
+    <pre><span class="c"># apri la tua tabella di cron (crontab) per modificarla</span>
+<span class="p">$</span> <span class="cmd">crontab</span> <span class="fl">-e</span>
+
+<span class="c"># dentro, aggiungi righe come questa (5 campi di tempo + il comando):</span>
+<span class="c"># ┌── minuto (0-59)</span>
+<span class="c"># │ ┌── ora (0-23)</span>
+<span class="c"># │ │ ┌── giorno del mese (1-31)</span>
+<span class="c"># │ │ │ ┌── mese (1-12)</span>
+<span class="c"># │ │ │ │ ┌── giorno settimana (0-6, 0=domenica)</span>
+<span class="c"># │ │ │ │ │</span>
+  <span class="nm">0</span> <span class="nm">3</span> <span class="nm">*</span> <span class="nm">*</span> <span class="nm">*</span>   <span class="ar">/home/anna/backup.sh</span>   <span class="c"># ogni giorno alle 3:00</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La sintassi di cron <span class="tag">min ora giorno mese settimana comando</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>i <b>5 campi di tempo</b></dt>
+        <dd>nell'ordine: <b>minuto, ora, giorno del mese, mese, giorno della settimana</b>. Poi il comando da eseguire.
+            <mark>Insieme definiscono <b>quando</b></mark> eseguire.</dd>
+        <dt>l'asterisco <span class="mono">*</span> = «ogni»</dt>
+        <dd>un <code>*</code> in un campo significa «ogni valore». <code>0 3 * * *</code> = «al minuto 0 dell'ora 3,
+            ogni giorno del mese, ogni mese, ogni giorno della settimana» = <mark>ogni giorno alle 3:00</mark>.</dd>
+        <dt>esempi comuni</dt>
+        <dd><code>0 * * * *</code> = ogni ora (al minuto 0); <code>*/15 * * * *</code> = ogni 15 minuti;
+            <code>0 9 * * 1</code> = ogni lunedì alle 9:00; <code>30 2 1 * *</code> = il 1° di ogni mese alle 2:30.
+            <mark>Combinazioni per ogni esigenza.</mark></dd>
+        <dt><span class="mono">crontab -e</span> · <span class="mono">crontab -l</span></dt>
+        <dd><code>-e</code> modifica la tabella (si apre nell'editor), <code>-l</code> la elenca. <mark>Ogni riga è un
+            task programmato.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      cron è ciò che rende un server «vivo» anche quando nessuno lo tocca: manutenzioni, backup, controlli, rapporti —
+      tutto girato automaticamente all'orario giusto. <mark>La sintassi dei 5 campi confonde all'inizio</mark>, ma con
+      un po' di pratica (e strumenti online che la traducono) diventa naturale. Prova il costruttore nel widget qui
+      sotto per vedere le espressioni cron tradotte in italiano.
+    </div>
+  </div>
+
+  <div class="widget" id="w-cron">
+    <div class="w-head">
+      <span>Costruttore di espressioni cron</span>
+      <span class="hint">imposta quando, leggi cosa significa</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:480px; margin:0 auto">
+        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:.4rem; text-align:center; font-size:.72rem; color:var(--ink-soft); margin-bottom:.3rem">
+          <span>minuto</span><span>ora</span><span>giorno</span><span>mese</span><span>sett.</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:.4rem">
+          <input type="text" id="cr-min" value="0" class="cr-f">
+          <input type="text" id="cr-ora" value="3" class="cr-f">
+          <input type="text" id="cr-gio" value="*" class="cr-f">
+          <input type="text" id="cr-mes" value="*" class="cr-f">
+          <input type="text" id="cr-set" value="*" class="cr-f">
+        </div>
+        <div style="text-align:center; margin-top:.8rem">
+          <div style="font-family:var(--mono); font-size:1.1rem; color:var(--accent)" id="cr-expr"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn ghost" data-preset="0 3 * * *">ogni giorno 3:00</button>
+      <button class="btn ghost" data-preset="0 * * * *">ogni ora</button>
+      <button class="btn ghost" data-preset="0 9 * * 1">lunedì 9:00</button>
+      <button class="btn ghost" data-preset="*/15 * * * *">ogni 15 min</button>
+    </div>
+    <div class="w-readout" id="cr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Rendere gli script comodi</h2>
+
+  <p class="lead">
+    Uniamo i pezzi: come far sì che i tuoi script siano facili da lanciare, ovunque, e girino da soli quando serve.
+    Poche accortezze che fanno la differenza tra uno script «scritto» e uno «integrato».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Da script a strumento del sistema <span class="tag">le buone abitudini</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>usa <b>percorsi assoluti</b> negli script schedulati</dt>
+        <dd>quando cron esegue uno script, non è «nella tua cartella»: <mark>usa percorsi assoluti</mark>
+            (<code>/home/anna/dati</code>, non <code>dati</code>) per i file, o lo script non li troverà. Errore
+            classico degli script cron.</dd>
+        <dt>una <b>cartella per i tuoi script</b></dt>
+        <dd>raccogli i tuoi script in una cartella (es. <code>~/scripts</code>) e, aggiungendola al PATH (§14.1), li
+            lanci col solo nome, da ovunque. <mark>Ordine e comodità.</mark></dd>
+        <dt><b>log</b> dei task automatici</dt>
+        <dd>uno script schedulato gira «invisibile»: fai in modo che scriva cosa fa in un file di log (con
+            <code>&gt;&gt;</code>, Cap. 9), così puoi controllare se ha funzionato. <mark>Un task senza log è cieco.</mark></dd>
+        <dt><b>alias</b> per i comandi frequenti</dt>
+        <dd>metti nel <code>.bashrc</code> gli alias per le operazioni che ripeti: rende il lavoro quotidiano più
+            rapido.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il filo conduttore: <mark>uno script è utile quanto è <b>comodo da usare</b> e <b>affidabile quando gira da
+      solo</b></mark>. Percorsi assoluti (per cron), una cartella ordinata nel PATH, log per controllare, alias per
+      velocizzare. Queste piccole cure trasformano uno script «di prova» in uno strumento su cui puoi contare — proprio
+      ciò che serve per il progetto finale del prossimo capitolo: un backup automatico che gira ogni notte.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: automatizzare un compito</h2>
+
+  <p class="lead">
+    Mettiamo insieme alias, .bashrc e cron per automatizzare un piccolo compito reale.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro di automazione</div>
+    <pre><span class="c"># 1) crea un alias comodo e rendilo permanente nel .bashrc</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">'alias ll="ls -la"'</span> &gt;&gt; <span class="ar">~/.bashrc</span>
+<span class="p">$</span> <span class="cmd">source</span> <span class="ar">~/.bashrc</span>          <span class="c"># applica subito (senza riaprire)</span>
+<span class="p">$</span> <span class="cmd">ll</span>                       <span class="c"># ora funziona!</span>
+
+<span class="c"># 2) crea uno script che salva la data in un log</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">~/registra.sh</span>
+<span class="c">#   dentro:  #!/bin/bash</span>
+<span class="c">#            echo "Eseguito il $(date)" >> /home/anna/registro.log</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">~/registra.sh</span>
+
+<span class="c"># 3) programmalo con cron: ogni giorno alle 8:00</span>
+<span class="p">$</span> <span class="cmd">crontab</span> <span class="fl">-e</span>
+<span class="c">#   aggiungi la riga:</span>
+  <span class="nm">0</span> <span class="nm">8</span> <span class="nm">*</span> <span class="nm">*</span> <span class="nm">*</span>   <span class="ar">/home/anna/registra.sh</span>
+
+<span class="c"># 4) verifica che il task sia registrato</span>
+<span class="p">$</span> <span class="cmd">crontab</span> <span class="fl">-l</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai automatizzato</div>
+    <p style="margin-bottom:0">
+      Hai reso un alias <b>permanente</b> (nel <code>.bashrc</code>), scritto uno script che <b>registra</b> un log
+      (con percorso <b>assoluto</b>, come consigliato per cron), e lo hai <b>schedulato</b> perché giri ogni giorno
+      alle 8:00 — <mark>da solo, senza che tu debba fare nulla</mark>. Da domani, ogni mattina, il tuo
+      <code>registro.log</code> avrà una nuova riga, aggiunta dal computer al posto tuo. Questo è il senso profondo
+      dell'automazione: definisci il lavoro una volta, e il sistema lo esegue per sempre, all'orario giusto. Con questa
+      competenza sei pronto per il gran finale: nel prossimo capitolo, prima uno sguardo ai comandi di <b>sistema e
+      rete</b>, poi il <b>progetto completo</b> — uno script di backup automatico che unisce tutto ciò che hai
+      imparato.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li><b>Variabili d'ambiente</b> (impostazioni globali): <code>$HOME</code>, <code>$PATH</code> (dove il sistema
+          cerca i comandi). <code>export</code> per impostarle (§14.1).</li>
+      <li><b>Alias</b>: scorciatoie (<code>alias ll="ls -la"</code>). Il file <b>.bashrc</b> le rende permanenti (viene
+          eseguito a ogni terminale) (§14.2).</li>
+      <li><b>cron</b> esegue comandi a orari prestabiliti: 5 campi (min ora giorno mese settimana) + comando.
+          <code>*</code> = «ogni». <code>crontab -e</code> per modificare (§14.3).</li>
+      <li>Script comodi: <b>percorsi assoluti</b> (per cron), una cartella nel PATH, <b>log</b> per controllare, alias
+          per velocizzare (§14.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    I tuoi script ora girano da soli, quando devono: l'automazione è completa. Prima di chiudere con il progetto
+    finale, uno sguardo agli strumenti per <b>ispezionare il sistema e la rete</b> dal terminale — quanto spazio resta
+    sul disco, se la rete funziona, come collegarsi a un server remoto. Nel <strong>Capitolo 15</strong> vediamo
+    <code>df</code>, <code>du</code>, <code>ping</code>, <code>ssh</code> e cenni ai servizi con
+    <code>systemctl</code>: gli strumenti diagnostici che completano la tua cassetta degli attrezzi Linux.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Cos'è il <code>PATH</code>? Perché puoi lanciare <code>ls</code> col solo nome, ma per un tuo script devi
+      scrivere <code>./script.sh</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Crei un alias con <code>alias gs="git status"</code>, ma dopo aver chiuso e riaperto il terminale non funziona
+      più. Perché? Come lo rendi permanente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Cosa significa l'espressione cron <code>0 3 * * *</code>? E <code>0 9 * * 1</code>? (Ricorda l'ordine: minuto,
+      ora, giorno, mese, giorno della settimana.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      Perché in uno script eseguito da cron è importante usare <b>percorsi assoluti</b> per i file, invece di percorsi
+      relativi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Il <code>PATH</code> è una variabile d'ambiente che contiene la <b>lista di cartelle</b> dove il sistema cerca i
+      comandi che digiti. Puoi lanciare <code>ls</code> col solo nome perché <code>ls</code> si trova in una cartella
+      del PATH (es. <code>/bin</code>), quindi il sistema lo trova. Un tuo script, invece, sta in una cartella <b>non
+      nel PATH</b> (la cartella corrente non è inclusa, per sicurezza): perciò devi indicargli esplicitamente il
+      percorso con <code>./script.sh</code> («in questa cartella»).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Non funziona più perché un alias creato al volo con <code>alias</code> vale <b>solo per la sessione corrente</b>
+      del terminale: chiudendolo, sparisce. Per renderlo <b>permanente</b>, aggiungi la riga <code>alias gs="git
+      status"</code> al file <code>~/.bashrc</code> (che bash esegue a ogni apertura del terminale); poi
+      <code>source ~/.bashrc</code> o riapri il terminale per applicarlo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      <code>0 3 * * *</code> = «al minuto 0 dell'ora 3, ogni giorno, ogni mese, ogni giorno della settimana» = <b>ogni
+      giorno alle 3:00</b>. <code>0 9 * * 1</code> = «al minuto 0 dell'ora 9, ogni giorno del mese, ogni mese, ma solo
+      il giorno 1 della settimana (lunedì)» = <b>ogni lunedì alle 9:00</b>. Gli <code>*</code> significano «ogni», e il
+      quinto campo (giorno settimana) usa 0=domenica … 6=sabato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      Perché cron esegue lo script <b>non</b> «dalla tua cartella»: la sua directory di lavoro non è quella che ti
+      aspetti. Un percorso <b>relativo</b> (es. <code>dati.txt</code>) verrebbe cercato nel posto sbagliato e lo script
+      non troverebbe il file (o lo creerebbe altrove). Con un percorso <b>assoluto</b> (es.
+      <code>/home/anna/dati.txt</code>), invece, il file è individuato in modo univoco, indipendentemente da dove cron
+      esegue lo script. È l'errore più comune degli script schedulati.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<style>#w-cron .cr-f{padding:.4rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono); text-align:center; font-size:.95rem; width:100%; box-sizing:border-box}</style>
+<script>
+/* ============================================================================
+   WIDGET §14.3 — costruttore cron: 5 campi -> espressione + traduzione in italiano
+   ========================================================================= */
+(function () {
+  const fields = ['cr-min', 'cr-ora', 'cr-gio', 'cr-mes', 'cr-set'];
+  const els = fields.map(function (id) { return document.getElementById(id); });
+  if (!els[0]) return;
+  const exprEl = document.getElementById('cr-expr');
+  const out = document.getElementById('cr-out');
+  const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function traduci(min, ora, gio, mes, set) {
+    let quando = '';
+    // frequenza base
+    if (min.indexOf('*/') === 0) return 'ogni ' + min.slice(2) + ' minuti';
+    if (min === '*' && ora === '*') return 'ogni minuto';
+    if (ora === '*') return 'ogni ora, al minuto ' + min;
+    // orario fisso
+    const hh = (ora.length < 2 ? '0' : '') + ora;
+    const mm = (min.length < 2 ? '0' : '') + min;
+    quando = 'alle ' + hh + ':' + mm;
+    // giorno della settimana
+    if (set !== '*' && /^[0-6]$/.test(set)) return 'ogni ' + GIORNI[+set] + ' ' + quando;
+    // giorno del mese
+    if (gio !== '*') return 'il giorno ' + gio + ' di ogni mese ' + quando;
+    return 'ogni giorno ' + quando;
+  }
+
+  function render() {
+    const v = els.map(function (e) { return (e.value || '*').trim() || '*'; });
+    exprEl.textContent = v.join(' ');
+    const t = traduci(v[0], v[1], v[2], v[3], v[4]);
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">L\'espressione <code>' + esc(v.join(' ')) + '</code> significa: <b style="color:var(--accent)">' + esc(t) + '</b>.<br>' +
+      'I 5 campi sono <b>minuto ora giorno mese giorno-settimana</b>, poi il comando. <code>*</code> = «ogni». Prova i preset o cambia i campi.</div>';
+  }
+  els.forEach(function (e) { e.addEventListener('input', render); });
+  document.querySelectorAll('#w-cron .btn[data-preset]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const p = b.getAttribute('data-preset').split(' ');
+      els.forEach(function (e, i) { e.value = p[i]; });
+      render();
+    });
+  });
+  render();
+})();
+</script>
+</body>
+</html>

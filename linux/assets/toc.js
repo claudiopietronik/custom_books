@@ -209,7 +209,7 @@ const TOC = [
     n: 14,
     titolo: "Automazione e ambiente",
     file: "cap14-automazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Variabili d'ambiente e PATH" },
       { id: "s14-2", n: "14.2", t: "Alias e .bashrc" },
