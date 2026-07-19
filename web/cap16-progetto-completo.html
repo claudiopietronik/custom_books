@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Un progetto completo — Il Web</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Progetto finale</div>
+    <h1>Un progetto completo</h1>
+    <p class="standfirst">
+      Ci siamo. In quindici capitoli hai raccolto tutti i pezzi — HTML, CSS, JavaScript, DOM, eventi, dati — e ora li
+      montiamo in <b>un'unica applicazione vera</b>, costruita da zero davanti ai tuoi occhi: una <b>lista di cose da
+      fare</b> (una «to-do list») che aggiungi, spunti, cancelli, e che <b>ricorda i tuoi dati</b> anche dopo aver
+      chiuso il browser. È il progetto che chiunque abbia imparato lo sviluppo web ha costruito almeno una volta,
+      perché racchiude in piccolo tutto ciò che serve: struttura, stile, interazione e <b>persistenza</b>. Lo
+      costruiamo a strati — prima l'HTML (le ossa), poi il CSS (l'aspetto), poi il JS (la vita), infine il salvataggio
+      — e lo vedi <b>funzionare dal vivo</b> qui nella pagina. <mark>Alla fine avrai un'app completa, che capisci riga
+      per riga, e le basi per costruire la prossima da solo.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'idea (§16.1), la <b>struttura HTML</b> (§16.2), lo <b>stile CSS</b> (§16.3), il <b>comportamento JS</b>
+      (§16.4), il <b>salvataggio</b> con <code>localStorage</code> (§16.5), e <b>dove andare da qui</b> per continuare
+      (§16.6). L'app completa è qui, giocabile, in §16.4.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal sapere al saper fare</div>
+    <p style="margin-bottom:0">
+      Conoscere i mattoni non basta: il salto è <b>combinarli</b> in qualcosa che funziona. Questo progetto ti fa
+      vedere come i pezzi si incastrano in un'app reale, e ti lascia uno <b>scheletro riutilizzabile</b>: quasi ogni
+      piccola app (una lista della spesa, un blocco note, un tracker) ha questa stessa forma. <mark>Da qui non parti
+      più da zero: parti da un modello che hai capito.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>L'idea: una lista di cose da fare</h2>
+
+  <p class="lead">
+    Prima di scrivere codice, definiamo <b>cosa</b> deve fare l'app. Un buon progetto parte sempre da una lista
+    chiara di funzionalità — piccola, ma completa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📋</span> Le funzionalità (piccole ma complete)</div>
+    <p style="margin-bottom:.5rem">La nostra to-do list deve permettere di:</p>
+    <ul style="margin-bottom:0">
+      <li><b>Aggiungere</b> una cosa da fare, scrivendola e premendo un pulsante (o Invio);</li>
+      <li><b>Spuntare</b> una voce come completata (con un clic, che la barra);</li>
+      <li><b>Cancellare</b> una voce che non serve più;</li>
+      <li><b>Ricordare</b> tutto: se chiudi e riapri la pagina, le tue voci sono ancora lì.</li>
+    </ul>
+    <p style="margin:.6rem 0 0">
+      Riconosci gli strumenti dietro ognuna? Aggiungere = <code>createElement</code>+<code>appendChild</code> (Cap.
+      13) su un <b>evento</b> click (Cap. 14); spuntare/cancellare = <code>classList</code>/<code>remove</code> su
+      altri eventi; ricordare = <b>localStorage</b> (lo vediamo in §16.5). <mark>Nessuno strumento nuovo: solo
+      combinazione.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>La struttura HTML</h2>
+
+  <p class="lead">
+    Partiamo dalle <b>ossa</b>: il minimo HTML necessario. Un campo per scrivere, un pulsante per aggiungere, e una
+    lista vuota che riempiremo con JavaScript.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">index.html (il corpo)</div>
+    <pre><span class="tg">&lt;body&gt;</span>
+    <span class="tg">&lt;h1&gt;</span>Le mie cose da fare<span class="tg">&lt;/h1&gt;</span>
+
+    <span class="tg">&lt;div</span> <span class="at">class</span>=<span class="vl">"aggiungi"</span><span class="tg">&gt;</span>
+        <span class="tg">&lt;input</span> <span class="at">type</span>=<span class="vl">"text"</span> <span class="at">id</span>=<span class="vl">"campo"</span> <span class="at">placeholder</span>=<span class="vl">"Cosa devi fare?"</span><span class="tg">&gt;</span>
+        <span class="tg">&lt;button</span> <span class="at">id</span>=<span class="vl">"aggiungi"</span><span class="tg">&gt;</span>Aggiungi<span class="tg">&lt;/button&gt;</span>
+    <span class="tg">&lt;/div&gt;</span>
+
+    <span class="tg">&lt;ul</span> <span class="at">id</span>=<span class="vl">"lista"</span><span class="tg">&gt;&lt;/ul&gt;</span>   <span class="cm">&lt;!-- vuota: la riempie il JS --&gt;</span>
+
+    <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="vl">"app.js"</span><span class="tg">&gt;&lt;/script&gt;</span>   <span class="cm">&lt;!-- in fondo! --&gt;</span>
+<span class="tg">&lt;/body&gt;</span></pre>
+  </div>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">💡</span> Gli id sono i «ganci» per JavaScript</div>
+    <p style="margin-bottom:0">
+      Nota i tre <code>id</code>: <code>campo</code>, <code>aggiungi</code>, <code>lista</code>. Sono i punti a cui
+      JavaScript «si aggancerà» col <code>querySelector</code>. La <code>&lt;ul&gt;</code> è <b>volutamente
+      vuota</b>: non scriviamo le voci a mano nell'HTML, le <b>genera il JS</b> a partire dai dati. E lo
+      <code>&lt;script&gt;</code> è <b>in fondo</b>, così quando parte, campo/pulsante/lista esistono già (ricordi
+      l'errore «null» del Cap. 12?).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Lo stile CSS</h2>
+
+  <p class="lead">
+    Le ossa ci sono; diamogli un aspetto pulito. Poche regole, tutte tecniche che conosci dai Cap. 6–10: centratura,
+    box model, Flexbox, una classe per le voci «fatte».
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">style.css (estratto)</div>
+    <pre><span class="sel">body</span> { <span class="prop">font-family</span>: <span class="vl">system-ui, sans-serif</span>; <span class="prop">max-width</span>: <span class="vl">460px</span>;
+       <span class="prop">margin</span>: <span class="vl">2rem auto</span>; <span class="prop">padding</span>: <span class="vl">0 1rem</span>; }
+
+<span class="sel">.aggiungi</span> { <span class="prop">display</span>: <span class="vl">flex</span>; <span class="prop">gap</span>: <span class="vl">.5rem</span>; }        <span class="cm">/* campo + bottone affiancati */</span>
+<span class="sel">.aggiungi input</span> { <span class="prop">flex</span>: <span class="vl">1</span>; <span class="prop">padding</span>: <span class="vl">.6rem</span>; }         <span class="cm">/* il campo si allarga */</span>
+
+<span class="sel">li</span> { <span class="prop">display</span>: <span class="vl">flex</span>; <span class="prop">justify-content</span>: <span class="vl">space-between</span>;
+     <span class="prop">padding</span>: <span class="vl">.6rem</span>; <span class="prop">border-bottom</span>: <span class="vl">1px solid #eee</span>; <span class="prop">cursor</span>: <span class="vl">pointer</span>; }
+
+<span class="sel">li.fatto</span> { <span class="prop">text-decoration</span>: <span class="vl">line-through</span>; <span class="prop">color</span>: <span class="vl">#999</span>; }  <span class="cm">/* voce completata */</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🎨</span> Il trucco della classe <code>.fatto</code></div>
+    <p style="margin-bottom:0">
+      La riga chiave è <code>li.fatto</code>: definisce l'aspetto di una voce <b>completata</b> (barrata e grigia). Il
+      CSS descrive <b>com'è fatta</b> una voce completata; sarà poi il JavaScript, con
+      <code>classList.toggle("fatto")</code> al clic, a <b>decidere quando</b> una voce lo diventa. <mark>È di nuovo
+      la divisione dei ruoli</mark>: CSS l'aspetto, JS il momento. Esattamente la lezione del Cap. 13.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Il comportamento JS</h2>
+
+  <p class="lead">
+    Ora la <b>vita</b>. Il JavaScript aggancia gli elementi, ascolta i click, e crea/spunta/rimuove le voci. Prova
+    <b>subito</b> l'app completa qui sotto — funziona davvero, e <b>ricorda i dati</b> (§16.5) — poi leggi il codice
+    che la anima.
+  </p>
+
+  <div class="widget" id="w-todo">
+    <div class="w-head">
+      <span>La tua to-do list — funzionante e persistente</span>
+      <span class="hint">clic sul testo = fatto · ✕ = elimina</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div style="max-width:420px; margin:0 auto">
+        <div style="display:flex; gap:.5rem; margin-bottom:.9rem">
+          <input type="text" id="wt-campo" placeholder="Cosa devi fare?" autocomplete="off"
+                 style="flex:1; padding:.6rem .7rem; border:2px solid var(--ink-soft); border-radius:8px; font-size:.95rem; background:var(--paper); color:var(--ink)">
+          <button class="btn" id="wt-add">Aggiungi</button>
+        </div>
+        <ul id="wt-lista" style="list-style:none; padding:0; margin:0; text-align:left"></ul>
+        <div id="wt-vuoto" style="color:var(--ink-soft); font-size:.9rem; text-align:center; padding:1rem">Niente da fare! Aggiungi qualcosa. ✨</div>
+        <div id="wt-conta" style="margin-top:.7rem; font-size:.82rem; color:var(--ink-soft); text-align:center"></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn ghost" data-seed="Finire il libro «Il Web»">esempio</button>
+      <button class="btn ghost" id="wt-clear">svuota tutto</button>
+    </div>
+    <div class="w-readout" id="wt-out"></div>
+  </div>
+
+  <p style="margin-top:1.4rem">Ecco il cuore del codice — riconoscerai <b>ogni</b> pezzo dai capitoli precedenti:</p>
+
+  <div class="term" style="margin:1rem auto">
+    <div class="t-head file">app.js (struttura essenziale)</div>
+    <pre><span class="cm">// 1) aggancia gli elementi (Cap. 12)</span>
+<span class="kw">const</span> <span class="nm">campo</span>  <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#campo"</span>);
+<span class="kw">const</span> <span class="nm">lista</span>  <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#lista"</span>);
+
+<span class="cm">// 2) funzione che crea UNA voce nel DOM (Cap. 13)</span>
+<span class="kw">function</span> <span class="fn">creaVoce</span>(<span class="nm">testo</span>) {
+    <span class="kw">const</span> <span class="nm">li</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">createElement</span>(<span class="st">"li"</span>);
+    <span class="nm">li</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">testo</span>;
+
+    <span class="cm">// clic sul testo → segna "fatto" (Cap. 13 + 14)</span>
+    <span class="nm">li</span>.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, () <span class="op">=&gt;</span> {
+        <span class="nm">li</span>.<span class="nm">classList</span>.<span class="fn">toggle</span>(<span class="st">"fatto"</span>);
+        <span class="fn">salva</span>();
+    });
+
+    <span class="cm">// bottoncino ✕ → rimuove la voce</span>
+    <span class="kw">const</span> <span class="nm">x</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">createElement</span>(<span class="st">"button"</span>);
+    <span class="nm">x</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="st">"✕"</span>;
+    <span class="nm">x</span>.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, (<span class="nm">e</span>) <span class="op">=&gt;</span> {
+        <span class="nm">e</span>.<span class="fn">stopPropagation</span>();   <span class="cm">// non far scattare anche il "fatto"</span>
+        <span class="nm">li</span>.<span class="fn">remove</span>();
+        <span class="fn">salva</span>();
+    });
+    <span class="nm">li</span>.<span class="fn">appendChild</span>(<span class="nm">x</span>);
+    <span class="nm">lista</span>.<span class="fn">appendChild</span>(<span class="nm">li</span>);   <span class="cm">// attacca la voce alla pagina</span>
+}
+
+<span class="cm">// 3) aggiungere: al click sul bottone (Cap. 14)</span>
+<span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#aggiungi"</span>).<span class="fn">addEventListener</span>(<span class="st">"click"</span>, () <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (<span class="nm">campo</span>.<span class="nm">value</span>.<span class="fn">trim</span>()) {
+        <span class="fn">creaVoce</span>(<span class="nm">campo</span>.<span class="nm">value</span>.<span class="fn">trim</span>());
+        <span class="nm">campo</span>.<span class="nm">value</span> <span class="op">=</span> <span class="st">""</span>;   <span class="cm">// svuota il campo</span>
+        <span class="fn">salva</span>();
+    }
+});</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔍</span> Una novità utile: <code>e.stopPropagation()</code></div>
+    <p style="margin-bottom:0">
+      L'unico pezzo nuovo. Il pulsante ✕ è <b>dentro</b> il <code>&lt;li&gt;</code>: senza precauzioni, cliccando la ✕
+      scatterebbe <b>anche</b> il click del <code>li</code> (che segna «fatto») — l'evento «risale» dal figlio al
+      genitore. <code>e.stopPropagation()</code> <mark>ferma questa risalita</mark>, così la ✕ fa <b>solo</b> il suo
+      lavoro (rimuovere). È un dettaglio che incontrerai spesso quando annidi elementi cliccabili.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Salvare con localStorage</h2>
+
+  <p class="lead">
+    Manca l'ultima magia: la <b>memoria</b>. Finora, ricaricando la pagina, la lista si svuoterebbe. Con
+    <code>localStorage</code> — un piccolo archivio che il browser conserva sul dispositivo — le voci
+    <b>sopravvivono</b> alla chiusura.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">salvare e ricaricare</div>
+    <pre><span class="cm">// SALVARE: raccogli le voci e mettile in localStorage (come testo JSON)</span>
+<span class="kw">function</span> <span class="fn">salva</span>() {
+    <span class="kw">const</span> <span class="nm">voci</span> <span class="op">=</span> [];
+    <span class="kw">for</span> (<span class="kw">const</span> <span class="nm">li</span> <span class="kw">of</span> <span class="nm">lista</span>.<span class="nm">children</span>) {
+        <span class="nm">voci</span>.<span class="fn">push</span>({
+            testo: <span class="nm">li</span>.<span class="fn">firstChild</span>.<span class="nm">textContent</span>,
+            fatto: <span class="nm">li</span>.<span class="nm">classList</span>.<span class="fn">contains</span>(<span class="st">"fatto"</span>)
+        });
+    }
+    <span class="bi">localStorage</span>.<span class="fn">setItem</span>(<span class="st">"cose"</span>, <span class="bi">JSON</span>.<span class="fn">stringify</span>(<span class="nm">voci</span>));
+}
+
+<span class="cm">// RICARICARE: all'avvio, leggi da localStorage e ricrea le voci</span>
+<span class="kw">function</span> <span class="fn">carica</span>() {
+    <span class="kw">const</span> <span class="nm">salvato</span> <span class="op">=</span> <span class="bi">localStorage</span>.<span class="fn">getItem</span>(<span class="st">"cose"</span>);
+    <span class="kw">if</span> (<span class="op">!</span><span class="nm">salvato</span>) <span class="kw">return</span>;
+    <span class="kw">for</span> (<span class="kw">const</span> <span class="nm">v</span> <span class="kw">of</span> <span class="bi">JSON</span>.<span class="fn">parse</span>(<span class="nm">salvato</span>)) {
+        <span class="fn">creaVoce</span>(<span class="nm">v</span>.<span class="nm">testo</span>, <span class="nm">v</span>.<span class="nm">fatto</span>);
+    }
+}
+<span class="fn">carica</span>();   <span class="cm">// esegui all'avvio della pagina</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">localStorage <span class="tag">setItem · getItem · JSON.stringify/parse</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">localStorage.setItem("chiave", testo)</span></dt>
+        <dd>salva un testo sotto un nome («chiave»). <mark>Resta sul dispositivo anche dopo aver chiuso il
+            browser.</mark> Salva <b>solo stringhe</b>, per questo si usa JSON.</dd>
+        <dt><span class="mono">localStorage.getItem("chiave")</span></dt>
+        <dd>rilegge ciò che avevi salvato (o <code>null</code> se non c'è nulla).</dd>
+        <dt><span class="mono">JSON.stringify(oggetto)</span> / <span class="mono">JSON.parse(testo)</span></dt>
+        <dd>la coppia di traduttori: <code>stringify</code> trasforma un array/oggetto JS in <b>testo</b> JSON (per
+            salvarlo); <code>parse</code> fa l'inverso, dal testo all'oggetto (per rileggerlo). <mark>Stesso JSON del
+            Cap. 15</mark>, qui usato per la memoria locale invece che per la rete.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      È <b>esattamente</b> il meccanismo del segnalibro 🔖 di questi libri, e della funzione «riprendi la lettura»
+      della home. Chiamando <code>salva()</code> dopo <b>ogni</b> modifica (aggiungi, spunta, rimuovi) e
+      <code>carica()</code> all'avvio, l'app ha la memoria. <mark>La to-do list qui sopra lo fa davvero</mark>: prova
+      ad aggiungere voci e ricaricare la pagina — sono ancora lì.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🏆</span> Ce l'hai fatta: un'app web completa</div>
+    <p style="margin-bottom:0">
+      Fermati un attimo a guardare cosa hai costruito: un'applicazione con <b>struttura</b> (HTML), <b>stile</b>
+      (CSS), <b>interazione</b> (eventi), <b>manipolazione dinamica</b> del contenuto (DOM) e <b>persistenza</b>
+      (localStorage). <mark>Sono gli stessi ingredienti — solo in scala maggiore — di qualsiasi applicazione web che
+      userai o costruirai.</mark> Non hai imparato «dei trucchi»: hai imparato l'architettura del web lato browser.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai le fondamenta solide. Ecco le direzioni naturali per crescere — non serve tutto subito, ma sapere dove
+    guardare ti dà la mappa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La mappa dei prossimi passi <span class="tag">dal front-end in poi</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>Approfondire il <b>front-end</b></dt>
+        <dd>CSS più avanzato (Grid, animazioni, variabili CSS), JavaScript più a fondo (array methods come
+            <code>map</code>/<code>filter</code>, moduli), e la <b>accessibilità</b>. Poi i <b>framework</b> (React,
+            Vue): strumenti per costruire interfacce grandi senza ripeterti — ma <mark>si basano tutti su ciò che hai
+            imparato qui</mark>. Nessun framework ha senso senza queste basi.</dd>
+        <dt>Andare verso il <b>back-end</b></dt>
+        <dd>finora sei stato nel <b>browser</b> (il «front-end»). L'altra metà del web è il <b>server</b>: dove
+            vivono i dati veri, i database, la logica, l'autenticazione. È ciò che sta dietro le <b>API</b> che hai
+            imparato a chiamare col <code>fetch</code>. <mark>È il naturale capitolo successivo del tuo percorso</mark>
+            — e in questa stessa collana c'è un libro dedicato al <b>Backend Development</b> (server, database,
+            FastAPI, Docker…).</dd>
+        <dt><b>Costruire</b>, costruire, costruire</dt>
+        <dd>il consiglio più importante: <b>fai progetti tuoi</b>. Una lista della spesa, un timer, una galleria di
+            foto, un piccolo gioco. <mark>Si impara a programmare programmando</mark>, sbagliando e correggendo —
+            proprio con la console (Cap. 11) come alleata.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Hai attraversato i tre linguaggi del web e costruito un'app vera. Da qui, ogni sito che visiti non è più
+      magia: è HTML che riconosci, CSS che sapresti scrivere, JavaScript che capisci. <b>Il web ha smesso di essere
+      una scatola nera.</b> Buon codice. 🌐
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Nell'HTML del progetto, perché la <code>&lt;ul id="lista"&gt;</code> è lasciata <b>vuota</b> invece di scriverci
+      dentro le voci a mano?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve <code>e.stopPropagation()</code> nel gestore del pulsante ✕? Cosa succederebbe senza?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      Perché per salvare in <code>localStorage</code> usiamo <code>JSON.stringify</code>, e per rileggere
+      <code>JSON.parse</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      (Progetto) Aggiungi all'app un contatore che mostra «<b>N cose ancora da fare</b>» (le voci <b>non</b> spuntate).
+      Quali pezzi useresti? (Suggerimento: <code>querySelectorAll</code> e la classe <code>fatto</code>.)
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Perché le voci non sono fisse: cambiano di continuo (l'utente le aggiunge e rimuove) e devono essere
+      <b>ricaricate</b> da <code>localStorage</code> a ogni avvio. È JavaScript a <b>generarle dinamicamente</b> con
+      <code>creaVoce</code>. Scriverle a mano nell'HTML sarebbe inutile (sparirebbero al primo salvataggio) e
+      sbagliato: i dati stanno nell'archivio, non nel markup. L'HTML fornisce solo il <b>contenitore</b> vuoto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      La ✕ è <b>dentro</b> il <code>&lt;li&gt;</code>, che a sua volta ha un gestore di click (segna «fatto»). Gli
+      eventi «risalgono» dal figlio al genitore, quindi un clic sulla ✕ farebbe scattare <b>anche</b> il click del
+      <code>li</code>: la voce verrebbe rimossa <em>e</em> nel frattempo segnata «fatto» — comportamento confuso.
+      <code>e.stopPropagation()</code> <b>ferma la risalita</b>, isolando l'azione della ✕ (solo rimozione).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>localStorage</code> sa memorizzare <b>solo testo</b> (stringhe), mentre le nostre voci sono un
+      <b>array di oggetti</b>. <code>JSON.stringify</code> converte quell'array in una stringa JSON (salvabile);
+      <code>JSON.parse</code> fa il percorso inverso quando rileggiamo, ricostruendo l'array di oggetti su cui poter
+      ciclare. Sono il ponte tra i dati «vivi» in memoria e la loro forma «testuale» salvabile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="kw">function</span> <span class="fn">aggiornaContatore</span>() {
+    <span class="kw">const</span> <span class="nm">tutte</span>  <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelectorAll</span>(<span class="st">"#lista li"</span>).<span class="nm">length</span>;
+    <span class="kw">const</span> <span class="nm">fatte</span>  <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelectorAll</span>(<span class="st">"#lista li.fatto"</span>).<span class="nm">length</span>;
+    <span class="kw">const</span> <span class="nm">restano</span> <span class="op">=</span> <span class="nm">tutte</span> <span class="op">-</span> <span class="nm">fatte</span>;
+    <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#contatore"</span>).<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">restano</span> <span class="op">+</span> <span class="st">" cose ancora da fare"</span>;
+}</pre>
+    </div>
+    <p style="margin:.5rem 0 0">
+      Chiami <code>aggiornaContatore()</code> dopo ogni modifica (dentro <code>salva()</code>, per esempio). Usa
+      <code>querySelectorAll</code> per contare tutte le voci e quelle <code>.fatto</code>, e la differenza sono
+      quelle rimaste. È proprio ciò che fa la to-do list qui sopra sotto la lista.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16.4 — la to-do list COMPLETA e PERSISTENTE (localStorage reale)
+   Unisce tutto il libro: DOM + eventi + classList + createElement + localStorage
+   ========================================================================= */
+(function () {
+  const lista = document.getElementById('wt-lista');
+  if (!lista) return;
+  const campo = document.getElementById('wt-campo');
+  const vuoto = document.getElementById('wt-vuoto');
+  const conta = document.getElementById('wt-conta');
+  const out   = document.getElementById('wt-out');
+  const CHIAVE = 'custombooks:web:todo';   // chiave localStorage propria del libro
+
+  function salva() {
+    const voci = [];
+    for (const li of lista.children) {
+      voci.push({ testo: li.dataset.testo, fatto: li.classList.contains('fatto') });
+    }
+    try { localStorage.setItem(CHIAVE, JSON.stringify(voci)); } catch (e) {}
+    aggiorna();
+  }
+
+  function creaVoce(testo, fatto) {
+    const li = document.createElement('li');
+    li.dataset.testo = testo;
+    li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:.6rem; ' +
+      'padding:.55rem .7rem; border:1px solid var(--ink-soft); border-radius:8px; margin-bottom:.4rem; cursor:pointer';
+    const span = document.createElement('span');
+    span.textContent = testo;
+    span.style.color = 'var(--ink)';
+    if (fatto) { li.classList.add('fatto'); span.style.textDecoration = 'line-through'; span.style.opacity = '.55'; }
+    li.appendChild(span);
+
+    // clic sulla voce → alterna "fatto" (classList.toggle)
+    li.addEventListener('click', function () {
+      const ora = li.classList.toggle('fatto');
+      span.style.textDecoration = ora ? 'line-through' : 'none';
+      span.style.opacity = ora ? '.55' : '1';
+      salva();
+    });
+
+    // ✕ → rimuove (stopPropagation per non far scattare anche il "fatto")
+    const x = document.createElement('button');
+    x.textContent = '✕';
+    x.className = 'btn ghost';
+    x.style.cssText = 'padding:.1rem .5rem; line-height:1.4';
+    x.addEventListener('click', function (e) { e.stopPropagation(); li.remove(); salva(); });
+    li.appendChild(x);
+
+    lista.appendChild(li);
+  }
+
+  function aggiungi(testo) {
+    testo = (testo || '').trim();
+    if (!testo) return;
+    creaVoce(testo, false);
+    salva();
+  }
+
+  function aggiorna() {
+    const tutte = lista.children.length;
+    let fatte = lista.querySelectorAll('li.fatto').length;
+    vuoto.style.display = tutte ? 'none' : 'block';
+    conta.textContent = tutte ? ((tutte - fatte) + ' da fare · ' + fatte + ' completate · ' + tutte + ' in totale') : '';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">App <b>completa e reale</b>: aggiungi voci, cliccale per spuntarle, ✕ per rimuoverle. È salvata in <code>localStorage</code> — <b>ricarica la pagina</b> e le tue voci sono ancora qui. Struttura + stile + eventi + DOM + persistenza, tutto insieme.</div>';
+  }
+
+  document.getElementById('wt-add').addEventListener('click', function () { aggiungi(campo.value); campo.value = ''; campo.focus(); });
+  campo.addEventListener('keydown', function (e) { if (e.key === 'Enter') { aggiungi(campo.value); campo.value = ''; } });
+  document.querySelectorAll('#w-todo .btn[data-seed]').forEach(function (b) {
+    b.addEventListener('click', function () { aggiungi(b.getAttribute('data-seed')); });
+  });
+  document.getElementById('wt-clear').addEventListener('click', function () {
+    lista.innerHTML = ''; salva();
+  });
+
+  // all'avvio: ricarica da localStorage
+  try {
+    const salvato = localStorage.getItem(CHIAVE);
+    if (salvato) { for (const v of JSON.parse(salvato)) creaVoce(v.testo, v.fatto); }
+  } catch (e) {}
+  aggiorna();
+})();
+</script>
+</body>
+</html>
