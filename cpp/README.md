@@ -24,7 +24,7 @@ Contenuto originale scritto ex novo.
 - [x] 11 — Ereditarietà e polimorfismo
 - [x] 12 — La memoria: stack, heap, RAII
 - [x] 13 — Template e la STL
-- [ ] 14 — Gestione degli errori
+- [x] 14 — Gestione degli errori
 - [ ] 15 — File e I/O
 - [ ] 16 — Un progetto completo
 

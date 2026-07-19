@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Gestione degli errori — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Gestione degli errori</h1>
+    <p class="standfirst">
+      I programmi vanno a male: un input sbagliato, un file che manca, una divisione per zero, un indice fuori
+      limite. Un programma robusto non crolla di fronte all'imprevisto — lo <b>gestisce</b>. Il C++ distingue tra
+      errori del <b>compilatore</b> (colti prima dell'esecuzione, il suo grande vantaggio) ed errori a <b>runtime</b>,
+      e per questi ultimi offre le <b>eccezioni</b>: <code>throw</code> per «lanciare» un problema, <code>try</code>/
+      <code>catch</code> per «catturarlo» e reagire. Unite a <b>RAII</b> (Cap. 12), le eccezioni permettono al C++ di
+      gestire gli errori in modo pulito, con le risorse sempre liberate correttamente. <mark>Ma il C++ ha anche una
+      sua cultura sull'uso delle eccezioni</mark>, che vale la pena conoscere.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Errori di <b>compilazione vs a runtime</b> (§14.1), le <b>eccezioni</b> con <code>try</code>/<code>catch</code>
+      (§14.2), <b>sollevare</b> eccezioni con <code>throw</code> (§14.3), e <b>quando (non) usarle</b> (§14.4). Nel
+      laboratorio (§14.5) rendi un input robusto.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: programmi che reggono l'imprevisto</div>
+    <p style="margin-bottom:0">
+      Nel mondo reale gli imprevisti sono la norma. <mark>Un software professionale gestisce l'errore e prosegue (o
+      fallisce con grazia), invece di crollare</mark>. In C++, saper usare le eccezioni — e sapere che, insieme a
+      RAII, non lasciano risorse «appese» — è essenziale per scrivere codice affidabile. Ed è utile capire la
+      posizione, un po' particolare, che il C++ ha verso le eccezioni: non sempre sono lo strumento giusto, e
+      conoscerne i costi ti fa scegliere bene.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Errori di compilazione vs a runtime</h2>
+
+  <p class="lead">
+    Due famiglie di errori, in momenti diversi. Il C++, essendo compilato, ha un asso nella manica: ne cattura
+    moltissimi <b>prima</b> ancora di eseguire.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Prima o durante</div>
+    <ul style="margin-bottom:0">
+      <li><b>Errori di compilazione</b>: il compilatore rifiuta il codice e <b>non produce l'eseguibile</b>. Sintassi
+          sbagliata, tipi incompatibili, <code>;</code> mancante, funzione non dichiarata. <mark>Sono i «migliori»:
+          li scopri subito, prima che il programma possa fare danni</mark>. È il grande vantaggio della tipizzazione
+          statica e della compilazione (Cap. 1-2): tanti bug muoiono qui.</li>
+      <li><b>Errori a runtime</b>: il codice compila, ma <b>durante l'esecuzione</b> qualcosa va storto — un file non
+          c'è, un indice sfora, una conversione fallisce. Questi il compilatore <b>non</b> può prevederli (dipendono
+          dai dati e dall'ambiente). Sono quelli che vanno <b>gestiti</b> col codice, con le eccezioni.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Leggere gli errori del compilatore</div>
+    <p style="margin-bottom:0">
+      Gli errori del compilatore C++ hanno fama di essere <b>lunghi e criptici</b> (specie con i template!). Il
+      trucco: <mark>leggi la <b>prima</b> riga d'errore e il numero di riga</mark> — spesso il vero problema è lì, e
+      il resto è «rumore» conseguente. Correggi il primo errore e ricompila: spesso ne spariscono a cascata anche
+      altri. Come col traceback (Cap. 11 di Python), il messaggio è un alleato, non un nemico: dagli riga e causa, e
+      il problema si risolve. Imparare a «dialogare» col compilatore è metà del mestiere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Le eccezioni: try / catch</h2>
+
+  <p class="lead">
+    Per gli errori a runtime prevedibili, il C++ offre le <b>eccezioni</b>: metti il codice «rischioso» in un
+    blocco <code>try</code>, e gestisci l'eventuale errore in un blocco <code>catch</code>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">try / catch <span class="tag">prova · e se va male…</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;stdexcept&gt;</span>
+
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">v</span> <span class="op">=</span> {<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>};
+
+<span class="kw">try</span> {
+    <span class="ty">int</span> <span class="nm">x</span> <span class="op">=</span> <span class="nm">v</span><span class="op">.</span><span class="fn">at</span>(<span class="nm">10</span>);      <span class="cm">// .at() LANCIA un'eccezione se fuori limite (Cap. 8)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">x</span>;
+} <span class="kw">catch</span> (<span class="kw">const</span> <span class="ns">std</span>::out_of_range<span class="op">&amp;</span> <span class="nm">e</span>) {   <span class="cm">// cattura QUEL tipo di errore</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Indice fuori limite: "</span> <span class="op">&lt;&lt;</span> <span class="nm">e</span><span class="op">.</span><span class="fn">what</span>();
+}
+<span class="cm">// il programma continua invece di crollare</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">try { … }</span></dt>
+        <dd>il blocco col codice che <b>potrebbe</b> lanciare un'eccezione. Se tutto va bene, il <code>catch</code>
+            viene saltato.</dd>
+        <dt><span class="mono">catch (const std::out_of_range&amp; e)</span></dt>
+        <dd>se dentro il <code>try</code> viene lanciata un'eccezione di <b>quel tipo</b>, l'esecuzione <b>salta
+            qui</b>: il blocco catch la gestisce, e il programma <b>continua</b> invece di crollare. <code>e.what()</code>
+            dà un messaggio descrittivo. <mark>Cattura il tipo specifico che ti aspetti</mark>.</dd>
+        <dt>più catch, o «catch-all»</dt>
+        <dd>puoi mettere più <code>catch</code> per tipi d'errore diversi. <code>catch (...)</code> cattura
+            qualsiasi eccezione (usalo con parsimonia, come l'<code>except:</code> muto di Python — meglio essere
+            specifici). Molte eccezioni standard derivano da <code>std::exception</code>.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-try">
+    <div class="w-head">
+      <span>try / catch: quale percorso prende l'esecuzione</span>
+      <span class="hint">scegli l'indice e guarda il flusso</span>
+    </div>
+    <div class="w-stage" style="min-height:190px">
+      <div id="wtr-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-i="1">v.at(1) — valido</button>
+      <button class="w-btn" data-i="10">v.at(10) — fuori limite</button>
+    </div>
+    <div class="w-readout" id="wtr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Sollevare eccezioni (throw)</h2>
+
+  <p class="lead">
+    Puoi <b>lanciare tu</b> un'eccezione quando rilevi una situazione che il tuo codice non deve accettare, con
+    <code>throw</code>. È il modo di dire «qui c'è un problema che non posso gestire, se ne occupi chi mi ha
+    chiamato».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">throw <span class="tag">segnalare un problema</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;stdexcept&gt;</span>
+
+<span class="ty">double</span> <span class="fn">dividi</span>(<span class="ty">double</span> <span class="nm">a</span>, <span class="ty">double</span> <span class="nm">b</span>) {
+    <span class="kw">if</span> (<span class="nm">b</span> <span class="op">==</span> <span class="nm">0</span>) {
+        <span class="kw">throw</span> <span class="ns">std</span>::invalid_argument(<span class="st">"divisione per zero"</span>);   <span class="cm">// LANCIA un'eccezione</span>
+    }
+    <span class="kw">return</span> <span class="nm">a</span> <span class="op">/</span> <span class="nm">b</span>;
+}
+
+<span class="kw">try</span> {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="fn">dividi</span>(<span class="nm">10</span>, <span class="nm">0</span>);   <span class="cm">// lancia! l'esecuzione salta al catch</span>
+} <span class="kw">catch</span> (<span class="kw">const</span> <span class="ns">std</span>::exception<span class="op">&amp;</span> <span class="nm">e</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Errore: "</span> <span class="op">&lt;&lt;</span> <span class="nm">e</span><span class="op">.</span><span class="fn">what</span>();   <span class="cm">// "Errore: divisione per zero"</span>
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">throw std::invalid_argument("...")</span></dt>
+        <dd>«lancia» un'eccezione: <b>interrompe subito</b> la funzione e «propaga» l'errore verso l'alto, finché un
+            <code>catch</code> adatto non lo raccoglie (o, se nessuno lo fa, il programma termina). Il messaggio
+            spiega il problema.</dd>
+        <dt>le eccezioni standard</dt>
+        <dd>il C++ ha tipi pronti in <code>&lt;stdexcept&gt;</code>: <code>std::invalid_argument</code>,
+            <code>std::out_of_range</code>, <code>std::runtime_error</code>… tutti derivati da
+            <code>std::exception</code> (quindi un <code>catch (const std::exception&amp;)</code> li cattura tutti).</dd>
+        <dt>la magia con RAII</dt>
+        <dd>quando un'eccezione «risale», <mark>tutti gli oggetti locali vengono distrutti correttamente</mark> (i
+            distruttori partono): grazie a RAII (Cap. 12), file e memoria vengono rilasciati anche in caso d'errore.
+            È l'accoppiata che rende sicura la gestione degli errori in C++.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>Quando (non) usare le eccezioni</h2>
+
+  <p class="lead">
+    Qui il C++ ha una cultura sua. Le eccezioni sono potenti, ma hanno un <b>costo</b> e non sono sempre la scelta
+    giusta. Conoscere il dibattito ti fa usarle con criterio.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Eccezioni sì, eccezioni no</div>
+    <p style="margin-bottom:0">
+      Le eccezioni sono ideali per errori <b>eccezionali</b> e <b>irrecuperabili sul posto</b>: un file di
+      configurazione mancante all'avvio, memoria esaurita, dati corrotti. <mark>Non sono adatte per il controllo di
+      flusso «normale»</mark>: se un input sbagliato è <em>previsto</em> e frequente (l'utente che digita male), spesso
+      è meglio un controllo esplicito (un <code>if</code>, o un valore di ritorno che segnala l'esito). Motivi: le
+      eccezioni hanno un piccolo <b>costo</b> quando scattano, e certi ambiti del C++ (giochi, sistemi embedded, dove
+      le prestazioni sono tutto) a volte le <b>disabilitano del tutto</b>, preferendo i codici di ritorno. Il C++
+      moderno offre anche alternative come <code>std::optional</code> (un valore che «forse c'è») per gli errori
+      «attesi». <mark>La regola: eccezioni per l'eccezionale, controlli espliciti per il prevedibile</mark>. Non c'è
+      una risposta unica — dipende dal contesto, ed è una scelta di design che imparerai a fare con l'esperienza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: input robusto</h2>
+
+  <p class="lead">
+    Costruiamo un programma che chiede un numero e <b>non crolla</b> se l'utente scrive qualcosa di sbagliato,
+    usando le eccezioni della conversione stringa→numero.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>input.cpp</code> <span class="tag">try/catch attorno a stoi</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">input.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">testo</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Scrivi un numero: "</span>;
+    <span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">testo</span>;
+
+    <span class="kw">try</span> {
+        <span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="ns">std</span>::stoi(<span class="nm">testo</span>);      <span class="cm">// stoi lancia se "testo" non è un numero</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Il doppio è "</span> <span class="op">&lt;&lt;</span> <span class="nm">n</span> <span class="op">*</span> <span class="nm">2</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    } <span class="kw">catch</span> (<span class="kw">const</span> <span class="ns">std</span>::exception<span class="op">&amp;</span> <span class="nm">e</span>) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"\"</span><span class="st">"</span> <span class="op">&lt;&lt;</span> <span class="nm">testo</span> <span class="op">&lt;&lt;</span> <span class="st">"\" non è un numero valido!\n"</span>;
+    }
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Esecuzione: con «21» stampa «Il doppio è 42»; con «abc» stampa «"abc" non è un numero valido!» — <b>senza
+      crashare</b>. <mark><code>std::stoi</code> (string→int) lancia un'eccezione se la stringa non rappresenta un
+      numero</mark>, e il <code>catch</code> la trasforma in un messaggio gentile. È lo schema robusto: metti la
+      conversione (o l'operazione rischiosa) nel <code>try</code>, gestisci il fallimento nel <code>catch</code>.
+      Per insistere finché l'input è valido, metteresti il tutto in un ciclo (come lo schema try-dentro-while del
+      libro di Python). Compila con <code>g++ input.cpp -o input</code>.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li>Errori di <b>compilazione</b> (colti prima, il vantaggio del C++) vs <b>runtime</b> (da gestire); leggi la
+          <b>prima riga</b> dell'errore del compilatore (§14.1).</li>
+      <li>Le <b>eccezioni</b>: <code>try { … }</code> col codice rischioso, <code>catch (const Tipo&amp; e)</code>
+          per gestirlo; <code>e.what()</code> dà il messaggio. Il programma continua invece di crollare (§14.2).</li>
+      <li><code>throw</code> lancia tu un'eccezione (tipi standard in <code>&lt;stdexcept&gt;</code>); con <b>RAII</b>
+          le risorse restano liberate anche in caso d'errore (§14.3).</li>
+      <li><mark>Eccezioni per l'eccezionale/irrecuperabile; controlli espliciti (if, valori di ritorno,
+          <code>optional</code>) per il prevedibile</mark> — hanno un costo e a volte si disabilitano (§14.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    I tuoi programmi ora reggono gli imprevisti. Manca un ultimo strumento pratico prima del gran finale: la
+    <b>persistenza</b>. Tutto ciò che un programma elabora svanisce alla chiusura, a meno di salvarlo su disco. Nel
+    <strong>Capitolo 15</strong> vediamo <b>file e I/O</b> in C++: il concetto di <b>stream</b> (lo stesso di
+    <code>cout</code>/<code>cin</code>, esteso ai file), come <b>scrivere</b> su file con <code>ofstream</code> e
+    <b>leggere</b> con <code>ifstream</code>, riga per riga. Scoprirai che leggere e scrivere file usa la stessa
+    elegante idea degli stream che conosci fin dal Capitolo 1 — e con RAII, i file si chiudono da soli.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un errore di <b>compilazione</b> e uno a <b>runtime</b>? Fai un esempio di ciascuno.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve il blocco <code>try</code>? E il <code>catch</code>? Cosa succede all'esecuzione quando dentro il
+      <code>try</code> viene lanciata un'eccezione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Perché, secondo la cultura C++, non conviene usare le eccezioni per gestire un input utente sbagliato che è
+      <b>frequente e previsto</b>? Cosa useresti invece?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi un <code>try/catch</code> attorno a <code>v.at(i)</code> di un vector, che cattura
+      <code>std::out_of_range</code> e stampa «indice non valido» invece di far crashare il programma.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <p style="margin-bottom:0">
+      Un errore di <b>compilazione</b> impedisce di creare l'eseguibile (colto prima dell'esecuzione): es. un
+      <code>;</code> mancante, un tipo incompatibile. Un errore a <b>runtime</b> avviene durante l'esecuzione, su
+      codice che compila: es. accedere a <code>v.at(10)</code> su un vector di 3 elementi, o <code>stoi("abc")</code>.
+      Il primo lo scopri subito, il secondo dipende dai dati e va gestito.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Il <code>try</code> racchiude il codice che <b>potrebbe</b> lanciare un'eccezione; il <code>catch</code>
+      gestisce l'eventuale errore di quel tipo. Quando dentro il <code>try</code> viene lanciata un'eccezione,
+      l'esecuzione <b>salta immediatamente</b> al <code>catch</code> corrispondente (saltando il resto del try), e
+      il programma <b>continua</b> dopo il catch invece di crollare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <p style="margin-bottom:0">
+      Perché le eccezioni sono pensate per situazioni <b>eccezionali</b> e hanno un piccolo <b>costo</b> quando
+      scattano: usarle per un evento <b>frequente e previsto</b> (input sbagliato dell'utente) è considerato uso
+      improprio. Meglio un <b>controllo esplicito</b> (un <code>if</code>, o un valore di ritorno/
+      <code>std::optional</code> che segnala l'esito) per gli errori attesi, riservando le eccezioni all'imprevisto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">accesso.cpp</div>
+      <pre><span class="kw">try</span> {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">v</span><span class="op">.</span><span class="fn">at</span>(<span class="nm">i</span>);
+} <span class="kw">catch</span> (<span class="kw">const</span> <span class="ns">std</span>::out_of_range<span class="op">&amp;</span> <span class="nm">e</span>) {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"indice non valido"</span>;
+}</pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.2 — try/catch: percorso valido vs eccezione catturata
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wtr-view');
+  if (!view) return;
+  const out = document.getElementById('wtr-out');
+  const btns = document.querySelectorAll('#w-try .w-btn');
+  function show(i) {
+    const ok = i >= 0 && i < 3;   // vector di 3 elementi
+    const rows = [
+      { code: 'try {', kind: 'kw' },
+      { code: '    int x = v.at(' + i + ');', active: true, kind: 'try' },
+      { code: '    cout << x;', active: ok, kind: 'try', skip: !ok },
+      { code: '} catch (const std::out_of_range& e) {', kind: 'kw' },
+      { code: '    cout << "Indice fuori limite";', active: !ok, kind: 'exc', skip: ok }
+    ];
+    view.innerHTML = '<div style="font-family:var(--mono); font-size:.86rem; line-height:1.9; text-align:left; max-width:460px; margin:0 auto">' +
+      rows.map(r => {
+        let col = 'var(--ink-soft)', bg = 'transparent', tag = '';
+        if (r.active && r.kind === 'try') { col = 'var(--green)'; bg = 'color-mix(in srgb,var(--green) 12%,transparent)'; tag = '✓ eseguito'; }
+        else if (r.active && r.kind === 'exc') { col = 'var(--warm)'; bg = 'color-mix(in srgb,var(--warm) 14%,transparent)'; tag = '→ catturato!'; }
+        else if (r.skip) { col = 'var(--ink-faint)'; tag = '— saltato'; }
+        return `<div style="background:${bg}; color:${col}; padding:.1rem .5rem; border-radius:5px">${r.code.replace(/</g, '&lt;')}<span style="float:right; font-size:.72rem; font-weight:700">${tag}</span></div>`;
+      }).join('') + '<div style="color:var(--ink-soft)">}</div></div>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' +
+      (ok
+        ? '<code>v.at(' + i + ')</code> è <b style="color:var(--green)">valido</b>: il try va liscio, il catch viene saltato.'
+        : '<code>v.at(' + i + ')</code> è fuori limite (il vector ha 3 elementi): <code>.at()</code> <b style="color:var(--warm)">lancia std::out_of_range</b>, l\'esecuzione <b>salta al catch</b>, che gestisce. <mark>Niente crash.</mark>') +
+      '</div>';
+    btns.forEach(b => b.style.outline = +b.dataset.i === i ? '2px solid var(--accent)' : 'none');
+  }
+  btns.forEach(b => b.addEventListener('click', () => show(+b.dataset.i)));
+  show(1);
+})();
+</script>
+</body>
+</html>
