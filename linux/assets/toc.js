@@ -224,7 +224,7 @@ const TOC = [
     n: 15,
     titolo: "Sistema e rete da terminale",
     file: "cap15-sistema-rete.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Spazio su disco: df, du" },
       { id: "s15-2", n: "15.2", t: "Rete: ip, ping, curl" },

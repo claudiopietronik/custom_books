@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Sistema e rete da terminale — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>Sistema e rete da terminale</h1>
+    <p class="standfirst">
+      Prima del progetto finale, completiamo la cassetta degli attrezzi con gli strumenti per <b>ispezionare il sistema
+      e la rete</b> dal terminale: le domande pratiche che ti farai spesso, soprattutto amministrando un server. Quanto
+      spazio è rimasto sul disco? Cosa lo sta riempiendo? La rete funziona, il sito è raggiungibile? Come mi collego a
+      un server remoto? È attivo quel servizio? Sono comandi diagnostici che userai per capire lo stato di una macchina
+      e per risolvere problemi — dal «il disco è pieno» al «il server non risponde». Molti li hai già sfiorati nei
+      libri «Reti» e «Backend»: qui li mettiamo a fuoco. In questo capitolo: lo spazio su disco con <code>df</code> e
+      <code>du</code> (§15.1), la rete con <code>ip</code>, <code>ping</code>, <code>curl</code> (§15.2), l'accesso
+      remoto con <code>ssh</code> (§15.3), e i servizi con <code>systemctl</code> (§15.4). <mark>Sono gli strumenti che
+      trasformano «il sistema non va» in «ecco cosa non va».</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Spazio su disco: <b>df, du</b> (§15.1), rete: <b>ip, ping, curl</b> (§15.2), accesso remoto: <b>ssh</b> (§15.3),
+      servizi: <b>systemctl</b> (§15.4). Nel laboratorio (§15.5) ispezioni il sistema.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: diagnosticare è metà del risolvere</div>
+    <p style="margin-bottom:0">
+      «Il server è lento», «il disco è pieno», «il sito non si apre»: dietro ogni problema c'è una diagnosi da fare.
+      <mark>Questi comandi sono i tuoi «strumenti di misura»</mark>: ti dicono lo stato reale del sistema, così puoi
+      agire con cognizione invece che a tentoni. Sono indispensabili per chiunque gestisca un server (l'hai visto nel
+      deploy del libro «Backend»).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Spazio su disco: df, du</h2>
+
+  <p class="lead">
+    Due comandi rispondono a «quanto spazio ho?» e «cosa lo sta occupando?»: <code>df</code> (spazio dei dischi nel
+    complesso) e <code>du</code> (spazio usato da cartelle e file specifici).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — spazio su disco</div>
+    <pre><span class="c"># df -h: spazio libero/usato sui dischi (-h = "human", leggibile: GB invece di byte)</span>
+<span class="p">$</span> <span class="cmd">df</span> <span class="fl">-h</span>
+<span class="out">Filesystem   Size  Used  Avail  Use%  Mounted on
+/dev/sda1     50G   38G    12G   76%  /</span>
+
+<span class="c"># du -sh: quanto occupa una cartella (-s = totale, -h = leggibile)</span>
+<span class="p">$</span> <span class="cmd">du</span> <span class="fl">-sh</span> <span class="ar">~/documenti</span>
+<span class="out">2.3G  /home/anna/documenti</span>
+
+<span class="c"># le sottocartelle più pesanti (per trovare cosa occupa spazio)</span>
+<span class="p">$</span> <span class="cmd">du</span> <span class="fl">-h</span> <span class="ar">~</span> | <span class="cmd">sort</span> <span class="fl">-rh</span> | <span class="cmd">head</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">df e du <span class="tag">i dischi vs le cartelle</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">df -h</span> — «disk free»</dt>
+        <dd>mostra lo spazio <b>totale, usato e libero</b> di ogni disco/partizione. <mark>La colonna <code>Use%</code>
+            è la più importante</mark>: se è vicina al 100%, il disco è quasi pieno (guai in arrivo). Il <code>-h</code>
+            rende i numeri leggibili (GB/MB).</dd>
+        <dt><span class="mono">du -sh cartella</span> — «disk usage»</dt>
+        <dd>mostra quanto occupa una <b>cartella specifica</b> (<code>-s</code> = solo il totale, <code>-h</code> =
+            leggibile). <mark>Per capire <em>cosa</em> occupa spazio</mark>, non solo quanto ne resta.</dd>
+        <dt>trovare i «divoratori» di spazio</dt>
+        <dd>la pipe <code>du -h | sort -rh | head</code> (Cap. 9!) elenca le cartelle più pesanti. <mark>Il modo
+            classico per scoprire cosa riempie il disco</mark> quando <code>df</code> ti avvisa che è pieno.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La coppia diagnostica tipica: <mark><code>df -h</code> ti dice «il disco è pieno al 95%», poi <code>du</code>
+      (con la pipe) ti dice «è quella cartella di log da 30 GB»</mark>. Prima il quadro d'insieme, poi il dettaglio. È
+      una delle situazioni più comuni su un server: il disco si riempie (spesso di log, in <code>/var/log</code>), il
+      sistema inizia a fare i capricci, e questi comandi ti portano dritto al colpevole. Prova la diagnostica nel
+      widget.
+    </div>
+  </div>
+
+  <div class="widget" id="w-diag">
+    <div class="w-head">
+      <span>Diagnostica del sistema</span>
+      <span class="hint">esegui i comandi, leggi lo stato</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div class="term" style="margin:0 auto; max-width:100%"><pre id="dg-term" style="margin:0; min-height:120px; font-size:12px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-d="df">df -h</button>
+      <button class="btn" data-d="du">du -sh (cartelle)</button>
+      <button class="btn" data-d="ping">ping google.com</button>
+      <button class="btn" data-d="ip">ip a</button>
+    </div>
+    <div class="w-readout" id="dg-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>Rete: ip, ping, curl</h2>
+
+  <p class="lead">
+    Tre strumenti per la rete, che riprendono concetti del libro «Reti»: <code>ip</code> (il tuo indirizzo),
+    <code>ping</code> (raggiungo quel computer?), <code>curl</code> (scarica/interroga un URL).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — strumenti di rete</div>
+    <pre><span class="c"># ip a: mostra i tuoi indirizzi di rete (il tuo IP)</span>
+<span class="p">$</span> <span class="cmd">ip</span> <span class="ar">a</span>
+<span class="out">... inet 192.168.1.42/24 ...</span>          <span class="c"># il tuo indirizzo locale</span>
+
+<span class="c"># ping: verifica se un computer è raggiungibile (invia pacchetti di prova)</span>
+<span class="p">$</span> <span class="cmd">ping</span> <span class="ar">google.com</span>
+<span class="out">64 bytes from ...: time=12.3 ms</span>          <span class="c">(Ctrl+C per fermare)</span>
+
+<span class="c"># curl: scarica il contenuto di un URL (o interroga un'API, come nel libro Backend)</span>
+<span class="p">$</span> <span class="cmd">curl</span> <span class="ar">https://esempio.com</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Gli strumenti di rete <span class="tag">ip · ping · curl</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">ip a</span></dt>
+        <dd>mostra le tue interfacce di rete e i loro <b>indirizzi IP</b> (Cap. «Reti»). <mark>Per sapere «qual è il mio
+            indirizzo»</mark> sulla rete locale. (Il vecchio comando era <code>ifconfig</code>.)</dd>
+        <dt><span class="mono">ping host</span></dt>
+        <dd>invia piccoli pacchetti di prova a un computer e misura se (e quanto veloce) risponde. <mark>«Quel server è
+            raggiungibile?»</mark> Se il ping funziona, la rete verso quella destinazione va. Si ferma con
+            <code>Ctrl+C</code>.</dd>
+        <dt><span class="mono">curl url</span></dt>
+        <dd>scarica il contenuto di un URL o interroga un'API (l'hai usato nel libro «Backend»!). <mark>Per testare che
+            un sito/servizio risponda</mark>, o scaricare file. Comodissimo per il debug dei servizi web.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questi comandi sono la tua «prima diagnosi di rete»: <mark><code>ping</code> per capire se arrivi a una macchina,
+      <code>curl</code> per capire se un servizio web risponde, <code>ip</code> per sapere il tuo indirizzo</mark>. Se
+      hai fatto «Reti», riconoscerai i concetti (IP, pacchetti, HTTP); qui sono gli strumenti pratici per verificarli
+      dal terminale. Un altro utile: <code>ping</code> non funziona ma il sito sì? Potrebbe essere il DNS o un firewall
+      — la diagnosi continua da lì.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Accesso remoto: ssh</h2>
+
+  <p class="lead">
+    <code>ssh</code> è il modo di <b>collegarti al terminale di un computer remoto</b>, in modo sicuro. È così che si
+    amministra un server: apri un terminale sul tuo PC e «entri» nel server, dando comandi come se fossi lì.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — collegarsi a un server con ssh</div>
+    <pre><span class="c"># collegati a un server: ssh utente@indirizzo</span>
+<span class="p">$</span> <span class="cmd">ssh</span> <span class="ar">anna@203.0.113.5</span>
+<span class="out">anna@server:~$</span>          <span class="c"># ora il prompt è del SERVER: sei "dentro"!</span>
+
+<span class="c"># da qui, ogni comando gira sul server remoto</span>
+<span class="ar">anna@server</span>:~$ <span class="cmd">df</span> <span class="fl">-h</span>          <span class="c"># controlli il disco DEL SERVER</span>
+
+<span class="c"># per tornare al tuo computer: exit (o Ctrl+D)</span>
+<span class="ar">anna@server</span>:~$ <span class="cmd">exit</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">ssh smontato <span class="tag">ssh utente@host · exit</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">ssh utente@indirizzo</span></dt>
+        <dd>apre una <b>sessione remota sicura</b> (cifrata) sul computer indicato, come quell'utente. <mark>Da quel
+            momento il tuo terminale «è» quello del server</mark>: ogni comando gira lì. Il prompt cambia per
+            ricordartelo (Cap. 2: ecco perché il nome host nel prompt è utile!).</dd>
+        <dt>l'autenticazione</dt>
+        <dd>ssh ti chiede la password (o usa una <b>chiave</b>, più sicura — Cap. «Backend»). <mark>Il traffico è
+            cifrato</mark>: nessuno può spiare i comandi o i dati.</dd>
+        <dt><span class="mono">exit</span></dt>
+        <dd>chiude la sessione remota e torni al tuo computer. <mark>«Esci» dal server.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>ssh</code> è il ponte verso i server: <mark>tutto ciò che hai imparato in questo libro — navigare, gestire
+      file, processi, script, cron — lo applichi sui server <b>attraverso ssh</b></mark>. È il motivo per cui saper
+      usare Linux da terminale è così importante: i server non hanno grafica, ci si arriva solo così. Lo hai visto nel
+      libro «Backend», per il deploy. Ora sai cos'è davvero: una finestra sicura sul terminale di una macchina lontana.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Servizi: systemctl (cenni)</h2>
+
+  <p class="lead">
+    Molti programmi «di sistema» (un web server, un database, ssh stesso) girano come <b>servizi</b>: processi che
+    partono all'avvio e restano attivi in background. Si gestiscono con <code>systemctl</code>. Ne diamo i cenni: ti
+    serviranno amministrando server.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — gestire i servizi (con sudo)</div>
+    <pre><span class="c"># stato di un servizio (es. nginx, il web server del libro Backend)</span>
+<span class="p">$</span> <span class="cmd">systemctl</span> <span class="ar">status</span> <span class="ar">nginx</span>
+<span class="out">● nginx.service - ... active (running)</span>          <span class="c"># attivo!</span>
+
+<span class="c"># avviare / fermare / riavviare un servizio</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">systemctl</span> <span class="ar">start</span> <span class="ar">nginx</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">systemctl</span> <span class="ar">restart</span> <span class="ar">nginx</span>
+
+<span class="c"># fare in modo che parta automaticamente all'avvio del sistema</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">systemctl</span> <span class="ar">enable</span> <span class="ar">nginx</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">systemctl: le azioni principali <span class="tag">status · start/stop/restart · enable</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">systemctl status servizio</span></dt>
+        <dd>mostra se un servizio è <b>attivo</b> («active/running») o fermo, con gli ultimi messaggi. <mark>La prima
+            cosa da controllare</mark> quando un servizio «non funziona».</dd>
+        <dt><span class="mono">start</span> / <span class="mono">stop</span> / <span class="mono">restart</span></dt>
+        <dd>avvia, ferma o riavvia un servizio (con <code>sudo</code>: sono azioni di sistema). <mark>Il
+            <code>restart</code> è il classico «spegni e riaccendi»</mark> quando qualcosa si è impuntato.</dd>
+        <dt><span class="mono">enable</span> / <span class="mono">disable</span></dt>
+        <dd>decide se il servizio parte <b>automaticamente all'avvio</b> del sistema (enable) o no (disable).
+            <mark>Perché un server, riavviato, deve far ripartire i suoi servizi</mark> da solo (come il
+            <code>restart: always</code> di Docker nel libro «Backend»).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve approfondire ora: <mark>ti basti riconoscere <code>systemctl</code> come «il telecomando dei
+      servizi»</mark> di sistema. Quando amministrerai un server e un servizio (web, database) non risponderà, il primo
+      gesto sarà <code>systemctl status nome</code> per vedere se è attivo, e magari <code>restart</code> per
+      riavviarlo. È il completamento naturale della gestione dei processi (Cap. 8), applicato ai programmi «di sistema»
+      che girano stabilmente.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio: ispezionare il sistema</h2>
+
+  <p class="lead">
+    Facciamo un «check-up» del sistema con i comandi diagnostici — un giro che replicherai spesso, su PC e server.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un check-up del sistema</div>
+    <pre><span class="c"># quanto spazio ho sui dischi?</span>
+<span class="p">$</span> <span class="cmd">df</span> <span class="fl">-h</span>
+
+<span class="c"># cosa occupa spazio nella mia home? (le 5 cartelle più pesanti)</span>
+<span class="p">$</span> <span class="cmd">du</span> <span class="fl">-h</span> <span class="ar">~</span> | <span class="cmd">sort</span> <span class="fl">-rh</span> | <span class="cmd">head</span> <span class="fl">-n</span> <span class="ar">5</span>
+
+<span class="c"># la rete funziona? (raggiungo internet?)</span>
+<span class="p">$</span> <span class="cmd">ping</span> <span class="fl">-c</span> <span class="ar">3</span> <span class="ar">google.com</span>          <span class="c"># -c 3 = solo 3 pacchetti, poi si ferma</span>
+
+<span class="c"># qual è il mio indirizzo IP?</span>
+<span class="p">$</span> <span class="cmd">ip</span> <span class="ar">a</span> | <span class="cmd">grep</span> <span class="ar">inet</span>          <span class="c"># filtra le righe con l'IP (pipe!)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> La tua cassetta degli attrezzi è completa</div>
+    <p style="margin-bottom:0">
+      Hai fatto un check-up completo: <b>spazio</b> (<code>df</code>, <code>du</code>), <b>rete</b> (<code>ping</code>,
+      <code>ip</code>), con tanto di <b>pipe</b> (Cap. 9) per raffinare l'output. <mark>Nota come si compongono le
+      competenze</mark>: <code>ip a | grep inet</code> unisce un comando di rete con un filtro. Con questi strumenti
+      diagnostici, più tutto ciò che hai imparato prima, hai una <b>cassetta degli attrezzi Linux completa</b>:
+      navigare, gestire file e permessi, processi, comporre comandi, installare, scriptare, automatizzare,
+      diagnosticare. Sei pronto per il gran finale: nel <strong>Capitolo 16</strong>, il <b>progetto completo</b> —
+      costruiamo insieme uno script di backup automatico che unisce filesystem, condizioni, cicli, date, e cron. Tutto
+      il libro, in un unico strumento reale e utile.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li><b>Disco</b>: <code>df -h</code> (spazio dei dischi, guarda <code>Use%</code>), <code>du -sh</code> (spazio di
+          una cartella). <code>du | sort -rh</code> trova i «divoratori» (§15.1).</li>
+      <li><b>Rete</b>: <code>ip a</code> (il tuo IP), <code>ping host</code> (è raggiungibile?), <code>curl url</code>
+          (interroga un servizio web) (§15.2).</li>
+      <li><b>ssh</b>: <code>ssh utente@host</code> apre un terminale sicuro su un server remoto; <code>exit</code> per
+          uscire. È così che si amministrano i server (§15.3).</li>
+      <li><b>systemctl</b>: gestisce i <b>servizi</b> — <code>status</code>, <code>start/stop/restart</code>,
+          <code>enable</code> (parte all'avvio). Con sudo (§15.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La tua cassetta degli attrezzi Linux è completa. È il momento di <b>metterla alla prova</b> in un progetto reale.
+    Nel <strong>Capitolo 16</strong>, il gran finale: costruiamo passo per passo uno <b>script di backup automatico</b>
+    — che copia una cartella importante, la comprime con la data del giorno, tiene solo i backup recenti, e gira da solo
+    ogni notte con cron. Unisce filesystem, variabili, condizioni, cicli, date e automazione: tutto ciò che hai
+    imparato, in un unico strumento che potresti davvero usare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>df</code> e <code>du</code>? Quale useresti per scoprire che il disco è pieno al
+      95%, e quale per capire <em>cosa</em> lo sta riempiendo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve <code>ping</code>? E <code>curl</code>? Fai un esempio di quando useresti ciascuno per capire perché
+      «un sito non si apre».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>ssh anna@203.0.113.5</code>? Come capisci, dal prompt, che ora i comandi girano sul server remoto e
+      non sul tuo computer? Come torni indietro?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Un servizio web (nginx) non risponde. Quale comando usi per <b>primo</b> per vedere se è attivo? E quale per
+      provare a rimetterlo in funzione?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      <code>df</code> mostra lo spazio <b>dei dischi nel complesso</b> (totale/usato/libero per partizione);
+      <code>du</code> mostra lo spazio occupato da <b>cartelle e file specifici</b>. Per scoprire che il disco è pieno
+      al 95% usi <code>df -h</code> (guardando la colonna <code>Use%</code>); per capire <em>cosa</em> lo sta riempiendo
+      usi <code>du</code> (spesso con la pipe <code>du -h | sort -rh | head</code>, per trovare le cartelle più
+      pesanti).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      <code>ping</code> verifica se un computer è <b>raggiungibile</b> in rete (invia pacchetti di prova e misura la
+      risposta); <code>curl</code> <b>scarica/interroga</b> il contenuto di un URL. Per «un sito non si apre»: con
+      <code>ping</code> verifichi se il server è raggiungibile a livello di rete; con <code>curl</code> se il servizio
+      web risponde effettivamente (magari il server è su ma il sito dà errore). Insieme, restringono il problema (rete
+      vs servizio).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      <code>ssh anna@203.0.113.5</code> apre una <b>sessione remota sicura</b> (cifrata) sul server a quell'indirizzo,
+      come utente anna: da quel momento il tuo terminale «è» quello del server e ogni comando gira lì. Lo capisci dal
+      <b>prompt</b>, che cambia mostrando il nome dell'host del server (es. <code>anna@server:~$</code>) invece del tuo
+      computer. Per tornare indietro (chiudere la sessione remota) usi <code>exit</code> (o <code>Ctrl+D</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      Per primo, <code>systemctl status nginx</code>: mostra se il servizio è attivo («active/running») o fermo, con
+      gli ultimi messaggi utili a capire il problema. Per provare a rimetterlo in funzione:
+      <code>sudo systemctl restart nginx</code> (lo riavvia) — il classico «spegni e riaccendi» che risolve molti
+      blocchi; se non basta, i messaggi dello <code>status</code> (e i log) indicano cosa non va.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.1 — diagnostica: esegui df/du/ping/ip con output plausibile e barre
+   ========================================================================= */
+(function () {
+  const term = document.getElementById('dg-term');
+  if (!term) return;
+  const out = document.getElementById('dg-out');
+
+  function bar(pct, color) {
+    const w = 20, filled = Math.round(pct / 100 * w);
+    let s = '';
+    for (let i = 0; i < w; i++) s += i < filled ? '█' : '░';
+    return '<span style="color:' + color + '">' + s + '</span>';
+  }
+
+  const OUT = {
+    df: {
+      body: '<span class="hl">Filesystem   Size  Used Avail Use%</span>\n' +
+        '<span class="out">/dev/sda1     50G   38G   12G  </span><span style="color:#e0b14f">76%</span>  ' + bar(76, '#e0b14f') + '\n' +
+        '<span class="out">/dev/sdb1    200G  190G   10G  </span><span style="color:#e0654f">95%</span>  ' + bar(95, '#e0654f') + '  <span style="color:#ff8a8a">← quasi pieno!</span>',
+      note: '<code>df -h</code>: il disco <code>/dev/sdb1</code> è al <b>95%</b> (rosso): sta per riempirsi. Ora userei <code>du</code> per scoprire <b>cosa</b> lo occupa.'
+    },
+    du: {
+      body: '<span class="p">$</span> <span class="cmd">du -h ~ | sort -rh | head -n 4</span>\n' +
+        '<span class="out">30G   /home/anna/video\n 8G   /home/anna/backup\n 3G   /home/anna/documenti\n1.2G  /home/anna/foto</span>',
+      note: '<code>du</code> + pipe: le cartelle più pesanti in cima. La cartella <b>video</b> (30G) è il «divoratore» di spazio. Ecco cosa riempiva il disco.'
+    },
+    ping: {
+      body: '<span class="p">$</span> <span class="cmd">ping -c 3 google.com</span>\n' +
+        '<span class="out">64 bytes from ...: time=11.2 ms\n64 bytes from ...: time=12.8 ms\n64 bytes from ...: time=10.9 ms\n\n3 packets transmitted, 3 received, 0% packet loss</span>',
+      note: '<code>ping</code>: 3 pacchetti inviati, 3 ricevuti, <b>0% persi</b> → la rete verso google.com <b>funziona</b>, con tempi bassi (~11ms). Se non arrivasse risposta, ci sarebbe un problema di rete.'
+    },
+    ip: {
+      body: '<span class="p">$</span> <span class="cmd">ip a | grep inet</span>\n' +
+        '<span class="out">    inet 127.0.0.1/8 ...        (loopback)\n    inet </span><span class="hl">192.168.1.42</span><span class="out">/24 ...   (rete locale)</span>',
+      note: '<code>ip a</code>: il tuo indirizzo sulla <b>rete locale</b> è <b>192.168.1.42</b> (il 127.0.0.1 è «te stesso», il loopback). Utile per farti raggiungere da altri dispositivi della rete.'
+    }
+  };
+
+  document.querySelectorAll('#w-diag .btn[data-d]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const o = OUT[b.getAttribute('data-d')];
+      term.innerHTML = o.body;
+      out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + o.note + '</div>';
+    });
+  });
+  term.innerHTML = '<span class="out">Scegli un comando diagnostico.</span>';
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Esegui i comandi per «misurare» lo stato del sistema: spazio disco (df/du), rete (ping), indirizzo (ip). È la diagnostica che fai quando qualcosa non va.</div>';
+})();
+</script>
+</body>
+</html>
