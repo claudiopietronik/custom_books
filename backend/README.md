@@ -12,7 +12,7 @@ Internet** e **Il Web**.
 
 ## Capitoli
 
-- [ ] 1 — Cos'è il backend
+- [x] 1 — Cos'è il backend
 - [ ] 2 — HTTP e le API REST
 - [ ] 3 — Preparare l'ambiente Python
 - [ ] 4 — Il primo server con FastAPI

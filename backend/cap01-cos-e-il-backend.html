@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Cos'è il backend — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 1</div>
+    <h1>Cos'è il backend</h1>
+    <p class="standfirst">
+      Quando apri un'app e vedi il tuo profilo, i tuoi messaggi, il tuo carrello, stai guardando solo <b>metà</b> del
+      lavoro: la parte visibile, il <b>front-end</b>, che gira sul tuo dispositivo. L'altra metà — quella che
+      <b>custodisce i dati</b>, controlla le password, applica le regole e decide cosa mostrarti — vive lontano, su un
+      computer chiamato <b>server</b>, ed è il <b>back-end</b>. È la metà nascosta, quella che nessun utente vede ma
+      senza cui niente funziona: senza backend, un social non ricorderebbe i tuoi post, un negozio non registrerebbe
+      un ordine, una banca non saprebbe il tuo saldo. In questo primo capitolo capiamo <b>cos'è</b> il backend,
+      <b>come dialoga</b> con il front-end (il modello client-server), e <b>quali pezzi</b> lo compongono. <mark>È la
+      mappa mentale su cui costruiremo, capitolo dopo capitolo, un'applicazione vera e completa.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Front-end vs back-end (§1.1), il modello <b>client-server</b> (§1.2), cosa fa <b>davvero</b> un server (§1.3),
+      e i tre <b>attori</b> del backend — web server, applicazione, database (§1.4). Nel laboratorio (§1.5) avvii il
+      tuo primissimo server con una sola riga.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: qui si costruiscono le app «vere»</div>
+    <p style="margin-bottom:0">
+      Con il front-end (il libro «Il Web») fai pagine belle e interattive; ma per <b>ricordare</b> dati tra una
+      visita e l'altra, <b>condividerli</b> tra utenti, <b>proteggerli</b> e applicare <b>regole di business</b>,
+      serve il backend. <mark>È il salto da «una pagina» a «un'applicazione».</mark> Ed è anche dove vivono le
+      competenze più richieste e durevoli: capito il backend, capisci come funziona <em>qualsiasi</em> servizio
+      online che usi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">Sezione 1.1</span>Front-end e back-end</h2>
+
+  <p class="lead">
+    Ogni applicazione web è divisa in due mondi che collaborano. Distinguere <b>chi fa cosa</b> — e soprattutto
+    <b>dove</b> gira ciascuna parte — è il primo passo per orientarsi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I due mondi <span class="tag">dove gira, cosa fa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Front-end</b> — «davanti»</dt>
+        <dd>tutto ciò che gira <b>sul dispositivo dell'utente</b> (nel browser o nell'app): la grafica, i pulsanti,
+            le animazioni. È fatto di HTML, CSS, JavaScript. <mark>L'utente lo vede e ci interagisce direttamente.</mark>
+            Ma è «effimero»: chiudi la pagina e sparisce.</dd>
+        <dt><b>Back-end</b> — «dietro»</dt>
+        <dd>tutto ciò che gira <b>su un server remoto</b>, fuori dalla vista: la logica, i dati, la sicurezza. È
+            scritto in linguaggi come Python (il nostro), JavaScript/Node, Go, Java… <mark>L'utente non lo vede mai,
+            ma è lì che le cose «vere» accadono</mark> e vengono conservate.</dd>
+        <dt>il confine</dt>
+        <dd>i due mondi parlano attraverso la <b>rete</b>, scambiandosi messaggi HTTP (Cap. 2). Il front-end
+            <b>chiede</b>, il back-end <b>risponde</b>. Questa separazione netta è ciò che permette a un solo backend
+            di servire un sito web, un'app iPhone e un'app Android <b>tutti insieme</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un'analogia: il front-end è la <b>sala di un ristorante</b> (tavoli, menu, il cameriere con cui parli); il
+      back-end è la <b>cucina e il magazzino</b> (dove si prepara il cibo e si conservano gli ingredienti). Tu,
+      cliente, vedi e vivi la sala; ma senza cucina non mangi. <mark>Il cameriere che fa la spola è la rete</mark>:
+      porta le tue ordinazioni in cucina e ti riporta i piatti.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">Sezione 1.2</span>Il modello client-server</h2>
+
+  <p class="lead">
+    Il dialogo tra i due mondi segue uno schema preciso e universale, che hai già incontrato nel libro «Reti»: il
+    modello <b>client-server</b>. Vale la pena metterlo a fuoco, perché è l'impalcatura di tutto ciò che segue.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Client e server: chi chiede, chi serve</div>
+    <p>
+      Il <b>client</b> è chi <b>fa la richiesta</b> (il tuo browser, l'app sul telefono). Il <b>server</b> è chi
+      <b>riceve la richiesta, la elabora e risponde</b>. <mark>È sempre il client a iniziare</mark>: il server
+      aspetta, in ascolto, e reagisce a ogni richiesta che arriva. Un server serve <b>tanti</b> client
+      contemporaneamente — migliaia, milioni — senza confonderli.
+    </p>
+    <p style="margin-bottom:0">
+      La parola «server» ha due sensi che conviene tenere distinti: è sia la <b>macchina</b> (un computer sempre
+      acceso in un data center) sia il <b>programma</b> che ci gira sopra e risponde alle richieste. In questo libro,
+      quando scriveremo «il server», intenderemo per lo più il <b>programma</b> — l'applicazione backend che
+      costruiremo noi. La macchina la incontreremo alla fine, quando andremo in produzione (Cap. 18).
+    </p>
+  </div>
+
+  <div class="widget" id="w-flow">
+    <div class="w-head">
+      <span>Una richiesta, passo per passo</span>
+      <span class="hint">clicca «invia» e segui il viaggio</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div style="display:flex; align-items:stretch; justify-content:space-between; gap:.5rem; position:relative; max-width:560px; margin:0 auto">
+        <div class="flow-node" id="fn-client" style="flex:1; text-align:center; border:2px solid var(--ink-soft); border-radius:12px; padding:.9rem .4rem; transition:all .25s">
+          <div style="font-size:1.8rem">💻</div>
+          <div style="font-weight:700; color:var(--ink)">Client</div>
+          <div style="font-size:.72rem; color:var(--ink-soft)">browser / app</div>
+        </div>
+        <div style="align-self:center; font-size:1.3rem; color:var(--ink-faint)">⟷</div>
+        <div class="flow-node" id="fn-server" style="flex:1; text-align:center; border:2px solid var(--ink-soft); border-radius:12px; padding:.9rem .4rem; transition:all .25s">
+          <div style="font-size:1.8rem">⚙️</div>
+          <div style="font-weight:700; color:var(--ink)">Server</div>
+          <div style="font-size:.72rem; color:var(--ink-soft)">la nostra app</div>
+        </div>
+        <div style="align-self:center; font-size:1.3rem; color:var(--ink-faint)">⟷</div>
+        <div class="flow-node" id="fn-db" style="flex:1; text-align:center; border:2px solid var(--ink-soft); border-radius:12px; padding:.9rem .4rem; transition:all .25s">
+          <div style="font-size:1.8rem">🗄️</div>
+          <div style="font-weight:700; color:var(--ink)">Database</div>
+          <div style="font-size:.72rem; color:var(--ink-soft)">i dati</div>
+        </div>
+      </div>
+      <div id="fn-step" style="margin-top:1rem; min-height:2.6em; text-align:center; color:var(--ink); font-size:.98rem; display:flex; align-items:center; justify-content:center; padding:0 .5rem"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="fn-go">▶ invia una richiesta</button>
+      <button class="btn ghost" id="fn-reset">reset</button>
+    </div>
+    <div class="w-readout" id="fn-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">Sezione 1.3</span>Cosa fa davvero un server</h2>
+
+  <p class="lead">
+    «Riceve richieste e risponde» è vero ma vago. Concretamente, per <b>ogni</b> richiesta che arriva, il codice del
+    backend compie una sequenza di lavori ben definita. Conoscerla ti dà lo scheletro di quasi ogni funzione che
+    scriverai.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il ciclo di vita di una richiesta <span class="tag">cosa succede a ogni chiamata</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>Ricevere e interpretare</b></dt>
+        <dd>arriva una richiesta HTTP; il server capisce <b>cosa</b> vuole (quale indirizzo, quale metodo) e ne
+            estrae i <b>dati</b> (parametri, corpo JSON).</dd>
+        <dt>2 · <b>Autenticare e autorizzare</b></dt>
+        <dd>«chi sei? puoi fare questa cosa?». Verifica l'identità (login, token) e i permessi. <mark>Un controllo che
+            il front-end non può fare da solo</mark>: la sicurezza vive qui (Cap. 13).</dd>
+        <dt>3 · <b>Applicare la logica di business</b></dt>
+        <dd>le <b>regole</b> dell'applicazione: calcola il totale del carrello, verifica che ci sia disponibilità,
+            impedisci un bonifico a saldo negativo. È il «cervello» del servizio.</dd>
+        <dt>4 · <b>Parlare col database</b></dt>
+        <dd>legge o scrive i <b>dati permanenti</b>: recupera il profilo, salva l'ordine, aggiorna il saldo
+            (Cap. 8–12). <mark>È qui che le cose vengono <b>ricordate</b></mark> tra una richiesta e l'altra.</dd>
+        <dt>5 · <b>Rispondere</b></dt>
+        <dd>costruisce e rimanda una risposta (di solito JSON) con l'esito e i dati richiesti, più un <b>codice</b> di
+            stato (200 ok, 404 non trovato, 403 vietato…) (Cap. 2).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non tutte le richieste passano da tutti i passi (una pagina pubblica salta l'autenticazione), ma questo è lo
+      <b>schema generale</b>. <mark>Nota il passo 4: la <b>persistenza</b> è ciò che distingue davvero il backend</mark>
+      dal front-end. Il front-end dimentica tutto a ogni ricaricamento; il backend, col database, <b>ricorda per
+      sempre</b>. Gran parte di questo libro ruota attorno a farlo bene e in sicurezza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">Sezione 1.4</span>Gli attori: web server, app, database</h2>
+
+  <p class="lead">
+    «Il backend» non è un unico blocco: è una <b>squadra</b> di programmi che collaborano, ciascuno con un ruolo.
+    Vederli separati adesso ti farà capire perché più avanti installeremo e configureremo pezzi diversi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre attori (più uno) <span class="tag">chi fa cosa, dietro le quinte</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Il web server</b> (es. nginx)</dt>
+        <dd>il «portiere» che sta davanti a tutto: riceve le connessioni dalla rete, gestisce l'HTTPS, smista le
+            richieste all'applicazione e serve i file statici. <mark>È il primo a toccare ogni richiesta</mark> e
+            l'ultimo prima della risposta (Cap. 17).</dd>
+        <dt><b>L'applicazione</b> (il nostro codice, con FastAPI)</dt>
+        <dd>il «cervello»: contiene la <b>logica</b> e definisce le <b>API</b> (gli indirizzi a cui si può chiedere
+            qualcosa). È ciò che scriverai tu, in Python, per la maggior parte del libro (dal Cap. 4).</dd>
+        <dt><b>Il database</b> (es. PostgreSQL)</dt>
+        <dd>la «memoria» permanente: conserva i dati in modo organizzato, sicuro e interrogabile. Sopravvive ai
+            riavvii e regge grandi quantità di informazioni (Cap. 8–12).</dd>
+        <dt>+ <b>Servizi accessori</b> (es. MinIO)</dt>
+        <dd>pezzi specializzati: lo <b>storage</b> per i file grossi (immagini, video) sta a parte dal database
+            (Cap. 14); ci sono anche cache, code di lavoro, e altro che incontrerai crescendo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      All'inizio (Cap. 4–7) faremo girare <b>tutto in un unico programma</b> sul tuo computer, per semplicità. Poi,
+      pezzo per pezzo, aggiungeremo il database vero, lo storage, e infine impacchetteremo ogni attore in un
+      <b>container Docker</b> (Cap. 15–16) e li metteremo dietro nginx su un server (Cap. 17–18). <mark>Questa squadra
+      di attori è, in miniatura, l'architettura di qualsiasi servizio online.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">Sezione 1.5</span>Laboratorio: il tuo primo server</h2>
+
+  <p class="lead">
+    Basta teoria: mettiamo in piedi un <b>vero server</b> con una sola riga. Python ne include uno già pronto per
+    servire file — non è quello che useremo per le API, ma è perfetto per <b>toccare con mano</b> il modello
+    client-server: un programma che si mette in ascolto e risponde al tuo browser.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧪</span> Prerequisito: Python installato</div>
+    <p style="margin-bottom:0">
+      Serve Python 3 sul tuo computer (dal nostro libro «Python», o da <code>python.org</code>). Verifica aprendo un
+      terminale e digitando <code>python --version</code> (su alcuni sistemi <code>python3 --version</code>):
+      dovresti vedere una versione 3.x.
+    </p>
+  </div>
+
+  <p>Crea una cartella vuota, entraci, e avvia il server integrato di Python:</p>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="c"># crea una cartella per l'esperimento ed entraci</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">primo-server</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">primo-server</span>
+
+<span class="c"># metti dentro un file da servire</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"Ciao dal mio primo server!"</span> &gt; <span class="ar">index.html</span>
+
+<span class="c"># avvia il web server integrato di Python sulla porta 8000</span>
+<span class="p">$</span> <span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">http.server 8000</span>
+<span class="out">Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il comando smontato <span class="tag">python -m http.server 8000</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">python</span></dt>
+        <dd>lancia l'interprete Python (su alcuni sistemi è <code>python3</code>).</dd>
+        <dt><span class="mono">-m http.server</span></dt>
+        <dd><code>-m</code> significa «esegui il <b>modulo</b> di libreria che ti indico»: qui
+            <code>http.server</code>, un piccolo web server incluso in Python. <mark>Non hai installato niente: era
+            già lì.</mark></dd>
+        <dt><span class="mono">8000</span></dt>
+        <dd>la <b>porta</b> su cui mettersi in ascolto (il «numero di interno» del server sulla macchina, come nel
+            libro «Reti»). 8000 è una scelta comune per lo sviluppo locale.</dd>
+        <dt>la riga <span class="mono">Serving HTTP on…</span></dt>
+        <dd>il server ti dice che è <b>in ascolto</b> e aspetta richieste. Ora è un vero server: resta lì finché non
+            lo fermi.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <p>
+    Ora sei il <b>client</b>: apri il browser e vai a <code>http://localhost:8000</code>. Vedrai il tuo messaggio.
+    Nel frattempo, guarda il terminale: a ogni visita compare una <b>riga di log</b> della richiesta ricevuta —
+    stai vedendo il server reagire, dal vivo.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale (mentre visiti la pagina dal browser)</div>
+    <pre><span class="out">127.0.0.1 - - [19/Jul/2026 10:30:01] "</span><span class="hl">GET / HTTP/1.1</span><span class="out">" 200 -</span>
+<span class="out">127.0.0.1 - - [19/Jul/2026 10:30:01] "GET /favicon.ico HTTP/1.1" 404 -</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔍</span> Leggere quel log: c'è già tutto</div>
+    <p style="margin-bottom:0">
+      In quelle righe c'è in nuce tutto il libro: <code>127.0.0.1</code> è il client (tu stesso, «localhost»);
+      <code>GET /</code> è la <b>richiesta</b> (metodo GET, indirizzo <code>/</code>, Cap. 2); <code>200</code> è il
+      <b>codice di stato</b> «tutto ok»; <code>404</code> nella seconda riga è «non trovato» (il browser ha chiesto
+      un'iconcina <code>favicon.ico</code> che non esiste). <mark>Hai appena visto una conversazione client-server
+      completa</mark>, con richieste, risposte e codici di stato. Per fermare il server: <code>Ctrl + C</code>.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Questo non è un server «da produzione»</div>
+    <p style="margin-bottom:0">
+      <code>http.server</code> serve solo file statici e regge poche richieste: è pensato per esperimenti locali, mai
+      per un sito vero. Ma come <b>primo contatto</b> è perfetto: hai avviato un processo in ascolto, lo hai
+      interrogato da un client e hai letto le risposte. <mark>Da qui in poi costruiremo un server che non serve
+      file, ma <b>risponde con dati e logica</b></mark> — un'API — usando FastAPI. Tutto parte da questo semplice
+      schema.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li><b>Front-end</b> (sul dispositivo, visibile, effimero) e <b>back-end</b> (sul server, nascosto, con i
+          dati): due mondi che collaborano via rete (§1.1).</li>
+      <li>Modello <b>client-server</b>: il client <b>chiede</b>, il server <b>ascolta ed elabora e risponde</b>, per
+          tanti client insieme (§1.2).</li>
+      <li>Per ogni richiesta il server: <b>riceve → autentica → applica la logica → parla col database →
+          risponde</b>. La <b>persistenza</b> è ciò che distingue il backend (§1.3).</li>
+      <li>Gli <b>attori</b>: web server (nginx, il portiere), applicazione (FastAPI, il cervello), database
+          (PostgreSQL, la memoria), + servizi come MinIO (storage) (§1.4).</li>
+      <li>Un server è solo <b>un programma in ascolto che risponde</b>: <code>python -m http.server</code> te lo ha
+          fatto toccare (§1.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai la mappa: sai <em>cosa</em> è il backend e <em>chi</em> ci lavora. Prima di scrivere il nostro server, però,
+    dobbiamo padroneggiare la <b>lingua</b> con cui client e server si parlano — quel <code>GET /</code> … <code>200</code>
+    che hai intravisto nel log. È il protocollo <b>HTTP</b>, e il modo moderno di organizzare un'API attorno a esso si
+    chiama <b>REST</b>. Sono il tema del <strong>Capitolo 2</strong>: i metodi, i codici di stato, le risorse e il
+    formato JSON — l'alfabeto di tutto ciò che costruiremo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">Sezione 1.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.1</div>
+    <p style="margin-bottom:0">
+      Con parole tue, qual è la differenza fondamentale tra front-end e back-end riguardo a <b>dove girano</b> e a
+      <b>cosa ricordano</b>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.2</div>
+    <p style="margin-bottom:0">
+      Nel modello client-server, chi <b>inizia</b> sempre la conversazione? Perché un server viene descritto come «in
+      ascolto»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.3</div>
+    <p style="margin-bottom:0">
+      Perché la validazione di sicurezza («questo utente può cancellare questo post?») deve stare nel <b>backend</b> e
+      non può essere lasciata al solo front-end?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Avvia <code>python -m http.server 8000</code> in una cartella, visita <code>localhost:8000</code> dal
+      browser, e osserva il log. Che <b>metodo</b> e che <b>codice di stato</b> vedi per la pagina principale? E cosa
+      succede se nella cartella non c'è nessun <code>index.html</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">Sezione 1.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.1</div>
+    <p style="margin-bottom:0">
+      Il <b>front-end</b> gira <b>sul dispositivo dell'utente</b> (browser/app) ed è <b>effimero</b>: chiuso il
+      programma, il suo stato sparisce. Il <b>back-end</b> gira <b>su un server remoto</b> e, grazie al database,
+      <b>ricorda i dati in modo permanente</b>, condiviso tra tutti gli utenti e tra tutte le visite. In breve: il
+      front-end mostra, il back-end conserva e decide.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.2</div>
+    <p style="margin-bottom:0">
+      È sempre il <b>client</b> a iniziare, facendo una richiesta. Il server è «in ascolto» perché sta fermo, attivo,
+      ad aspettare che arrivino richieste dalla rete su una certa porta; non fa nulla di sua iniziativa, ma
+      <b>reagisce</b> a ogni richiesta che riceve — potenzialmente da moltissimi client contemporaneamente.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.3</div>
+    <p style="margin-bottom:0">
+      Perché il front-end gira <b>sul dispositivo dell'utente</b>, che ha pieno controllo su di esso: chiunque può
+      modificarlo, ignorarlo o inviare richieste «a mano» al server saltando l'interfaccia. Qualsiasi controllo fatto
+      solo lì è <b>aggirabile</b>. Il backend, invece, è <b>fuori</b> dalla portata dell'utente: è l'unico posto dove
+      un controllo di sicurezza è <b>affidabile</b>. Regola d'oro: <mark>non fidarti mai dei dati che arrivano dal
+      client</mark> — validali sempre nel backend.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.4</div>
+    <p style="margin-bottom:0">
+      Per la pagina principale vedi il metodo <b>GET</b> e il codice <b>200</b> (successo). Se nella cartella
+      <b>non</b> c'è un <code>index.html</code>, <code>http.server</code> non trova una pagina predefinita e
+      <b>mostra invece l'elenco dei file</b> della cartella (una «directory listing»), rispondendo comunque con un
+      200. Se chiedi un file inesistente (es. <code>localhost:8000/pippo</code>) ottieni un <b>404</b>. Sperimenta:
+      leggere i codici di stato nel log è un'abilità che userai per tutto il libro.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §1.2 — una richiesta passo per passo: anima il flusso client→server→db→ritorno
+   ========================================================================= */
+(function () {
+  const client = document.getElementById('fn-client');
+  if (!client) return;
+  const server = document.getElementById('fn-server');
+  const db     = document.getElementById('fn-db');
+  const step   = document.getElementById('fn-step');
+  const out    = document.getElementById('fn-out');
+  const go     = document.getElementById('fn-go');
+
+  const ACC = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2f5d8c';
+  const GRN = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#2c6b4f';
+
+  const nodes = [client, server, db];
+  function spegni() {
+    nodes.forEach(n => { n.style.borderColor = 'var(--ink-soft)'; n.style.background = 'transparent'; n.style.transform = 'none'; });
+  }
+  function accendi(n, color) {
+    spegni();
+    n.style.borderColor = color;
+    n.style.background = 'color-mix(in srgb, ' + color + ' 14%, transparent)';
+    n.style.transform = 'translateY(-4px)';
+  }
+
+  const FASI = [
+    { n: client, c: ACC, t: '1 · <b>Il client</b> (il browser) invia una richiesta HTTP: «dammi il profilo di Anna».' },
+    { n: server, c: ACC, t: '2 · <b>Il server</b> riceve la richiesta, controlla chi sei e i permessi, applica la logica.' },
+    { n: db,     c: ACC, t: '3 · <b>Il server interroga il database</b>: «cerca la riga dell\'utente Anna».' },
+    { n: db,     c: GRN, t: '4 · <b>Il database risponde</b> al server con i dati trovati.' },
+    { n: server, c: GRN, t: '5 · <b>Il server costruisce la risposta</b> (di solito JSON) con codice di stato 200.' },
+    { n: client, c: GRN, t: '6 · <b>Il client riceve la risposta</b> e mostra il profilo. Viaggio completo! ✅' }
+  ];
+
+  let timer = null;
+  function play() {
+    go.disabled = true;
+    let i = 0;
+    function next() {
+      if (i >= FASI.length) { go.disabled = false; return; }
+      const f = FASI[i];
+      accendi(f.n, f.c);
+      step.innerHTML = f.t;
+      i++;
+      timer = setTimeout(next, 1150);
+    }
+    next();
+  }
+
+  go.addEventListener('click', play);
+  document.getElementById('fn-reset').addEventListener('click', function () {
+    if (timer) clearTimeout(timer);
+    go.disabled = false; spegni(); step.textContent = '';
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Una richiesta viaggia <b>a destra</b> (client→server→database) e la risposta torna <b>a sinistra</b>. Il server sta nel mezzo: riceve, decide, interroga i dati e risponde. È lo schema di <b>ogni</b> operazione che costruiremo nel libro.</div>';
+})();
+</script>
+</body>
+</html>

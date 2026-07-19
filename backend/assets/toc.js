@@ -14,7 +14,7 @@ const TOC = [
     n: 1,
     titolo: "Cos'è il backend",
     file: "cap01-cos-e-il-backend.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Front-end e back-end" },
       { id: "s1-2", n: "1.2", t: "Il modello client-server" },
