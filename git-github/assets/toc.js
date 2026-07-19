@@ -163,7 +163,7 @@ const TOC = [
     n: 11,
     titolo: "Collaborare: push, pull, fetch",
     file: "cap11-push-pull.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "git push: mandare le commit al remoto" },
       { id: "s11-2", n: "11.2", t: "git pull: ricevere le modifiche" },

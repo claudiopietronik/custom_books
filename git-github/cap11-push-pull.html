@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Collaborare: push, pull, fetch — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Collaborare: push, pull, fetch</h1>
+    <p class="standfirst">
+      Il tuo repository è su GitHub: ora impariamo a <b>sincronizzarlo</b>, cioè a scambiare commit tra la tua copia
+      locale e quella remota. Sono due movimenti opposti: <b>push</b> per <em>mandare</em> le tue commit al remoto
+      («salire»), <b>pull</b> per <em>ricevere</em> quelle nuove dal remoto («scendere»). Con questi due comandi, più
+      persone possono lavorare sullo stesso progetto: ciascuno fa commit in locale, le pusha su GitHub, e pulla il
+      lavoro degli altri. Vedremo anche la differenza tra <b>pull</b> e <b>fetch</b> (un dettaglio che chiarisce come
+      Git ragiona) e le abitudini per restare allineati in team senza pestarsi i piedi. In questo capitolo:
+      <code>git push</code> (§11.1), <code>git pull</code> (§11.2), <code>fetch</code> vs <code>pull</code> (§11.3), e
+      la sincronizzazione in team (§11.4). <mark>È il ritmo quotidiano del lavoro collaborativo: committa, pusha,
+      pulla, ripeti.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <code>git push</code> per mandare (§11.1), <code>git pull</code> per ricevere (§11.2), <b>fetch vs pull</b>
+      (§11.3), restare <b>sincronizzati</b> in team (§11.4). Nel laboratorio (§11.5) simuli un flusso di
+      sincronizzazione.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la collaborazione, in due comandi</div>
+    <p style="margin-bottom:0">
+      Push e pull sono il <b>battito</b> del lavoro di squadra: senza di essi, il repository remoto sarebbe solo un
+      backup statico. <mark>Con essi, il codice fluisce tra te, il team e il progetto ufficiale.</mark> Capire
+      <em>quando</em> pushare e pullare — e cosa succede quando anche altri lo fanno — è la base per collaborare senza
+      confusione (e per le pull request del prossimo capitolo).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>git push: mandare le commit al remoto</h2>
+
+  <p class="lead">
+    <code>git push</code> invia le commit che hai fatto in locale al repository remoto (GitHub), aggiornandolo. È il
+    passo che rende visibile agli altri (e mette al sicuro) il tuo lavoro.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — mandare le commit su GitHub</div>
+    <pre><span class="c"># hai committato in locale; ora manda le commit a origin</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span>
+<span class="out">... To https://github.com/anna/diario.git
+   a1b2c3d..e4f5g6h  main -&gt; main</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git push smontato <span class="tag">manda ciò che è solo in locale</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git push</span></dt>
+        <dd>manda al remoto le commit che hai in locale ma <b>non ancora sul remoto</b>. <mark>Solo le novità</mark>:
+            Git sa cosa manca «lassù» e invia quello. Dopo il primo <code>push -u</code> (Cap. 10), basta
+            <code>git push</code>.</dd>
+        <dt>la forma esplicita <span class="mono">git push origin main</span></dt>
+        <dd>«manda il branch <code>main</code> al remoto <code>origin</code>». <mark>Utile per essere precisi</mark> o
+            quando pushi un branch nuovo per la prima volta.</dd>
+        <dt>cosa succede</dt>
+        <dd>il remoto avanza: le tue commit ora sono su GitHub, visibili nella pagina del repo e agli altri
+            collaboratori. <mark>Il tuo lavoro è condiviso e al sicuro.</mark></dd>
+        <dt>quando pushare</dt>
+        <dd>tipicamente dopo aver completato un pezzo di lavoro (una o più commit coerenti). <mark>Non serve pushare
+            a ogni singola commit</mark>, ma farlo spesso è una buona abitudine (backup + gli altri vedono i
+            progressi).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un dettaglio importante: <mark>puoi pushare solo se il tuo locale è «aggiornato» rispetto al remoto</mark>. Se
+      nel frattempo qualcun altro ha pushato commit che tu non hai, Git <b>rifiuta</b> il tuo push e ti chiede di
+      fare prima <code>git pull</code> (§11.2) per allinearti. È una protezione: evita di sovrascrivere il lavoro
+      altrui. Vediamo appunto il pull.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>git pull: ricevere le modifiche</h2>
+
+  <p class="lead">
+    <code>git pull</code> fa l'opposto di push: <b>scarica</b> dal remoto le commit nuove (fatte da te su un'altra
+    macchina, o dai collaboratori) e le integra nel tuo repository locale.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — ricevere le novità dal remoto</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>
+<span class="out">Updating a1b2c3d..f9e8d7c
+Fast-forward
+ collaboratore.txt | 5 +++++
+ 1 file changed, 5 insertions(+)</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git pull smontato <span class="tag">scarica + integra</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git pull</span></dt>
+        <dd>scarica le commit nuove dal remoto e le <b>fonde</b> nel tuo branch locale, in un colpo solo.
+            <mark>Il tuo locale si allinea al remoto</mark>: hai anche le commit degli altri.</dd>
+        <dt>pull = fetch + merge</dt>
+        <dd>«dietro le quinte» <code>pull</code> fa due cose: <b>scarica</b> (fetch) le commit remote e le
+            <b>unisce</b> (merge) al tuo lavoro. <mark>Per questo può generare un <b>conflitto</b></mark> (Cap. 9!), se
+            tu e un altro avete cambiato le stesse righe.</dd>
+        <dt>quando pullare</dt>
+        <dd><b>all'inizio</b> di una sessione di lavoro (per partire dall'ultima versione) e <b>prima di pushare</b>
+            (per allinearti). <mark>Pulla spesso</mark>: meno divergenza, meno conflitti.</dd>
+        <dt>il ciclo collaborativo</dt>
+        <dd><b>pull</b> (parti aggiornato) → lavora e <b>committa</b> in locale → <b>pull</b> di nuovo (allinea) →
+            <b>push</b> (condividi). Questo ritmo tiene tutti sincronizzati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il caso classico da tenere a mente: provi a <code>push</code>, Git lo <b>rifiuta</b> («updates were rejected»)
+      perché il remoto è più avanti; fai <code>git pull</code> (che scarica le novità e magari ti fa risolvere un
+      conflitto), poi <code>git push</code> di nuovo — e stavolta va. <mark>«Push rifiutato → pull → push» è una
+      sequenza che incontrerai spesso</mark>: ora sai perché e cosa fare.
+    </div>
+  </div>
+
+  <div class="widget" id="w-sync">
+    <div class="w-head">
+      <span>Sincronizzazione: push e pull tra te e il team</span>
+      <span class="hint">le commit salgono e scendono</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div style="display:flex; align-items:stretch; justify-content:center; gap:1rem; flex-wrap:wrap">
+        <div style="flex:1; min-width:150px; text-align:center">
+          <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">💻 tu (locale)</div>
+          <div id="sy-local" style="border:2px solid var(--ink-soft); border-radius:10px; padding:.6rem; min-height:60px; font-family:var(--mono); font-size:.8rem"></div>
+        </div>
+        <div style="align-self:center; text-align:center; color:var(--ink-faint); font-size:.75rem">
+          <div id="sy-up">⬆ push</div>
+          <div id="sy-down" style="margin-top:.3rem">⬇ pull</div>
+        </div>
+        <div style="flex:1; min-width:150px; text-align:center">
+          <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">☁️ GitHub (origin)</div>
+          <div id="sy-remote" style="border:2px solid var(--ink-soft); border-radius:10px; padding:.6rem; min-height:60px; font-family:var(--mono); font-size:.8rem"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="sy-commit">commit (in locale)</button>
+      <button class="btn" id="sy-push">git push</button>
+      <button class="btn" id="sy-mate">👤 un collega pusha</button>
+      <button class="btn" id="sy-pull">git pull</button>
+      <button class="btn ghost" id="sy-reset">reset</button>
+    </div>
+    <div class="w-readout" id="sy-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>fetch vs pull</h2>
+
+  <p class="lead">
+    C'è un cugino di <code>pull</code> che vale la pena conoscere: <code>git fetch</code>. Fa <b>metà</b> del lavoro di
+    pull — scarica, ma non fonde — ed è utile quando vuoi <b>guardare</b> le novità prima di integrarle.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">fetch vs pull <span class="tag">scarica-e-basta vs scarica-e-unisci</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git fetch</span></dt>
+        <dd>scarica le commit nuove dal remoto <b>senza</b> toccare il tuo lavoro. <mark>Le mette «da parte»</mark> (in
+            riferimenti come <code>origin/main</code>) così puoi ispezionarle (con <code>git log origin/main</code>,
+            <code>git diff</code>) prima di decidere.</dd>
+        <dt><span class="mono">git pull</span></dt>
+        <dd>= <code>git fetch</code> <b>+</b> <code>git merge</code>: scarica <b>e</b> integra subito nel tuo branch.
+            <mark>Più diretto, ma «impegna» subito</mark> le modifiche remote (con possibile conflitto).</dd>
+        <dt>quando usare quale</dt>
+        <dd><b>pull</b> nell'uso quotidiano, quando vuoi semplicemente allinearti. <b>fetch</b> quando vuoi
+            <b>prima vedere</b> cosa è cambiato (utile in progetti attivi, o se sei prudente). <mark>fetch è sempre
+            «sicuro»</mark>: non modifica il tuo lavoro, solo aggiorna la conoscenza del remoto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un modo di pensarci: <mark><code>fetch</code> = «vai a vedere la posta ma non aprirla»; <code>pull</code> = «vai
+      a prendere la posta e sistemala subito»</mark>. All'inizio userai quasi sempre <code>pull</code> (più
+      semplice); <code>fetch</code> diventa utile quando vuoi controllo e prudenza. Sapere che <code>pull = fetch +
+      merge</code> ti aiuta anche a capire perché un <code>pull</code> può generare un conflitto: la parte «merge».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Restare sincronizzati in team</h2>
+
+  <p class="lead">
+    Quando più persone lavorano sullo stesso repository, la chiave è <b>sincronizzarsi spesso</b>. Poche abitudini
+    rendono la collaborazione fluida ed evitano il caos (e i conflitti).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le abitudini del lavoro in team <span class="tag">pull spesso · push spesso · branch propri</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>pull all'inizio, pull prima di push</b></dt>
+        <dd>comincia ogni sessione con <code>git pull</code> (parti dall'ultima versione); fai <code>pull</code> anche
+            <b>prima</b> di ogni <code>push</code> (per allinearti ed evitare il rifiuto). <mark>Meno sorprese.</mark></dd>
+        <dt><b>push frequenti</b></dt>
+        <dd>condividi il tuo lavoro spesso, così gli altri vedono i progressi e le divergenze restano piccole. Un
+            lavoro tenuto in locale per settimane è una bomba di conflitti.</dd>
+        <dt><b>lavora su branch tuoi</b></dt>
+        <dd>ognuno la sua feature sul suo branch (Cap. 7), poi unione controllata. <mark>Non tutti su <code>main</code>
+            insieme</mark>: sarebbe un campo minato. È il tema delle pull request (Cap. 12).</dd>
+        <dt><b>comunica</b></dt>
+        <dd>Git è uno strumento, non un sostituto della comunicazione. <mark>Dirsi «sto lavorando su questo file»</mark>
+            previene sovrapposizioni meglio di qualsiasi comando.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il messaggio di fondo: <mark>la collaborazione con Git è fatta di piccoli scambi frequenti</mark>, non di grandi
+      travasi occasionali. Pull spesso, push spesso, branch separati, e comunicazione. Con queste abitudini, lavorare
+      in dieci sullo stesso progetto diventa naturale — ed è esattamente ciò che il flusso a pull request del prossimo
+      capitolo formalizza e rende ordinato.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Laboratorio: sincronizzare</h2>
+
+  <p class="lead">
+    Simuliamo il ciclo collaborativo completo sul tuo repo <code>diario</code> già su GitHub (Cap. 10). Anche da solo,
+    puoi esercitare push e pull (immagina che il «collaboratore» sia te stesso da un'altra macchina).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — il ciclo pull → lavora → push</div>
+    <pre><span class="c"># 1) parti aggiornato: scarica eventuali novità dal remoto</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>
+<span class="out">Already up to date.</span>          <span class="c"># (se non ci sono novità)</span>
+
+<span class="c"># 2) lavora e committa in locale (il ciclo del Cap. 4)</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"Giorno 4: ho imparato push e pull."</span> &gt; <span class="ar">giorno4.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il quarto giorno"</span>
+
+<span class="c"># 3) allinea di nuovo (buona abitudine) e condividi</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">pull</span>          <span class="c"># nel caso siano arrivate novità nel frattempo</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span>          <span class="c"># manda la tua commit su GitHub</span>
+
+<span class="c"># ricarica GitHub: il quarto giorno è online!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il ritmo che hai imparato</div>
+    <p style="margin-bottom:0">
+      Hai praticato il ciclo collaborativo: <b>pull</b> (parti aggiornato) → <b>lavora e committa</b> → <b>pull</b>
+      (allinea) → <b>push</b> (condividi). <mark>Questo ritmo, ripetuto, è la sincronizzazione in team</mark>. Se durante
+      un pull comparisse un conflitto, ora sai risolverlo (Cap. 9). E se un push venisse rifiutato, sai che basta un
+      pull prima. Hai tutti gli strumenti per lavorare con altri su un progetto condiviso. Manca solo un pezzo — il più
+      «sociale» — per rendere la collaborazione ordinata e revisionata: le <b>pull request</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><code>git push</code> <b>manda</b> le tue commit locali al remoto (origin). Puoi pushare solo se sei
+          allineato: altrimenti Git rifiuta e chiede un pull (§11.1).</li>
+      <li><code>git pull</code> <b>scarica e integra</b> le commit nuove dal remoto (= fetch + merge). Può generare un
+          conflitto (§11.2).</li>
+      <li><code>git fetch</code> scarica <b>senza</b> integrare (sicuro, per «guardare prima»); <code>pull</code> =
+          <code>fetch</code> + <code>merge</code> (§11.3).</li>
+      <li>In team: <b>pull spesso</b> (all'inizio e prima di push), <b>push spesso</b>, <b>branch propri</b>,
+          comunica. Scambi piccoli e frequenti (§11.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai scambiare commit con il remoto. Ma pushare direttamente su <code>main</code> in un team non è il modo migliore:
+    manca un momento di <b>revisione</b>, e il rischio di rompere il ramo principale è alto. Il flusso professionale
+    usa le <b>pull request</b>: proponi le tue modifiche su un branch, i colleghi le <b>revisionano</b> e discutono, e
+    solo dopo si uniscono. Nel <strong>Capitolo 12</strong> impariamo questo flusso — il cuore della collaborazione
+    moderna su GitHub — con la code review che rende il codice migliore e condiviso.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      In una frase ciascuno, cosa fanno <code>git push</code> e <code>git pull</code>? In che «direzione» va ognuno
+      (dal locale al remoto o viceversa)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Provi a fare <code>git push</code> e Git lo <b>rifiuta</b> dicendo che il remoto ha commit che tu non hai. Cosa
+      fai per risolvere e riuscire a pushare?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>git fetch</code> e <code>git pull</code>? A cosa equivale <code>git pull</code>
+      «sotto il cofano»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Perché, lavorando in team, è consigliato fare <code>git pull</code> <b>prima</b> di <code>git push</code>? Cosa
+      si rischia a tenere il proprio lavoro in locale per settimane senza sincronizzare?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      <code>git push</code> <b>manda</b> le tue commit locali al repository remoto (direzione: <b>dal locale al
+      remoto</b>, «salgono»). <code>git pull</code> <b>scarica e integra</b> le commit nuove dal remoto nel tuo
+      repository locale (direzione: <b>dal remoto al locale</b>, «scendono»). In breve: push condivide il tuo lavoro,
+      pull ti aggiorna con quello degli altri.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      Il push è rifiutato perché il remoto è «più avanti» del tuo locale (qualcuno ha pushato commit che tu non hai).
+      La soluzione: fare prima <code>git pull</code> per scaricare e integrare quelle commit (risolvendo un eventuale
+      conflitto), così il tuo locale si allinea al remoto; poi <code>git push</code> di nuovo, che stavolta va a buon
+      fine. La sequenza è: <b>push rifiutato → pull → push</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      <code>git fetch</code> <b>scarica</b> le commit nuove dal remoto ma <b>non le integra</b> nel tuo branch (le mette
+      «da parte» per ispezionarle): è sicuro, non tocca il tuo lavoro. <code>git pull</code> scarica <b>e</b> integra
+      subito. «Sotto il cofano», <code>git pull</code> equivale a <code>git fetch</code> + <code>git merge</code>:
+      prima scarica, poi fonde le commit remote nel tuo branch (motivo per cui può generare un conflitto).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      Fare <code>pull</code> prima di <code>push</code> ti fa <b>allineare</b> il locale con le eventuali commit nuove
+      del remoto: così il push non viene rifiutato e integri per tempo il lavoro altrui (risolvendo subito piccoli
+      conflitti). Tenere il proprio lavoro in locale per settimane senza sincronizzare fa <b>divergere</b> molto la tua
+      copia da quella condivisa: quando finalmente sincronizzi, rischi <b>conflitti grandi e numerosi</b>, difficili da
+      risolvere. Meglio scambi piccoli e frequenti.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.2 — sincronizzazione: commit locali, push (su), collega pusha, pull (giù)
+   ========================================================================= */
+(function () {
+  const localEl = document.getElementById('sy-local');
+  if (!localEl) return;
+  const remoteEl = document.getElementById('sy-remote');
+  const out = document.getElementById('sy-out');
+  const up = document.getElementById('sy-up');
+  const down = document.getElementById('sy-down');
+
+  // ogni commit: {id, by}  by = 'io' o 'collega'
+  let local = [{ id: 'c1', by: 'io' }];
+  let remote = [{ id: 'c1', by: 'io' }];
+  let seed = 1;
+  function nid() { seed++; return 'c' + seed; }
+
+  function ids(arr) { return arr.map(function (c) { return c.id; }); }
+  function draw() {
+    function render(arr) {
+      return arr.map(function (c) {
+        const col = c.by === 'io' ? '#2f5d8c' : '#a8452c';
+        return '<span style="display:inline-block; background:' + col + '; color:#fff; border-radius:5px; padding:.12rem .4rem; margin:.1rem; font-size:.72rem">' + c.id + '</span>';
+      }).join('');
+    }
+    localEl.innerHTML = render(local) || '<span style="color:var(--ink-soft)">vuoto</span>';
+    remoteEl.innerHTML = render(remote) || '<span style="color:var(--ink-soft)">vuoto</span>';
+  }
+  function flash(el, color) { el.style.color = color; el.style.fontWeight = '700'; setTimeout(function () { el.style.color = 'var(--ink-faint)'; el.style.fontWeight = 'normal'; }, 700); }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  function localAhead() { return local.filter(function (c) { return ids(remote).indexOf(c.id) < 0; }); }
+  function remoteAhead() { return remote.filter(function (c) { return ids(local).indexOf(c.id) < 0; }); }
+
+  document.getElementById('sy-commit').addEventListener('click', function () {
+    local.push({ id: nid(), by: 'io' }); draw();
+    out.innerHTML = note('green', 'Nuova <b>commit in locale</b>. È solo da te (blu): il remoto non la conosce ancora. Fai <b>git push</b> per condividerla.');
+  });
+  document.getElementById('sy-push').addEventListener('click', function () {
+    if (remoteAhead().length) { out.innerHTML = note('warm', '⚠ <b>Push rifiutato!</b> Il remoto ha commit che tu non hai (arancioni, del collega). Fai prima <b>git pull</b> per allinearti, poi ripushare.'); return; }
+    const ahead = localAhead();
+    if (!ahead.length) { out.innerHTML = note('', 'Niente da pushare: sei già allineato col remoto.'); return; }
+    remote = local.slice(); draw(); flash(up, 'var(--green)');
+    out.innerHTML = note('green', '⬆ <b>push</b>: ' + ahead.length + ' commit inviate a GitHub. Ora il remoto è allineato al tuo locale — gli altri le vedranno.');
+  });
+  document.getElementById('sy-mate').addEventListener('click', function () {
+    const c = { id: nid(), by: 'collega' };
+    remote.push(c); draw();
+    out.innerHTML = note('', '👤 Un <b>collega ha pushato</b> una commit (arancione): ora è sul remoto ma <b>non</b> nel tuo locale. Se provi a pushare ora, verrà rifiutato: fai <b>git pull</b>.');
+  });
+  document.getElementById('sy-pull').addEventListener('click', function () {
+    const behind = remoteAhead();
+    if (!behind.length) { out.innerHTML = note('', 'Already up to date: il tuo locale ha già tutto quello che c\'è sul remoto.'); return; }
+    // integra le commit remote mancanti
+    behind.forEach(function (c) { local.push(c); });
+    // riordina local secondo remote+extra? semplice: local diventa unione
+    draw(); flash(down, 'var(--green)');
+    out.innerHTML = note('green', '⬇ <b>pull</b>: scaricate ' + behind.length + ' commit dal remoto (incluse quelle del collega) e integrate nel tuo locale. Ora sei allineato — puoi pushare le tue.');
+  });
+  document.getElementById('sy-reset').addEventListener('click', function () {
+    local = [{ id: 'c1', by: 'io' }]; remote = [{ id: 'c1', by: 'io' }]; seed = 1; draw();
+    out.innerHTML = note('', 'Reset: locale e remoto allineati (una commit).');
+  });
+
+  draw();
+  out.innerHTML = note('', 'Le commit <span style="color:#2f5d8c">blu</span> sono tue, <span style="color:#a8452c">arancioni</span> del collega. <b>commit</b> aggiunge in locale; <b>push</b> le manda su (se allineato); <b>il collega pusha</b> mette roba sul remoto; <b>pull</b> la scarica. Prova la sequenza «collega pusha → tu committi → push (rifiutato!) → pull → push».');
+})();
+</script>
+</body>
+</html>
