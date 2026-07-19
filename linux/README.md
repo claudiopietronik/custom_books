@@ -27,4 +27,4 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 - [x] 13 — Bash scripting: logica
 - [x] 14 — Automazione e ambiente
 - [x] 15 — Sistema e rete da terminale
-- [ ] 16 — Un progetto completo
+- [x] 16 — Un progetto completo

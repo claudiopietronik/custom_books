@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Un progetto completo — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16 · Il traguardo</div>
+    <h1>Un progetto completo</h1>
+    <p class="standfirst">
+      Ci siamo: il gran finale. In quindici capitoli hai costruito una cassetta degli attrezzi completa — navigare il
+      filesystem, gestire file e permessi, processi, comporre comandi con le pipe, installare software, scrivere script
+      con logica, automatizzare con cron, diagnosticare il sistema. Ora <b>mettiamo tutto insieme</b> in un progetto
+      reale e utile: uno <b>script di backup automatico</b>. Copierà una cartella importante, la comprimerà in un
+      archivio con la <b>data del giorno</b> nel nome, terrà solo i backup recenti (cancellando i più vecchi), scriverà
+      un log di cosa fa — e girerà <b>da solo ogni notte</b> con cron. È il classico script che ogni amministratore di
+      sistema scrive prima o poi, e racchiude in piccolo tutto ciò che serve: filesystem, variabili, date, condizioni,
+      cicli, compressione, automazione. <mark>Costruendolo pezzo per pezzo, vedrai come le competenze del libro si
+      combinano in uno strumento vero, che potresti davvero usare per proteggere i tuoi dati.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'idea del <b>backup</b> (§16.1), costruire lo script <b>pezzo per pezzo</b> (§16.2), renderlo <b>robusto</b>
+      (§16.3), <b>automatizzarlo</b> con cron (§16.4). Nel laboratorio (§16.5) il backup completo; poi <b>dove andare
+      da qui</b> (§16.6).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: dal sapere al saper fare</div>
+    <p style="margin-bottom:0">
+      Conoscere i comandi è una cosa; <b>combinarli</b> in uno strumento che risolve un problema reale è il salto che
+      conta. <mark>Questo progetto ti lascia uno script funzionante che capisci riga per riga</mark> — e un modello
+      riutilizzabile: quasi ogni automazione (pulizia, sincronizzazione, report) ha questa stessa forma. Da qui non
+      parti più da zero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>L'idea: uno script di backup</h2>
+
+  <p class="lead">
+    Prima di scrivere, definiamo <b>cosa</b> deve fare lo script. Un buon progetto parte da requisiti chiari.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📋</span> Cosa deve fare il nostro backup</div>
+    <p style="margin-bottom:.5rem">Lo script deve:</p>
+    <ul style="margin-bottom:0">
+      <li><b>comprimere</b> una cartella importante (es. <code>~/documenti</code>) in un unico archivio;</li>
+      <li><b>datare</b> l'archivio: il nome include la data del giorno (es. <code>backup-2026-07-19.tar.gz</code>), così
+          i backup non si sovrascrivono;</li>
+      <li><b>salvarlo</b> in una cartella dedicata (es. <code>~/backups</code>);</li>
+      <li><b>fare pulizia</b>: tenere solo i backup recenti (es. degli ultimi 7 giorni), cancellando i più vecchi;</li>
+      <li><b>registrare</b> cosa ha fatto in un file di log;</li>
+      <li><b>girare da solo</b>, ogni notte, con cron.</li>
+    </ul>
+    <p style="margin:.6rem 0 0">
+      Riconosci gli strumenti dietro ognuno? Comprimere = <code>tar</code>; datare = la sostituzione di comando
+      <code>$(date)</code> (Cap. 12); condizioni e cicli per la pulizia (Cap. 13); log con <code>&gt;&gt;</code> (Cap.
+      9); automazione con cron (Cap. 14). <mark>Nessuno strumento nuovo: solo composizione</mark> — più un comando che
+      incontriamo ora, <code>tar</code>, per gli archivi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Costruire lo script pezzo per pezzo</h2>
+
+  <p class="lead">
+    Costruiamo lo script un pezzo alla volta, così ogni riga ha un senso chiaro. Prima cosa nuova: <code>tar</code>, il
+    comando per creare archivi compressi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📦</span> tar: creare un archivio compresso</div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head">tar per comprimere una cartella</div>
+      <pre><span class="p">$</span> <span class="cmd">tar</span> <span class="fl">-czf</span> <span class="ar">archivio.tar.gz</span> <span class="ar">documenti/</span>
+<span class="c"># -c = crea, -z = comprimi (gzip), -f = nome file</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      <code>tar -czf</code> crea un archivio <b>compresso</b> (un <code>.tar.gz</code>) di una cartella:
+      <code>-c</code> «create», <code>-z</code> «zip/comprimi», <code>-f</code> «file» (il nome). <mark>Un unico file,
+      più piccolo, che contiene tutta la cartella</mark> — perfetto per un backup. (Per estrarlo: <code>tar -xzf
+      archivio.tar.gz</code>, con <code>-x</code> «extract».)
+    </p>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">backup.sh — lo script, costruito pezzo per pezzo</div>
+    <pre><span class="cm">#!/bin/bash</span>
+
+<span class="cm"># 1) VARIABILI: cosa salvare, dove, e il nome con la data (Cap. 12)</span>
+SORGENTE<span class="op">=</span><span class="st">"/home/anna/documenti"</span>
+DESTINAZIONE<span class="op">=</span><span class="st">"/home/anna/backups"</span>
+DATA<span class="op">=</span><span class="rs">$(</span><span class="cmd">date</span> +<span class="st">%Y-%m-%d</span><span class="rs">)</span>              <span class="cm"># es. 2026-07-19</span>
+ARCHIVIO<span class="op">=</span><span class="st">"</span><span class="rs">$DESTINAZIONE</span><span class="st">/backup-</span><span class="rs">$DATA</span><span class="st">.tar.gz"</span>
+
+<span class="cm"># 2) assicurati che la cartella di destinazione esista (Cap. 4)</span>
+<span class="cmd">mkdir</span> <span class="fl">-p</span> <span class="rs">"$DESTINAZIONE"</span>
+
+<span class="cm"># 3) crea l'archivio compresso (tar)</span>
+<span class="cmd">tar</span> <span class="fl">-czf</span> <span class="rs">"$ARCHIVIO"</span> <span class="rs">"$SORGENTE"</span>
+
+<span class="cm"># 4) registra nel log cosa è stato fatto (Cap. 9)</span>
+<span class="bi">echo</span> <span class="st">"[</span><span class="rs">$(</span><span class="cmd">date</span><span class="rs">)</span><span class="st">] Backup creato: </span><span class="rs">$ARCHIVIO</span><span class="st">"</span> &gt;&gt; <span class="rs">$DESTINAZIONE</span>/backup.log</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Lo script letto riga per riga <span class="tag">tutto il libro in un file</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>le <b>variabili</b> in cima (Cap. 12)</dt>
+        <dd>SORGENTE, DESTINAZIONE, e il nome <b>datato</b> con <code>$(date +%Y-%m-%d)</code>. <mark>Definite una
+            volta, usate ovunque</mark>: per cambiare cosa salvare, modifichi solo una riga.</dd>
+        <dt><span class="mono">mkdir -p</span> (Cap. 4)</dt>
+        <dd>crea la cartella dei backup se non esiste, senza errori se già c'è. Una piccola robustezza.</dd>
+        <dt><span class="mono">tar -czf</span></dt>
+        <dd>il cuore: comprime la cartella nell'archivio datato. <mark>Un file per ogni giorno</mark>, che non si
+            sovrascrivono grazie alla data nel nome.</dd>
+        <dt>il <b>log</b> con <code>&gt;&gt;</code> (Cap. 9)</dt>
+        <dd>aggiunge una riga al file di log con data e nome dell'archivio. <mark>Così puoi verificare</mark> che il
+            backup (che gira di notte, invisibile) sia stato fatto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota le <b>virgolette</b> attorno alle variabili (<code>"$SORGENTE"</code>): buona pratica (Cap. 13), evita
+      problemi con spazi nei percorsi. E la <b>data nel nome</b> è l'idea chiave: <code>backup-2026-07-19.tar.gz</code>,
+      <code>backup-2026-07-20.tar.gz</code>… ogni giorno il suo, senza cancellare i precedenti. <mark>Questo script già
+      funziona</mark>: comprime e registra. Ora lo rendiamo più robusto.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Renderlo robusto</h2>
+
+  <p class="lead">
+    Uno script che gira da solo dev'essere <b>robusto</b>: controllare che le cose vadano bene e non accumulare backup
+    all'infinito (riempirebbe il disco!). Aggiungiamo un controllo e una pulizia.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">backup.sh — aggiunte per la robustezza</div>
+    <pre><span class="cm"># dopo aver creato l'archivio, CONTROLLA che sia andato bene (Cap. 13)</span>
+<span class="kw">if</span> [ <span class="fl">-f</span> <span class="rs">"$ARCHIVIO"</span> ]; <span class="kw">then</span>
+    <span class="bi">echo</span> <span class="st">"[</span><span class="rs">$(</span><span class="cmd">date</span><span class="rs">)</span><span class="st">] OK: </span><span class="rs">$ARCHIVIO</span><span class="st">"</span> &gt;&gt; <span class="rs">$DESTINAZIONE</span>/backup.log
+<span class="kw">else</span>
+    <span class="bi">echo</span> <span class="st">"[</span><span class="rs">$(</span><span class="cmd">date</span><span class="rs">)</span><span class="st">] ERRORE: backup fallito!"</span> &gt;&gt; <span class="rs">$DESTINAZIONE</span>/backup.log
+<span class="kw">fi</span>
+
+<span class="cm"># PULIZIA: cancella i backup più vecchi di 7 giorni (find, Cap. 5)</span>
+<span class="cmd">find</span> <span class="rs">"$DESTINAZIONE"</span> <span class="fl">-name</span> <span class="st">"backup-*.tar.gz"</span> <span class="fl">-mtime</span> +<span class="nm">7</span> <span class="fl">-delete</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le due robustezze <span class="tag">controllo · pulizia automatica</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>controllo</b> con <code>if [ -f ]</code> (Cap. 13)</dt>
+        <dd>verifica che l'archivio sia stato davvero creato (<code>-f</code> = il file esiste). <mark>Se sì, log di
+            successo; se no, log di errore</mark>. Così, guardando il log, sai se il backup ha funzionato — essenziale
+            per un task automatico che non vedi girare.</dd>
+        <dt>la <b>pulizia</b> con <code>find</code> (Cap. 5)</dt>
+        <dd><code>find ... -mtime +7 -delete</code> trova i backup <b>più vecchi di 7 giorni</b> e li cancella.
+            <mark>Senza questo, i backup si accumulerebbero all'infinito</mark> riempiendo il disco. La «rotazione»:
+            tieni i recenti, elimina i vecchi.</dd>
+        <dt>perché è importante</dt>
+        <dd>un backup <b>senza controllo</b> è pericoloso (potrebbe fallire in silenzio e scoprirlo troppo tardi); un
+            backup <b>senza pulizia</b> è una bomba a orologeria per lo spazio. <mark>La robustezza fa la differenza tra
+            uno script «di prova» e uno «di produzione».</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Guarda quante competenze del libro convergono: <code>find</code> con criterio temporale (Cap. 5), condizione
+      <code>if</code> (Cap. 13), log con redirezione (Cap. 9), <code>-mtime</code> per la data (Cap. 5). <mark>Ogni
+      pezzo l'hai imparato separatamente; qui collaborano</mark> in uno strumento coeso. Questa è la ricompensa dello
+      scripting: le piccole competenze si moltiplicano quando si combinano.
+    </div>
+  </div>
+
+  <div class="widget" id="w-backup">
+    <div class="w-head">
+      <span>Il backup automatico in azione</span>
+      <span class="hint">simula più notti: crea, controlla, ruota</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">📂 ~/backups</div>
+        <div id="bk-files" style="display:flex; flex-direction:column; gap:.3rem; min-height:80px"></div>
+      </div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">📝 backup.log</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="bk-log" style="margin:0; min-height:80px; font-size:11px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="bk-run">🌙 esegui il backup (una notte)</button>
+      <button class="btn ghost" id="bk-reset">reset</button>
+    </div>
+    <div class="w-readout" id="bk-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Automatizzarlo con cron</h2>
+
+  <p class="lead">
+    L'ultimo tocco: far girare lo script <b>da solo</b>, ogni notte, con cron (Cap. 14). Così non devi ricordarti di
+    lanciarlo — il backup avviene mentre dormi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — schedulare il backup</div>
+    <pre><span class="c"># rendi lo script eseguibile (una volta)</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="fl">+x</span> <span class="ar">~/backup.sh</span>
+
+<span class="c"># apri il crontab e aggiungi il task: ogni notte alle 2:00</span>
+<span class="p">$</span> <span class="cmd">crontab</span> <span class="fl">-e</span>
+<span class="c">#   aggiungi questa riga (nota il PERCORSO ASSOLUTO, Cap. 14!):</span>
+  <span class="nm">0</span> <span class="nm">2</span> <span class="nm">*</span> <span class="nm">*</span> <span class="nm">*</span>   <span class="ar">/home/anna/backup.sh</span>
+
+<span class="c"># verifica</span>
+<span class="p">$</span> <span class="cmd">crontab</span> <span class="fl">-l</span>
+<span class="out">0 2 * * *   /home/anna/backup.sh</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🌙</span> Il backup che si prende cura di sé</div>
+    <p style="margin-bottom:0">
+      Con questa riga di cron (<code>0 2 * * *</code> = ogni giorno alle 2:00, Cap. 14), lo script gira <b>ogni notte
+      da solo</b>: crea l'archivio datato, controlla che sia riuscito, ruota i vecchi, e registra tutto nel log.
+      <mark>Da domani, i tuoi documenti sono protetti automaticamente</mark>, senza che tu debba fare nulla. Nota il
+      dettaglio importante: il <b>percorso assoluto</b> dello script (e delle variabili dentro), essenziale perché cron
+      lo esegue «fuori» dalla tua cartella (Cap. 14). Ogni mattina, se vuoi, controlli il <code>backup.log</code> per
+      conferma. Questo è il senso profondo di Linux e dell'automazione: <b>definisci il lavoro una volta, e il sistema
+      lo esegue per sempre, all'orario giusto, prendendosi cura di sé.</b>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Laboratorio: il backup automatico</h2>
+
+  <p class="lead">
+    Ecco lo script completo, da provare (in sicurezza, su una cartella di test). È tutto ciò che hai imparato, in un
+    unico file.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">backup.sh — completo</div>
+    <pre><span class="cm">#!/bin/bash</span>
+SORGENTE<span class="op">=</span><span class="st">"$HOME/documenti"</span>
+DESTINAZIONE<span class="op">=</span><span class="st">"$HOME/backups"</span>
+DATA<span class="op">=</span><span class="rs">$(</span><span class="cmd">date</span> +<span class="st">%Y-%m-%d</span><span class="rs">)</span>
+ARCHIVIO<span class="op">=</span><span class="st">"</span><span class="rs">$DESTINAZIONE</span><span class="st">/backup-</span><span class="rs">$DATA</span><span class="st">.tar.gz"</span>
+
+<span class="cmd">mkdir</span> <span class="fl">-p</span> <span class="rs">"$DESTINAZIONE"</span>
+<span class="cmd">tar</span> <span class="fl">-czf</span> <span class="rs">"$ARCHIVIO"</span> <span class="rs">"$SORGENTE"</span>
+
+<span class="kw">if</span> [ <span class="fl">-f</span> <span class="rs">"$ARCHIVIO"</span> ]; <span class="kw">then</span>
+    <span class="bi">echo</span> <span class="st">"[</span><span class="rs">$(</span><span class="cmd">date</span><span class="rs">)</span><span class="st">] OK: </span><span class="rs">$ARCHIVIO</span><span class="st">"</span> &gt;&gt; <span class="rs">"$DESTINAZIONE/backup.log"</span>
+<span class="kw">else</span>
+    <span class="bi">echo</span> <span class="st">"[</span><span class="rs">$(</span><span class="cmd">date</span><span class="rs">)</span><span class="st">] ERRORE: backup fallito!"</span> &gt;&gt; <span class="rs">"$DESTINAZIONE/backup.log"</span>
+<span class="kw">fi</span>
+
+<span class="cmd">find</span> <span class="rs">"$DESTINAZIONE"</span> <span class="fl">-name</span> <span class="st">"backup-*.tar.gz"</span> <span class="fl">-mtime</span> +<span class="nm">7</span> <span class="fl">-delete</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🏁</span> Ce l'hai fatta</div>
+    <p style="margin-bottom:0">
+      Guarda cosa hai costruito: uno <b>script di backup completo e robusto</b> che unisce filesystem
+      (<code>mkdir</code>, percorsi), variabili e date (<code>$(date)</code>), compressione (<code>tar</code>),
+      condizioni (<code>if</code>), ricerca con criterio temporale (<code>find -mtime</code>), log
+      (<code>&gt;&gt;</code>) e automazione (cron). <mark>Ogni pezzo l'hai imparato in un capitolo; qui vivono tutti
+      insieme, in uno strumento reale</mark> che protegge i tuoi dati automaticamente. Fermati a guardarlo: sei partito
+      dal non sapere cos'è il terminale, e ora scrivi script di produzione. Questo è ciò che significa «saper usare
+      Linux». (Consiglio pratico: provalo <b>prima</b> su una cartella di test e verifica il log, prima di affidargli
+      dati importanti — la prudenza dei backup.)
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li>Un progetto reale nasce da <b>requisiti chiari</b> e si costruisce <b>pezzo per pezzo</b>, combinando
+          competenze note (§16.1-16.2).</li>
+      <li><code>tar -czf</code> crea un archivio compresso; <code>$(date +%Y-%m-%d)</code> dà il nome datato (backup che
+          non si sovrascrivono) (§16.2).</li>
+      <li>La <b>robustezza</b>: controllo con <code>if [ -f ]</code>, log di esito, e <b>pulizia</b> con
+          <code>find -mtime +7 -delete</code> (rotazione) (§16.3).</li>
+      <li><b>Automazione</b> con cron (<code>0 2 * * *</code>) e percorsi assoluti: il backup gira da solo ogni notte,
+          curandosi di sé (§16.4).</li>
+    </ol>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Dove andare da qui</h2>
+
+  <p class="lead">
+    Hai completato il libro: hai le fondamenta solide di Linux da terminale. Ecco le direzioni per crescere, quando ti
+    serviranno — non tutte subito, ma sapere che esistono ti dà la mappa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La mappa dei prossimi passi <span class="tag">approfondimenti</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>scripting più avanzato</dt>
+        <dd><b>funzioni</b> in bash, gestione avanzata degli errori, <code>sed</code> e <code>awk</code> (potenti
+            strumenti per trasformare testo), le espressioni regolari a fondo. <mark>Il tuo <code>grep</code> e le pipe
+            sono la porta d'ingresso.</mark></dd>
+        <dt>amministrazione di sistema</dt>
+        <dd>gestione di utenti e permessi avanzata, configurazione di servizi (systemd), firewall, log di sistema,
+            monitoraggio. <mark>La strada verso il ruolo di «sysadmin» / DevOps.</mark></dd>
+        <dt>strumenti moderni</dt>
+        <dd><b>tmux</b> (sessioni terminale persistenti), <b>ssh</b> avanzato (chiavi, tunnel), <b>Docker</b> (che hai
+            visto nel libro «Backend») e l'orchestrazione. <mark>L'ecosistema attorno a Linux è vastissimo.</mark></dd>
+        <dt>il consiglio più importante</dt>
+        <dd><mark>usa il terminale ogni giorno, per ogni cosa che puoi</mark>. Si impara usandolo: ogni comando, ogni
+            script, ogni problema risolto è pratica. È così che diventa una seconda natura.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non lasciarti intimidire dalla lista: <mark>ciò che hai imparato è la base su cui tutto il resto si appoggia</mark>.
+      Chi padroneggia filesystem, permessi, processi, pipe e scripting sa già muoversi su qualsiasi sistema Linux — dal
+      PC al server. Il resto sono approfondimenti che aggiungerai quando serviranno, un pezzo alla volta, come hai fatto
+      in questo libro. <b>Il terminale ha smesso di essere una scatola nera: è uno strumento che padroneggi.</b> Buon
+      lavoro, e buoni comandi. 🐧
+    </div>
+  </div>
+
+  <p class="closing">
+    Questo è il traguardo del libro — e un punto di partenza per te. Da qui, ogni server a cui accederai, ogni
+    automazione che scriverai, ogni problema di sistema che diagnosticherai parlerà la lingua che ora conosci. <mark>Il
+    terminale non ti fa più paura: ti dà potere</mark>. E si combina con tutto il resto della collana — Reti, Backend,
+    Git — perché Linux è il terreno su cui vive gran parte dell'informatica. Il modo migliore per continuare è lo
+    stesso di sempre: <b>usarlo, costruire, automatizzare</b>. Ora sai come si fa. Buon terminale. 🐧
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Nello script di backup, a cosa serve includere <code>$(date +%Y-%m-%d)</code> nel nome dell'archivio? Cosa
+      succederebbe senza?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Cosa fa la riga <code>find "$DESTINAZIONE" -name "backup-*.tar.gz" -mtime +7 -delete</code>? Perché è importante
+      averla?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      A cosa serve il controllo <code>if [ -f "$ARCHIVIO" ]</code> dopo aver creato il backup? Perché è utile
+      soprattutto per uno script che gira automaticamente di notte?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      Vuoi che il backup giri ogni notte alle 2:00. Scrivi la riga di cron corretta (con un percorso assoluto di
+      esempio). Perché il percorso deve essere assoluto?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-8"><span class="secnum">Sezione 16.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Includere la <b>data</b> nel nome (es. <code>backup-2026-07-19.tar.gz</code>) fa sì che ogni giorno crei un
+      archivio con nome <b>diverso</b>. Così i backup <b>non si sovrascrivono</b>: ne conservi uno per ogni giorno,
+      potendo tornare a una versione precedente. Senza la data, ogni esecuzione userebbe lo stesso nome e
+      <b>sovrascriverebbe</b> il backup del giorno prima — perdendo la storia, il senso stesso di un backup ricorrente.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      Quella riga <b>cancella i backup più vecchi di 7 giorni</b>: <code>find</code> cerca nella cartella dei backup i
+      file col nome <code>backup-*.tar.gz</code> (<code>-name</code>) modificati più di 7 giorni fa (<code>-mtime
+      +7</code>) e li elimina (<code>-delete</code>). È importante perché, senza pulizia, i backup si
+      <b>accumulerebbero all'infinito</b>, finendo per riempire il disco. È la «rotazione»: si tengono solo i backup
+      recenti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Il controllo <code>if [ -f "$ARCHIVIO" ]</code> verifica che l'archivio di backup sia stato <b>davvero
+      creato</b> (il file esiste): in caso positivo scrive un log di successo, altrimenti un log di errore. È utile
+      soprattutto per uno script <b>automatico e notturno</b> perché nessuno lo vede girare: se il backup fallisse in
+      silenzio, potresti scoprirlo troppo tardi (quando ti serve e non c'è). Il controllo, registrato nel log, ti
+      permette di <b>accorgerti dei problemi</b> semplicemente leggendo il log.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">crontab -e</div>
+      <pre><span class="nm">0</span> <span class="nm">2</span> <span class="nm">*</span> <span class="nm">*</span> <span class="nm">*</span>   <span class="ar">/home/anna/backup.sh</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">
+      <code>0 2 * * *</code> significa «al minuto 0 dell'ora 2, ogni giorno» = ogni notte alle 2:00. Il percorso dello
+      script (e dei file dentro) deve essere <b>assoluto</b> perché cron esegue lo script <b>non</b> dalla tua cartella:
+      con un percorso relativo, cron non troverebbe lo script (o i file che usa). Il percorso assoluto lo individua in
+      modo univoco, indipendentemente da dove cron opera.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16.3 — il backup in azione: simula più "notti", crea archivi datati, ruota i vecchi
+   NB: date finte deterministiche (partiamo dal giorno 1 e avanziamo)
+   ========================================================================= */
+(function () {
+  const filesEl = document.getElementById('bk-files');
+  if (!filesEl) return;
+  const logEl = document.getElementById('bk-log');
+  const out = document.getElementById('bk-out');
+
+  let day = 0;                 // giorno corrente (0 = nessuna notte ancora)
+  let backups = [];            // {day, name}
+  let log = [];
+
+  function nome(d) {
+    // finge una data: 2026-07-(18+d)
+    const dd = 17 + d;
+    return 'backup-2026-07-' + (dd < 10 ? '0' + dd : dd) + '.tar.gz';
+  }
+
+  function draw() {
+    filesEl.innerHTML = backups.length ? backups.map(function (b) {
+      return '<span style="border:1px solid var(--green); border-radius:6px; padding:.3rem .55rem; font-family:var(--mono); font-size:.78rem; background:color-mix(in srgb, var(--green) 8%, transparent)">📦 ' + b.name + '</span>';
+    }).join('') : '<span style="color:var(--ink-soft); font-family:var(--mono); font-size:.8rem">(vuota)</span>';
+    logEl.innerHTML = log.length ? log.slice(-6).map(function (l) { return '<span class="out">' + l + '</span>'; }).join('\n') : '<span style="color:#6b7385">(vuoto)</span>';
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('bk-run').addEventListener('click', function () {
+    day++;
+    const n = nome(day);
+    backups.push({ day: day, name: n });
+    log.push('[giorno ' + day + '] OK: ' + n);
+    // rotazione: tieni solo gli ultimi 7 (mtime +7 -delete)
+    let rimossi = 0;
+    if (backups.length > 7) {
+      rimossi = backups.length - 7;
+      backups = backups.slice(-7);
+      log.push('[giorno ' + day + '] rotazione: cancellati ' + rimossi + ' backup vecchi (>7gg)');
+    }
+    draw();
+    out.innerHTML = rimossi > 0
+      ? note('green', '🌙 Notte ' + day + ': creato <b>' + n + '</b> (controllo OK → log). Poi la <b>rotazione</b> (find -mtime +7 -delete) ha cancellato <b>' + rimossi + '</b> backup più vecchi di 7 giorni: la cartella resta a 7 archivi, senza riempire il disco.')
+      : note('green', '🌙 Notte ' + day + ': creato <b>' + n + '</b>, controllato (esiste → log OK). ' + (backups.length < 7 ? 'Ancora sotto i 7 backup: nessuna pulizia. Continua a «passare le notti».' : ''));
+  });
+  document.getElementById('bk-reset').addEventListener('click', function () {
+    day = 0; backups = []; log = []; draw();
+    out.innerHTML = note('', 'Reset: cartella backups vuota, giorno 0.');
+  });
+
+  draw();
+  out.innerHTML = note('', 'Premi «esegui il backup» per simulare una notte: lo script crea un archivio <b>datato</b>, lo <b>controlla</b> (log), e <b>ruota</b> i vecchi (max 7). Premilo <b>8+ volte</b> per vedere la rotazione cancellare i backup più vecchi di 7 giorni — così il disco non si riempie mai.');
+})();
+</script>
+</body>
+</html>
