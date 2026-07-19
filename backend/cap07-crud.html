@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Un'API CRUD completa — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Un'API CRUD completa</h1>
+    <p class="standfirst">
+      Abbiamo tutti i mattoni: rotte, parametri, modelli, validazione. È ora di <b>metterli insieme</b> e costruire la
+      nostra prima vera applicazione: un'API che gestisce una risorsa in <b>tutte</b> le sue operazioni. Il pattern si
+      chiama <b>CRUD</b> — Create, Read, Update, Delete — ed è lo scheletro di quasi ogni backend del mondo: un social
+      fa CRUD sui post, un negozio sui prodotti, una banca sui movimenti. Costruiremo l'API di una <b>rubrica</b> di
+      contatti, con tutti e cinque gli endpoint classici, e impareremo a <b>gestire gli errori</b> con eleganza: cosa
+      rispondere quando qualcuno chiede un contatto che non esiste? (Un bel <code>404</code>, fatto bene.) Per ora
+      terremo i dati in memoria, in un semplice dizionario Python; <mark>ma la <b>forma</b> di questa API è
+      esattamente quella che, dal Capitolo 11, collegheremo a un database vero — cambierà solo <em>dove</em> stanno i
+      dati, non <em>come</em> è fatta l'API.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cosa significa <b>CRUD</b> (§7.1), come <b>progettare</b> le risorse (§7.2), i cinque endpoint in pratica
+      (§7.3), la gestione degli <b>errori</b> con <code>HTTPException</code> (§7.4). Nel laboratorio (§7.5) scrivi
+      l'API completa di una rubrica.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è lo scheletro di ogni backend</div>
+    <p style="margin-bottom:0">
+      Il 90% del lavoro di backend è, in fondo, «gestire delle risorse»: crearle, leggerle, aggiornarle,
+      cancellarle. <mark>Padroneggiare il pattern CRUD significa saper costruire la struttura portante di quasi
+      qualsiasi applicazione.</mark> Tutto il resto (database, auth, file) sono strati che si appoggiano su questa
+      ossatura. Imparala bene una volta, e la riuserai per sempre.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Cosa significa CRUD</h2>
+
+  <p class="lead">
+    <b>CRUD</b> è l'acronimo delle quattro operazioni fondamentali sui dati. Ciascuna corrisponde, quasi
+    perfettamente, a un metodo HTTP — il che rende naturale tradurle in endpoint REST.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">CRUD ↔ HTTP ↔ SQL <span class="tag">le quattro operazioni sui dati</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>C</b>reate — <span class="mono">POST</span></dt>
+        <dd><b>creare</b> una nuova risorsa. <code>POST /contatti</code> con i dati nel corpo. (In SQL sarà
+            <code>INSERT</code>, Cap. 8.)</dd>
+        <dt><b>R</b>ead — <span class="mono">GET</span></dt>
+        <dd><b>leggere</b>: l'intera collezione (<code>GET /contatti</code>) o un singolo elemento
+            (<code>GET /contatti/42</code>). (In SQL <code>SELECT</code>.)</dd>
+        <dt><b>U</b>pdate — <span class="mono">PUT</span> / <span class="mono">PATCH</span></dt>
+        <dd><b>modificare</b> una risorsa esistente. <code>PUT /contatti/42</code> coi nuovi dati. (In SQL
+            <code>UPDATE</code>.)</dd>
+        <dt><b>D</b>elete — <span class="mono">DELETE</span></dt>
+        <dd><b>cancellare</b>. <code>DELETE /contatti/42</code>. (In SQL <code>DELETE</code>.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota la corrispondenza quasi magica: <mark>le operazioni sui dati, i metodi HTTP e i comandi SQL «parlano» lo
+      stesso linguaggio a quattro voci.</mark> Non è un caso: REST è stato pensato proprio per esporre risorse
+      manipolabili in questo modo. Questa coerenza è ciò che rende il pattern così naturale — e ciò che ti farà
+      sentire «a casa» quando, tra pochi capitoli, sotto gli endpoint metteremo un database SQL.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Progettare le risorse</h2>
+
+  <p class="lead">
+    Prima di scrivere codice, decidiamo la <b>forma</b> dell'API: quale risorsa, quali campi, quali endpoint. Una
+    buona progettazione REST rende l'implementazione quasi meccanica.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La rubrica: risorsa «contatto»</div>
+    <p style="margin-bottom:.6rem">
+      La nostra risorsa è il <b>contatto</b>, con campi: <code>nome</code>, <code>telefono</code>, <code>email</code>.
+      Ogni contatto avrà un <b>id</b> assegnato dal server. Ecco la tabella degli endpoint — il «contratto» dell'API:
+    </p>
+    <div class="term" style="margin:.4rem auto 0">
+      <div class="t-head">il contratto REST della rubrica</div>
+      <pre><span class="hl">GET</span>    /contatti       <span class="c"># elenca tutti i contatti          -> 200</span>
+<span class="hl">POST</span>   /contatti       <span class="c"># crea un contatto (dati nel corpo) -> 201</span>
+<span class="hl">GET</span>    /contatti/{id}  <span class="c"># leggi un contatto                 -> 200 / 404</span>
+<span class="hl">PUT</span>    /contatti/{id}  <span class="c"># aggiorna un contatto              -> 200 / 404</span>
+<span class="hl">DELETE</span> /contatti/{id}  <span class="c"># cancella un contatto              -> 204 / 404</span></pre>
+    </div>
+    <p style="margin:.7rem 0 0">
+      <mark>Definire prima questa tabella è metà del lavoro</mark>: dice esattamente quali funzioni scrivere, cosa
+      ricevono e cosa restituiscono (compresi i codici di stato). Nota i due esiti possibili degli endpoint su
+      <code>{id}</code>: successo, oppure <code>404</code> se quell'id non esiste — la gestione degli errori del §7.4.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>GET/POST/PUT/DELETE in pratica</h2>
+
+  <p class="lead">
+    Scriviamo il codice, endpoint per endpoint. I dati stanno in un dizionario Python (<code>DB</code>) che fa da
+    «finto database»: id → contatto. Ogni funzione è breve, perché rotte, modelli e validazione fanno il lavoro
+    pesante.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py — preparazione</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, HTTPException
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+app <span class="op">=</span> <span class="fn">FastAPI</span>()
+
+<span class="kw">class</span> <span class="fn">Contatto</span>(BaseModel):     <span class="cm"># la forma dei dati in ingresso</span>
+    nome: <span class="ty">str</span>
+    telefono: <span class="ty">str</span>
+    email: <span class="ty">str</span> <span class="op">=</span> <span class="st">""</span>
+
+DB <span class="op">=</span> {}              <span class="cm"># il "database" in memoria: id -> dati</span>
+prossimo_id <span class="op">=</span> <span class="nm">1</span>       <span class="cm"># contatore per i nuovi id</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">main.py — i cinque endpoint CRUD</div>
+    <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/contatti"</span>)                    <span class="cm"># READ (tutti)</span>
+<span class="kw">def</span> <span class="fn">elenca</span>():
+    <span class="kw">return</span> DB
+
+<span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/contatti"</span>, status_code<span class="op">=</span><span class="nm">201</span>)   <span class="cm"># CREATE</span>
+<span class="kw">def</span> <span class="fn">crea</span>(contatto: Contatto):
+    <span class="kw">global</span> prossimo_id
+    DB[prossimo_id] <span class="op">=</span> contatto.<span class="fn">model_dump</span>()   <span class="cm"># salva come dizionario</span>
+    nuovo <span class="op">=</span> {<span class="st">"id"</span>: prossimo_id, <span class="op">**</span>DB[prossimo_id]}
+    prossimo_id <span class="op">+=</span> <span class="nm">1</span>
+    <span class="kw">return</span> nuovo
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/contatti/{id}"</span>)               <span class="cm"># READ (uno)</span>
+<span class="kw">def</span> <span class="fn">leggi</span>(id: <span class="ty">int</span>):
+    <span class="kw">if</span> id <span class="kw">not</span> <span class="kw">in</span> DB:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Contatto non trovato"</span>)
+    <span class="kw">return</span> {<span class="st">"id"</span>: id, <span class="op">**</span>DB[id]}
+
+<span class="op">@</span>app.<span class="fn">put</span>(<span class="st">"/contatti/{id}"</span>)               <span class="cm"># UPDATE</span>
+<span class="kw">def</span> <span class="fn">aggiorna</span>(id: <span class="ty">int</span>, contatto: Contatto):
+    <span class="kw">if</span> id <span class="kw">not</span> <span class="kw">in</span> DB:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Contatto non trovato"</span>)
+    DB[id] <span class="op">=</span> contatto.<span class="fn">model_dump</span>()
+    <span class="kw">return</span> {<span class="st">"id"</span>: id, <span class="op">**</span>DB[id]}
+
+<span class="op">@</span>app.<span class="fn">delete</span>(<span class="st">"/contatti/{id}"</span>, status_code<span class="op">=</span><span class="nm">204</span>)  <span class="cm"># DELETE</span>
+<span class="kw">def</span> <span class="fn">cancella</span>(id: <span class="ty">int</span>):
+    <span class="kw">if</span> id <span class="kw">not</span> <span class="kw">in</span> DB:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Contatto non trovato"</span>)
+    <span class="kw">del</span> DB[id]</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I dettagli che contano <span class="tag">status_code · model_dump · {id, **dati}</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">status_code=201</span> nel decoratore</dt>
+        <dd>imposti il codice di successo giusto: <b>201 Created</b> per la creazione, <b>204 No Content</b> per la
+            cancellazione (Cap. 2). <mark>Il default è 200; qui scegli quello semanticamente corretto.</mark></dd>
+        <dt><span class="mono">contatto.model_dump()</span></dt>
+        <dd>converte l'oggetto Pydantic in un normale <b>dizionario</b> Python (per salvarlo nel nostro DB finto).
+            Dal Cap. 11 questo passo diventerà «salva nel database».</dd>
+        <dt><span class="mono">{"id": id, **DB[id]}</span></dt>
+        <dd>costruisce la risposta unendo l'id ai dati del contatto (<code>**</code> «spacchetta» il dizionario).
+            Restituisce al client la risorsa completa, id incluso.</dd>
+        <dt><span class="mono">raise HTTPException(...)</span></dt>
+        <dd>il modo di segnalare un errore — il tema della prossima sezione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Guarda la <b>regolarità</b>: ogni endpoint è la traduzione diretta di una riga della tabella del §7.2. La
+      validazione dell'input (è un <code>Contatto</code> valido?) e la conversione dei tipi (<code>id: int</code>)
+      avvengono <b>prima</b>, gratis. <mark>Restano solo poche righe di logica pura</mark> per endpoint. Questa è la
+      densità di FastAPI: tanto risultato, poco codice.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Gestire gli errori</h2>
+
+  <p class="lead">
+    Cosa deve succedere se qualcuno chiede <code>GET /contatti/999</code> ma quel contatto non esiste? Restituire dati
+    vuoti sarebbe confuso e scorretto. La risposta giusta è un <b>404 Not Found</b>, e FastAPI lo rende semplice con
+    <code>HTTPException</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">segnalare un errore</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> HTTPException
+
+<span class="kw">if</span> id <span class="kw">not</span> <span class="kw">in</span> DB:
+    <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">404</span>, detail<span class="op">=</span><span class="st">"Contatto non trovato"</span>)</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">HTTPException: l'errore fatto bene <span class="tag">raise · status_code · detail</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">raise HTTPException(...)</span></dt>
+        <dd><code>raise</code> «solleva» l'eccezione: <mark>interrompe subito la funzione</mark> e FastAPI la trasforma
+            in una risposta HTTP di errore. Non serve <code>return</code>: appena sollevata, la funzione finisce lì.</dd>
+        <dt><span class="mono">status_code=404</span></dt>
+        <dd>il codice giusto per «non trovato» (Cap. 2). Puoi usarne altri: <code>403</code> (vietato),
+            <code>400</code> (richiesta errata), <code>409</code> (conflitto)… a seconda del problema.</dd>
+        <dt><span class="mono">detail="Contatto non trovato"</span></dt>
+        <dd>il messaggio, che finisce nel JSON di risposta: <code>{"detail": "Contatto non trovato"}</code>.
+            <mark>Spiega al client <b>cosa</b> è andato storto</mark>, in modo utile ma senza rivelare dettagli
+            interni sensibili.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La differenza tra un'API dilettante e una professionale è spesso <b>proprio qui</b>: nella gestione onesta e
+      coerente degli errori. <mark>Codice di stato corretto + messaggio chiaro = un'API con cui è un piacere
+      lavorare.</mark> Ricorda i due mondi di errore (Cap. 2): usa <b>4xx</b> quando il client ha sbagliato (id
+      inesistente, dati non validi); i <b>5xx</b> li genera FastAPI da solo quando c'è un bug nel <em>tuo</em> codice
+      — e sono il segnale che c'è qualcosa da correggere.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Laboratorio: l'API di una rubrica</h2>
+
+  <p class="lead">
+    Il codice del §7.3 <b>è</b> il laboratorio: mettilo tutto nel tuo <code>main.py</code>, avvia
+    <code>uvicorn main:app --reload</code> e provalo. Qui sotto puoi <b>giocarci</b> con una simulazione fedele: la
+    stessa API, con gli stessi codici di stato, che gira nella pagina.
+  </p>
+
+  <div class="widget" id="w-crud">
+    <div class="w-head">
+      <span>La rubrica CRUD, dal vivo</span>
+      <span class="hint">ogni azione = una chiamata HTTP</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:stretch">
+      <div style="flex:1; min-width:230px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">📇 i contatti (DB in memoria)</div>
+        <div style="display:flex; gap:.4rem; margin-bottom:.5rem; flex-wrap:wrap">
+          <input type="text" id="cr-nome" placeholder="nome" style="flex:1; min-width:80px; padding:.4rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink)">
+          <input type="text" id="cr-tel" placeholder="telefono" style="flex:1; min-width:80px; padding:.4rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink)">
+          <button class="btn" id="cr-add">POST</button>
+        </div>
+        <ul id="cr-lista" style="list-style:none; padding:0; margin:0; text-align:left"></ul>
+        <div id="cr-vuoto" style="color:var(--ink-soft); font-size:.85rem; padding:.5rem 0">Rubrica vuota. Crea un contatto con POST.</div>
+        <div style="margin-top:.5rem; display:flex; gap:.4rem; align-items:center">
+          <span style="font-size:.85rem; color:var(--ink-soft)">GET /contatti/</span>
+          <input type="text" id="cr-getid" placeholder="id" style="width:60px; padding:.3rem .4rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink)">
+          <button class="btn ghost" id="cr-get">leggi</button>
+        </div>
+      </div>
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">📡 ultima chiamata HTTP</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="cr-http" style="min-height:150px; margin:0"><span class="out">Nessuna chiamata ancora.</span></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="cr-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>CRUD</b> = Create/Read/Update/Delete, che mappano su <b>POST/GET/PUT/DELETE</b> (e su INSERT/SELECT/
+          UPDATE/DELETE in SQL) (§7.1).</li>
+      <li><b>Progetta prima</b> la tabella degli endpoint (metodo, percorso, codici): l'implementazione diventa quasi
+          meccanica (§7.2).</li>
+      <li>Ogni endpoint è breve: rotte + modelli + validazione fanno il lavoro pesante. Imposta i <b>codici di
+          successo</b> giusti con <code>status_code=</code> (201, 204) (§7.3).</li>
+      <li><b>Gestisci gli errori</b> con <code>raise HTTPException(status_code=404, detail=...)</code>: interrompe e
+          risponde con codice e messaggio corretti (§7.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai un'API CRUD completa e ben fatta! Ha però un limite evidente: i dati vivono in un dizionario in memoria, e
+    <b>svaniscono</b> a ogni riavvio del server. Un backend vero deve <b>ricordare per sempre</b>: è il momento di
+    dare alla nostra rubrica una <b>memoria permanente</b>. Nei prossimi capitoli entriamo nel mondo dei
+    <b>database</b>: dal <strong>Capitolo 8</strong>, cosa sono le tabelle e come si parla loro con il linguaggio
+    <b>SQL</b> — le fondamenta su cui poi (Cap. 10–11) sostituiremo il nostro <code>DB = {}</code> con un vero
+    archivio persistente.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Scrivi la tabella CRUD (metodo + percorso + codice di successo) per una risorsa <code>libri</code>, sul modello
+      di quella dei contatti (§7.2).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Perché per la creazione si imposta <code>status_code=201</code> e per la cancellazione <code>204</code>, invece
+      di lasciare il default <code>200</code>? Cosa comunicano questi codici?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>raise HTTPException(status_code=404, detail="...")</code>? In cosa differisce da un normale
+      <code>return</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Nell'endpoint <code>DELETE /contatti/{id}</code>, cosa succede (con questo codice) se chiami due volte di
+      seguito lo stesso id valido? Con quali codici di stato risponde la prima e la seconda volta?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">CRUD di /libri</div>
+      <pre><span class="hl">GET</span>    /libri       <span class="c"># elenca            -> 200</span>
+<span class="hl">POST</span>   /libri       <span class="c"># crea              -> 201</span>
+<span class="hl">GET</span>    /libri/{id}  <span class="c"># leggi uno         -> 200 / 404</span>
+<span class="hl">PUT</span>    /libri/{id}  <span class="c"># aggiorna          -> 200 / 404</span>
+<span class="hl">DELETE</span> /libri/{id}  <span class="c"># cancella          -> 204 / 404</span></pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      Perché comunicano l'esito in modo più preciso (Cap. 2): <b>201 Created</b> dice «ho creato una nuova risorsa»
+      (spesso restituendola), più informativo di un generico 200; <b>204 No Content</b> dice «operazione riuscita, e
+      non c'è nulla da restituire» — perfetto per una cancellazione, dopo la quale la risorsa non esiste più. Usare il
+      codice giusto rende l'API chiara e conforme alle convenzioni che i client si aspettano.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      <code>raise HTTPException(...)</code> <b>interrompe immediatamente</b> la funzione e fa sì che FastAPI invii una
+      risposta di <b>errore</b> con il codice indicato (es. 404) e il messaggio <code>detail</code>. Un normale
+      <code>return</code>, invece, produce una risposta di <b>successo</b> (200 di default) con i dati restituiti. In
+      sintesi: <code>return</code> = «è andata bene, ecco il risultato»; <code>raise HTTPException</code> = «c'è un
+      problema, ecco il codice d'errore e la spiegazione».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      La <b>prima</b> volta il contatto esiste: viene cancellato e la risposta è <b>204 No Content</b>. La
+      <b>seconda</b> volta quell'id non è più nel <code>DB</code>, quindi scatta il controllo <code>if id not in
+      DB</code> e la risposta è <b>404 Not Found</b>. È un comportamento corretto e prevedibile: la cancellazione è
+      «andata a buon fine» una sola volta, e riprovarci segnala onestamente che non c'è più nulla da cancellare.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.5 — rubrica CRUD dal vivo: POST/GET/DELETE con codici di stato reali
+   ========================================================================= */
+(function () {
+  const lista = document.getElementById('cr-lista');
+  if (!lista) return;
+  const nomeEl = document.getElementById('cr-nome');
+  const telEl  = document.getElementById('cr-tel');
+  const vuoto  = document.getElementById('cr-vuoto');
+  const httpEl = document.getElementById('cr-http');
+  const out    = document.getElementById('cr-out');
+  const getId  = document.getElementById('cr-getid');
+
+  const DB = {};
+  let prossimo = 1;
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function mostraHttp(metodo, path, body, code, resp) {
+    const okColor = (code[0] === '2') ? '#5fb96d' : '#e0654f';
+    httpEl.innerHTML =
+      '<span class="hl">' + metodo + '</span> ' + esc(path) +
+      (body ? '\n<span class="ar">Content-Type:</span> application/json\n\n<span class="st">' + esc(body) + '</span>' : '') +
+      '\n\n<span class="out">HTTP/1.1</span> <span style="color:' + okColor + '; font-weight:700">' + code + '</span>\n' +
+      '<span class="out">' + esc(resp) + '</span>';
+  }
+
+  function refresh() {
+    const ids = Object.keys(DB);
+    vuoto.style.display = ids.length ? 'none' : 'block';
+    lista.innerHTML = ids.map(function (id) {
+      const c = DB[id];
+      return '<li style="display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.4rem .55rem; border:1px solid var(--ink-soft); border-radius:7px; margin-bottom:.35rem">' +
+        '<span style="font-size:.88rem"><b style="color:var(--accent)">#' + id + '</b> ' + esc(c.nome) + ' <span style="color:var(--ink-soft)">' + esc(c.telefono) + '</span></span>' +
+        '<button class="btn ghost" data-del="' + id + '" style="padding:.05rem .45rem; line-height:1.4">DELETE</button></li>';
+    }).join('');
+    lista.querySelectorAll('button[data-del]').forEach(function (b) {
+      b.addEventListener('click', function () { cancella(parseInt(b.getAttribute('data-del'), 10)); });
+    });
+  }
+
+  function crea() {
+    const nome = (nomeEl.value || '').trim();
+    const tel  = (telEl.value || '').trim();
+    if (!nome) { out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">⚠ Il campo nome è obbligatorio (Pydantic lo rifiuterebbe con 422).</div>'; return; }
+    const id = prossimo++;
+    DB[id] = { nome: nome, telefono: tel };
+    mostraHttp('POST', '/contatti', '{ "nome": "' + nome + '", "telefono": "' + tel + '" }', '201 Created', '{ "id": ' + id + ', "nome": "' + nome + '", "telefono": "' + tel + '" }');
+    nomeEl.value = ''; telEl.value = '';
+    refresh();
+    out.innerHTML = '<div style="color:var(--green); font-size:.9rem; text-align:left">✅ <b>CREATE</b>: contatto #' + id + ' creato → <b>201</b>. Il server ha assegnato l\'id.</div>';
+  }
+
+  function cancella(id) {
+    if (!(id in DB)) {
+      mostraHttp('DELETE', '/contatti/' + id, '', '404 Not Found', '{ "detail": "Contatto non trovato" }');
+      out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">⚠ <b>DELETE</b> su id inesistente → <b>404</b>.</div>';
+      return;
+    }
+    delete DB[id];
+    mostraHttp('DELETE', '/contatti/' + id, '', '204 No Content', '(nessun corpo)');
+    refresh();
+    out.innerHTML = '<div style="color:var(--green); font-size:.9rem; text-align:left">✅ <b>DELETE</b>: contatto #' + id + ' cancellato → <b>204</b> (nessun contenuto).</div>';
+  }
+
+  function leggi() {
+    const id = parseInt((getId.value || '').trim(), 10);
+    if (isNaN(id)) { out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">⚠ Inserisci un id numerico (un id non intero darebbe 422).</div>'; return; }
+    if (!(id in DB)) {
+      mostraHttp('GET', '/contatti/' + id, '', '404 Not Found', '{ "detail": "Contatto non trovato" }');
+      out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">⚠ <b>READ</b>: id ' + id + ' non esiste → <b>404</b>. È l\'HTTPException al lavoro.</div>';
+      return;
+    }
+    const c = DB[id];
+    mostraHttp('GET', '/contatti/' + id, '', '200 OK', '{ "id": ' + id + ', "nome": "' + c.nome + '", "telefono": "' + c.telefono + '" }');
+    out.innerHTML = '<div style="color:var(--green); font-size:.9rem; text-align:left">✅ <b>READ</b>: contatto #' + id + ' trovato → <b>200</b>.</div>';
+  }
+
+  document.getElementById('cr-add').addEventListener('click', crea);
+  document.getElementById('cr-get').addEventListener('click', leggi);
+  telEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') crea(); });
+  getId.addEventListener('keydown', function (e) { if (e.key === 'Enter') leggi(); });
+
+  refresh();
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Crea contatti (POST → 201), leggili per id (GET → 200 o 404), cancellali (DELETE → 204 o 404). Il pannello a destra mostra la <b>chiamata HTTP reale</b> con il suo codice di stato — esattamente ciò che farebbe la tua API FastAPI.</div>';
+})();
+</script>
+</body>
+</html>
