@@ -17,7 +17,7 @@ Contenuto originale scritto ex novo.
 - [x] 4 — Prendere decisioni
 - [x] 5 — I cicli
 - [x] 6 — Le funzioni
-- [ ] 7 — Puntatori e riferimenti
+- [x] 7 — Puntatori e riferimenti
 - [ ] 8 — Array e vector
 - [ ] 9 — Le stringhe
 - [ ] 10 — Struct e classi

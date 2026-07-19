@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Puntatori e riferimenti — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Puntatori e riferimenti</h1>
+    <p class="standfirst">
+      Eccolo, il capitolo che rende il C++ <em>il C++</em>. I <b>puntatori</b> sono al tempo stesso il suo
+      superpotere e il suo tallone d'Achille: ti danno accesso <b>diretto alla memoria</b> — la capacità di dire
+      «lavora su <em>quel</em> dato, lì a quell'indirizzo» — che è la fonte della velocità e della flessibilità del
+      C++, e insieme la causa dei suoi bug più famosi. Molti principianti li temono; in realtà l'idea è semplice se
+      la vedi come una <b>mappa</b>: un puntatore è un foglietto con scritto <em>dove</em> vive un dato. In questo
+      capitolo demistifichiamo memoria, indirizzi, riferimenti e puntatori — con figure e un widget — finché non ti
+      sembreranno naturali. <mark>Capire i puntatori è capire, davvero, come funziona un computer.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>memoria e gli indirizzi</b> (§7.1), i <b>riferimenti</b> come «soprannomi» (§7.2), i <b>puntatori</b> e
+      gli operatori <code>&amp;</code> e <code>*</code> (§7.3), <b>nullptr</b> e i puntatori pericolosi (§7.4),
+      <b>puntatori e funzioni</b> (§7.5). Nel laboratorio (§7.6) guardi gli indirizzi reali.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il cuore del C++</div>
+    <p style="margin-bottom:0">
+      I puntatori sono ovunque nel C++: gestione della memoria, strutture dati, prestazioni, interfacce con
+      l'hardware. <mark>Senza capirli, non si va oltre le basi</mark> — e con essi, si capisce <em>perché</em> il
+      C++ è così potente e veloce. Anche se poi userai puntatori «intelligenti» (Cap. 12) che nascondono la
+      complessità, devi sapere cosa c'è sotto. È il concetto che separa chi «scrive un po' di C++» da chi lo
+      <b>comprende</b>. Prenditi il tempo: è il capitolo più importante del libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>La memoria e gli indirizzi</h2>
+
+  <p class="lead">
+    Per capire i puntatori, prima devi vedere la <b>memoria</b> come la vede il computer: una sterminata fila di
+    <b>caselle numerate</b>, ognuna con un suo <b>indirizzo</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> La memoria è una via di case numerate</div>
+    <p style="margin-bottom:0">
+      La memoria (RAM) del computer è come una <b>lunghissima via</b> di caselle, ognuna con un <b>numero civico</b>
+      (l'<b>indirizzo</b>) e un contenuto (i dati). Quando dichiari <code>int eta = 25;</code>, il computer:
+      <b>(1)</b> riserva una casella (grande abbastanza per un int, 4 byte), <b>(2)</b> le dà un indirizzo, <b>(3)</b>
+      ci mette dentro 25, e <b>(4)</b> associa il nome <code>eta</code> a quella casella. <mark>Il nome
+      <code>eta</code> è un'etichetta comoda; l'indirizzo è dove il dato vive davvero.</mark> Di solito lavori coi
+      nomi e non pensi agli indirizzi — ma il C++ ti permette di scendere a quel livello, di <b>vedere</b> e
+      <b>usare</b> gli indirizzi direttamente. È da qui che nascono puntatori e riferimenti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>I riferimenti</h2>
+
+  <p class="lead">
+    Il concetto più gentile, che hai già intravisto (Cap. 6). Un <b>riferimento</b> è semplicemente un <b>altro
+    nome</b> per una variabile esistente — un soprannome. Modifichi il soprannome, modifichi l'originale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I riferimenti <span class="tag">un soprannome per una variabile</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">eta</span> <span class="op">=</span> <span class="nm">25</span>;
+<span class="ty">int</span><span class="op">&amp;</span> <span class="nm">soprannome</span> <span class="op">=</span> <span class="nm">eta</span>;   <span class="cm">// soprannome È eta (stesso dato!)</span>
+
+<span class="nm">soprannome</span> <span class="op">=</span> <span class="nm">30</span>;           <span class="cm">// cambio il soprannome...</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">eta</span>;        <span class="cm">// ...e eta è 30! Sono la stessa cosa.</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">int&amp; soprannome = eta;</span></dt>
+        <dd>la <code>&amp;</code> dopo il tipo crea un <b>riferimento</b>: <code>soprannome</code> non è una nuova
+            variabile, è <b>un altro nome per <code>eta</code></b>. Entrambi si riferiscono alla <em>stessa
+            casella di memoria</em>.</dd>
+        <dt>modifichi uno, modifichi l'altro</dt>
+        <dd>essendo la stessa cosa, cambiare <code>soprannome</code> cambia <code>eta</code> e viceversa. <mark>Non
+            è una copia: è proprio lo stesso dato con due etichette</mark>.</dd>
+        <dt>due regole dei riferimenti</dt>
+        <dd><b>(1)</b> vanno <b>inizializzati subito</b> (un riferimento deve riferirsi a qualcosa fin dall'inizio);
+            <b>(2)</b> non si possono «riagganciare» a un'altra variabile dopo. Sono soprannomi fedeli e
+            permanenti. È proprio questo che rende sicuri i parametri per riferimento del Cap. 6.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>I puntatori: & e *</h2>
+
+  <p class="lead">
+    Il puntatore è il fratello più potente (e più delicato) del riferimento. Un <b>puntatore</b> è una variabile
+    che <b>contiene un indirizzo</b>: non il dato, ma <em>dove</em> sta il dato. Due operatori lo governano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Puntatori: &amp; (indirizzo di) e * (contenuto di) <span class="tag">i due operatori chiave</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">eta</span> <span class="op">=</span> <span class="nm">25</span>;
+
+<span class="ty">int</span><span class="op">*</span> <span class="nm">p</span> <span class="op">=</span> <span class="op">&amp;</span><span class="nm">eta</span>;   <span class="cm">// p è un puntatore: contiene l'INDIRIZZO di eta (&eta)</span>
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">p</span>;      <span class="cm">// stampa l'indirizzo (es. 0x7ffd...)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="op">*</span><span class="nm">p</span>;     <span class="cm">// stampa 25: *p = "il contenuto all'indirizzo p"</span>
+
+<span class="op">*</span><span class="nm">p</span> <span class="op">=</span> <span class="nm">30</span>;          <span class="cm">// scrivo tramite il puntatore → eta diventa 30!</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">int* p</span> — un puntatore a int</dt>
+        <dd>l'asterisco nel tipo dichiara un <b>puntatore</b>: <code>p</code> non contiene un intero, contiene
+            <b>l'indirizzo</b> di un intero.</dd>
+        <dt><span class="mono">&amp;eta</span> — «indirizzo di» (address-of)</dt>
+        <dd>l'operatore <code>&amp;</code> <b>davanti</b> a una variabile dà il suo <b>indirizzo</b>. <code>&amp;eta</code>
+            = «dove vive eta». Lo mettiamo dentro <code>p</code>.</dd>
+        <dt><span class="mono">*p</span> — «contenuto di» (dereferenziazione)</dt>
+        <dd>l'operatore <code>*</code> <b>davanti</b> a un puntatore dà il <b>dato all'indirizzo puntato</b>.
+            <code>*p</code> = «il valore là dove punta p» = 25. E <code>*p = 30</code> <b>scrive</b> a quell'indirizzo,
+            cambiando <code>eta</code>! <mark>Segui il puntatore fino al dato: è la «dereferenziazione».</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'analogia definitiva: un puntatore è un <b>foglietto con un indirizzo di casa</b>. <code>&amp;eta</code> =
+      «prendi l'indirizzo di casa di eta». <code>*p</code> = «vai all'indirizzo scritto sul foglietto e guarda cosa
+      c'è dentro». <mark>Il foglietto (puntatore) non è la casa (dato): è un modo per <em>trovarla</em></mark>. Lo
+      stesso simbolo <code>*</code> si usa per dichiarare (<code>int* p</code>) e per dereferenziare (<code>*p</code>):
+      confonde all'inizio, ma il contesto chiarisce. Il widget qui sotto lo rende visibile.
+    </div>
+  </div>
+
+  <div class="widget" id="w-ptr">
+    <div class="w-head">
+      <span>Puntatori: indirizzo, contenuto, dereferenziazione</span>
+      <span class="hint">segui il puntatore fino al dato</span>
+    </div>
+    <div class="w-stage" style="min-height:200px">
+      <div id="wpt-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wpt-read">leggi *p</button>
+      <button class="w-btn" id="wpt-write">*p = 30  (scrivi)</button>
+      <button class="w-btn" id="wpt-reset">↺</button>
+    </div>
+    <div class="w-readout" id="wpt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>nullptr e i puntatori pericolosi</h2>
+
+  <p class="lead">
+    Il potere dei puntatori ha un prezzo: sono la <b>fonte principale di bug</b> in C++. Conoscere i pericoli — e le
+    difese — è essenziale prima di usarli sul serio.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> I tre puntatori pericolosi</div>
+    <ul style="margin-bottom:0">
+      <li><b>Puntatore non inizializzato</b>: <code>int* p;</code> (senza valore) contiene un indirizzo
+          <b>casuale</b>; dereferenziarlo (<code>*p</code>) tocca memoria a caso → crash o comportamenti assurdi.</li>
+      <li><b>Puntatore nullo dereferenziato</b>: un puntatore può valere <code>nullptr</code> («non punta a
+          nulla»); dereferenziarlo (<code>*p</code> quando <code>p == nullptr</code>) fa <b>crashare</b> il
+          programma (il famigerato «segmentation fault»).</li>
+      <li><b>Puntatore «penzolante»</b> (dangling): punta a memoria che <b>non esiste più</b> (una variabile
+          uscita dal suo ambito, o liberata). Usarlo è un bug insidioso.</li>
+    </ul>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le difese</div>
+    <p style="margin-bottom:0">
+      <b>(1) Inizializza sempre</b> i puntatori: se non hanno ancora un bersaglio, dagli <code>nullptr</code>
+      (<code>int* p = nullptr;</code>), il valore «non punto a nulla». <b>(2) Controlla prima di dereferenziare</b>:
+      <code>if (p != nullptr) { … *p … }</code>. <b>(3)</b> Nel C++ moderno, <mark>preferisci i <b>riferimenti</b> ai
+      puntatori</mark> quando basta un soprannome (non possono essere nulli né penzolanti), e usa gli <b>smart
+      pointer</b> (Cap. 12) per la gestione della memoria — nascondono i pericoli automatizzando il lavoro. I
+      puntatori «grezzi» restano importanti da capire, ma nel codice quotidiano moderno se ne usano meno, e con
+      queste precauzioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Puntatori e funzioni</h2>
+
+  <p class="lead">
+    Uno degli usi classici: passare a una funzione l'<b>indirizzo</b> di una variabile, così che possa modificarla.
+    È l'alternativa (più «grezza») al passaggio per riferimento del Cap. 6.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Modificare tramite puntatore <span class="tag">passare un indirizzo</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">void</span> <span class="fn">raddoppia</span>(<span class="ty">int</span><span class="op">*</span> <span class="nm">p</span>) {    <span class="cm">// riceve un puntatore a int</span>
+    <span class="op">*</span><span class="nm">p</span> <span class="op">=</span> <span class="op">*</span><span class="nm">p</span> <span class="op">*</span> <span class="nm">2</span>;              <span class="cm">// modifica il dato PUNTATO</span>
+}
+
+<span class="ty">int</span> <span class="nm">n</span> <span class="op">=</span> <span class="nm">5</span>;
+<span class="fn">raddoppia</span>(<span class="op">&amp;</span><span class="nm">n</span>);     <span class="cm">// passo l'INDIRIZZO di n (&n) → n diventa 10</span></pre>
+    </div>
+    <div class="f-note">
+      È lo stesso effetto del passaggio per riferimento (Cap. 6), ma «esplicito»: passi l'<b>indirizzo</b>
+      (<code>&amp;n</code>) e la funzione lo dereferenzia (<code>*p</code>). <mark>Quando scegliere l'uno o
+      l'altro?</mark> Nel C++ moderno, per «modificare un parametro» si <b>preferisce il riferimento</b>
+      (<code>int&amp; n</code>): è più sicuro (non può essere nullo) e più pulito. I puntatori come parametri
+      restano utili quando l'argomento può <b>legittimamente mancare</b> (<code>nullptr</code> = «nessun valore»), o
+      quando si lavora con array e memoria dinamica (Cap. 8, 12). Ma il concetto è lo stesso: dai alla funzione un
+      modo per raggiungere il tuo dato originale.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Laboratorio: guardare gli indirizzi</h2>
+
+  <p class="lead">
+    Rendiamo tutto concreto: scriviamo un programma che <b>mostra gli indirizzi reali</b> delle variabili e li usa
+    tramite un puntatore. Vedere i veri indirizzi di memoria toglie ogni mistero.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>indirizzi.cpp</code> <span class="tag">memoria alla luce del sole</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">indirizzi.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> <span class="nm">a</span> <span class="op">=</span> <span class="nm">10</span>;
+    <span class="ty">int</span> <span class="nm">b</span> <span class="op">=</span> <span class="nm">20</span>;
+    <span class="ty">int</span><span class="op">*</span> <span class="nm">p</span> <span class="op">=</span> <span class="op">&amp;</span><span class="nm">a</span>;                    <span class="cm">// p punta ad a</span>
+
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"a vale       "</span> <span class="op">&lt;&lt;</span> <span class="nm">a</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"indirizzo &amp;a "</span> <span class="op">&lt;&lt;</span> <span class="op">&amp;</span><span class="nm">a</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;   <span class="cm">// es. 0x7ffee3b8</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"p contiene   "</span> <span class="op">&lt;&lt;</span> <span class="nm">p</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;    <span class="cm">// lo stesso indirizzo!</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"*p vale      "</span> <span class="op">&lt;&lt;</span> <span class="op">*</span><span class="nm">p</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;   <span class="cm">// 10 (il contenuto)</span>
+
+    <span class="nm">p</span> <span class="op">=</span> <span class="op">&amp;</span><span class="nm">b</span>;                          <span class="cm">// ora p punta a b (un puntatore si può riagganciare!)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"ora *p vale  "</span> <span class="op">&lt;&lt;</span> <span class="op">*</span><span class="nm">p</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;   <span class="cm">// 20</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Compila (<code>g++ indirizzi.cpp -o ind</code>) ed esegui: vedrai indirizzi reali tipo <code>0x7ffee3b8</code>
+      (esadecimali — cambiano a ogni esecuzione, è normale). Le lezioni: <b>(1)</b> <code>&amp;a</code> e
+      <code>p</code> stampano lo <b>stesso</b> indirizzo (p contiene proprio l'indirizzo di a); <b>(2)</b>
+      <code>*p</code> dà il <b>contenuto</b> (10); <b>(3)</b> un <b>puntatore si può riagganciare</b> (<code>p =
+      &amp;b</code>) — a differenza di un riferimento, che resta fedele al primo bersaglio. <mark>Vedere gli
+      indirizzi veri trasforma i puntatori da concetto astratto a cosa concreta</mark>: sono solo numeri di casella.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li>La memoria è una fila di <b>caselle numerate</b>; ogni variabile vive a un <b>indirizzo</b> (§7.1).</li>
+      <li>Un <b>riferimento</b> (<code>int&amp; r = x;</code>) è un <b>soprannome</b> per una variabile: stesso dato,
+          due nomi. Va inizializzato subito e non si riaggancia (§7.2).</li>
+      <li>Un <b>puntatore</b> (<code>int* p</code>) contiene un <b>indirizzo</b>. <code>&amp;x</code> = «indirizzo
+          di», <code>*p</code> = «contenuto all'indirizzo» (dereferenziazione); <code>*p = v</code> scrive lì (§7.3).</li>
+      <li>Pericoli: puntatori non inizializzati, nulli, penzolanti. Difese: <mark>inizializza a <code>nullptr</code>,
+          controlla prima di dereferenziare, preferisci riferimenti e smart pointer</mark> (§7.4). I puntatori
+          permettono a una funzione di modificare l'originale (§7.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai domato il concetto più temuto del C++: ora «vedi» la memoria. Questa comprensione sblocca tutto ciò che
+    segue. La prima applicazione concreta: le <b>collezioni</b>. Come si tiene una sequenza di tanti valori in
+    memoria, contigui, e li si scorre? Nel <strong>Capitolo 8</strong> vediamo gli <b>array</b> (le sequenze «grezze»
+    del C, strettamente legate ai puntatori) e soprattutto <code>std::vector</code> — l'array «intelligente» che
+    cresce da solo, la struttura dati che userai davvero ogni giorno. Scoprirai che array e puntatori sono, in
+    fondo, due facce della stessa idea che hai appena imparato.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Cosa contiene un <b>puntatore</b>? Qual è la differenza tra <code>p</code>, <code>&amp;p</code>, <code>*p</code>
+      e la variabile a cui punta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Dato <code>int x = 7; int* p = &amp;x;</code>, cosa stampano <code>*p</code> e (dopo <code>*p = 100;</code>)
+      la variabile <code>x</code>? Perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza principale tra un <b>riferimento</b> e un <b>puntatore</b>? Cita almeno due differenze.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Perché è pericoloso dereferenziare un puntatore <code>nullptr</code> o non inizializzato? Come ti proteggi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      Un puntatore contiene un <b>indirizzo di memoria</b> (dove vive un dato), non il dato stesso. <code>p</code> =
+      l'indirizzo che contiene; <code>&amp;p</code> = l'indirizzo <em>del puntatore stesso</em> (dove vive p);
+      <code>*p</code> = il <b>contenuto</b> all'indirizzo puntato (il dato); la variabile puntata è quel dato.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      <code>*p</code> stampa <b>7</b> (il contenuto all'indirizzo di x). Dopo <code>*p = 100;</code>, <code>x</code>
+      vale <b>100</b>: scrivere tramite <code>*p</code> scrive proprio nella casella di x, perché <code>p</code>
+      contiene il suo indirizzo. Puntatore e variabile condividono la stessa cella.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      Differenze: <b>(1)</b> un <b>riferimento</b> deve essere inizializzato subito e <b>non si riaggancia</b>; un
+      <b>puntatore</b> può essere non inizializzato e <b>riagganciato</b> a bersagli diversi. <b>(2)</b> un
+      riferimento <b>non può essere nullo</b>; un puntatore sì (<code>nullptr</code>). <b>(3)</b> si usa il
+      riferimento «direttamente» (come la variabile), il puntatore va dereferenziato con <code>*</code>. In sintesi:
+      il riferimento è un soprannome fedele; il puntatore è un indirizzo modificabile, più potente ma più rischioso.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>nullptr</code> «non punta a nulla» e un puntatore non inizializzato punta a un indirizzo casuale:
+      dereferenziarli (<code>*p</code>) accede a memoria non valida → <b>crash</b> (segmentation fault) o
+      comportamenti imprevedibili. Difese: inizializza i puntatori (a <code>nullptr</code> se non hanno ancora un
+      bersaglio), e <b>controlla</b> prima di dereferenziare (<code>if (p != nullptr)</code>). Meglio ancora, usa
+      riferimenti o smart pointer dove possibile.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.3 — puntatori: casella di memoria, indirizzo, dereferenziazione
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wpt-view');
+  if (!view) return;
+  const out = document.getElementById('wpt-out');
+  const ADDR = '0x7ffd1a';
+  let val = 25, msg = 'La variabile <code>eta</code> vive in una casella all\'indirizzo ' + ADDR + '. Il puntatore <code>p</code> contiene quell\'indirizzo. Premi i pulsanti.';
+  let flash = '';
+
+  document.getElementById('wpt-read').addEventListener('click', () => { flash = 'read'; msg = '<code>*p</code> = «segui p fino alla casella e leggi il contenuto» = <b style="color:var(--green)">' + val + '</b>. Il puntatore ti porta al dato.'; draw(); });
+  document.getElementById('wpt-write').addEventListener('click', () => { val = 30; flash = 'write'; msg = '<code>*p = 30</code> = «scrivi 30 nella casella puntata da p». <mark>Ora eta vale 30!</mark> Hai modificato la variabile <em>attraverso</em> il puntatore.'; draw(); });
+  document.getElementById('wpt-reset').addEventListener('click', () => { val = 25; flash = ''; msg = 'Reimpostato: eta = 25.'; draw(); });
+
+  function draw() {
+    const cellBd = flash ? 'var(--green)' : 'var(--accent)';
+    view.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="font-family:var(--mono); color:var(--violet); font-weight:700; font-size:.9rem">int* p</div>
+          <div style="width:120px; padding:.6rem; border:2px solid var(--violet); border-radius:10px; background:color-mix(in srgb,var(--violet) 8%,transparent); font-family:var(--mono); font-size:.85rem; margin-top:.3rem">${ADDR}</div>
+          <div style="color:var(--ink-faint); font-size:.72rem; margin-top:.2rem">contiene un indirizzo</div>
+        </div>
+        <div style="font-size:1.6rem; color:${flash ? 'var(--green)' : 'var(--ink-faint)'}">→ *p</div>
+        <div style="text-align:center">
+          <div style="font-family:var(--mono); color:var(--accent); font-weight:700; font-size:.9rem">eta &nbsp;<span style="color:var(--ink-faint); font-weight:400">@ ${ADDR}</span></div>
+          <div style="width:100px; padding:.8rem; border:2px solid ${cellBd}; border-radius:10px; background:color-mix(in srgb,${cellBd} 12%,transparent); font-family:var(--mono); font-size:1.6rem; font-weight:700; color:${cellBd}; margin-top:.3rem">${val}</div>
+          <div style="color:var(--ink-faint); font-size:.72rem; margin-top:.2rem">la casella (il dato)</div>
+        </div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -108,7 +108,7 @@ const TOC = [
     n: 7,
     titolo: "Puntatori e riferimenti",
     file: "cap07-puntatori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "La memoria e gli indirizzi" },
       { id: "s7-2", n: "7.2", t: "I riferimenti" },
