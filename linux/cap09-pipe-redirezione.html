@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Pipe e redirezione — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>Pipe e redirezione</h1>
+    <p class="standfirst">
+      Eccoci a una delle idee più geniali di Linux, quella che ne spiega la potenza: <b>ogni comando è un piccolo
+      strumento specializzato, e questi strumenti si possono <em>collegare</em> tra loro</b>, come tubi. L'output di
+      un comando può diventare l'input del successivo (la <b>pipe</b>, il simbolo <code>|</code>), oppure essere
+      salvato in un file (la <b>redirezione</b>, i simboli <code>&gt;</code> e <code>&gt;&gt;</code>). Così, invece di
+      un unico programma gigante che fa tutto, componi «catene» di comandi semplici, ciascuno esperto in una cosa:
+      questo estrae, quello filtra, quell'altro ordina, l'ultimo conta. È la filosofia Unix — «fai una cosa e falla
+      bene» — che rende il terminale infinitamente flessibile. In questo capitolo capiamo i tre «canali» di ogni
+      comando (§9.1), come redirigere l'output su file (§9.2), la pipe che collega i comandi (§9.3), e alcuni
+      <b>filtri</b> preziosi da mettere in catena — <code>wc</code>, <code>sort</code>, <code>uniq</code> (§9.4).
+      <mark>Dopo questo capitolo, non vedrai più i comandi come cose isolate, ma come mattoni da comporre.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I canali <b>input/output/errore</b> (§9.1), <b>redirigere</b> su file con <code>&gt;</code> e <code>&gt;&gt;</code>
+      (§9.2), la <b>pipe</b> <code>|</code> (§9.3), i <b>filtri</b> wc/sort/uniq (§9.4). Nel laboratorio (§9.5)
+      costruisci catene di comandi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: comporre è più potente che comandare</div>
+    <p style="margin-bottom:0">
+      La pipe è ciò che trasforma una manciata di comandi semplici in uno strumento capace di risolvere problemi
+      complessi. <mark>«Trova gli errori nei log, contali per tipo, e mostrami i 3 più frequenti» diventa una riga</mark>
+      — impensabile a clic. Padroneggiare pipe e redirezione è forse il salto di qualità più grande nell'uso del
+      terminale, e la base per gli script (Cap. 12).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>Input, output, errore</h2>
+
+  <p class="lead">
+    Ogni comando ha <b>tre canali</b>: da dove legge (input), dove scrive i risultati (output), dove scrive gli errori
+    (error). Capirli è la chiave per redirigere e collegare i comandi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre canali standard <span class="tag">stdin · stdout · stderr</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>input</b> (stdin) — da dove legge</dt>
+        <dd>i dati in ingresso. Di default, ciò che <b>digiti da tastiera</b>. Ma può arrivare da un file o da un altro
+            comando (via pipe). <mark>«Da dove prendo i dati».</mark></dd>
+        <dt><b>output</b> (stdout) — dove scrive i risultati</dt>
+        <dd>il risultato «normale» del comando. Di default, va <b>sullo schermo</b>. <mark>Ma può essere rediretto</mark>
+            in un file (§9.2) o passato a un altro comando (§9.3). «Dove finiscono i risultati».</dd>
+        <dt><b>errore</b> (stderr) — dove scrive gli errori</dt>
+        <dd>i messaggi di errore vanno su un <b>canale separato</b> dai risultati. <mark>Anche questo va di default
+            sullo schermo, ma è distinto</mark>: così puoi redirigere i risultati in un file e vedere ancora gli errori
+            (o viceversa).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché <b>errore separato da output</b>? Perché così, se un comando produce dati <em>e</em> un errore, puoi
+      salvare i dati puliti in un file e vedere l'errore a schermo — non si mescolano. <mark>È un'eleganza che apprezzi
+      quando concateni comandi</mark>: la pipe passa l'output (stdout), non gli errori, così una catena non si
+      «sporca» con i messaggi d'errore. Per ora tieni a mente i tre canali; li useremo subito.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Redirigere su file: &gt;, &gt;&gt;</h2>
+
+  <p class="lead">
+    La <b>redirezione</b> devia l'output di un comando dallo schermo a un <b>file</b>. Due simboli: <code>&gt;</code>
+    (sovrascrive) e <code>&gt;&gt;</code> (aggiunge in fondo).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — redirigere su file</div>
+    <pre><span class="c"># &gt; : scrivi l'output in un file (SOVRASCRIVE se esiste)</span>
+<span class="p">$</span> <span class="cmd">ls</span> &gt; <span class="ar">elenco.txt</span>          <span class="c"># l'elenco dei file finisce in elenco.txt</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"riga uno"</span> &gt; <span class="ar">note.txt</span>
+
+<span class="c"># &gt;&gt; : AGGIUNGE in fondo al file (non cancella il contenuto esistente)</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"riga due"</span> &gt;&gt; <span class="ar">note.txt</span>
+<span class="p">$</span> <span class="cmd">cat</span> <span class="ar">note.txt</span>
+<span class="out">riga uno
+riga due</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">&gt; vs &gt;&gt; <span class="tag">sovrascrivi vs aggiungi</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">comando &gt; file</span></dt>
+        <dd>manda l'output nel file, <b>sovrascrivendo</b> tutto ciò che c'era. <mark>Attenzione: cancella il contenuto
+            precedente</mark> senza chiedere! Utile per creare/rigenerare un file.</dd>
+        <dt><span class="mono">comando &gt;&gt; file</span></dt>
+        <dd>manda l'output <b>aggiungendolo in fondo</b> al file (senza cancellare il resto). <mark>Sicuro per
+            «accumulare»</mark>, es. aggiungere righe a un log.</dd>
+        <dt>redirigere l'input: <span class="mono">&lt;</span></dt>
+        <dd>esiste anche <code>comando &lt; file</code>, che prende l'<b>input</b> da un file invece che da tastiera.
+            Meno usato, ma completa il quadro dei canali.</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> Un solo &gt; sovrascrive: attenzione</div>
+      <p style="margin-bottom:0">
+        L'errore classico: usare <code>&gt;</code> pensando di aggiungere, e invece <b>cancellare</b> il contenuto del
+        file. <mark><code>&gt;</code> = sovrascrivi, <code>&gt;&gt;</code> = aggiungi</mark>. Se vuoi accumulare (log,
+        elenchi che crescono), usa <b>sempre</b> <code>&gt;&gt;</code>. E fai attenzione a non redirigere su un file
+        importante «per sbaglio»: come <code>rm</code>, non c'è un «annulla».
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>La pipe: |</h2>
+
+  <p class="lead">
+    Ecco la stella del capitolo. La <b>pipe</b> (il simbolo <code>|</code>) collega due comandi: prende l'<b>output</b>
+    del primo e lo passa come <b>input</b> al secondo. Puoi concatenarne quanti vuoi, formando una «catena di
+    montaggio» dei dati.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — la pipe collega i comandi</div>
+    <pre><span class="c"># l'output di ls diventa l'input di grep: filtra solo i .txt</span>
+<span class="p">$</span> <span class="cmd">ls</span> | <span class="cmd">grep</span> <span class="ar">.txt</span>
+<span class="out">note.txt  todo.txt</span>
+
+<span class="c"># catena di tre: elenca processi -&gt; filtra firefox -&gt; conta le righe</span>
+<span class="p">$</span> <span class="cmd">ps</span> <span class="ar">aux</span> | <span class="cmd">grep</span> <span class="ar">firefox</span> | <span class="cmd">wc</span> <span class="fl">-l</span>
+<span class="out">3</span>          <span class="c"># ci sono 3 processi di firefox</span>
+
+<span class="c"># mostra le righe con "errore" in un log, ma solo le prime 5</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="ar">errore</span> <span class="ar">app.log</span> | <span class="cmd">head</span> <span class="fl">-n</span> <span class="ar">5</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Come funziona la pipe <span class="tag">output → | → input</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">comando1 | comando2</span></dt>
+        <dd>l'<b>output</b> di <code>comando1</code> diventa l'<b>input</b> di <code>comando2</code>. <mark>I dati
+            «scorrono» da sinistra a destra</mark> lungo il tubo, trasformati a ogni passo.</dd>
+        <dt>catene lunghe</dt>
+        <dd><code>cmd1 | cmd2 | cmd3 | ...</code>: ogni comando riceve dal precedente e passa al successivo.
+            <mark>Ognuno fa <b>una</b> cosa</mark> — estrarre, filtrare, ordinare, contare — e insieme risolvono un
+            problema complesso.</dd>
+        <dt>il partner ideale: <span class="mono">grep</span></dt>
+        <dd><code>grep</code> (Cap. 5) in una pipe filtra l'output di <em>qualsiasi</em> comando, non solo i file:
+            <code>qualcosa | grep parola</code> = «di tutto ciò che produce, mostrami solo le righe con parola».
+            <mark>Uno degli usi più comuni della pipe.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La pipe incarna la <b>filosofia Unix</b>: tanti piccoli programmi che «fanno una cosa e la fanno bene», combinati
+      per fare cose grandi. <mark>Non esiste un comando «trova gli errori, contali e ordinali»</mark> — ma con la pipe
+      lo componi in un attimo dai mattoni esistenti. È un modo di pensare, oltre che uno strumento: «quale sequenza di
+      trasformazioni mi porta dal dato grezzo al risultato?». Prova a costruire una pipe nel widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-pipe">
+    <div class="w-head">
+      <span>Costruisci una pipe</span>
+      <span class="hint">aggiungi filtri, guarda i dati trasformarsi</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="text-align:center; margin-bottom:.6rem"><code id="pp-cmd" style="font-size:.95rem"></code></div>
+      <div class="term" style="margin:0 auto; max-width:100%"><div class="t-head">output</div><pre id="pp-out-term" style="margin:0; min-height:110px; font-size:12px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-add="grep">| grep .log</button>
+      <button class="btn" data-add="sort">| sort</button>
+      <button class="btn" data-add="head">| head -n 3</button>
+      <button class="btn" data-add="wc">| wc -l</button>
+      <button class="btn ghost" id="pp-reset">reset (solo cat)</button>
+    </div>
+    <div class="w-readout" id="pp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>I filtri: wc, sort, uniq</h2>
+
+  <p class="lead">
+    I comandi che «trasformano» un flusso di testo si chiamano <b>filtri</b>: ricevono dati (di solito da una pipe) e
+    ne producono una versione modificata. Ne conosci già alcuni (<code>grep</code>, <code>head</code>); ecco altri tre
+    utilissimi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Tre filtri preziosi <span class="tag">wc · sort · uniq</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">wc</span> — conta</dt>
+        <dd>«word count»: conta righe, parole e caratteri. <code>wc -l</code> = solo le righe. <mark>Utilissimo in
+            pipe</mark>: «quante righe corrispondono?» → <code>... | grep x | wc -l</code>.</dd>
+        <dt><span class="mono">sort</span> — ordina</dt>
+        <dd>ordina le righe (alfabeticamente, o numericamente con <code>-n</code>, al contrario con <code>-r</code>).
+            <mark>Riordina un flusso disordinato</mark> prima di mostrarlo o contarlo.</dd>
+        <dt><span class="mono">uniq</span> — rimuovi duplicati</dt>
+        <dd>elimina le righe <b>consecutive</b> uguali. <mark>Va quasi sempre dopo <code>sort</code></mark> (che mette
+            vicine le righe uguali): <code>sort | uniq</code> = «righe uniche». Con <code>uniq -c</code> le conta
+            (quante volte ognuna).</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">terminale — una catena classica</div>
+      <pre><span class="c"># quante volte compare ogni tipo di errore in un log? I 3 più frequenti:</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="ar">errore</span> <span class="ar">app.log</span> | <span class="cmd">sort</span> | <span class="cmd">uniq</span> <span class="fl">-c</span> | <span class="cmd">sort</span> <span class="fl">-rn</span> | <span class="cmd">head</span> <span class="fl">-n</span> <span class="ar">3</span>
+<span class="out">    47 errore: timeout
+    31 errore: connessione
+    12 errore: memoria</span></pre>
+    </div>
+    <div class="f-note">
+      Guarda quella catena: <mark>cinque comandi semplici che insieme rispondono a una domanda tutt'altro che
+      banale</mark> («i 3 errori più frequenti»). <code>grep</code> estrae le righe di errore, <code>sort</code> le
+      raggruppa, <code>uniq -c</code> conta le occorrenze, <code>sort -rn</code> ordina per numero decrescente,
+      <code>head</code> prende le prime 3. Questa è la potenza della composizione: <b>nessun singolo comando lo fa, ma
+      la loro catena sì</b>. È il genere di «trucco» che, una volta imparato, useri per la vita.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Laboratorio: costruire catene</h2>
+
+  <p class="lead">
+    Costruiamo qualche pipe e redirezione su dati veri, per rendere concreta la composizione dei comandi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — pipe e redirezione in pratica</div>
+    <pre><span class="c"># crea un file di prova con alcune righe (alcune ripetute)</span>
+<span class="p">$</span> <span class="cmd">printf</span> <span class="ar">"mela\npera\nmela\nkiwi\npera\nmela\n"</span> &gt; <span class="ar">frutta.txt</span>
+
+<span class="c"># conta quante righe ha</span>
+<span class="p">$</span> <span class="cmd">wc</span> <span class="fl">-l</span> <span class="ar">frutta.txt</span>
+<span class="out">6 frutta.txt</span>
+
+<span class="c"># mostra i frutti UNICI, in ordine</span>
+<span class="p">$</span> <span class="cmd">sort</span> <span class="ar">frutta.txt</span> | <span class="cmd">uniq</span>
+<span class="out">kiwi
+mela
+pera</span>
+
+<span class="c"># conta quante volte compare ognuno, dal più frequente</span>
+<span class="p">$</span> <span class="cmd">sort</span> <span class="ar">frutta.txt</span> | <span class="cmd">uniq</span> <span class="fl">-c</span> | <span class="cmd">sort</span> <span class="fl">-rn</span>
+<span class="out">   3 mela
+   2 pera
+   1 kiwi</span>
+
+<span class="c"># salva il risultato in un file (redirezione)</span>
+<span class="p">$</span> <span class="cmd">sort</span> <span class="ar">frutta.txt</span> | <span class="cmd">uniq</span> <span class="fl">-c</span> &gt; <span class="ar">conteggio.txt</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai <b>composto</b> comandi in catene (<code>sort | uniq -c | sort -rn</code>) e <b>rediretto</b> il risultato in
+      un file (<code>&gt;</code>). <mark>Nota come ogni comando abbia fatto una cosa sola</mark> — ordinare, contare i
+      duplicati, riordinare per numero — e come la loro combinazione risponda a una domanda utile («quante volte
+      compare ogni frutto, dal più frequente»). Questo modo di pensare — «quale sequenza di trasformazioni?» — è la
+      vera competenza da portare a casa. Nei prossimi capitoli useremo pipe e redirezione di continuo. Ma prima, per
+      creare e modificare file più complessi degli echo, serve saper usare un <b>editor di testo</b> da terminale: è
+      il tema del prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>Ogni comando ha tre canali: <b>input</b> (stdin), <b>output</b> (stdout), <b>errore</b> (stderr), separati
+          (§9.1).</li>
+      <li><b>Redirezione</b>: <code>&gt;</code> manda l'output in un file (<b>sovrascrive!</b>), <code>&gt;&gt;</code>
+          aggiunge in fondo (§9.2).</li>
+      <li>La <b>pipe</b> <code>|</code> passa l'output di un comando all'input del successivo: catene di comandi
+          semplici → risultati complessi (§9.3).</li>
+      <li><b>Filtri</b> per le pipe: <code>wc</code> (conta), <code>sort</code> (ordina), <code>uniq</code> (togli
+          duplicati; dopo sort). La filosofia Unix: «fai una cosa e falla bene» (§9.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai comporre comandi e dirigere i dati. Finora hai creato file solo con <code>echo</code> e redirezione — ma per
+    scrivere e modificare file veri (configurazioni, script, note) serve un <b>editor di testo</b>. Nel
+    <strong>Capitolo 10</strong> impariamo a usare gli editor da terminale: <b>nano</b>, semplice e amichevole, e
+    <b>vim</b>, potente ma con una curva d'apprendimento (di cui vedremo almeno la «sopravvivenza»). Perché prima o
+    poi, sul terminale, dovrai modificare un file — e saperlo fare senza panico è essenziale.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>comando &gt; file</code> e <code>comando &gt;&gt; file</code>? Quale rischia di
+      farti perdere il contenuto precedente del file?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Cosa fa la pipe <code>|</code>? Descrivi cosa succede, passo per passo, in <code>ls | grep foto</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Scrivi una pipe che, dato un file <code>accessi.log</code>, conti quante righe contengono la parola «login».
+      (Suggerimento: <code>grep</code> + <code>wc</code>.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>uniq</code> si usa quasi sempre <b>dopo</b> <code>sort</code>? Cosa aggiunge l'opzione
+      <code>uniq -c</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      <code>&gt;</code> <b>sovrascrive</b> il file con l'output (cancellando ciò che c'era); <code>&gt;&gt;</code>
+      <b>aggiunge</b> l'output in fondo al file (senza toccare il contenuto esistente). Quello che rischia di farti
+      perdere il contenuto precedente è <code>&gt;</code> (un solo simbolo): se il file esisteva, viene azzerato e
+      riscritto. Per accumulare in sicurezza si usa <code>&gt;&gt;</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      La pipe <code>|</code> passa l'<b>output</b> del comando a sinistra come <b>input</b> al comando a destra. In
+      <code>ls | grep foto</code>: <b>(1)</b> <code>ls</code> produce l'elenco dei file/cartelle della directory
+      corrente; <b>(2)</b> quell'elenco, invece di andare a schermo, viene «incanalato» a <code>grep foto</code>;
+      <b>(3)</b> <code>grep</code> filtra e mostra <b>solo</b> le righe (i nomi) che contengono «foto». Risultato: i
+      soli elementi il cui nome contiene «foto».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">grep</span> <span class="ar">login</span> <span class="ar">accessi.log</span> | <span class="cmd">wc</span> <span class="fl">-l</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0"><code>grep login</code> estrae le righe con «login», e <code>wc -l</code> le conta.
+      (In alternativa, <code>grep</code> ha anche <code>-c</code> che conta direttamente: <code>grep -c login
+      accessi.log</code>.)</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      <code>uniq</code> elimina solo le righe uguali <b>consecutive</b> (adiacenti): per rimuovere <em>tutti</em> i
+      duplicati bisogna prima <b>metterli vicini</b>, e questo lo fa <code>sort</code> (che ordina, portando le righe
+      identiche una accanto all'altra). Perciò si usa <code>sort | uniq</code>. L'opzione <code>uniq -c</code> aggiunge
+      il <b>conteggio</b>: per ogni riga unica, quante volte compariva — utile per «classifiche» di frequenza.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.3 — costruttore di pipe: parti da cat, aggiungi filtri, vedi trasformare
+   ========================================================================= */
+(function () {
+  const cmdEl = document.getElementById('pp-cmd');
+  if (!cmdEl) return;
+  const term = document.getElementById('pp-out-term');
+  const out = document.getElementById('pp-out');
+
+  const SORGENTE = ['server.log', 'app.log', 'note.txt', 'backup.log', 'app.log', 'dati.csv', 'server.log'];
+  let stages = []; // lista di filtri applicati
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function applica() {
+    let data = SORGENTE.slice();
+    stages.forEach(function (s) {
+      if (s === 'grep') data = data.filter(function (l) { return l.indexOf('.log') >= 0; });
+      else if (s === 'sort') data = data.slice().sort();
+      else if (s === 'head') data = data.slice(0, 3);
+      else if (s === 'wc') data = [String(data.length)];
+    });
+    return data;
+  }
+
+  const LABEL = { grep: 'grep .log', sort: 'sort', head: 'head -n 3', wc: 'wc -l' };
+  const DESC = {
+    grep: 'filtra: tiene solo le righe che contengono «.log»',
+    sort: 'ordina le righe alfabeticamente',
+    head: 'tiene solo le prime 3 righe',
+    wc: 'conta le righe (restituisce un numero)'
+  };
+
+  function render(last) {
+    let cmd = 'cat file.txt';
+    stages.forEach(function (s) { cmd += ' | ' + LABEL[s]; });
+    cmdEl.innerHTML = esc(cmd);
+    const data = applica();
+    term.innerHTML = data.length ? data.map(function (l) { return '<span class="out">' + esc(l) + '</span>'; }).join('\n') : '<span style="color:#6b7385">(vuoto)</span>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' +
+      (last ? 'Aggiunto <code>' + LABEL[last] + '</code>: ' + DESC[last] + '. ' : 'Parti da <code>cat file.txt</code> (mostra tutto il file). ') +
+      'Aggiungi filtri con i pulsanti: ogni <code>|</code> passa l\'output al comando successivo, che lo <b>trasforma</b>. La catena tipica: <code>grep</code> → <code>sort</code> → <code>head</code>/<code>wc</code>.</div>';
+  }
+
+  document.querySelectorAll('#w-pipe .btn[data-add]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const s = b.getAttribute('data-add');
+      if (stages[stages.length - 1] === 'wc') { out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">⚠ Dopo <code>wc -l</code> c\'è solo un numero: non ha senso filtrarlo oltre. Fai reset per ricominciare.</div>'; return; }
+      stages.push(s); render(s);
+    });
+  });
+  document.getElementById('pp-reset').addEventListener('click', function () { stages = []; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

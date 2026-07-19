@@ -134,7 +134,7 @@ const TOC = [
     n: 9,
     titolo: "Pipe e redirezione",
     file: "cap09-pipe-redirezione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Input, output, errore" },
       { id: "s9-2", n: "9.2", t: "Redirigere su file: >, >>" },
