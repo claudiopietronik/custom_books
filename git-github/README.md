@@ -15,7 +15,7 @@ nessun linguaggio di programmazione richiesto.
 - [x] 1 — Cos'è il controllo di versione
 - [x] 2 — Installare e configurare Git
 - [x] 3 — Il primo repository
-- [ ] 4 — Salvare le modifiche: la commit
+- [x] 4 — Salvare le modifiche: la commit
 - [ ] 5 — La storia del progetto
 - [ ] 6 — Annullare e correggere
 - [ ] 7 — I branch

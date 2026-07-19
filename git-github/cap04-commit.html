@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Salvare le modifiche: la commit — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>Salvare le modifiche: la commit</h1>
+    <p class="standfirst">
+      Eccoci al gesto centrale di Git, quello che ripeterai migliaia di volte: fare una <b>commit</b>, cioè salvare uno
+      snapshot del tuo progetto nella storia. Dal capitolo scorso sai che una modifica compie un viaggio in tre aree;
+      ora impariamo i due comandi che lo completano: <code>git add</code> (porta le modifiche in staging) e
+      <code>git commit</code> (le registra per sempre, con un messaggio che descrive cosa hai fatto). Vedremo perché il
+      <b>messaggio di commit</b> è tutt'altro che un dettaglio — è ciò che rende la storia leggibile e utile, a te e
+      agli altri, anche a mesi di distanza. E consolideremo il <b>ciclo add-commit</b>: il battito cardiaco del lavoro
+      quotidiano con Git. In questo capitolo: <code>git add</code> (§4.1), <code>git commit</code> (§4.2), il
+      messaggio (§4.3) e il ciclo completo (§4.4). <mark>Dopo questo capitolo saprai davvero versionare un progetto: è
+      il cuore di tutto Git.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <code>git add</code> (§4.1), <code>git commit</code> (§4.2), il <b>messaggio</b> di commit (§4.3), il <b>ciclo
+      add-commit</b> (§4.4). Nel laboratorio (§4.5) fai le tue prime commit e vedi la storia crescere.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è l'azione che fai di più</div>
+    <p style="margin-bottom:0">
+      Se c'è <b>un</b> gesto che definisce l'uso di Git, è fare commit. <mark>Ogni progresso, ogni correzione, ogni
+      idea salvata è una commit.</mark> Farle bene — con contenuti coerenti e messaggi chiari — trasforma la storia del
+      progetto in una risorsa preziosa (per capire, per tornare indietro, per collaborare). Farle male la rende un
+      pasticcio. È un'abilità che vale la pena affinare fin da subito.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>git add: preparare le modifiche</h2>
+
+  <p class="lead">
+    Il primo passo per salvare è <code>git add</code>: sposta le modifiche dalla working directory alla <b>staging
+    area</b> (Cap. 3), cioè le «seleziona» per la prossima commit.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — aggiungere alla staging area</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">giorno1.txt</span>       <span class="c"># aggiungi un file specifico</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span>                 <span class="c"># aggiungi TUTTO ciò che è cambiato</span>
+
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">Changes to be committed:
+        </span><span class="hl">new file: giorno1.txt</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git add smontato <span class="tag">file singolo · tutto · lo stato «staged»</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git add nomefile</span></dt>
+        <dd>mette in staging le modifiche di <b>quel</b> file. Utile per selezionare con precisione cosa includere
+            nella prossima commit.</dd>
+        <dt><span class="mono">git add .</span></dt>
+        <dd>il punto significa «<b>tutto ciò che è cambiato</b> in questa cartella e sottocartelle». <mark>Il modo più
+            comune e veloce</mark> quando vuoi salvare tutte le modifiche insieme.</dd>
+        <dt>dopo l'add: stato <b>staged</b></dt>
+        <dd><code>git status</code> ora elenca il file sotto «Changes to be committed» (in verde): è <b>pronto</b> per
+            la commit. <mark>Ma non è ancora salvato</mark> — serve il <code>commit</code>.</dd>
+        <dt>ripensarci</dt>
+        <dd>hai messo in staging qualcosa per sbaglio? Puoi toglierlo senza perdere il lavoro (lo vedremo al Cap. 6,
+            <code>git restore --staged</code>). Lo staging è reversibile.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Pensa a <code>git add</code> come al «mettere gli articoli nel carrello»: scegli cosa comprare, ma non hai ancora
+      pagato. <mark>Il pagamento è il <code>commit</code></mark> (prossima sezione). Puoi aggiungere più cose al
+      carrello (più <code>git add</code>) prima di «pagare» una volta sola. Questa immagine — carrello e cassa — aiuta
+      a ricordare perché servono due comandi.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>git commit: salvare uno snapshot</h2>
+
+  <p class="lead">
+    Con le modifiche in staging, <code>git commit</code> le registra come uno <b>snapshot permanente</b> nella storia
+    del repository. Ogni commit ha un messaggio che la descrive.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — fare una commit</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il primo giorno del diario"</span>
+<span class="out">[main (root-commit) a1b2c3d] Aggiungi il primo giorno del diario
+ 1 file changed, 1 insertion(+)
+ create mode 100644 giorno1.txt</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git commit smontato <span class="tag">-m · l'hash · il riepilogo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git commit -m "messaggio"</span></dt>
+        <dd>crea la commit con il messaggio indicato. <mark>Il <code>-m</code> («message») ti fa scrivere il messaggio
+            direttamente</mark> sulla riga di comando. Senza <code>-m</code>, Git aprirebbe un editor di testo per
+            scriverlo.</dd>
+        <dt>l'<b>hash</b> <span class="mono">a1b2c3d</span></dt>
+        <dd>ogni commit riceve un identificatore univoco (un codice lungo, di solito mostrato accorciato).
+            <mark>È l'«impronta digitale» della commit</mark>: la userai per riferirti a lei (Cap. 5-6).</dd>
+        <dt><span class="mono">root-commit</span></dt>
+        <dd>appare solo per la <b>primissima</b> commit del repository (non ha commit precedenti). Dalla seconda in
+            poi, non lo vedrai più.</dd>
+        <dt>il <b>riepilogo</b></dt>
+        <dd>«1 file changed, 1 insertion»: Git riassume cosa è entrato nella commit (quanti file, quante righe
+            aggiunte/rimosse). Un rapido controllo che hai salvato ciò che intendevi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Fatto! La modifica è ora <b>al sicuro nella storia</b>: anche se cancelli o rovini il file, puoi sempre
+      recuperare questa versione. <mark>La working directory torna «pulita»</mark> (<code>git status</code> dirà
+      «nothing to commit»), pronta per le prossime modifiche. Hai completato il viaggio delle tre aree del Cap. 3:
+      working → staging (<code>add</code>) → repository (<code>commit</code>).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Il messaggio di commit</h2>
+
+  <p class="lead">
+    Il messaggio non è una formalità: è <b>la spiegazione</b> di cosa hai cambiato e perché. Un buon messaggio rende
+    la storia leggibile; uno pigro la rende inutile. Vale la pena imparare a scriverli bene fin da subito.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di un buon messaggio <span class="tag">chiaro · conciso · al presente</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>descrivi <b>cosa</b> fa la commit</dt>
+        <dd>una frase breve che riassume la modifica: «Aggiungi la validazione dell'email», «Correggi il calcolo del
+            totale». <mark>Deve bastare a capire, senza aprire il codice.</mark></dd>
+        <dt>usa l'<b>imperativo presente</b></dt>
+        <dd>la convenzione: «Aggiungi…», «Correggi…», «Rimuovi…» (come un comando), non «Aggiunto» o «Aggiungendo».
+            <mark>Suona come «questa commit <em>fa</em> X»</mark>. È lo stile usato ovunque nel mondo Git.</dd>
+        <dt>sii <b>specifico</b>, non generico</dt>
+        <dd>evita messaggi vuoti come «modifiche», «fix», «aggiornamento», «asdf». <mark>Tra sei mesi non ti diranno
+            nulla.</mark> Meglio «Correggi il bug del login con email maiuscole».</dd>
+        <dt>breve la prima riga (~50 caratteri)</dt>
+        <dd>la prima riga è il «titolo» della commit; tienila concisa. Se serve, aggiungi una riga vuota e altri
+            dettagli sotto (per commit importanti).</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">messaggi: buoni vs pigri</div>
+      <pre><span class="c"># ✔ buoni (chiari, all'imperativo, specifici):</span>
+<span class="hl">"Aggiungi la pagina di contatti"</span>
+<span class="hl">"Correggi il crash quando la lista è vuota"</span>
+<span class="hl">"Rimuovi il codice di debug inutilizzato"</span>
+
+<span class="c"># ✗ pigri (vaghi, inutili tra sei mesi):</span>
+<span class="out">"modifiche"    "fix"    "aggiornamento"    "asdf"    "."</span></pre>
+    </div>
+    <div class="f-note">
+      Una prova pratica: <mark>un buon messaggio completa la frase «Questa commit, se applicata, …»</mark> — «…aggiunge
+      la pagina di contatti». Se il tuo messaggio non ci sta bene, probabilmente è troppo vago. Non è pedanteria: la
+      storia dei messaggi è ciò che leggi (con <code>git log</code>, Cap. 5) per capire l'evoluzione del progetto e
+      per ritrovare <em>quando</em> è stato introdotto un cambiamento. Messaggi curati = storia utile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>Il ciclo add-commit</h2>
+
+  <p class="lead">
+    Ora unisci tutto: il lavoro con Git è, in gran parte, la <b>ripetizione</b> di un ciclo semplice. Modifichi,
+    aggiungi, committi — e ricominci. È il ritmo quotidiano.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔁</span> Il battito cardiaco di Git</div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head">il ciclo, ripetuto all'infinito</div>
+      <pre><span class="c"># 1. LAVORA: modifica i tuoi file (nell'editor)</span>
+<span class="c"># 2. CONTROLLA: cosa è cambiato?</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="c"># 3. PREPARA: metti in staging</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span>
+<span class="c"># 4. SALVA: fai la commit con un messaggio</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Descrivi cosa hai fatto"</span>
+<span class="c"># ...e ricomincia dal punto 1</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      <mark>Questo ciclo è il 90% dell'uso quotidiano di Git.</mark> Modifica → status → add → commit. Quanto spesso
+      committare? Regola pratica: <b>una commit per ogni «unità logica» di lavoro compiuta</b> — una funzionalità
+      aggiunta, un bug corretto, una sezione scritta. Commit piccole e frequenti (Cap. 13) sono meglio di una gigante
+      alla fine: più facili da capire e da annullare se serve. Prova il ciclo nel widget qui sotto.
+    </p>
+  </div>
+
+  <div class="widget" id="w-cycle">
+    <div class="w-head">
+      <span>Il ciclo add-commit: costruisci la storia</span>
+      <span class="hint">modifica, add, commit — e ripeti</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:480px; margin:0 auto">
+        <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; flex-wrap:wrap">
+          <span style="font-size:.82rem; color:var(--ink-soft)">messaggio:</span>
+          <input type="text" id="cy-msg" value="Aggiungi il titolo" placeholder="descrivi la modifica" style="flex:1; min-width:150px; padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:.85rem">
+        </div>
+        <div style="font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin:.6rem 0 .3rem">git log (la storia)</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="cy-log" style="margin:0; min-height:80px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="cy-edit">✏ modifica</button>
+      <button class="btn" id="cy-add">git add .</button>
+      <button class="btn" id="cy-commit">git commit -m</button>
+      <button class="btn ghost" id="cy-reset">reset</button>
+    </div>
+    <div class="w-readout" id="cy-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>Laboratorio: le prime commit</h2>
+
+  <p class="lead">
+    Facciamo due commit vere nel repository del capitolo scorso, così vedi la storia nascere e crescere. Ti serve il
+    repo <code>diario</code> (o creane uno nuovo con <code>git init</code>).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — due commit dall'inizio</div>
+    <pre><span class="c"># crea un file e fai la PRIMA commit</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"Giorno 1: ho imparato git init."</span> &gt; <span class="ar">giorno1.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">giorno1.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il primo giorno"</span>
+<span class="out">[main (root-commit) a1b2c3d] Aggiungi il primo giorno</span>
+
+<span class="c"># modifica/aggiungi e fai la SECONDA commit</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"Giorno 2: ho imparato add e commit."</span> &gt; <span class="ar">giorno2.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi il secondo giorno"</span>
+<span class="out">[main e4f5g6h] Aggiungi il secondo giorno</span>
+
+<span class="c"># guarda la storia: due commit!</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">log</span> <span class="fl">--oneline</span>
+<span class="out">e4f5g6h Aggiungi il secondo giorno
+a1b2c3d Aggiungi il primo giorno</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai costruito</div>
+    <p style="margin-bottom:0">
+      Hai creato una <b>storia</b> di due commit: due snapshot del progetto, ciascuno con il suo messaggio e il suo
+      hash. <code>git log --oneline</code> te li mostra dal più recente al più vecchio. <mark>Questa è la «macchina del
+      tempo» del Cap. 1, ora costruita da te</mark>: ogni commit è un punto a cui potrai tornare (Cap. 5-6). Nota il
+      ritmo: modifica → add → commit, ripetuto. Continua a usarlo per ogni progresso del tuo diario, e la storia
+      crescerà, ordinata e navigabile. Esploreremo <code>git log</code> a fondo nel prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><code>git add nomefile</code> (o <code>git add .</code> per tutto) mette le modifiche in <b>staging</b>: il
+          «carrello» (§4.1).</li>
+      <li><code>git commit -m "messaggio"</code> registra lo <b>snapshot</b> nella storia: la «cassa». Ottiene un
+          <b>hash</b> univoco (§4.2).</li>
+      <li>Il <b>messaggio</b> conta: chiaro, specifico, all'imperativo presente («Aggiungi…»). Evita «fix»,
+          «modifiche» (§4.3).</li>
+      <li>Il <b>ciclo</b> quotidiano: modifica → <code>status</code> → <code>add</code> → <code>commit</code>, ripeti.
+          Commit piccole e frequenti (§4.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai versionare: creare snapshot ordinati e descritti. Ma una storia serve a poco se non sai <b>consultarla</b>.
+    Nel <strong>Capitolo 5</strong> impariamo a <b>leggere la storia</b>: <code>git log</code> per scorrere le commit,
+    <code>git diff</code> per vedere esattamente cosa è cambiato, <code>git show</code> per ispezionare una singola
+    commit. Strumenti che trasformano la sequenza di snapshot in una risorsa che puoi interrogare — «cosa è cambiato,
+    quando, e perché».
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>git add file.txt</code> e <code>git add .</code>? Quando preferiresti il primo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Scrivi la sequenza completa di comandi per salvare, in una commit, un nuovo file <code>ricetta.txt</code> con il
+      messaggio «Aggiungi la ricetta della pizza».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Riscrivi questi messaggi di commit pigri in versioni migliori (inventa un contesto plausibile):
+      <code>"fix"</code>, <code>"modifiche"</code>, <code>"roba nuova"</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Nel «carrello e cassa», a cosa corrispondono <code>git add</code> e <code>git commit</code>? Perché Git separa
+      le due fasi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      <code>git add file.txt</code> mette in staging <b>solo quel file</b>; <code>git add .</code> mette in staging
+      <b>tutte</b> le modifiche della cartella (e sottocartelle). Preferisci il primo quando hai cambiato più file ma
+      vuoi includere in una commit <b>solo alcuni</b> di essi (per comporre una commit coerente, lasciando le altre
+      modifiche per una commit successiva).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">ricetta.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Aggiungi la ricetta della pizza"</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Prima <code>add</code> (staging), poi <code>commit</code> (salvataggio con
+      messaggio).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      Esempi di riscrittura (all'imperativo, specifici): <code>"fix"</code> → <b>«Correggi il calcolo del totale con
+      lo sconto»</b>; <code>"modifiche"</code> → <b>«Aggiorna i colori del tema in modalità scura»</b>;
+      <code>"roba nuova"</code> → <b>«Aggiungi la funzione di ricerca nei contatti»</b>. L'importante è che chi legge
+      capisca <b>cosa</b> fa la commit senza aprire il codice.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      <code>git add</code> = <b>mettere gli articoli nel carrello</b> (selezioni cosa vuoi salvare, nella staging
+      area); <code>git commit</code> = <b>pagare alla cassa</b> (registri definitivamente ciò che è nel carrello,
+      creando lo snapshot). Git separa le due fasi per darti <b>controllo</b>: puoi comporre con cura cosa mettere nel
+      «carrello» (anche in più passaggi) prima di «pagare» una volta sola, ottenendo commit pulite e coerenti.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.4 — il ciclo add-commit: costruisci una storia di commit (git log cresce)
+   NB: hash "finti" deterministici per didattica.
+   ========================================================================= */
+(function () {
+  const logEl = document.getElementById('cy-log');
+  if (!logEl) return;
+  const msgEl = document.getElementById('cy-msg');
+  const out = document.getElementById('cy-out');
+
+  let state = 0; // 0 pulito, 1 modificato, 2 staged
+  let commits = [];
+  let seed = 40503;
+  function nextHash() {
+    let h = '';
+    const chars = '0123456789abcdef';
+    for (let i = 0; i < 7; i++) { seed = (seed * 1103515245 + 12345 + i * 7) >>> 0; h += chars[seed % 16]; }
+    return h;
+  }
+
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function drawLog() {
+    if (!commits.length) { logEl.innerHTML = '<span class="out">(nessuna commit ancora)</span>'; return; }
+    logEl.innerHTML = commits.slice().reverse().map(function (c) {
+      return '<span class="nm">' + c.hash + '</span> ' + esc(c.msg);
+    }).join('\n');
+  }
+
+  document.getElementById('cy-edit').addEventListener('click', function () {
+    if (state === 0) { state = 1; out.innerHTML = note('', '✏ Hai <b>modificato</b> un file (working directory). Ora <b>git add .</b> per prepararlo.'); }
+    else out.innerHTML = note('', 'C\'è già una modifica in corso: prosegui con <b>git add</b>.');
+  });
+  document.getElementById('cy-add').addEventListener('click', function () {
+    if (state === 1) { state = 2; out.innerHTML = note('', 'Modifica in <b>staging</b> (carrello). Scrivi un messaggio e fai <b>git commit -m</b> (cassa).'); }
+    else out.innerHTML = note('warm', state === 0 ? '⚠ Niente da aggiungere: prima <b>✏ modifica</b>.' : 'È già in staging.');
+  });
+  document.getElementById('cy-commit').addEventListener('click', function () {
+    if (state !== 2) { out.innerHTML = note('warm', '⚠ Non c\'è nulla in staging: fai <b>✏ modifica</b> e <b>git add .</b> prima.'); return; }
+    const msg = (msgEl.value || '').trim() || '(messaggio vuoto)';
+    commits.push({ hash: nextHash(), msg: msg });
+    state = 0; drawLog();
+    out.innerHTML = note('green', '✔ <b>Commit salvata!</b> Ora la storia ha <b>' + commits.length + '</b> commit. La working directory è pulita — ricomincia il ciclo: modifica → add → commit.');
+  });
+  document.getElementById('cy-reset').addEventListener('click', function () {
+    state = 0; commits = []; seed = 40503; drawLog(); out.innerHTML = note('', 'Reset. Ripeti il ciclo per costruire la storia.');
+  });
+
+  drawLog();
+  out.innerHTML = note('', 'Segui il ciclo: <b>✏ modifica</b> → <b>git add .</b> → scrivi un messaggio → <b>git commit -m</b>. Ogni commit compare in <code>git log</code> con il suo hash. Ripeti per far crescere la storia.');
+})();
+</script>
+</body>
+</html>

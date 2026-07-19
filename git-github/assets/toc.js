@@ -58,7 +58,7 @@ const TOC = [
     n: 4,
     titolo: "Salvare le modifiche: la commit",
     file: "cap04-commit.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "git add: preparare le modifiche" },
       { id: "s4-2", n: "4.2", t: "git commit: salvare uno snapshot" },
