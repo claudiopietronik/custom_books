@@ -18,7 +18,7 @@ Contenuto originale scritto ex novo.
 - [x] 5 — I cicli
 - [x] 6 — Le funzioni
 - [x] 7 — Puntatori e riferimenti
-- [ ] 8 — Array e vector
+- [x] 8 — Array e vector
 - [ ] 9 — Le stringhe
 - [ ] 10 — Struct e classi
 - [ ] 11 — Ereditarietà e polimorfismo

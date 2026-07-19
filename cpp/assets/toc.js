@@ -124,7 +124,7 @@ const TOC = [
     n: 8,
     titolo: "Array e vector",
     file: "cap08-array-vector.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Gli array del C" },
       { id: "s8-2", n: "8.2", t: "std::vector: l'array che cresce" },

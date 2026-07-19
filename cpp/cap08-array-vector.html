@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Array e vector — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>Array e vector</h1>
+    <p class="standfirst">
+      I programmi veri lavorano su <b>tanti</b> valori insieme: i voti di una classe, i pixel di un'immagine, i
+      punteggi di un gioco. Il C++ offre due modi per tenere sequenze di dati. Gli <b>array</b> «grezzi», eredità
+      del linguaggio C: velocissimi e vicini alla memoria (sono, in fondo, dei puntatori — il capitolo scorso torna
+      utile!), ma rigidi e pericolosi. E <code>std::vector</code>: l'<b>array «intelligente»</b> che cresce da solo,
+      conosce la propria dimensione e ti protegge dagli errori più comuni. <mark>Nel C++ moderno la regola è
+      semplice: usa <code>std::vector</code></mark> — è la struttura dati che maneggerai ogni giorno. In questo
+      capitolo li conosciamo entrambi, capendo perché il vector ha (quasi sempre) ragione.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Gli <b>array del C</b> e i loro limiti (§8.1), <b>std::vector</b> e perché è meglio (§8.2), come <b>aggiungere,
+      accedere, scorrere</b> (§8.3), il legame tra <b>array e puntatori</b> (§8.4), e le <b>matrici</b> (§8.5). Nel
+      laboratorio (§8.6) calcoli statistiche su una lista di numeri.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: gestire tanti dati</div>
+    <p style="margin-bottom:0">
+      Le sequenze sono ovunque. <mark><code>std::vector</code> è probabilmente la struttura dati che userai di
+      più</mark> in C++: flessibile, sicura, efficiente. Capire la differenza con gli array «grezzi» ti fa
+      apprezzare cosa il vector fa <em>per</em> te (crescere, ricordare la dimensione, evitare accessi fuori
+      limite), e ti fa capire perché tanto codice C legacy è pieno di trappole. È anche il tuo primo incontro con la
+      <b>STL</b>, la ricchissima libreria di strutture e algoritmi del C++ (Cap. 13).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Gli array del C</h2>
+
+  <p class="lead">
+    L'<b>array</b> classico: una sequenza di elementi dello stesso tipo, <b>contigui in memoria</b>, di dimensione
+    <b>fissa</b>. Semplice e velocissimo — ma con spigoli pericolosi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Un array C <span class="tag">dimensione fissa, indici da 0</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span> <span class="nm">voti</span>[<span class="nm">4</span>] <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>, <span class="nm">9</span>};   <span class="cm">// array di 4 int</span>
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">voti</span>[<span class="nm">0</span>];      <span class="cm">// 7  (indice da 0!)</span>
+<span class="nm">voti</span>[<span class="nm">2</span>] <span class="op">=</span> <span class="nm">10</span>;              <span class="cm">// modifica il terzo elemento</span>
+
+<span class="cm">// voti[7] = 1;   →  NESSUN controllo! Scrive fuori dall'array: DISASTRO</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">int voti[4]</span> — dimensione fissa</dt>
+        <dd>dichiari il tipo, il nome e <b>quanti elementi</b> tra quadre. La dimensione è <b>fissata alla
+            creazione</b> e non può cambiare: 4 elementi, per sempre. Accesso per indice (da 0), come le stringhe.</dd>
+        <dt>contigui in memoria</dt>
+        <dd>gli elementi vivono in caselle <b>adiacenti</b> (Cap. 7): <code>voti[0]</code>, poi subito
+            <code>voti[1]</code>, ecc. È ciò che li rende velocissimi (e legati ai puntatori, §8.4).</dd>
+        <dt><mark>la trappola mortale: nessun controllo di limite</mark></dt>
+        <dd>l'array ha 4 elementi (indici 0-3), ma <code>voti[7]</code> <b>non dà errore</b>: scrive in memoria
+            <b>fuori</b> dall'array, corrompendo altri dati o facendo crashare il programma. <b>L'array grezzo si
+            fida ciecamente di te</b>. È la causa di innumerevoli bug e falle di sicurezza. Per questo esiste
+            <code>std::vector</code>.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>std::vector: l'array che cresce</h2>
+
+  <p class="lead">
+    Ecco la soluzione moderna. <code>std::vector</code> è un array che <b>cresce e si accorcia da solo</b>, sa
+    <b>quanti elementi contiene</b>, e offre metodi comodi. È la struttura dati «di default» del C++.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">std::vector <span class="tag">l'array intelligente</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>          <span class="cm">// serve questo include</span>
+
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">voti</span> <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>};   <span class="cm">// un vector di int</span>
+
+<span class="nm">voti</span><span class="op">.</span><span class="fn">push_back</span>(<span class="nm">9</span>);       <span class="cm">// AGGIUNGE in fondo → {7,8,6,9}  (cresce da solo!)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">voti</span><span class="op">.</span><span class="fn">size</span>();   <span class="cm">// 4  (conosce la propria dimensione)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">voti</span>[<span class="nm">0</span>];        <span class="cm">// 7  (accesso per indice come l'array)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::vector&lt;int&gt;</span></dt>
+        <dd>«un vector di int». Il tipo degli elementi va tra <b>parentesi angolari</b> <code>&lt; &gt;</code>
+            (è un <b>template</b>, Cap. 13): <code>vector&lt;double&gt;</code>, <code>vector&lt;std::string&gt;</code>,
+            ecc. Richiede <code>#include &lt;vector&gt;</code>.</dd>
+        <dt><span class="mono">.push_back(x)</span> — cresce</dt>
+        <dd>aggiunge <code>x</code> in fondo, <b>allargando</b> il vector automaticamente. Non c'è una dimensione
+            fissa: parti anche da vuoto e riempi. <mark>È ciò che l'array grezzo non sa fare</mark>.</dd>
+        <dt><span class="mono">.size()</span> — quanti elementi</dt>
+        <dd>il vector <b>ricorda la propria dimensione</b>: niente più bisogno di portartela dietro in una variabile
+            separata (fonte classica di bug con gli array).</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-vec">
+    <div class="w-head">
+      <span>std::vector: cresce, si accorcia, ricorda la size</span>
+      <span class="hint">usa i metodi e guarda il vector</span>
+    </div>
+    <div class="w-stage" style="min-height:150px">
+      <div id="wvc-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wvc-push">push_back(9)</button>
+      <button class="w-btn" id="wvc-pop">pop_back()</button>
+      <button class="w-btn" id="wvc-reset">↺ reset</button>
+    </div>
+    <div class="w-readout" id="wvc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Aggiungere, accedere, scorrere</h2>
+
+  <p class="lead">
+    Le operazioni quotidiane sul vector: aggiungere e togliere elementi, accedere in sicurezza, e scorrerlo — spesso
+    col comodo <b>for range-based</b> del Capitolo 5.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le operazioni sul vector <span class="tag">push · at · for range</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">v</span> <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>};
+
+<span class="nm">v</span><span class="op">.</span><span class="fn">push_back</span>(<span class="nm">9</span>);      <span class="cm">// aggiunge in fondo</span>
+<span class="nm">v</span><span class="op">.</span><span class="fn">pop_back</span>();        <span class="cm">// toglie l'ultimo</span>
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">v</span>[<span class="nm">0</span>];       <span class="cm">// accesso rapido (ma NON controlla i limiti)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">v</span><span class="op">.</span><span class="fn">at</span>(<span class="nm">0</span>);    <span class="cm">// accesso SICURO: .at() lancia un errore se fuori limite</span>
+
+<span class="kw">for</span> (<span class="ty">int</span> <span class="nm">x</span> : <span class="nm">v</span>) {        <span class="cm">// scorrere col for range-based (Cap. 5)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">x</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">v[i]</span> vs <span class="mono">v.at(i)</span></dt>
+        <dd>entrambi accedono all'elemento <code>i</code>. <code>v[i]</code> è veloce ma <b>non controlla i
+            limiti</b> (come l'array grezzo); <code>v.at(i)</code> <b>controlla</b> e lancia un'eccezione se
+            l'indice è fuori dai limiti. <mark>Usa <code>.at()</code> quando l'indice potrebbe sbagliare</mark>, per
+            un crash controllato invece di un bug silenzioso.</dd>
+        <dt>scorrere</dt>
+        <dd>il <b>for range-based</b> (<code>for (int x : v)</code>) è il modo più pulito; se ti servono gli indici,
+            usa il for classico da 0 a <code>v.size()</code>. Con <code>int&amp; x</code> puoi anche modificare gli
+            elementi.</dd>
+        <dt>altre operazioni utili</dt>
+        <dd><code>v.empty()</code> (è vuoto?), <code>v.clear()</code> (svuota), <code>v.front()</code>/
+            <code>v.back()</code> (primo/ultimo). Il vector è ricchissimo.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Array e puntatori</h2>
+
+  <p class="lead">
+    Ecco dove il Capitolo 7 torna: in C++ (eredità del C) un <b>array è, quasi, un puntatore</b> al suo primo
+    elemento. È un legame profondo che spiega molte cose — e molte trappole.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il nome dell'array è un indirizzo</div>
+    <p style="margin-bottom:0">
+      Quando scrivi il nome di un array «nudo», in molti contesti esso «decade» nell'<b>indirizzo del suo primo
+      elemento</b> — cioè si comporta come un puntatore. Per questo <code>voti</code> e <code>&amp;voti[0]</code>
+      sono di fatto lo stesso indirizzo, e <code>*(voti + 1)</code> è equivalente a <code>voti[1]</code> (l'indice è
+      «spostati di tanto dall'inizio»). <mark>Gli elementi contigui + l'aritmetica dei puntatori spiegano perché
+      l'accesso per indice è così veloce</mark>: è una semplice somma di indirizzi. Il rovescio: passando un array a
+      una funzione, <b>perdi la sua dimensione</b> (arriva solo il puntatore al primo elemento), da cui i tanti bug
+      del C. <code>std::vector</code>, invece, si porta dietro la sua dimensione: un altro motivo per preferirlo. Non
+      devi padroneggiare l'aritmetica dei puntatori ora — ti basta l'idea: array e puntatori sono parenti stretti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Matrici (vector di vector)</h2>
+
+  <p class="lead">
+    Per dati a <b>due dimensioni</b> (una griglia, una tabella, una scacchiera) servono strutture bidimensionali. La
+    via moderna: un <b>vector di vector</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una matrice <span class="tag">vector di vector</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;&gt;</span> <span class="nm">griglia</span> <span class="op">=</span> {
+    {<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>},
+    {<span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">6</span>}
+};
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">griglia</span>[<span class="nm">1</span>][<span class="nm">2</span>];   <span class="cm">// 6  (riga 1, colonna 2)</span>
+
+<span class="kw">for</span> (<span class="ty">auto</span><span class="op">&amp;</span> <span class="nm">riga</span> : <span class="nm">griglia</span>) {      <span class="cm">// scorri le righe...</span>
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">x</span> : <span class="nm">riga</span>) {           <span class="cm">// ...e le colonne (cicli annidati, Cap. 5)</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">x</span> <span class="op">&lt;&lt;</span> <span class="st">" "</span>;
+    }
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Un <code>vector&lt;vector&lt;int&gt;&gt;</code> è «una lista di righe, ognuna una lista di numeri»: l'accesso è
+      <code>griglia[riga][colonna]</code>. <mark>La sintassi dei template annidati (<code>&lt;&lt; &gt;&gt;</code>)
+      spaventa all'inizio</mark>, ma l'idea è semplice — è la stessa struttura «lista di liste» dei linguaggi ad
+      alto livello. Per scorrerla, cicli annidati (Cap. 5). Nota <code>auto&amp;</code> nel ciclo esterno: il
+      <code>&amp;</code> evita di <b>copiare</b> ogni riga (che è un vector intero!) — efficienza, come nel Cap. 6.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Laboratorio: statistiche su una lista</h2>
+
+  <p class="lead">
+    Uniamo tutto: leggiamo dei numeri in un vector e calcoliamo somma, media e massimo — scorrendo con un ciclo e
+    accumulando. Un classico che mostra il vector al lavoro.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>stat.cpp</code> <span class="tag">vector + ciclo + accumulatori</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">stat.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">voti</span> <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">6</span>, <span class="nm">10</span>, <span class="nm">9</span>};
+
+    <span class="ty">int</span> <span class="nm">somma</span> <span class="op">=</span> <span class="nm">0</span>;
+    <span class="ty">int</span> <span class="nm">massimo</span> <span class="op">=</span> <span class="nm">voti</span>[<span class="nm">0</span>];
+    <span class="kw">for</span> (<span class="ty">int</span> <span class="nm">v</span> : <span class="nm">voti</span>) {
+        <span class="nm">somma</span> <span class="op">+=</span> <span class="nm">v</span>;                       <span class="cm">// accumulo la somma</span>
+        <span class="kw">if</span> (<span class="nm">v</span> <span class="op">&gt;</span> <span class="nm">massimo</span>) <span class="nm">massimo</span> <span class="op">=</span> <span class="nm">v</span>;    <span class="cm">// tengo il più grande</span>
+    }
+
+    <span class="ty">double</span> <span class="nm">media</span> <span class="op">=</span> <span class="kw">static_cast</span><span class="op">&lt;</span><span class="ty">double</span><span class="op">&gt;</span>(<span class="nm">somma</span>) <span class="op">/</span> <span class="nm">voti</span><span class="op">.</span><span class="fn">size</span>();   <span class="cm">// cast! (Cap. 3)</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Media: "</span> <span class="op">&lt;&lt;</span> <span class="nm">media</span> <span class="op">&lt;&lt;</span> <span class="st">", massimo: "</span> <span class="op">&lt;&lt;</span> <span class="nm">massimo</span> <span class="op">&lt;&lt;</span> <span class="ns">std</span>::endl;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Output: «Media: 8, massimo: 10». Vedi convergere tante idee: il <b>vector</b> tiene i dati e conosce la sua
+      <code>.size()</code>, il <b>for range-based</b> li scorre, gli <b>accumulatori</b> sommano e cercano il max, e
+      il <b>cast</b> a <code>double</code> (Cap. 3!) evita la divisione intera nella media. <mark>Nota
+      <code>static_cast&lt;double&gt;(somma)</code>: senza, <code>40 / 5</code> sarebbe intero e con numeri diversi
+      perderebbe i decimali</mark>. Compila con <code>g++ stat.cpp -o stat</code>. (Bonus: la STL, Cap. 13, ha
+      <code>std::accumulate</code> e <code>std::max_element</code> che fanno questo in una riga — ma capire lo
+      schema a mano è essenziale.)
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>L'<b>array C</b> (<code>int a[4]</code>) è a dimensione fissa, contiguo e velocissimo, ma <mark>non
+          controlla i limiti</mark> (bug pericolosi) (§8.1).</li>
+      <li><b>std::vector</b> (<code>#include &lt;vector&gt;</code>) è l'array «intelligente»: <b>cresce</b>
+          (<code>push_back</code>), conosce la <code>.size()</code>, offre l'accesso sicuro <code>.at()</code>. <b>È
+          la scelta di default</b> (§8.2-8.3).</li>
+      <li>Un array «decade» in un <b>puntatore</b> al primo elemento (Cap. 7): parenti stretti; ma passandolo a una
+          funzione perdi la dimensione — il vector no (§8.4).</li>
+      <li>Le <b>matrici</b> = <code>vector&lt;vector&lt;T&gt;&gt;</code>, accesso <code>[riga][col]</code>, scorse
+          con cicli annidati (§8.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai gestire sequenze di numeri. Ma i programmi lavorano tantissimo con il <b>testo</b>: nomi, messaggi,
+    contenuti. In C++ il testo ha una storia doppia — le vecchie stringhe «grezze» ereditate dal C (array di
+    <code>char</code>, spinosi) e la moderna <code>std::string</code>, comoda e sicura. Nel <strong>Capitolo 9</strong>
+    ci dedichiamo alle <b>stringhe</b>: <code>std::string</code>, concatenazione, sottostringhe, i metodi utili, e
+    come leggere righe intere. Vedrai che, con le classi giuste (come vector e string), il C++ moderno è molto più
+    amichevole della sua fama.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza principale tra un array C (<code>int a[4]</code>) e un <code>std::vector&lt;int&gt;</code>?
+      Cita almeno due vantaggi del vector.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Perché è pericoloso scrivere <code>voti[7]</code> su un array di 4 elementi? Cosa fa il vector con
+      <code>.at(7)</code> nella stessa situazione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Scrivi il codice per creare un <code>vector&lt;std::string&gt;</code> con «pane» e «latte», aggiungere «uova»
+      e stampare quanti elementi ha.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi <code>conta.cpp</code>: dato un <code>vector&lt;int&gt;</code>, conta con un ciclo quanti
+      numeri sono pari e stampalo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-8"><span class="secnum">Sezione 8.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      L'array C ha <b>dimensione fissa</b> e <b>non controlla i limiti</b>; il <code>std::vector</code> <b>cresce e
+      si accorcia</b> dinamicamente (<code>push_back</code>/<code>pop_back</code>), <b>conosce la propria
+      dimensione</b> (<code>.size()</code>), offre accesso <b>sicuro</b> (<code>.at()</code>) e si porta dietro i
+      dati passandolo alle funzioni. Vantaggi del vector: flessibilità, sicurezza, comodità.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      L'array di 4 elementi ha indici validi 0-3; <code>voti[7]</code> scrive/legge <b>fuori</b> dall'array, in
+      memoria che non gli appartiene, <b>senza alcun errore</b>: corrompe altri dati o fa crashare (bug insidioso).
+      Il vector con <code>.at(7)</code>, invece, <b>rileva</b> l'accesso fuori limite e <b>lancia un'eccezione</b>
+      (crash controllato e chiaro) invece di corrompere la memoria.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">spesa.cpp</div>
+      <pre><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ns">std</span>::<span class="ns">string</span><span class="op">&gt;</span> <span class="nm">spesa</span> <span class="op">=</span> {<span class="st">"pane"</span>, <span class="st">"latte"</span>};
+<span class="nm">spesa</span><span class="op">.</span><span class="fn">push_back</span>(<span class="st">"uova"</span>);
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">spesa</span><span class="op">.</span><span class="fn">size</span>();   <span class="cm">// 3</span></pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">conta.cpp</div>
+      <pre><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">v</span> <span class="op">=</span> {<span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">7</span>, <span class="nm">8</span>, <span class="nm">10</span>};
+<span class="ty">int</span> <span class="nm">pari</span> <span class="op">=</span> <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="ty">int</span> <span class="nm">x</span> : <span class="nm">v</span>) {
+    <span class="kw">if</span> (<span class="nm">x</span> <span class="op">%</span> <span class="nm">2</span> <span class="op">==</span> <span class="nm">0</span>) <span class="nm">pari</span><span class="op">++</span>;
+}
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">pari</span> <span class="op">&lt;&lt;</span> <span class="st">" numeri pari\n"</span>;   <span class="cm">// 3</span></pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.2 — std::vector: push_back / pop_back con size
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wvc-view');
+  if (!view) return;
+  const out = document.getElementById('wvc-out');
+  const start = () => [7, 8, 6];
+  let v = start(), msg = 'Un vector di 3 int. A differenza dell\'array, cresce e si accorcia da solo e conosce la sua size.';
+
+  document.getElementById('wvc-push').addEventListener('click', () => { v.push(9); msg = '<code>v.push_back(9)</code>: aggiunge 9 <b>in fondo</b>, il vector <b>cresce</b> da solo. size ora = ' + v.length + '.'; draw(); });
+  document.getElementById('wvc-pop').addEventListener('click', () => { if (v.length) { v.pop(); msg = '<code>v.pop_back()</code>: toglie l\'<b>ultimo</b> elemento. size = ' + v.length + '.'; } else msg = 'Vector vuoto: niente da togliere.'; draw(); });
+  document.getElementById('wvc-reset').addEventListener('click', () => { v = start(); msg = 'Reimpostato.'; draw(); });
+
+  function draw() {
+    let cells = v.map((x, i) => `<div style="display:inline-block; text-align:center; margin:0 2px">
+      <div style="width:48px; height:48px; display:grid; place-items:center; border:2px solid var(--accent); border-radius:8px; background:color-mix(in srgb,var(--accent) 12%,transparent); font-family:var(--mono); font-weight:700; font-size:1.2rem; color:var(--accent)">${x}</div>
+      <div style="font-family:var(--mono); font-size:.72rem; color:var(--ink-faint); margin-top:.2rem">[${i}]</div>
+    </div>`).join('');
+    if (!v.length) cells = '<span style="color:var(--ink-faint); font-family:var(--mono)">{ }  (vuoto)</span>';
+    view.innerHTML = `<div style="margin-bottom:.6rem">${cells}</div>
+      <div style="font-family:var(--mono); color:var(--ink-soft)">v.size() = <b style="color:var(--green)">${v.length}</b></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
