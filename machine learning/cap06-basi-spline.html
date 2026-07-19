@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Oltre il lineare: basi e spline — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Oltre il lineare: basi e spline</h1>
+    <p class="standfirst">
+      Tutti i modelli visti finora tracciano <b>rette</b> (o piani): descrivono relazioni «costanti». Ma il mondo è
+      pieno di relazioni <b>curve</b>: il rendimento che cresce e poi si appiattisce, l'effetto di una medicina che ha
+      un massimo, il consumo che dipende dalla temperatura a «U». Come cattura queste forme un modello lineare? Con un
+      trucco tanto semplice quanto geniale, che va capito bene una volta per tutte: <mark>il modello lineare è
+      «lineare» rispetto ai <b>pesi</b>, non necessariamente rispetto alle caratteristiche.</mark> Questo significa che
+      possiamo <b>trasformare</b> le caratteristiche — aggiungere, per esempio, $x^2$ e $x^3$ come nuove
+      «caratteristiche finte» — e fare la solita, comoda regressione lineare su di esse, ottenendo però una <b>curva</b>.
+      È l'idea delle <b>espansioni di base</b>. Ne vedremo due usi: la <b>regressione polinomiale</b> (aggiungere
+      potenze) e le <b>spline</b> (unire tanti pezzi di curva). E ritroveremo, inevitabilmente, il compromesso
+      bias-varianza: più flessibilità = più rischio di overfitting. In questo capitolo: le espansioni di base (§6.1), la
+      regressione polinomiale (§6.2), le spline (§6.3), flessibilità contro regolarità (§6.4). <mark>Impariamo a far
+      curvare i modelli senza uscire dalla cornice che già conosciamo.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>espansioni di base</b> (§6.1), la <b>regressione polinomiale</b> (§6.2), le <b>spline</b> e lo smoothing
+      (§6.3), <b>flessibilità contro regolarità</b> (§6.4). Nel laboratorio (§6.5) fai curvare una regressione.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la stessa cornice, forme più ricche</div>
+    <p style="margin-bottom:0">
+      Questa è una delle idee più fruttuose del machine learning: <mark>con una semplice trasformazione delle
+      caratteristiche, un modello lineare cattura forme non lineari</mark> — restando facile da allenare e da capire.
+      È il ponte tra i modelli semplici e quelli flessibili, e prepara il terreno per un'idea ancora più potente (i
+      kernel, capitolo 11). Capirla ti dà un superpotere: trasformare i dati per far emergere lo schema.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Espansioni di base</h2>
+
+  <p class="lead">
+    Il cuore di tutto è capire cosa significa davvero «lineare». C'è un malinteso comune da sciogliere subito, e da lì
+    tutto diventa chiaro.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> «Lineare nei pesi», non nelle caratteristiche</div>
+    <p style="margin-bottom:.5rem">
+      Quando diciamo che un modello è «lineare», intendiamo che la previsione è una <b>somma pesata</b> — ogni
+      caratteristica moltiplicata per un peso, poi sommate. Ma <mark>nulla ci vieta che le «caratteristiche» siano
+      versioni <b>trasformate</b> dell'originale.</mark> Guarda:
+    </p>
+    <p style="text-align:center; font-size:1.15rem; margin:.4rem 0 .9rem">$$ \hat{y} = \beta_0 + \beta_1 x + \beta_2 x^2 + \beta_3 x^3 $$</p>
+    <p style="margin-bottom:0">
+      Questa è ancora una <b>somma pesata</b> — di $x$, di $x^2$, di $x^3$ — quindi è ancora «regressione lineare», e la
+      alleniamo con i soliti minimi quadrati. Ma come funzione di $x$ non è affatto una retta: è una <b>curva</b>
+      (una cubica)! Il trucco: <mark>abbiamo creato nuove «caratteristiche» ($x^2$, $x^3$) a partire da quella
+      originale ($x$)</mark>, e le abbiamo date in pasto al modello lineare come se fossero feature separate. Le funzioni
+      con cui trasformiamo (qui $x$, $x^2$, $x^3$) si chiamano <b>funzioni di base</b>, e questo modo di procedere si
+      chiama <b>espansione di base</b>: «espandiamo» una caratteristica in tante.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Come cambiare occhiali</div>
+    <p style="margin-bottom:0">
+      È come se, prima di guardare i dati, indossassimo degli «occhiali» che li deformano in modo utile. In un mondo
+      curvo, il modello lineare è cieco; ma se trasformiamo lo spazio (aggiungendo $x^2$, $x^3$…), la stessa curva
+      diventa una «retta» in questo nuovo spazio deformato — e lì il modello lineare ci vede benissimo. <mark>Non
+      cambiamo il modello: cambiamo il modo di rappresentare i dati.</mark> Questa idea — «trasforma i dati finché il
+      problema diventa lineare» — è profonda e tornerà, ancora più potente, con i kernel (capitolo 11).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Regressione polinomiale</h2>
+
+  <p class="lead">
+    L'espansione di base più semplice è aggiungere le <b>potenze</b> della caratteristica: $x^2, x^3, \ldots$ fino a un
+    certo grado. Questa si chiama <b>regressione polinomiale</b>, e ci è già familiare: è il «grado» del widget del
+    capitolo 3.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il polinomio di grado $d$ <span class="tag">più potenze = più flessibilità</span></div>
+    <p style="text-align:center; font-size:1.15rem; margin:.6rem 0 1rem">$$ \hat{y} = \beta_0 + \beta_1 x + \beta_2 x^2 + \cdots + \beta_d x^d $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>grado</b> $d$ — quante potenze usiamo</dt>
+        <dd>è quanto «in alto» arriviamo con le potenze. <mark>$d = 1$ è la retta; $d = 2$ una parabola; $d = 3$ una
+            cubica</mark>, e così via. Più alto il grado, più la curva può contorcersi.</dd>
+        <dt>il grado è la <b>complessità</b> del modello</dt>
+        <dd>e qui torna il capitolo 3: <mark>il grado è la «manopola» del compromesso bias-varianza.</mark> Grado basso
+            = modello rigido, rischio underfitting (bias alto). Grado alto = modello flessibilissimo, rischio
+            overfitting (varianza alta), con la curva che si contorce per passare su ogni punto. Il grado giusto sta nel
+            mezzo, e si sceglie con la validazione (capitolo 3).</dd>
+        <dt>attenzione: cresce in fretta</dt>
+        <dd>con più caratteristiche di partenza, il numero di termini polinomiali (potenze e loro prodotti) esplode
+            rapidamente. <mark>Gradi molto alti tendono a overfittare</mark> e a comportarsi male ai bordi dei dati: in
+            pratica si resta su gradi bassi (2, 3), o si passa alle spline.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In scikit-learn la regressione polinomiale si fa in due mosse: prima <b>crei le potenze</b> con
+      <code>PolynomialFeatures</code> (che aggiunge $x^2$, $x^3$…), poi ci applichi la solita
+      <code>LinearRegression</code>. <mark>Vedi? Il modello resta lineare</mark>: cambia solo cosa gli dai in pasto. È
+      l'espansione di base del §6.1 messa in pratica.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Spline e smoothing</h2>
+
+  <p class="lead">
+    Un polinomio di grado alto ha un difetto: è una <b>singola curva globale</b> che deve valere ovunque, e per
+    adattarsi in una zona rischia di «impazzire» in un'altra (specie ai bordi). Le <b>spline</b> risolvono con
+    un'idea più furba: invece di una curva unica, tanti <b>pezzi</b> di curva semplice, uniti bene.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Tante curve piccole, unite dolcemente</div>
+    <p style="margin-bottom:0">
+      Una <b>spline</b> divide l'intervallo dei dati in tratti (separati da punti chiamati <b>nodi</b>, in inglese
+      «knots»), e in ogni tratto usa un polinomio semplice (di solito una cubica). Il segreto sta nell'<b>unire i
+      pezzi con dolcezza</b> ai nodi: si impone che, dove due tratti si incontrano, la curva sia <b>continua e liscia</b>
+      (senza spigoli né salti). <mark>Il risultato è una curva flessibile ma «locale»</mark>: ogni pezzo si adatta alla
+      sua zona senza dover valere per tutto il grafico, evitando gli sbandamenti dei polinomi di grado alto. È come
+      descrivere una strada di montagna con tanti tratti dolci uniti, invece che con un'unica, contorta equazione.
+      L'idea nasce, non a caso, dalle stecche flessibili («spline» in inglese) che i disegnatori usavano per tracciare
+      curve morbide passando per punti fissati.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🎚</span> Smoothing: quanto liscia?</div>
+    <p style="margin-bottom:0">
+      Con le spline, la «manopola» della complessità è <b>quanti nodi</b> mettere (più nodi = più flessibilità, come il
+      grado del polinomio). Una variante elegante, la <b>smoothing spline</b>, gira la manopola in modo continuo con un
+      parametro di <b>regolarizzazione</b> (di nuovo un $\lambda$, come nel capitolo 5!) che bilancia <b>quanto la
+      curva si adatta ai dati</b> contro <b>quanto è liscia</b>: <mark>$\lambda$ piccolo → curva molto ondulata
+      (rischio overfitting); $\lambda$ grande → curva quasi dritta (rischio underfitting).</mark> È sempre lo stesso
+      compromesso bias-varianza, con una manopola diversa. Vedi come tutti i fili si intrecciano? Le idee di base
+      (bias-varianza, regolarizzazione) ritornano in ogni modello, vestite in modi diversi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Flessibilità contro regolarità</h2>
+
+  <p class="lead">
+    Facciamo il punto su un principio che ormai riconosci, ma che qui diventa un criterio di scelta pratico: più un
+    modello è flessibile (curve più libere), più è potente <b>ma</b> più rischia di inseguire il rumore.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il compromesso, ancora una volta <span class="tag">flessibile ≠ meglio</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>poca flessibilità (retta) — molto <b>bias</b></dt>
+        <dd>il modello è troppo rigido per la vera forma dei dati: la «manca» sistematicamente. <mark>Underfitting.</mark></dd>
+        <dt>tanta flessibilità (grado alto, tanti nodi) — molta <b>varianza</b></dt>
+        <dd>il modello si contorce per passare su ogni punto, rumore compreso, e diventa instabile. <mark>Overfitting.</mark></dd>
+        <dt>la <b>flessibilità giusta</b></dt>
+        <dd>cattura la vera curva senza inseguire il rumore. <mark>Si trova con la validazione</mark> (capitolo 3):
+            provi diverse complessità (grado, numero di nodi, $\lambda$) e tieni quella con l'errore più basso su dati
+            <b>nuovi</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il messaggio pratico, valido per tutto il libro: <mark>«più flessibile» non significa «migliore».</mark> Un
+      modello più potente può facilmente essere <em>peggiore</em> su dati nuovi, se la sua libertà non è controllata.
+      La regolarizzazione (capitolo 5) e la scelta oculata della complessità (validazione) sono i due modi di
+      «trattenere» la flessibilità quel tanto che serve. Tieni sempre l'occhio sull'errore di validazione, mai solo su
+      quello di allenamento (che scende sempre, illudendoti).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi lo stesso identico modello lineare diventare una curva, semplicemente cambiando le «caratteristiche
+    trasformate» che gli diamo. Poi il codice, per farlo in scikit-learn.
+  </p>
+
+  <div class="widget" id="w-basis">
+    <div class="w-head">
+      <span>Lo stesso modello lineare, ma curvo</span>
+      <span class="hint">scegli quali potenze dare in pasto</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <div style="display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem; flex-wrap:wrap">
+        <button class="btn" data-deg="1">solo x (retta)</button>
+        <button class="btn ghost" data-deg="2">+ x² (parabola)</button>
+        <button class="btn ghost" data-deg="3">+ x³ (cubica)</button>
+        <button class="btn ghost" data-deg="8">fino a x⁸</button>
+      </div>
+      <svg id="bs-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+    </div>
+    <div class="w-readout" id="bs-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">polinomiale.py</div>
+    <pre><span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> PolynomialFeatures
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> make_pipeline
+
+<span class="cm"># crea le potenze (x, x², x³) e poi applica la SOLITA regressione lineare</span>
+<span class="cm"># make_pipeline le mette in sequenza in un unico "modello"</span>
+modello <span class="op">=</span> <span class="fn">make_pipeline</span>(
+    <span class="fn">PolynomialFeatures</span>(degree<span class="op">=</span><span class="nm">3</span>),   <span class="cm"># l'espansione di base: aggiunge x², x³</span>
+    <span class="fn">LinearRegression</span>()            <span class="cm"># il modello lineare di sempre</span>
+)
+modello.<span class="fn">fit</span>(X, y)                     <span class="cm"># adatta una CURVA (cubica) ai dati</span>
+<span class="bi">print</span>(modello.<span class="fn">predict</span>([[<span class="nm">5.0</span>]]))</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: passando da «solo x» a «+ x²» a «+ x³», la previsione passa da retta a parabola a cubica —
+      <b>eppure il modello sotto è sempre la stessa regressione lineare</b>. <mark>L'unica cosa che cambia è cosa gli
+      diamo in pasto</mark> (quali potenze). Ed ecco, con «fino a x⁸», l'overfitting: la curva si contorce per inseguire
+      ogni punto. Nel codice: <code>PolynomialFeatures</code> crea le potenze, <code>LinearRegression</code> fa il
+      resto, e <code>make_pipeline</code> li unisce in un unico modello con la solita interfaccia <code>fit</code>/
+      <code>predict</code>. (Le <b>pipeline</b> le vedremo bene al capitolo 19: sono un modo pulito di incatenare
+      trasformazioni e modello.) Hai visto come far curvare un modello lineare senza cambiarlo. Ma finora abbiamo
+      sempre previsto <b>numeri</b> (regressione). Nel prossimo capitolo cambiamo tipo di problema: prevedere
+      <b>categorie</b> — la <b>classificazione</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>Il modello lineare è «lineare nei <b>pesi</b>», non nelle caratteristiche: <b>trasformando</b> le feature
+          (espansioni di base) cattura relazioni <b>curve</b> restando regressione lineare (§6.1).</li>
+      <li><b>Regressione polinomiale</b>: aggiungi le potenze $x^2, x^3, \ldots, x^d$. Il <b>grado</b> $d$ è la manopola
+          della complessità (bias-varianza) (§6.2).</li>
+      <li>Le <b>spline</b>: tanti pezzi di curva semplice uniti dolcemente ai <b>nodi</b> — flessibili ma «locali»,
+          evitano gli sbandamenti dei polinomi. Lo smoothing bilancia adattamento e liscezza con un $\lambda$ (§6.3).</li>
+      <li>«Più flessibile» ≠ «migliore»: la libertà va controllata (regolarizzazione + validazione) per non overfittare
+          (§6.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con le espansioni di base, la regressione lineare è diventata sorprendentemente versatile. Ma finora abbiamo sempre
+    previsto <b>numeri</b>: un prezzo, un voto. Moltissimi problemi, però, chiedono di prevedere una <b>categoria</b>:
+    spam o non-spam, malato o sano, quale cifra è scritta in un'immagine. Nel <strong>Capitolo 7</strong> entriamo
+    nella <b>classificazione</b>: cosa cambia, cos'è un <b>confine decisionale</b> (la «frontiera» che separa le
+    categorie), e i primi classificatori — l'analisi discriminante lineare (LDA) e la sua versione curva (QDA), spiegati
+    con la solita, paziente cura.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Il modello $\hat{y} = \beta_0 + \beta_1 x + \beta_2 x^2$ è ancora «regressione lineare», anche se disegna una
+      curva. Perché? Cosa vuol dire, esattamente, che è «lineare»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Cosa rappresenta il «grado» di una regressione polinomiale? Cosa succede tipicamente se lo si alza troppo, e
+      perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Qual è il vantaggio delle spline rispetto a un singolo polinomio di grado alto? Cosa sono i «nodi»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      «Un modello più flessibile è sempre migliore»: perché questa affermazione è falsa? Come si decide la giusta
+      quantità di flessibilità (grado, numero di nodi)?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      È «lineare» perché la previsione è una <b>somma pesata</b> di caratteristiche (ogni caratteristica moltiplicata
+      per un peso, poi sommate), e questo è ciò che «lineare» significa nel machine learning: lineare <b>nei pesi</b>
+      $\beta$, non nella variabile $x$. Qui le «caratteristiche» sono $x$ e $x^2$ (una trasformazione di $x$): il
+      modello le somma pesate, restando lineare, ma come funzione di $x$ diventa una parabola. In breio: trasformiamo la
+      caratteristica, ma il meccanismo (somma pesata + minimi quadrati) resta quello lineare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      Il «grado» è la potenza massima usata ($x^d$): stabilisce <b>quanto la curva può contorcersi</b> — quindi è la
+      manopola della complessità del modello. Alzandolo troppo, il modello diventa troppo flessibile e va in
+      <b>overfitting</b>: la curva si contorce per passare vicino a ogni punto (rumore compreso), va benissimo sugli
+      esempi visti ma male su quelli nuovi (varianza alta), e spesso «impazzisce» ai bordi dei dati. Serve il grado
+      giusto, scelto in validazione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Un singolo polinomio di grado alto è una <b>curva globale unica</b> che deve valere ovunque: per adattarsi in una
+      zona rischia di sbandare in un'altra (specie ai bordi). Le <b>spline</b> invece usano <b>tanti pezzi</b> di curva
+      semplice, ognuno valido nel suo tratto, uniti dolcemente: sono flessibili ma «locali», così evitano gli
+      sbandamenti globali. I <b>nodi</b> sono i punti che separano i tratti (dove un pezzo di curva finisce e comincia
+      il successivo); ai nodi si impone che la curva sia continua e liscia.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      È falsa perché un modello troppo flessibile tende a <b>overfittare</b>: insegue il rumore invece dello schema
+      vero, e su dati nuovi va <b>peggio</b> di un modello più semplice. La flessibilità è potenza, ma va controllata.
+      La giusta quantità (grado del polinomio, numero di nodi, forza della regolarizzazione) si decide con la
+      <b>validazione</b>: si provano diverse complessità e si tiene quella che dà l'errore più basso su dati <b>non
+      usati per l'allenamento</b>, non quella che va meglio sui dati visti (che premierebbe sempre la più flessibile).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.5 — lo stesso modello lineare, curvato via espansione polinomiale.
+   Fit polinomiale (Vandermonde in t=[-1,1]). Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('bs-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('bs-out');
+
+  // dati con una forma curva (una gobba), + rumore
+  const DATA = [
+    [0.4,1.6],[1.1,2.9],[1.9,4.0],[2.7,4.7],[3.5,5.0],
+    [4.3,4.6],[5.1,3.9],[5.9,3.1],[6.7,2.6],[7.5,3.2],[8.3,4.1],[9.1,5.4]
+  ];
+  const XMIN=0, XMAX=9.5, YMIN=0, YMAX=7;
+  function toT(x){ return (x-(XMIN+XMAX)/2)/((XMAX-XMIN)/2); }
+
+  function solve(A,b){const n=A.length;const M=A.map(function(r,i){return r.slice().concat([b[i]]);});
+    for(let c=0;c<n;c++){let pv=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[pv][c]))pv=r;
+      const t=M[c];M[c]=M[pv];M[pv]=t;if(Math.abs(M[c][c])<1e-12)M[c][c]=1e-12;
+      for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c]/M[c][c];for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k];}}
+    const x=new Array(n);for(let i=0;i<n;i++)x[i]=M[i][n]/M[i][i];return x;}
+  function polyfit(d){const m=d+1;const A=[],bb=[];for(let i=0;i<m;i++){A.push(new Array(m).fill(0));bb.push(0);}
+    DATA.forEach(function(pt){const t=toT(pt[0]);const pw=[1];for(let j=1;j<2*m;j++)pw.push(pw[j-1]*t);
+      for(let i=0;i<m;i++){for(let j=0;j<m;j++)A[i][j]+=pw[i+j];bb[i]+=pw[i]*pt[1];}});return solve(A,bb);}
+  function ev(c,x){const t=toT(x);let y=0,p=1;for(let i=0;i<c.length;i++){y+=c[i]*p;p*=t;}return y;}
+
+  const p = new Plot(svg, { xmin: XMIN-0.4, xmax: XMAX+0.4, ymin: YMIN, ymax: YMAX });
+  let deg = 1;
+
+  function draw() {
+    const c = polyfit(deg);
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    const pts=[]; for(let x=XMIN;x<=XMAX;x+=0.08){ const y=ev(c,x); pts.push([x, Math.max(YMIN-1,Math.min(YMAX+1,y))]); }
+    p.poly(pts, { color:'var(--accent)', width:2.4, close:false });
+    DATA.forEach(function(pt){ p.dot(pt[0],pt[1],{ color:'var(--ink)', r:4.5 }); });
+
+    const NOMI = {1:'retta (solo x)', 2:'parabola (x, x²)', 3:'cubica (x, x², x³)', 8:'grado 8 (fino a x⁸)'};
+    let msg, col;
+    if (deg===1){ msg='<b>Solo x</b>: il modello è una <b>retta</b> — troppo rigida per questa gobba (underfitting). Aggiungi x² per farlo curvare.'; col='var(--warm)'; }
+    else if (deg===2){ msg='<b>+ x²</b>: ora è una <b>parabola</b>. Stesso modello lineare, ma con x² tra le feature: cattura la gobba! ✅'; col='var(--green)'; }
+    else if (deg===3){ msg='<b>+ x³</b>: una <b>cubica</b>, ancora più flessibile. Segue bene la forma. È sempre regressione lineare, solo su più potenze.'; col='var(--green)'; }
+    else { msg='<b>Fino a x⁸</b>: troppa flessibilità → <b>overfitting</b>: la curva si contorce per inseguire ogni punto (e sbanda ai bordi). Su dati nuovi andrebbe peggio.'; col='var(--warm)'; }
+    out.innerHTML = '<div style="color:'+col+'; font-size:.9rem; text-align:left">' + msg +
+      ' <span style="color:var(--ink-soft)">Le feature date al modello: ' + NOMI[deg] + '. Il modello sotto è <b>sempre</b> LinearRegression.</span></div>';
+  }
+
+  document.querySelectorAll('#w-basis .btn[data-deg]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      deg = +b.getAttribute('data-deg');
+      document.querySelectorAll('#w-basis .btn[data-deg]').forEach(function (x) { x.classList.add('ghost'); });
+      b.classList.remove('ghost');
+      draw();
+    });
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

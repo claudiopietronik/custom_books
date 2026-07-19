@@ -90,7 +90,7 @@ const TOC = [
     n: 6,
     titolo: "Oltre il lineare: basi e spline",
     file: "cap06-basi-spline.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Espansioni di base" },
       { id: "s6-2", n: "6.2", t: "Regressione polinomiale" },
