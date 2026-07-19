@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Bagging e Random Forests — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Bagging e Random Forests</h1>
+    <p class="standfirst">
+      Abbiamo lasciato gli alberi con un problema serio: da soli overfittano e sono <b>instabili</b> — cambia pochi dati
+      e ottieni un albero diverso. Questo capitolo trasforma quel difetto in una forza, con un'idea tanto semplice
+      quanto potente, che vale la pena imparare bene perché è uno dei pilastri del machine learning pratico: <mark>invece
+      di fidarti di <b>un</b> esperto imperfetto, chiedi a <b>tanti</b> esperti imperfetti e fai la media delle loro
+      opinioni.</mark> È la saggezza della folla. Una singola opinione può sbagliare in una direzione, un'altra
+      nell'opposta, ma la <b>media</b> tende a cadere vicino alla verità. Applicata agli alberi, questa idea genera due
+      dei modelli più usati e affidabili in assoluto. In questo capitolo: perché gli alberi hanno tanta varianza e
+      perché la media la abbatte (§13.1), la tecnica del <b>bagging</b> (§13.2), il tocco geniale in più delle
+      <b>Random Forests</b> — la decorrelazione (§13.3), e i loro strumenti bonus: importanza delle feature e stima OOB
+      (§13.4). Ogni idea spiegata con calma, dal principio.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>varianza degli alberi</b> (§13.1), il <b>bagging</b> (§13.2), le <b>Random Forests</b> e la decorrelazione
+      (§13.3), <b>importanza delle feature</b> e stima <b>OOB</b> (§13.4). Nel laboratorio (§13.5) vedi la media di
+      tanti alberi rumorosi stabilizzarsi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il cavallo di battaglia affidabile</div>
+    <p style="margin-bottom:0">
+      La <b>Random Forest</b> è spesso il primo modello «serio» da provare su dati a tabella: <mark>accurata, robusta,
+      poco sensibile alle impostazioni, difficile da far sbagliare di grosso.</mark> Funziona quasi sempre bene senza
+      troppa fatica. E il principio degli <b>ensemble</b> che imparerai qui — combinare tanti modelli deboli in uno
+      forte — è una delle idee più profonde e trasversali di tutta la disciplina.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>La varianza degli alberi</h2>
+
+  <p class="lead">
+    Ripartiamo dal difetto degli alberi, perché capirlo bene è capire perché il rimedio funziona. Ricordi il capitolo 3:
+    l'errore ha due componenti, <b>bias</b> (errore sistematico) e <b>varianza</b> (instabilità al cambiare dei dati).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Basso bias, altissima varianza</div>
+    <p style="margin-bottom:0">
+      Un albero profondo ha un profilo molto particolare: <mark>bias <b>basso</b> (è flessibile, sa adattarsi a quasi
+      ogni forma) ma varianza <b>altissima</b> (è instabile).</mark> «Instabile» vuol dire concretamente questo: se
+      raccogliessi un campione di dati leggermente diverso e riallenassi l'albero, otterresti un albero con domande e
+      tagli anche molto diversi — perché una piccola differenza nei dati può cambiare quale domanda «vince» in cima, e
+      da lì tutto il resto cambia a cascata. Le sue previsioni «ballano» molto da un campione all'altro. È proprio
+      questa varianza a rovinargli le prestazioni sui dati nuovi.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La media di tante cose rumorose è più stabile</div>
+    <p style="margin-bottom:0">
+      Ecco il seme dell'idea, con un esempio che conosci. Chiedi a <b>una</b> persona di indovinare quante caramelle ci
+      sono in un barattolo: sbaglierà, magari di parecchio. Ma chiedilo a <b>mille</b> persone e <b>fai la media</b>:
+      il risultato sarà sorprendentemente vicino al vero. Perché? <mark>Gli errori individuali, alcuni in eccesso altri
+      in difetto, tendono a <b>elidersi a vicenda</b> nella media; la verità comune sotto, invece, si somma.</mark> In
+      termini tecnici: <b>fare la media di tante previsioni riduce la varianza, senza aumentare il bias.</b> Se ogni
+      albero è (in media) giusto ma rumoroso, la media di tanti alberi è giusta <b>e</b> stabile. È esattamente la cura
+      di cui l'albero ha bisogno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Bagging (bootstrap aggregating)</h2>
+
+  <p class="lead">
+    C'è un problema pratico nell'idea «alleniamo tanti alberi e facciamo la media»: noi abbiamo <b>un solo</b> insieme
+    di dati. Come otteniamo tanti alberi <b>diversi</b> da un unico dataset? La risposta è un trucco elegante chiamato
+    <b>bootstrap</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il bootstrap: tanti dataset «finti» da uno vero</div>
+    <p style="margin-bottom:0">
+      Il <b>bootstrap</b> crea nuovi insiemi di dati <b>ricampionando con rimpiazzo</b> da quello originale. Spiegato
+      concretamente: hai 100 punti; per fare un dataset bootstrap, <mark>peschi 100 volte a caso un punto dal sacchetto,
+      <b>rimettendolo dentro ogni volta</b>.</mark> Il «con rimpiazzo» è la chiave: alcuni punti verranno pescati più
+      volte, altri per niente. Ottieni così un dataset della stessa dimensione ma <b>leggermente diverso</b>. Ripetendo,
+      generi tanti dataset finti, tutti un po' diversi tra loro. Ogni albero allenato su un dataset bootstrap diverso
+      sarà, appunto, un albero un po' diverso — ed è proprio la diversità che ci serve per far funzionare la media.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Bagging = Bootstrap + Aggregating <span class="tag">il nome dice tutto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>B</b>ootstrap — la diversità</dt>
+        <dd>crea $B$ dataset bootstrap (per esempio 100 o 500) ricampionando con rimpiazzo. <mark>Ognuno produrrà un
+            albero diverso.</mark></dd>
+        <dt><b>Agg</b>regating — mettere insieme</dt>
+        <dd>alleni un albero su ciascun dataset, poi <b>aggreghi</b> le loro previsioni: per la <b>regressione</b> fai
+            la <b>media</b> dei valori previsti; per la <b>classificazione</b> fai <b>votare</b> gli alberi e vince la
+            classe di maggioranza. <mark>Molte opinioni → una decisione collettiva.</mark></dd>
+        <dt>il risultato: stessa «giustezza», molta più stabilità</dt>
+        <dd>ogni albero mantiene il suo basso bias; ma aggregandoli la varianza <b>crolla</b>. <mark>Il bagging trasforma
+            tanti alberi instabili in un predittore accurato e robusto</mark>, senza svantaggi apprezzabili (solo più
+            calcolo, ma gli alberi si allenano in parallelo).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      «Bagging» è la crasi di <b>B</b>ootstrap <b>agg</b>regat<b>ing</b>. Puoi applicarlo a qualsiasi modello, ma dà il
+      meglio proprio con modelli a bassa distorsione e alta varianza come gli alberi profondi — sono i candidati
+      perfetti per essere «mediati».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Random Forests: la decorrelazione</h2>
+
+  <p class="lead">
+    Il bagging funziona, ma ha un limite sottile. Le Random Forests lo superano con un'idea in più, piccola ma
+    decisiva. Capiamola.
+  </p>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Il problema: alberi troppo simili tra loro</div>
+    <p style="margin-bottom:0">
+      La media riduce la varianza <b>tanto più</b> quanto più le cose che medi sono <b>diverse</b> e indipendenti (mille
+      persone che indovinano indipendentemente valgono più di mille che si copiano). Ma con il solo bagging c'è un
+      inghippo: <mark>se una caratteristica è molto predittiva, <b>tutti</b> gli alberi tenderanno a usarla come prima
+      domanda in cima</mark>, e finiranno per assomigliarsi parecchio. Alberi molto <b>simili</b> (correlati)
+      commettono gli stessi errori insieme, e mediarli aiuta poco: gli errori non si elidono se sono tutti uguali. La
+      media è forte solo se gli errori sono <b>vari</b>.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il tocco geniale: nascondere alcune feature a ogni taglio</div>
+    <p style="margin-bottom:0">
+      La <b>Random Forest</b> aggiunge una regola sorprendente: <mark>a ogni singola domanda, ogni albero può scegliere
+      solo tra un <b>sottoinsieme casuale</b> delle caratteristiche</mark> (per esempio, solo su una manciata delle
+      caratteristiche disponibili, estratte a sorte per quel taglio), non tra tutte. Sembra un'autolimitazione
+      controproducente, e invece è il segreto: costringendo alberi diversi a usare caratteristiche <b>diverse</b>,
+      soprattutto la super-caratteristica dominante viene «a turno» nascosta, così gli alberi sono forzati a esplorare
+      altre strade e diventano <b>più diversi tra loro</b> (meno correlati). <mark>Alberi più diversi → la media riduce
+      la varianza molto di più.</mark> Questa piccola aggiunta — la <b>decorrelazione</b> — è ciò che distingue una
+      Random Forest da un semplice bagging di alberi, e la rende nettamente migliore.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Random» due volte</div>
+    <p style="margin-bottom:0">
+      Il nome «foresta <b>casuale</b>» viene da <b>due</b> dosi di casualità che rendono gli alberi diversi: <b>(1)</b>
+      ogni albero vede un dataset <b>bootstrap</b> diverso (dal bagging); <b>(2)</b> a ogni taglio considera solo un
+      <b>sottoinsieme casuale</b> di caratteristiche (la decorrelazione). Insieme, garantiscono una <b>foresta</b> di
+      alberi genuinamente vari, la cui media è accurata e stabilissima.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>Importanza delle feature e OOB</h2>
+
+  <p class="lead">
+    Le Random Forests regalano, quasi gratis, due strumenti pratici molto amati. Vale la pena conoscerli perché li userai
+    spessissimo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📊</span> Importanza delle caratteristiche: chi conta di più</div>
+    <p style="margin-bottom:0">
+      Costruendo gli alberi, la foresta tiene traccia di <b>quanto ogni caratteristica ha contribuito</b> a ridurre
+      l'impurità nei tagli, in tutti gli alberi. Sommando questi contributi ottiene un punteggio di
+      <b>importanza</b> per ciascuna caratteristica: <mark>una classifica di «quali variabili contano di più» per la
+      previsione.</mark> È preziosissima per capire il problema (quali fattori guidano il prezzo? la diagnosi?) e per
+      scartare caratteristiche inutili. Una finestra sul «perché» del modello, che un singolo modello a scatola nera non
+      dà così facilmente.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🎁</span> La stima OOB: validazione gratis</div>
+    <p style="margin-bottom:0">
+      Ricorda: nel bootstrap, ogni albero viene allenato su un campione dove <b>alcuni punti non compaiono</b> (non
+      sono stati pescati). Quei punti si chiamano <b>«out-of-bag»</b> (OOB, «fuori dal sacchetto») per quell'albero.
+      Idea brillante: <mark>per valutare la foresta, ogni punto può essere previsto usando solo gli alberi che <b>non</b>
+      l'hanno visto in allenamento</mark> — per loro è un dato «nuovo». Confrontando queste previsioni con la verità si
+      ottiene la <b>stima OOB</b> dell'errore: una misura onesta delle prestazioni <b>senza dover mettere da parte un
+      set di validazione</b>. È come avere una validazione incrociata in omaggio, calcolata durante l'allenamento.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi il cuore del bagging: tante previsioni di alberi <b>rumorose</b> (le linee tenui, tutte diverse) e la
+    loro <b>media</b> (la linea in grassetto), che diventa liscia e stabile man mano che aggiungi alberi. La saggezza
+    della folla, in diretta.
+  </p>
+
+  <div class="widget" id="w-rf">
+    <div class="w-head">
+      <span>La media di tanti alberi si stabilizza</span>
+      <span class="hint">più alberi = previsione più liscia</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="rf-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>numero di alberi <input type="range" id="rf-n" min="1" max="40" step="1" value="1"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="rf-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">foresta.py</div>
+    <pre><span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> RandomForestClassifier
+
+foresta <span class="op">=</span> <span class="fn">RandomForestClassifier</span>(
+    n_estimators<span class="op">=</span><span class="nm">300</span>,      <span class="cm"># quanti alberi nella foresta (più = più stabile)</span>
+    max_features<span class="op">=</span><span class="st">"sqrt"</span>,   <span class="cm"># feature casuali per taglio: la DECORRELAZIONE</span>
+    oob_score<span class="op">=</span><span class="kw">True</span>         <span class="cm"># attiva la validazione gratis (out-of-bag)</span>
+)
+foresta.<span class="fn">fit</span>(X, y)
+
+<span class="bi">print</span>(foresta.oob_score_)             <span class="cm"># accuratezza stimata "gratis" (OOB)</span>
+<span class="bi">print</span>(foresta.feature_importances_)   <span class="cm"># quali caratteristiche contano di più</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: con <b>1 albero</b> la previsione è una spezzata nervosa (alta varianza); aggiungendo alberi, le loro
+      linee tenui e discordi si <b>mediano</b> in una curva sempre più <b>liscia e stabile</b> — la varianza crolla
+      mentre la «forma vera» emerge. Ecco la magia del bagging con gli occhi. Nel codice:
+      <code>n_estimators</code> (quanti alberi), <code>max_features="sqrt"</code> (la decorrelazione delle Random
+      Forest) e i regali <code>oob_score_</code> e <code>feature_importances_</code>. Hai imparato uno dei modelli più
+      affidabili che esistano. Ma c'è un altro modo di combinare alberi, opposto e ancora più potente su molti problemi:
+      invece di allenarli in parallelo e mediarli, allenarli <b>in sequenza</b>, ognuno per correggere gli errori del
+      precedente. È il <b>boosting</b>, protagonista del prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li>Gli alberi profondi hanno <b>basso bias ma alta varianza</b> (instabili). Fare la <b>media</b> di tante
+          previsioni riduce la varianza senza aumentare il bias: la saggezza della folla (§13.1).</li>
+      <li><b>Bagging</b> = <b>Bootstrap</b> (tanti dataset finti ricampionando con rimpiazzo → tanti alberi diversi) +
+          <b>Aggregating</b> (media per la regressione, voto per la classificazione) (§13.2).</li>
+      <li><b>Random Forest</b> = bagging + <b>decorrelazione</b>: a ogni taglio si considera solo un <b>sottoinsieme
+          casuale</b> di feature, così gli alberi diventano più diversi e la media riduce la varianza molto di più
+          (§13.3).</li>
+      <li>Regali della foresta: l'<b>importanza delle feature</b> (chi conta di più) e la stima <b>OOB</b> (una
+          validazione «gratis» usando i punti non visti da ciascun albero) (§13.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Le Random Forests ci hanno insegnato la forza del combinare tanti modelli <b>in parallelo</b> e mediarli: robustezza
+    dalla diversità. Ma esiste una strategia alternativa, quasi opposta nello spirito, spesso ancora più accurata: e se,
+    invece di allenare gli alberi indipendentemente, li allenassimo <b>uno dopo l'altro</b>, chiedendo a ciascuno di
+    concentrarsi proprio sugli errori che i precedenti hanno commesso? Nel <strong>Capitolo 14</strong> scopriamo il
+    <b>boosting</b> (AdaBoost e Gradient Boosting): l'arte di trasformare tanti modelli «deboli» in uno fortissimo,
+    correggendo gli errori un passo alla volta.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      Perché fare la media delle previsioni di tanti alberi riduce la varianza? Perché questa cura è particolarmente
+      adatta proprio agli alberi profondi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Cos'è il «bootstrap» e a cosa serve nel bagging? Spiega il ruolo del «con rimpiazzo».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Qual è l'idea in più delle Random Forests rispetto al semplice bagging? Perché rendere gli alberi «meno simili tra
+      loro» migliora la media?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Cosa significa che un punto è «out-of-bag» per un certo albero? Come sfrutta questo fatto la stima OOB per valutare
+      la foresta senza un set di validazione separato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.5</div>
+    <p style="margin-bottom:0">
+      A cosa serve l'«importanza delle caratteristiche» prodotta da una Random Forest? Fai un esempio di come potrebbe
+      esserti utile nella pratica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      Perché gli errori dei singoli alberi, alcuni in eccesso e altri in difetto, tendono a <b>compensarsi</b> nella
+      media, mentre la parte «giusta» comune a tutti si somma: il risultato è più vicino e più stabile della singola
+      previsione (riduce la varianza senza aumentare il bias). È particolarmente adatta agli alberi profondi perché
+      questi hanno <b>basso bias ma alta varianza</b>: sono giusti in media ma molto instabili, cioè esattamente i
+      candidati ideali da mediare (la media aggredisce proprio la varianza, che è il loro problema).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Il <b>bootstrap</b> genera nuovi dataset «finti» ricampionando dal dataset originale: si pescano tanti punti quanti
+      l'originale, ma <b>con rimpiazzo</b> (rimettendo ogni punto pescato). Serve a creare tanti insiemi leggermente
+      diversi da un solo dataset reale, così da allenare tanti alberi diversi. Il «con rimpiazzo» è essenziale: fa sì che
+      alcuni punti vengano ripetuti e altri esclusi, producendo la variabilità tra i dataset (e quindi tra gli alberi)
+      che rende utile la media.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      L'idea in più è la <b>decorrelazione</b>: a ogni taglio, ogni albero può scegliere solo tra un <b>sottoinsieme
+      casuale</b> delle caratteristiche, non tutte. Questo impedisce che tutti gli alberi usino sempre la stessa
+      caratteristica dominante e li rende <b>più diversi tra loro</b>. Rendere gli alberi meno simili migliora la media
+      perché la riduzione di varianza è tanto maggiore quanto più le previsioni mediate sono diverse e indipendenti: se
+      gli alberi si somigliassero, sbaglierebbero tutti allo stesso modo e mediarli servirebbe a poco.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Un punto è <b>out-of-bag</b> per un albero se non è stato pescato nel campione bootstrap su cui quell'albero è
+      stato allenato: per quell'albero è quindi un dato «mai visto». La stima OOB sfrutta questo prevedendo ogni punto
+      usando <b>solo gli alberi che non l'hanno visto</b> in allenamento, e confrontando con la verità. Così ottiene una
+      misura onesta dell'errore su dati «nuovi» senza sacrificare parte dei dati per un set di validazione separato: la
+      validazione arriva «in omaggio» durante l'allenamento.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.5</div>
+    <p style="margin-bottom:0">
+      L'importanza delle caratteristiche fornisce una classifica di quali variabili hanno contribuito di più alle
+      previsioni (riducendo di più l'impurità nei tagli, su tutti gli alberi). È utile per <b>capire</b> il problema e
+      per <b>semplificare</b> il modello. Esempio: in un modello che prevede l'abbandono dei clienti, scoprire che le
+      due caratteristiche di gran lunga più importanti sono «mesi da ultimo acquisto» e «numero di reclami» indirizza le
+      azioni di business, e permette di scartare decine di variabili quasi inutili, rendendo il modello più semplice e
+      veloce.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.5 — bagging: media di tanti "alberi" (piecewise-constant su
+   campioni bootstrap) che si stabilizza. Casualità DETERMINISTICA per albero
+   (LCG seminato dall'indice) — niente Math.random.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('rf-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('rf-out');
+  const sN = document.getElementById('rf-n');
+
+  const XMIN=0, XMAX=10, YMIN=0, YMAX=6;
+  // funzione "vera" + dati con rumore (rumore deterministico)
+  const N=40, XS=[], YS=[];
+  function truef(x){ return 3 + 1.6*Math.sin(x*0.6); }
+  for(let i=0;i<N;i++){ const x=XMIN+(XMAX-XMIN)*i/(N-1); const noise=Math.sin(i*12.9898)*0.9; XS.push(x); YS.push(truef(x)+noise*( (i%3)-1 )); }
+
+  // LCG deterministico
+  function lcg(seed){ let s=(seed>>>0)||1; return function(){ s=(1664525*s+1013904223)>>>0; return s/4294967296; }; }
+
+  const BINS=8; const binW=(XMAX-XMIN)/BINS;
+  // un "albero" = medie per bin su un campione bootstrap
+  function tree(seed){
+    const rnd=lcg(seed*2654435761>>>0);
+    const sum=new Array(BINS).fill(0), cnt=new Array(BINS).fill(0);
+    for(let k=0;k<N;k++){ const i=Math.floor(rnd()*N); const b=Math.min(BINS-1, Math.floor((XS[i]-XMIN)/binW)); sum[b]+=YS[i]; cnt[b]++; }
+    const m=new Array(BINS); let last=truef((XMIN+XMAX)/2);
+    for(let b=0;b<BINS;b++){ if(cnt[b]>0){ m[b]=sum[b]/cnt[b]; last=m[b]; } else m[b]=last; }
+    return m;
+  }
+  function stepPts(m){ const pts=[]; for(let b=0;b<BINS;b++){ const x0=XMIN+b*binW, x1=x0+binW; pts.push([x0,m[b]]); pts.push([x1,m[b]]); } return pts; }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const n=+sN.value;
+    const trees=[]; for(let t=1;t<=n;t++) trees.push(tree(t*7+3));
+    // media dei bin
+    const avg=new Array(BINS).fill(0);
+    trees.forEach(function(m){ for(let b=0;b<BINS;b++) avg[b]+=m[b]/n; });
+
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // dati
+    for(let i=0;i<N;i++) p.dot(XS[i],YS[i],{ color:'var(--grid)', r:2.6 });
+    // alberi individuali (tenui, max 12 mostrati)
+    const show=Math.min(n,12);
+    for(let t=0;t<show;t++) p.poly(stepPts(trees[t]), { color:'rgba(120,120,140,0.28)', width:1, close:false });
+    // media (grassetto)
+    p.poly(stepPts(avg), { color:'var(--accent)', width:3, close:false });
+
+    let note;
+    if(n===1) note='<b>1 albero</b>: la previsione è una spezzata nervosa e inaffidabile — <b>alta varianza</b>.';
+    else if(n>=20) note='<b>'+n+' alberi</b>: la media (linea spessa) è ormai <b>liscia e stabile</b>. La varianza è crollata: ecco la forza del bagging.';
+    else note='<b>'+n+' alberi</b>: le linee tenui discordi si stanno mediando in una curva sempre più regolare.';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">'+note+
+      ' <span style="color:var(--ink-soft)">Linee tenui = singoli alberi (rumorosi); linea spessa = la loro media. Punti grigi = dati.</span></div>';
+  }
+  sN.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>

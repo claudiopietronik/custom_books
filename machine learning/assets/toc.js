@@ -195,7 +195,7 @@ const TOC = [
     n: 13,
     titolo: "Bagging e Random Forests",
     file: "cap13-random-forests.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "La varianza degli alberi" },
       { id: "s13-2", n: "13.2", t: "Bagging (bootstrap aggregating)" },
