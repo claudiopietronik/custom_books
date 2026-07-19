@@ -29,7 +29,7 @@ usano Python/scikit-learn.
 - [x] 14 — Boosting: AdaBoost e Gradient Boosting
 - [x] 15 — Clustering: k-means e gerarchico
 - [x] 16 — DBSCAN e Gaussian Mixture Models
-- [ ] 17 — Riduzione della dimensionalità: PCA
+- [x] 17 — Riduzione della dimensionalità: PCA
 - [ ] 18 — Valutare i modelli
 - [ ] 19 — Feature engineering e pipeline
 - [ ] 20 — Un progetto completo

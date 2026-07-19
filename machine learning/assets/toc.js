@@ -255,7 +255,7 @@ const TOC = [
     n: 17,
     titolo: "Riduzione della dimensionalità: PCA",
     file: "cap17-pca.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Perché ridurre le dimensioni" },
       { id: "s17-2", n: "17.2", t: "PCA: la derivazione" },

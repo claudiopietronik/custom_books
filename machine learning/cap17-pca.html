@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17 · Riduzione della dimensionalità: PCA — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="17">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 17</div>
+    <h1>Riduzione della dimensionalità: PCA</h1>
+    <p class="standfirst">
+      Più volte, negli ultimi capitoli, è comparsa un'ombra: quando le caratteristiche sono <b>tantissime</b> —
+      centinaia di misure per ogni paziente, migliaia di pixel per ogni immagine — tutto peggiora. Le distanze si
+      appiattiscono (tutti i punti sembrano ugualmente lontani), i modelli overfittano, i calcoli rallentano, e
+      <b>visualizzare</b> i dati diventa impossibile: chi sa disegnare in 500 dimensioni? È la famigerata «maledizione
+      della dimensionalità». La cura è la <b>riduzione della dimensionalità</b>: <mark>comprimere molte caratteristiche
+      in <b>poche</b>, buttando via la ridondanza e conservando l'informazione che conta davvero.</mark> Lo strumento
+      principe è la <b>PCA</b> (analisi delle componenti principali), un'idea geometrica bellissima: trova le poche
+      «direzioni» lungo cui i dati variano di più, e descrive tutto rispetto a quelle. In questo capitolo: perché e
+      quando ridurre (§17.1), l'idea della PCA passo per passo (§17.2), i suoi ingredienti matematici — autovalori e
+      autovettori — spiegati con delicatezza (§17.3), e due metodi moderni per la sola visualizzazione, t-SNE e UMAP
+      (§17.4). Come sempre, nessun mattone dato per scontato.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Perché ridurre</b> (§17.1), la <b>PCA</b> e la sua derivazione (§17.2), <b>autovalori, autovettori,
+      componenti</b> (§17.3), <b>t-SNE e UMAP</b> per visualizzare (§17.4). Nel laboratorio (§17.5) trovi la direzione di
+      massima varianza ruotandola a mano.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: vedere e semplificare</div>
+    <p style="margin-bottom:0">
+      La riduzione della dimensionalità serve a <mark>visualizzare dati complessi in 2D, accelerare e stabilizzare i
+      modelli, togliere rumore e ridondanza, comprimere.</mark> La PCA in particolare è uno degli strumenti più usati in
+      assoluto — in statistica, genetica, finanza, elaborazione di immagini — e capirla ti regala anche una splendida
+      intuizione geometrica su cosa significhi «l'informazione» in un insieme di dati.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-1"><span class="secnum">Sezione 17.1</span>Perché ridurre le dimensioni</h2>
+
+  <p class="lead">
+    Prima di come, il perché. «Tante caratteristiche» suona come «tanta informazione», e quindi come una cosa buona.
+    Perché mai dovremmo volerne di meno? Per tre ottimi motivi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> I tre motivi per ridurre</div>
+    <ul style="margin:0">
+      <li style="margin-bottom:.5rem"><b>La maledizione della dimensionalità.</b> Con moltissime caratteristiche, lo
+          spazio diventa così «vasto e vuoto» che i punti sono tutti lontanissimi e più o meno alla stessa distanza:
+          <mark>concetti come «vicino» e «denso» perdono senso</mark>, e metodi basati su distanze (k-NN, k-means,
+          DBSCAN) vacillano. Inoltre servono esponenzialmente più dati per riempire quello spazio, e i modelli
+          overfittano.</li>
+      <li style="margin-bottom:.5rem"><b>La ridondanza.</b> Spesso molte caratteristiche <b>dicono la stessa cosa</b>
+          (altezza in cm e in pollici; misure molto correlate): <mark>l'informazione «vera» vive in poche direzioni,
+          il resto è ripetizione.</mark> Ridurre elimina questo spreco senza perdere quasi nulla.</li>
+      <li><b>La visualizzazione.</b> Non sappiamo vedere oltre le 2–3 dimensioni. <mark>Comprimere a 2 dimensioni ci
+          permette di <b>disegnare</b> i dati</mark> e coglierne a colpo d'occhio gruppi e strutture, altrimenti
+          invisibili.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'idea di fondo: poche direzioni contano</div>
+    <p style="margin-bottom:0">
+      La chiave, che la PCA sfrutterà, è questa: <mark>anche se i dati hanno tante caratteristiche, spesso la loro
+      «vera» variabilità si concentra in <b>poche direzioni</b>.</mark> Pensa a una nuvola di punti a forma di sigaro
+      immersa nello spazio 3D: pur vivendo in 3 dimensioni, è quasi tutta allungata lungo <b>una</b> direzione. Se
+      descrivi ogni punto solo con «quanto è avanti lungo il sigaro», perdi pochissimo e passi da 3 numeri a 1. La PCA
+      trova automaticamente queste direzioni privilegiate.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-2"><span class="secnum">Sezione 17.2</span>PCA: la derivazione</h2>
+
+  <p class="lead">
+    Costruiamo la PCA a partire da una sola, semplice domanda geometrica. Da lì discende tutto, con naturalezza.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La domanda: lungo quale direzione i dati si spargono di più?</div>
+    <p style="margin-bottom:0">
+      Immagina la tua nuvola di punti e una <b>freccia</b> (una direzione) che parte dal centro della nuvola. Proietta
+      tutti i punti su quella freccia — cioè schiacciali sulla retta, come le loro ombre sotto il sole. <mark>Alcune
+      direzioni «srotolano» bene la nuvola (le ombre si spargono tanto); altre la schiacciano (le ombre si accavallano
+      quasi nello stesso punto).</mark> La PCA chiede: <b>qual è la direzione lungo cui le ombre si spargono di più?</b>
+      Quella direzione — di <b>massima varianza</b> — è la <b>prima componente principale</b>: è l'asse lungo cui i dati
+      contengono più informazione (più variabilità = più informazione per distinguere i punti).
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Le componenti successive: nuove direzioni, perpendicolari</div>
+    <p style="margin-bottom:0">
+      Trovata la prima direzione, la PCA cerca la <b>seconda</b>: quella di massima varianza <b>tra quelle
+      perpendicolari</b> alla prima (ad angolo retto, per non ripetere informazione già catturata). Poi la terza,
+      perpendicolare alle prime due, e così via. <mark>Ottieni una nuova «griglia» di assi — le componenti principali —
+      ordinati dal più informativo al meno.</mark> Il colpo di genio: <b>per ridurre, tieni solo le prime poche
+      componenti</b> (quelle che catturano quasi tutta la varianza) e butti le altre. Descrivi ogni punto con le sue
+      coordinate lungo queste poche direzioni: da 500 numeri a 2 o 10, perdendo pochissima informazione.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> È come fotografare da ombra migliore</div>
+    <p style="margin-bottom:0">
+      Pensa a proiettare l'ombra di una teiera su un muro. Da certe angolazioni l'ombra è una macchia informe (hai perso
+      la forma); da <b>una</b> angolazione riconosci subito «teiera!». <mark>La PCA cerca proprio l'angolazione che
+      conserva più forma possibile mentre appiattisce.</mark> Ridurre da 3D a 2D con la PCA è scegliere il «muro» su cui
+      l'ombra della nuvola resta più fedele all'originale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-3"><span class="secnum">Sezione 17.3</span>Autovalori, autovettori, componenti</h2>
+
+  <p class="lead">
+    Diamo un nome agli ingredienti matematici della PCA. Sono due parole che spaventano — <b>autovettori</b> e
+    <b>autovalori</b> — ma qui hanno un significato geometrico concreto e facile. Andiamo pianissimo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Da dove vengono le direzioni <span class="tag">la matrice di covarianza</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>si parte dalla <b>covarianza</b> dei dati</dt>
+        <dd>ricordi la covarianza (cap. 7)? È la «forma della nuvola»: dice quanto e in quali direzioni i dati si
+            spargono e come le caratteristiche variano insieme. <mark>Tutta l'informazione sulla forma della nuvola è lì
+            dentro.</mark> La PCA la interroga per estrarne le direzioni privilegiate.</dd>
+        <dt>gli <b>autovettori</b> — le direzioni principali</dt>
+        <dd>gli autovettori della matrice di covarianza <b>sono</b> le componenti principali: <mark>le direzioni lungo
+            cui la nuvola si sparge, ognuna un asse della nostra nuova griglia.</mark> «Auto-» (dal tedesco «eigen» =
+            «proprio») indica che sono direzioni <b>speciali, proprie</b> di quella nuvola: quelle che ne rivelano la
+            struttura.</dd>
+        <dt>gli <b>autovalori</b> — quanta varianza c'è lungo ciascuna</dt>
+        <dd>a ogni autovettore (direzione) è associato un <b>autovalore</b>, un numero che dice <mark>quanta varianza —
+            quanta «informazione» — c'è lungo quella direzione.</mark> Autovalore grande = direzione molto informativa
+            (le ombre si spargono tanto); autovalore piccolo = direzione quasi piatta (poca informazione, candidata a
+            essere scartata). <b>Ordinando le componenti per autovalore decrescente</b> ottieni proprio la classifica
+            «dalla più alla meno informativa» del §17.2.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In pratica: la <b>varianza spiegata</b> da ogni componente è il suo autovalore diviso la somma di tutti (una
+      percentuale). <mark>Si guarda quante componenti servono per arrivare, diciamo, al 95% della varianza totale, e si
+      tengono solo quelle.</mark> Non devi calcolare autovettori a mano: scikit-learn lo fa in una riga e ti dice la
+      varianza spiegata da ciascuna componente. A te serve capire cosa significano.
+    </div>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Due avvertenze pratiche</div>
+    <p style="margin-bottom:0">
+      <b>(1) Standardizza prima.</b> La PCA guarda la varianza, quindi una caratteristica su scala enorme (lo stipendio)
+      dominerebbe tutte le altre solo per la sua unità di misura. <mark>Vanno riportate tutte alla stessa scala prima
+      della PCA</mark> (cap. 19), altrimenti il risultato è distorto. <b>(2) Le componenti sono combinazioni.</b> Le
+      nuove direzioni sono <b>mescolanze</b> delle caratteristiche originali («0,4·altezza + 0,3·peso − …»), quindi
+      perdono l'interpretabilità diretta: guadagni compattezza, ma «la componente 1» non è più una grandezza con un nome
+      semplice. È il prezzo della compressione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-4"><span class="secnum">Sezione 17.4</span>t-SNE e UMAP (cenni)</h2>
+
+  <p class="lead">
+    La PCA è potente ma <b>lineare</b>: proietta su rette e piani. Per la sola <b>visualizzazione</b> di dati con
+    strutture curve e complicate esistono metodi più recenti e spettacolari.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Mappe fatte per l'occhio</div>
+    <p style="margin-bottom:0">
+      <b>t-SNE</b> e <b>UMAP</b> sono tecniche di riduzione a 2 dimensioni pensate apposta per <b>vedere</b> i dati. La
+      loro filosofia è diversa dalla PCA: <mark>invece di conservare le direzioni di massima varianza, cercano di
+      mantenere le <b>vicinanze locali</b></mark> — «punti che erano vicini nello spazio originale restano vicini nella
+      mappa 2D» — anche a costo di deformare le distanze grandi. Il risultato sono mappe bidimensionali bellissime in cui
+      i gruppi naturali dei dati saltano all'occhio come «isole» ben separate. Sono lo strumento preferito per esplorare
+      visivamente dati complessi (per esempio migliaia di cellule descritte da migliaia di geni).
+    </p>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Solo per guardare, non per fidarsi delle distanze</div>
+    <p style="margin-bottom:0">
+      Attenzione a un punto importante: t-SNE e UMAP sono ottimi per <b>vedere</b>, ma <mark>le distanze e le dimensioni
+      dei gruppi nelle loro mappe <b>non</b> vanno interpretate quantitativamente</mark>: due «isole» molto distanti
+      nella mappa non sono necessariamente molto diverse nella realtà, e la dimensione di un'isola non riflette
+      l'importanza del gruppo. Sono strumenti di <b>esplorazione visiva</b>, non di misura. Per ridurre le dimensioni
+      «sul serio» dentro una pipeline di modelli (con distanze affidabili), la PCA resta la scelta di riferimento.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-5"><span class="secnum">Sezione 17.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget diventi tu la PCA: <b>ruoti una direzione</b> attraverso la nuvola e guardi quanto le «ombre» dei punti
+    si spargono su di essa. Cerca l'angolo che le sparge di più: quella è la prima componente principale.
+  </p>
+
+  <div class="widget" id="w-pca">
+    <div class="w-head">
+      <span>Trova la direzione di massima varianza</span>
+      <span class="hint">ruota e guarda quanto si spargono le ombre</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="pc-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>angolo della direzione <input type="range" id="pc-a" min="0" max="180" step="1" value="20"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="pc-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">pca.py</div>
+    <pre><span class="kw">from</span> sklearn.decomposition <span class="kw">import</span> PCA
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+
+X <span class="op">=</span> <span class="fn">StandardScaler</span>().<span class="fn">fit_transform</span>(X_grezzi)   <span class="cm"># standardizza SEMPRE prima della PCA</span>
+
+pca <span class="op">=</span> <span class="fn">PCA</span>(n_components<span class="op">=</span><span class="nm">2</span>)          <span class="cm"># comprimi a 2 dimensioni (per vedere)</span>
+X2 <span class="op">=</span> pca.<span class="fn">fit_transform</span>(X)             <span class="cm"># ogni punto ora ha solo 2 coordinate</span>
+
+<span class="cm"># quanta informazione ha conservato ciascuna componente?</span>
+<span class="bi">print</span>(pca.explained_variance_ratio_)   <span class="cm"># es. [0.72 0.18] → insieme il 90%</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: ruotando la direzione, le «ombre» (proiezioni) dei punti si spargono di più o di meno; c'è
+      <b>un angolo</b> in cui si spargono al massimo — è la <b>prima componente principale</b>, l'asse lungo cui la
+      nuvola contiene più informazione. Ad angolo retto rispetto a quello, le ombre si accavallano: poca varianza.
+      Nel codice: <code>PCA(n_components=2)</code> comprime, e <code>explained_variance_ratio_</code> ti dice quanta
+      informazione hai conservato. Hai imparato a domare tante dimensioni. Con questo chiudiamo il catalogo dei metodi:
+      nei tre capitoli finali cambiamo registro e diventiamo <b>professionisti</b> — come <b>valutare</b> onestamente un
+      modello (cap. 18), come costruire una <b>pipeline</b> pulita che eviti gli errori classici (cap. 19), e un
+      <b>progetto completo</b> dall'inizio alla fine (cap. 20).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 17</div>
+    <ol style="margin-bottom:0">
+      <li>Ridurre le dimensioni combatte la <b>maledizione della dimensionalità</b>, elimina la <b>ridondanza</b> e
+          permette di <b>visualizzare</b>. L'informazione vera vive spesso in poche direzioni (§17.1).</li>
+      <li>La <b>PCA</b> trova le <b>direzioni di massima varianza</b> (le componenti principali), ordinate dalla più
+          informativa; per ridurre, si tengono solo le prime poche (§17.2).</li>
+      <li>Le componenti sono gli <b>autovettori</b> della covarianza; gli <b>autovalori</b> dicono quanta varianza c'è
+          lungo ciascuna. La «varianza spiegata» guida quante componenti tenere (§17.3).</li>
+      <li><b>t-SNE</b> e <b>UMAP</b> creano mappe 2D bellissime conservando le <b>vicinanze locali</b>, ottime per
+          <b>vedere</b> i gruppi — ma le loro distanze non vanno interpretate quantitativamente (§17.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con la PCA hai completato il grande catalogo dei modelli e delle tecniche del machine learning classico: regressione,
+    classificazione, ensemble, clustering, riduzione delle dimensioni. Sai <b>cosa</b> usare. Ma saper scegliere e usare
+    un modello bene, nella pratica, richiede altre due competenze fondamentali che separano il dilettante dal
+    professionista. Nel <strong>Capitolo 18</strong> impariamo a <b>valutare</b> onestamente un modello: quali metriche
+    guardare (e perché l'accuratezza spesso inganna), la validazione incrociata, la matrice di confusione. Perché un
+    modello che sembra bravo può nascondere trappole insidiose.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-6"><span class="secnum">Sezione 17.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.1</div>
+    <p style="margin-bottom:0">
+      Elenca i tre motivi principali per ridurre la dimensionalità dei dati. Spiega con parole tue cos'è la «maledizione
+      della dimensionalità».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.2</div>
+    <p style="margin-bottom:0">
+      Qual è la domanda geometrica da cui nasce la PCA? Cosa rappresenta la «prima componente principale»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.3</div>
+    <p style="margin-bottom:0">
+      Perché la seconda componente principale è cercata perpendicolare alla prima? Come si decide quante componenti
+      tenere per ridurre?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.4</div>
+    <p style="margin-bottom:0">
+      Cosa rappresentano, geometricamente, gli autovettori e gli autovalori della matrice di covarianza nella PCA?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.5</div>
+    <p style="margin-bottom:0">
+      Perché è importante standardizzare le caratteristiche prima della PCA? E perché t-SNE/UMAP vanno usati con cautela
+      quando si interpretano le distanze nelle loro mappe?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-7"><span class="secnum">Sezione 17.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.1</div>
+    <p style="margin-bottom:0">
+      I tre motivi: (1) combattere la <b>maledizione della dimensionalità</b>; (2) eliminare la <b>ridondanza</b> tra
+      caratteristiche correlate; (3) permettere la <b>visualizzazione</b> (comprimendo a 2–3 dimensioni). La maledizione
+      della dimensionalità è il fenomeno per cui, con moltissime caratteristiche, lo spazio diventa enorme e quasi vuoto:
+      i punti risultano tutti lontani e più o meno equidistanti, così «vicinanza» e «densità» perdono significato, i
+      metodi basati su distanze si indeboliscono e servono moltissimi più dati per non overfittare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.2</div>
+    <p style="margin-bottom:0">
+      La domanda è: <b>lungo quale direzione i dati, proiettati (le loro «ombre»), si spargono di più?</b> La direzione
+      che massimizza questa dispersione (la varianza delle proiezioni) è la <b>prima componente principale</b>:
+      rappresenta l'asse lungo cui i dati contengono la maggiore variabilità, cioè la maggiore informazione utile a
+      distinguere i punti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.3</div>
+    <p style="margin-bottom:0">
+      La seconda componente è cercata <b>perpendicolare</b> alla prima per non catturare informazione già presa: essendo
+      ad angolo retto, descrive una variabilità «nuova», indipendente da quella della prima componente. Per decidere
+      quante componenti tenere si guarda la <b>varianza spiegata</b> cumulativa: si sommano le percentuali di varianza
+      delle componenti (dalla più informativa) e si tengono le prime poche che raggiungono una soglia desiderata (es. il
+      90–95% della varianza totale), scartando le restanti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.4</div>
+    <p style="margin-bottom:0">
+      Gli <b>autovettori</b> della matrice di covarianza sono le <b>direzioni principali</b> (le componenti principali):
+      gli assi lungo cui la nuvola di dati si sparge. Ogni <b>autovalore</b> associato indica <b>quanta varianza</b>
+      (quanta informazione) è presente lungo la sua direzione: autovalore grande = direzione molto informativa,
+      autovalore piccolo = direzione quasi piatta. Ordinando le componenti per autovalore decrescente si ottiene la
+      classifica dalla più alla meno informativa.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.5</div>
+    <p style="margin-bottom:0">
+      Standardizzare prima della PCA è importante perché la PCA cerca le direzioni di massima <b>varianza</b>: una
+      caratteristica misurata su una scala molto grande (per la sola unità di misura) avrebbe una varianza enorme e
+      dominerebbe le componenti, distorcendo il risultato; standardizzando, tutte le caratteristiche contano allo stesso
+      modo. t-SNE e UMAP vanno usati con cautela perché sono ottimizzati per preservare le <b>vicinanze locali</b>, non
+      le distanze globali: nelle loro mappe la distanza tra due gruppi lontani e la dimensione dei gruppi non riflettono
+      quantità reali, quindi vanno lette solo come indicazioni visive qualitative, non come misure.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §17.5 — PCA "a mano": ruoti una direzione e vedi la varianza delle
+   proiezioni. Massimo alla prima componente principale. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('pc-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('pc-out');
+  const sA = document.getElementById('pc-a');
+
+  // nuvola correlata (allungata su una diagonale) — centrata
+  const cx=5, cy=4;
+  const PTS=[];
+  for(let i=0;i<40;i++){
+    const t=(i-20)/8;                        // asse principale
+    const u=Math.sin(i*45.7)*0.9;            // rumore trasversale deterministico
+    const x=cx + t*1.7 + u*0.5;
+    const y=cy + t*0.9 - u*0.9;
+    PTS.push([x,y]);
+  }
+  const XMIN=0, XMAX=10, YMIN=0, YMAX=8;
+
+  // varianza delle proiezioni lungo direzione (cosA,sinA), e varianza massima teorica
+  function projVar(ang){ const c=Math.cos(ang), s=Math.sin(ang); let m=0; const pr=PTS.map(function(p){ const v=(p[0]-cx)*c+(p[1]-cy)*s; m+=v; return v; }); m/=PTS.length; let vv=0; pr.forEach(function(v){ vv+=(v-m)*(v-m); }); return vv/PTS.length; }
+  // trova l'angolo di massima varianza (scan fine)
+  let maxV=0, bestAng=0; for(let a=0;a<180;a++){ const v=projVar(a*Math.PI/180); if(v>maxV){maxV=v;bestAng=a;} }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function draw(){
+    const deg=+sA.value; const ang=deg*Math.PI/180; const c=Math.cos(ang), s=Math.sin(ang);
+    const v=projVar(ang); const pct=Math.round(100*v/maxV);
+
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // la direzione (retta attraverso il centro)
+    const L=6; p.line(cx-L*c,cy-L*s,cx+L*c,cy+L*s,{ color:'var(--ink)', width:2, dash:'6 4' });
+    // punti + loro proiezioni (ombre) sulla retta, con segmento di collegamento
+    PTS.forEach(function(pt){
+      const t=(pt[0]-cx)*c+(pt[1]-cy)*s; const px=cx+t*c, py=cy+t*s;
+      p.line(pt[0],pt[1],px,py,{ color:'var(--grid)', width:0.8 });
+      p.dot(pt[0],pt[1],{ color:'var(--accent)', r:3.4 });
+      p.dot(px,py,{ color:'var(--warm)', r:3, stroke:'#fff', sw:0.8 });
+    });
+
+    let msg, col;
+    if(pct>=97){ msg='🎯 <b>Ci sei!</b> Questa è (quasi) la <b>prima componente principale</b>: le ombre (arancioni) si spargono al massimo. Massima varianza = massima informazione.'; col='var(--green)'; }
+    else if(pct<=30){ msg='Qui le ombre si <b>accavallano</b>: pochissima varianza catturata. È vicino alla direzione <b>meno</b> informativa (perpendicolare alla componente principale).'; col='var(--warm)'; }
+    else { msg='Continua a ruotare: cerca l\'angolo in cui le ombre arancioni si spargono <b>di più</b> lungo la retta.'; col='var(--ink)'; }
+    out.innerHTML='<div style="font-size:.9rem; text-align:left; color:'+col+'">Angolo <b>'+deg+'°</b> → varianza catturata: <b>'+pct+'%</b> del massimo. '+msg+'</div>';
+  }
+  sA.addEventListener('input', draw); draw();
+})();
+</script>
+</body>
+</html>
