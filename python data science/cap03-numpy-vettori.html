@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · NumPy: vettorizzazione e broadcasting — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>NumPy: vettorizzazione e broadcasting</h1>
+    <p class="standfirst">
+      Nel capitolo scorso l'array era una comoda griglia di numeri. Ora scopriamo perché è un <b>superpotere</b>: la
+      capacità di calcolare su interi array <b>senza scrivere un solo ciclo</b>, a velocità di C. Questa è la
+      <b>vettorizzazione</b>, ed è il modo in cui si scrive (e si pensa) il codice numerico in Python: non «per ogni
+      elemento fai…», ma «all'intero array applica…». <mark>Un data scientist che scrive un <code>for</code> su un array
+      quasi sempre sta sbagliando: esiste un modo vettorizzato, più corto e centinaia di volte più veloce.</mark> In
+      questo capitolo: cosa significa vettorizzare (§3.1), le funzioni matematiche che operano su array interi — le
+      <b>ufunc</b> (§3.2), l'ingegnosa regola del <b>broadcasting</b> che combina array di forme diverse (§3.3), le
+      <b>riduzioni</b> lungo gli assi (§3.4) e le <b>maschere booleane</b> per filtrare i dati con eleganza (§3.5). È il
+      capitolo che trasforma il modo in cui scrivi codice numerico — per sempre.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Le <b>operazioni vettorizzate</b> (§3.1), le <b>ufunc</b> e le funzioni matematiche (§3.2), il <b>broadcasting</b>
+      (§3.3), <b>riduzioni e assi</b> (§3.4), <b>maschere booleane e fancy indexing</b> (§3.5). Nel laboratorio (§3.6)
+      analizzi dati senza scrivere cicli.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: pensare per array</div>
+    <p style="margin-bottom:0">
+      La vettorizzazione non è solo velocità: è un <b>modo di pensare</b> che rende il codice più corto, più leggibile e
+      meno soggetto a errori. <mark>È lo stesso stile con cui lavorano pandas (colonne intere), scikit-learn (matrici di
+      dati) e PyTorch (tensori)</mark>: impararlo qui significa scrivere bene in tutte le librerie che seguono. Il
+      broadcasting, in particolare, è una di quelle idee che una volta capite sembrano ovvie e usi ovunque.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Operazioni vettorizzate</h2>
+
+  <p class="lead">
+    L'idea è semplice ma cambia tutto: invece di ciclare sugli elementi, applichi l'operazione all'<b>intero array</b>.
+    NumPy la esegue sotto in codice compilato, tutta in una volta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Ciclo Python contro vettorizzazione <span class="tag">stesso risultato, mondi diversi</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">confronto.py</div>
+      <pre><span class="cm"># ❌ lo stile "Python puro": lento e verboso</span>
+<span class="nm">risultato</span> <span class="op">=</span> []
+<span class="kw">for</span> <span class="nm">x</span> <span class="kw">in</span> <span class="nm">numeri</span>:
+    <span class="nm">risultato</span><span class="op">.</span><span class="fn">append</span>(<span class="nm">x</span> <span class="op">**</span> <span class="nm">2</span> <span class="op">+</span> <span class="nm">1</span>)
+
+<span class="cm"># ✅ lo stile NumPy: una riga, velocissimo</span>
+<span class="nm">risultato</span> <span class="op">=</span> <span class="nm">numeri</span> <span class="op">**</span> <span class="nm">2</span> <span class="op">+</span> <span class="nm">1</span>       <span class="cm"># su TUTTO l'array in un colpo</span>
+
+<span class="cm"># operazioni tra due array: elemento per elemento</span>
+<span class="nm">a</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>])
+<span class="nm">b</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>])
+<span class="nm">a</span> <span class="op">+</span> <span class="nm">b</span>       <span class="cm"># [11 22 33]   somma posizione per posizione</span>
+<span class="nm">a</span> <span class="op">*</span> <span class="nm">b</span>       <span class="cm"># [10 40 90]   prodotto posizione per posizione</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><b>operazioni con uno scalare</b></dt>
+        <dd><code>numeri ** 2 + 1</code> applica la formula a <b>ogni</b> elemento. <mark>Niente ciclo, niente
+            <code>append</code>: scrivi la matematica come la penseresti sulla carta.</mark></dd>
+        <dt><b>operazioni tra due array</b></dt>
+        <dd><code>a + b</code>, <code>a * b</code> operano <b>elemento per elemento</b> (posizione con posizione),
+            purché abbiano forme compatibili. Attenzione: <code>a * b</code> è il prodotto elemento-per-elemento,
+            <b>non</b> il prodotto tra matrici (quello è <code>a @ b</code>).</dd>
+        <dt>perché è più veloce</dt>
+        <dd>il ciclo lo fa NumPy internamente, in C, senza il «peso» di Python a ogni passo. <mark>Su array grandi, la
+            versione vettorizzata è spesso <b>decine o centinaia di volte</b> più rapida</mark> — e anche più corta da
+            leggere.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Le ufunc e le funzioni matematiche</h2>
+
+  <p class="lead">
+    NumPy porta con sé un arsenale di funzioni matematiche che, come le operazioni, agiscono sull'<b>intero array</b>.
+    Si chiamano <b>ufunc</b> (universal functions): la stessa funzione, applicata a ogni elemento, in blocco.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Funzioni che operano su tutto l'array <span class="tag">np.qualcosa(array)</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">ufunc.py</div>
+      <pre><span class="nm">x</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">4</span>, <span class="nm">9</span>, <span class="nm">16</span>])
+
+<span class="nm">np</span><span class="op">.</span><span class="fn">sqrt</span>(<span class="nm">x</span>)      <span class="cm"># [1. 2. 3. 4.]   radice di ogni elemento</span>
+<span class="nm">np</span><span class="op">.</span><span class="fn">log</span>(<span class="nm">x</span>)       <span class="cm"># logaritmo naturale di ognuno</span>
+<span class="nm">np</span><span class="op">.</span><span class="fn">exp</span>(<span class="nm">x</span>)       <span class="cm"># e^x per ognuno</span>
+<span class="nm">np</span><span class="op">.</span><span class="fn">sin</span>(<span class="nm">x</span>)       <span class="cm"># seno di ognuno (utile con linspace per i grafici)</span>
+<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">x</span> <span class="op">/</span> <span class="nm">3</span>, <span class="nm">2</span>)   <span class="cm"># arrotonda a 2 decimali</span>
+
+<span class="cm"># confronti: danno array di veri/falsi (li useremo in §3.5)</span>
+<span class="nm">x</span> <span class="op">&gt;</span> <span class="nm">5</span>            <span class="cm"># [False False  True  True]</span></pre>
+    </div>
+    <div class="f-note">
+      Ne esistono per ogni esigenza: <code>sqrt</code>, <code>exp</code>, <code>log</code>, trigonometriche,
+      <code>abs</code>, <code>floor/ceil</code>, e centinaia altre. <mark>La regola: se ti serve una funzione matematica
+      su un array, quasi certamente esiste come <code>np.qualcosa</code></mark> ed è vettorizzata. Combinandole con
+      <code>linspace</code> (Cap. 2) generi in una riga i punti di qualsiasi curva — la base di ogni grafico (Cap. 9).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Il broadcasting</h2>
+
+  <p class="lead">
+    Ed eccoci alla regola più ingegnosa (e all'inizio più misteriosa) di NumPy. Cosa succede se sommi array di forme
+    <b>diverse</b>? A volte funziona, «allargando» automaticamente il più piccolo. Questo si chiama <b>broadcasting</b>,
+    e capirlo bene è un piccolo salto di qualità.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'idea: allungare il più piccolo per farlo combaciare</div>
+    <p style="margin-bottom:0">
+      Hai già visto il broadcasting senza saperlo: <code>array * 2</code> combina un array con un singolo numero. Come?
+      <mark>NumPy «immagina» il 2 replicato quanto serve per coprire l'array</mark>, e poi moltiplica elemento per
+      elemento. Il broadcasting generalizza questa idea: quando le forme non combaciano, NumPy prova a <b>«stirare»</b>
+      (senza copiare davvero i dati, solo concettualmente) la dimensione di lunghezza 1 finché le forme coincidono. Così
+      puoi, per esempio, sommare a <b>ogni riga</b> di una matrice lo stesso vettore, o sottrarre la media da ogni
+      colonna, <b>senza cicli</b>.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La regola in pratica <span class="tag">le forme si allineano da destra</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">broadcasting.py</div>
+      <pre><span class="nm">m</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>],
+              [<span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">6</span>]])       <span class="cm"># shape (2, 3)</span>
+
+<span class="nm">riga</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>])   <span class="cm"># shape (3,)</span>
+<span class="nm">m</span> <span class="op">+</span> <span class="nm">riga</span>          <span class="cm"># [[11 22 33]      la riga si somma a OGNI riga di m</span>
+                    <span class="cm">#  [14 25 36]]</span>
+
+<span class="nm">col</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">100</span>], [<span class="nm">200</span>]])  <span class="cm"># shape (2, 1)</span>
+<span class="nm">m</span> <span class="op">+</span> <span class="nm">col</span>           <span class="cm"># [[101 102 103]   la colonna si somma a OGNI colonna</span>
+                    <span class="cm">#  [204 205 206]]</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la regola</dt>
+        <dd>NumPy allinea le forme <b>da destra</b> e le confronta dimensione per dimensione. Due dimensioni sono
+            compatibili se <b>sono uguali</b> oppure <b>una delle due è 1</b> (quella viene «stirata»). <mark>La
+            dimensione 1 è quella che si allunga per adattarsi.</mark></dd>
+        <dt>vettore riga (shape <span class="mono">(3,)</span>) + matrice <span class="mono">(2, 3)</span></dt>
+        <dd>le colonne combaciano (3 e 3); la riga viene replicata su tutte le righe. <mark>Risultato: la stessa riga
+            sommata a ogni riga.</mark></dd>
+        <dt>vettore colonna <span class="mono">(2, 1)</span> + matrice <span class="mono">(2, 3)</span></dt>
+        <dd>le righe combaciano (2 e 2); la colonna (larga 1) viene stirata sulle 3 colonne. <mark>Risultato: lo stesso
+            valore sommato a tutta la riga.</mark></dd>
+        <dt>quando <b>non</b> funziona</dt>
+        <dd>se due dimensioni sono diverse e nessuna è 1 (es. <code>(2,3)</code> + <code>(4,)</code>), NumPy dà un errore
+            «operands could not be broadcast together». <mark>È l'errore più comune del principiante</mark>: leggi le
+            <code>shape</code> e capirai subito perché.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Applicazione tipica e utilissima: <b>standardizzare</b> i dati (sottrarre la media e dividere per la deviazione di
+      ogni colonna) si scrive in una riga grazie al broadcasting — <code>(X - X.mean(axis=0)) / X.std(axis=0)</code> —
+      senza un solo ciclo. Il widget qui sotto ti fa vedere lo «stiramento» in azione.
+    </div>
+  </div>
+
+  <div class="widget" id="w-bc">
+    <div class="w-head">
+      <span>Broadcasting dal vivo</span>
+      <span class="hint">somma alla matrice uno scalare, una riga o una colonna</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div id="bc-view" style="display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap; font-family:var(--mono); font-size:.85rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.4rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn on" data-m="0">+ scalare (10)</button>
+      <button class="w-btn" data-m="1">+ riga [10 20 30]</button>
+      <button class="w-btn" data-m="2">+ colonna [100; 200]</button>
+    </div>
+    <div class="w-readout" id="bc-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Riduzioni e assi</h2>
+
+  <p class="lead">
+    Abbiamo assaggiato le riduzioni nel Cap. 2 (<code>sum</code>, <code>mean</code> con <code>axis</code>). Qui le
+    fissiamo bene, perché sono il pane quotidiano dell'analisi: da tanti numeri, un riassunto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Riassumere un array <span class="tag">tutto, oppure lungo un asse</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">riduzioni.py</div>
+      <pre><span class="nm">x</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">3</span>, <span class="nm">1</span>, <span class="nm">4</span>, <span class="nm">1</span>, <span class="nm">5</span>, <span class="nm">9</span>])
+<span class="nm">x</span><span class="op">.</span><span class="fn">sum</span>()      <span class="cm"># 23     somma</span>
+<span class="nm">x</span><span class="op">.</span><span class="fn">mean</span>()     <span class="cm"># 3.83   media</span>
+<span class="nm">x</span><span class="op">.</span><span class="fn">std</span>()      <span class="cm"># deviazione standard</span>
+<span class="nm">x</span><span class="op">.</span><span class="fn">min</span>(), <span class="nm">x</span><span class="op">.</span><span class="fn">max</span>()   <span class="cm"># 1, 9</span>
+<span class="nm">x</span><span class="op">.</span><span class="fn">argmax</span>()   <span class="cm"># 5   → la POSIZIONE del massimo (non il valore)</span>
+
+<span class="nm">m</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>], [<span class="nm">3</span>, <span class="nm">4</span>], [<span class="nm">5</span>, <span class="nm">6</span>]])   <span class="cm"># (3, 2)</span>
+<span class="nm">m</span><span class="op">.</span><span class="fn">mean</span>(<span class="nm">axis</span><span class="op">=</span><span class="nm">0</span>)   <span class="cm"># [3. 4.]   media di ogni colonna (collassa le righe)</span>
+<span class="nm">m</span><span class="op">.</span><span class="fn">mean</span>(<span class="nm">axis</span><span class="op">=</span><span class="nm">1</span>)   <span class="cm"># [1.5 3.5 5.5]  media di ogni riga (collassa le colonne)</span></pre>
+    </div>
+    <div class="f-note">
+      Ricorda la regola d'oro del Cap. 2: <mark><code>axis</code> è la dimensione che <b>sparisce</b></mark>. Oltre a
+      <code>sum/mean/std/min/max</code>, utilissimi sono <code>argmin/argmax</code> (danno la <b>posizione</b>, non il
+      valore — serve per «qual è la riga migliore?»), <code>cumsum</code> (somma cumulata) e <code>np.median</code>,
+      <code>np.percentile</code>. Sono gli stessi nomi che ritroverai in pandas su colonne e righe.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Maschere booleane e fancy indexing</h2>
+
+  <p class="lead">
+    Ultimo superpotere, e forse il più usato di tutti: <b>filtrare</b> i dati con una condizione. Invece di ciclare e
+    controllare, scrivi la condizione sull'intero array e NumPy ti dà i pezzi che la soddisfano.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Filtrare con una condizione <span class="tag">la maschera booleana</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">maschere.py</div>
+      <pre><span class="nm">eta</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">15</span>, <span class="nm">22</span>, <span class="nm">17</span>, <span class="nm">31</span>, <span class="nm">19</span>, <span class="nm">45</span>])
+
+<span class="nm">maschera</span> <span class="op">=</span> <span class="nm">eta</span> <span class="op">&gt;=</span> <span class="nm">18</span>       <span class="cm"># [False  True False  True  True  True]</span>
+<span class="nm">eta</span>[<span class="nm">maschera</span>]              <span class="cm"># [22 31 19 45]  → SOLO chi soddisfa la condizione</span>
+<span class="nm">eta</span>[<span class="nm">eta</span> <span class="op">&gt;=</span> <span class="nm">18</span>]             <span class="cm"># idem, tutto in una riga (il modo tipico)</span>
+
+<span class="cm"># condizioni multiple: & (e), | (o), ~ (non) — con le parentesi!</span>
+<span class="nm">eta</span>[(<span class="nm">eta</span> <span class="op">&gt;=</span> <span class="nm">18</span>) <span class="op">&amp;</span> (<span class="nm">eta</span> <span class="op">&lt;</span> <span class="nm">40</span>)]   <span class="cm"># [22 31 19]  maggiorenni under 40</span>
+
+<span class="cm"># assegnare tramite maschera: modifica solo gli elementi scelti</span>
+<span class="nm">eta</span>[<span class="nm">eta</span> <span class="op">&lt;</span> <span class="nm">18</span>] <span class="op">=</span> <span class="nm">0</span>          <span class="cm"># azzera i minorenni</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>maschera booleana</b></dt>
+        <dd>una condizione (<code>eta &gt;= 18</code>) su un array dà un array di <code>True</code>/<code>False</code>
+            della stessa forma. Usandolo come indice, <mark>estrai <b>solo</b> gli elementi dove è <code>True</code></mark>.
+            È il modo di dire «dammi le righe che…».</dd>
+        <dt>condizioni multiple: <span class="mono">&amp;</span> <span class="mono">|</span> <span class="mono">~</span></dt>
+        <dd>si combinano con <code>&amp;</code> (e), <code>|</code> (o), <code>~</code> (non) — <mark>attenzione: <b>non</b>
+            <code>and</code>/<code>or</code> di Python</mark>, che qui non funzionano, e ogni condizione va tra
+            <b>parentesi</b> (per la precedenza degli operatori).</dd>
+        <dt>assegnazione con maschera</dt>
+        <dd><code>eta[eta &lt; 18] = 0</code> modifica <b>solo</b> gli elementi selezionati. Utilissimo per correggere,
+            azzerare o rimpiazzare valori che rispettano una condizione (per esempio, «tappare» gli outlier).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esiste anche il <b>fancy indexing</b>: passare una <b>lista di indici</b> per prendere elementi a scelta,
+      <code>x[[0, 3, 4]]</code>. Ma la maschera booleana è di gran lunga la più usata: <mark>è la base del «filtrare»,
+      e in pandas diventerà il modo di selezionare le righe di una tabella</mark> — con la stessissima sintassi. Qui sta
+      imparando lo strumento che userai ogni singolo giorno.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Rimettiamo insieme i pezzi su un caso realistico: le temperature di una settimana. Le analizziamo — media, giorni
+    caldi, standardizzazione — <b>senza scrivere un solo ciclo</b>. È il modo in cui un data scientist «interroga» i
+    dati.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">temperature.py</div>
+    <pre><span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+
+<span class="nm">t</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">19.5</span>, <span class="nm">23.1</span>, <span class="nm">28.0</span>, <span class="nm">31.2</span>, <span class="nm">27.8</span>, <span class="nm">22.4</span>, <span class="nm">18.9</span>])  <span class="cm"># 7 giorni</span>
+
+<span class="bi">print</span>(<span class="nm">t</span><span class="op">.</span><span class="fn">mean</span>()<span class="op">.</span><span class="fn">round</span>(<span class="nm">1</span>))          <span class="cm"># temperatura media della settimana</span>
+<span class="bi">print</span>(<span class="nm">t</span><span class="op">.</span><span class="fn">max</span>(), <span class="nm">t</span><span class="op">.</span><span class="fn">argmax</span>())         <span class="cm"># massimo e il giorno (indice) in cui cade</span>
+
+<span class="cm"># quanti giorni sopra i 25 gradi? (somma di una maschera: True vale 1)</span>
+<span class="bi">print</span>((<span class="nm">t</span> <span class="op">&gt;</span> <span class="nm">25</span>)<span class="op">.</span><span class="fn">sum</span>())            <span class="cm"># conta i giorni caldi</span>
+<span class="bi">print</span>(<span class="nm">t</span>[<span class="nm">t</span> <span class="op">&gt;</span> <span class="nm">25</span>])                 <span class="cm"># le temperature dei giorni caldi</span>
+
+<span class="cm"># standardizza (media 0, dev 1): una riga, grazie al broadcasting</span>
+<span class="nm">z</span> <span class="op">=</span> (<span class="nm">t</span> <span class="op">-</span> <span class="nm">t</span><span class="op">.</span><span class="fn">mean</span>()) <span class="op">/</span> <span class="nm">t</span><span class="op">.</span><span class="fn">std</span>()
+<span class="bi">print</span>(<span class="nm">z</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">2</span>))</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">24.4
+31.2 3
+3
+[28.  31.2 27.8]
+[-1.05 -0.31  0.69  1.34  0.64 -0.47 -1.19]</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Nota lo stile: <b>zero cicli</b>. <code>(t &gt; 25).sum()</code> conta i giorni caldi sfruttando un trucco elegante —
+      <mark>una maschera booleana sommata conta i <code>True</code></mark> (ognuno vale 1): 3 giorni. <code>t[t &gt; 25]</code>
+      ne dà le temperature. <code>argmax()</code> dice che il picco (31,2°) cade il <b>giorno indice 3</b> (il quarto).
+      E la standardizzazione — sottrai la media, dividi per la deviazione, il tutto sull'intero array via broadcasting —
+      trasforma i gradi in «quanto sopra/sotto la media», con lo zero sulla media (i valori negativi sono i giorni
+      freddi). <mark>Questo è il vocabolario quotidiano dell'analisi dati con NumPy.</mark>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li><b>Vettorizzazione</b>: applica operazioni all'intero array (<code>a ** 2 + 1</code>, <code>a + b</code>) senza
+          cicli — più corto e centinaia di volte più veloce (§3.1). Le <b>ufunc</b> (<code>np.sqrt</code>, <code>np.exp</code>…)
+          fanno lo stesso con le funzioni matematiche (§3.2).</li>
+      <li><b>Broadcasting</b>: NumPy «stira» le dimensioni di lunghezza 1 per combinare array di forme diverse (matrice +
+          riga, matrice + colonna). Se nessuna dimensione è 1 e differiscono, errore (§3.3).</li>
+      <li><b>Riduzioni</b> (<code>sum/mean/std/argmax</code>…) riassumono tutto, o lungo un <b>axis</b> (la dimensione che
+          sparisce) (§3.4).</li>
+      <li><b>Maschere booleane</b>: <code>x[x &gt; 5]</code> filtra con una condizione; combina con <code>&amp; | ~</code> e
+          parentesi; assegna con maschera per correggere valori (§3.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con NumPy sai ora calcolare e filtrare su griglie di numeri con potenza ed eleganza. Ma i dati reali non sono solo
+    numeri anonimi: hanno <b>nomi</b> (colonne come «età», «città»), <b>etichette</b> sulle righe, tipi misti, valori
+    mancanti. Servono strutture più «umane». Nel <strong>Capitolo 4</strong> saliamo di un piano nella piramide e
+    incontriamo <b>pandas</b>: la <b>Series</b> e il <b>DataFrame</b>, cioè fogli di calcolo programmabili, costruiti
+    sopra NumPy ma pensati per i dati del mondo reale. È lì che passerai la maggior parte delle tue giornate da data
+    scientist.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Hai un array <code>prezzi</code>. Scrivi in una riga (vettorizzata) come aumentarli tutti del 10%. Perché è meglio
+      di un ciclo <code>for</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      La matrice <code>m</code> ha shape <code>(4, 3)</code>. Con quali di questi array puoi sommarla via broadcasting, e
+      cosa succede? (a) uno scalare; (b) un array shape <code>(3,)</code>; (c) un array shape <code>(4, 1)</code>; (d) un
+      array shape <code>(4,)</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Con <code>voti = np.array([28, 18, 30, 22, 25])</code>, scrivi il codice per: (a) contare quanti voti sono ≥ 24;
+      (b) ottenere solo i voti ≥ 24; (c) la loro media.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>eta[(eta &gt; 18) and (eta &lt; 40)]</code> dà errore, mentre con <code>&amp;</code> e le parentesi
+      funziona? Qual è la forma corretta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.5</div>
+    <p style="margin-bottom:0">
+      Cosa restituisce <code>x.argmax()</code> rispetto a <code>x.max()</code>? In quale situazione pratica ti serve
+      <code>argmax</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-8"><span class="secnum">Sezione 3.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      <code>prezzi * 1.10</code> (oppure <code>prezzi + prezzi * 0.10</code>). È meglio di un ciclo perché è più corto,
+      più leggibile e molto più veloce: NumPy esegue la moltiplicazione su tutto l'array in codice compilato, senza il
+      costo di iterare in Python elemento per elemento.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      (a) <b>scalare</b>: sì, sommato a ogni elemento. (b) <b>(3,)</b>: sì, le colonne combaciano (3 e 3), la riga si
+      somma a ogni riga. (c) <b>(4, 1)</b>: sì, le righe combaciano (4 e 4), la colonna (larga 1) si stira sulle 3
+      colonne. (d) <b>(4,)</b>: <b>no</b>, errore — allineando da destra, 3 (colonne di m) e 4 non combaciano e nessuna è
+      1. Per farlo funzionare andrebbe reso <code>(4, 1)</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      (a) <code>(voti &gt;= 24).sum()</code> → 3 (una maschera sommata conta i <code>True</code>); (b)
+      <code>voti[voti &gt;= 24]</code> → <code>[28 30 25]</code>; (c) <code>voti[voti &gt;= 24].mean()</code> → circa
+      <code>27.67</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>and</code>/<code>or</code> di Python operano su un singolo valore vero/falso, mentre qui abbiamo
+      <b>array</b> di booleani: NumPy non sa come ridurli a un unico <code>True/False</code> e solleva un errore
+      («ambiguous»). Si usano gli operatori elemento-per-elemento <code>&amp;</code> (e), <code>|</code> (o),
+      <code>~</code> (non), con ogni condizione tra <b>parentesi</b>: <code>eta[(eta &gt; 18) &amp; (eta &lt; 40)]</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.5</div>
+    <p style="margin-bottom:0">
+      <code>x.max()</code> restituisce il <b>valore</b> più grande; <code>x.argmax()</code> restituisce la <b>posizione</b>
+      (l'indice) in cui si trova quel massimo. <code>argmax</code> serve quando ti interessa <b>quale</b> elemento è il
+      migliore, non solo quanto vale: per esempio «quale prodotto ha venduto di più?», «quale classe ha la probabilità
+      più alta?» (tipico nella classificazione, per scegliere la classe prevista).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.3 — broadcasting dal vivo: la stessa matrice 2x3 sommata a uno
+   scalare, a una riga o a una colonna; mostra come il piccolo si "stira".
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('bc-view');
+  if (!view) return;
+  const out = document.getElementById('bc-out');
+  const btns = document.querySelectorAll('#w-bc .w-btn');
+
+  const M = [[1, 2, 3], [4, 5, 6]];
+
+  function gridHTML(rows, hl) {
+    let h = '<div style="display:inline-grid; grid-template-columns:repeat(' + rows[0].length +
+      ',1.9rem); gap:.25rem">';
+    rows.forEach(function (r, ri) {
+      r.forEach(function (v, ci) {
+        const on = hl && hl(ri, ci);
+        h += '<div style="padding:.3rem 0; text-align:center; border-radius:5px; border:2px solid ' +
+          (on ? 'var(--accent)' : 'var(--rule)') + '; background:' + (on ? 'var(--accent-bg)' : 'transparent') +
+          '; color:' + (on ? 'var(--accent)' : 'var(--ink)') + '; font-weight:' + (on ? '700' : '400') + '">' +
+          v + '</div>';
+      });
+    });
+    return h + '</div>';
+  }
+
+  function show(mode) {
+    let addLabel, addGrid, result, note;
+    if (mode === 0) {
+      addLabel = '10 <span style="color:var(--ink-faint)">(scalare)</span>';
+      addGrid = '<div style="font-size:1.4rem; font-weight:700; color:var(--accent)">10</div>';
+      result = M.map(function (r) { return r.map(function (v) { return v + 10; }); });
+      note = 'Lo <b>scalare 10</b> viene «stirato» su ogni cella: sommato a tutti i 6 elementi. shape (2,3) + () → (2,3).';
+    } else if (mode === 1) {
+      addLabel = '[10 20 30] <span style="color:var(--ink-faint)">shape (3,)</span>';
+      addGrid = gridHTML([[10, 20, 30]]);
+      result = M.map(function (r) { return r.map(function (v, ci) { return v + [10, 20, 30][ci]; }); });
+      note = 'La <b>riga</b> (3,) si allinea alle 3 colonne e viene replicata su <b>ogni riga</b>. shape (2,3) + (3,) → (2,3).';
+    } else {
+      addLabel = '[[100],[200]] <span style="color:var(--ink-faint)">shape (2,1)</span>';
+      addGrid = gridHTML([[100], [200]]);
+      result = M.map(function (r, ri) { return r.map(function (v) { return v + [100, 200][ri]; }); });
+      note = 'La <b>colonna</b> (2,1), larga 1, si stira sulle 3 colonne: stesso valore su <b>tutta la riga</b>. shape (2,3) + (2,1) → (2,3).';
+    }
+    view.innerHTML =
+      '<div style="text-align:center"><div style="font-size:.72rem; color:var(--ink-soft); margin-bottom:.3rem">matrice (2,3)</div>' + gridHTML(M) + '</div>' +
+      '<div style="font-size:1.4rem; color:var(--ink-faint)">+</div>' +
+      '<div style="text-align:center"><div style="font-size:.72rem; color:var(--ink-soft); margin-bottom:.3rem">' + addLabel + '</div>' + addGrid + '</div>' +
+      '<div style="font-size:1.4rem; color:var(--ink-faint)">=</div>' +
+      '<div style="text-align:center"><div style="font-size:.72rem; color:var(--ink-soft); margin-bottom:.3rem">risultato (2,3)</div>' + gridHTML(result, function () { return true; }) + '</div>';
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">' + note + '</div>';
+    btns.forEach(function (b, k) { b.classList.toggle('on', k === mode); });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-m')); });
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

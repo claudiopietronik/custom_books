@@ -46,7 +46,7 @@ const TOC = [
     n: 3,
     titolo: "NumPy: vettorizzazione e broadcasting",
     file: "cap03-numpy-vettori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Operazioni vettorizzate" },
       { id: "s3-2", n: "3.2", t: "Le ufunc e le funzioni matematiche" },
