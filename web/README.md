@@ -21,7 +21,7 @@ Contenuto originale scritto ex novo.
 - [x] 8 — Il box model
 - [x] 9 — Layout con Flexbox
 - [x] 10 — Responsive: ogni schermo
-- [ ] 11 — JavaScript: le basi
+- [x] 11 — JavaScript: le basi
 - [ ] 12 — Il DOM: la pagina come oggetti
 - [ ] 13 — Manipolare il DOM
 - [ ] 14 — Eventi: reagire all'utente

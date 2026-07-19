@@ -165,7 +165,7 @@ const TOC = [
     n: 11,
     titolo: "JavaScript: le basi",
     file: "cap11-js-basi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Cosa aggiunge JavaScript" },
       { id: "s11-2", n: "11.2", t: "Variabili e tipi" },
