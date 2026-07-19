@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Struct e classi — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>Struct e classi</h1>
+    <p class="standfirst">
+      Hai usato le classi degli altri — <code>std::string</code>, <code>std::vector</code> sono oggetti che uniscono
+      dati e metodi. Ora impari a costruire i <b>tuoi</b> tipi. La <b>programmazione a oggetti</b> unisce i dati e i
+      comportamenti che li riguardano in un unico «oggetto», modellato su un progetto (la <b>classe</b>). Il C++
+      offre due strumenti quasi identici — <code>struct</code> e <code>class</code> — e aggiunge un concetto potente:
+      l'<b>incapsulamento</b>, cioè decidere cosa è <code>public</code> (accessibile da fuori) e cosa
+      <code>private</code> (protetto all'interno). E introduce i <b>costruttori</b> (che preparano ogni oggetto) e i
+      <b>distruttori</b> (che lo puliscono) — un meccanismo che porterà, tra due capitoli, all'idea più elegante del
+      C++: <mark>gli oggetti che gestiscono da soli le proprie risorse.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La <b>struct</b> per tenere dati insieme (§10.1), la <b>class</b> con dati + metodi (§10.2),
+      l'incapsulamento con <b>public e private</b> (§10.3), i <b>costruttori</b> (§10.4) e il <b>distruttore</b>
+      (§10.5). Nel laboratorio (§10.6) modelli qualcosa di reale.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: progettare i propri tipi</div>
+    <p style="margin-bottom:0">
+      Le classi sono il modo in cui è organizzato <b>tutto</b> il software C++ serio. <mark>Ti permettono di creare
+      tipi «su misura» per il tuo problema</mark> — un giocatore, un conto, una connessione — con i loro dati e le
+      loro operazioni, protetti e coerenti. L'incapsulamento (public/private), in particolare, è ciò che rende il
+      codice robusto: nasconde i dettagli e impedisce usi scorretti. E costruttori/distruttori sono la base di RAII,
+      l'idea che rende il C++ moderno sicuro sulla memoria (Cap. 12). È il capitolo che ti fa progettare, non solo
+      usare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>struct: dati insieme</h2>
+
+  <p class="lead">
+    La <code>struct</code> è il modo più semplice per <b>raggruppare dati correlati</b> sotto un unico nome. Un
+    «pacchetto» di variabili che vanno insieme.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una struct <span class="tag">dati correlati in un tipo</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">struct</span> <span class="fn">Punto</span> {        <span class="cm">// definisce un nuovo tipo "Punto"</span>
+    <span class="ty">int</span> <span class="nm">x</span>;
+    <span class="ty">int</span> <span class="nm">y</span>;
+};                    <span class="cm">// nota il ; finale dopo la graffa!</span>
+
+<span class="fn">Punto</span> <span class="nm">p</span>;              <span class="cm">// crea un Punto</span>
+<span class="nm">p</span><span class="op">.</span><span class="nm">x</span> <span class="op">=</span> <span class="nm">3</span>;             <span class="cm">// accede ai campi col punto</span>
+<span class="nm">p</span><span class="op">.</span><span class="nm">y</span> <span class="op">=</span> <span class="nm">5</span>;
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">p</span><span class="op">.</span><span class="nm">x</span> <span class="op">&lt;&lt;</span> <span class="st">", "</span> <span class="op">&lt;&lt;</span> <span class="nm">p</span><span class="op">.</span><span class="nm">y</span>;   <span class="cm">// 3, 5</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">struct Punto { … };</span></dt>
+        <dd>definisce un <b>nuovo tipo</b> che racchiude dei <b>campi</b> (le variabili membro). <mark>Attenzione al
+            <code>;</code> dopo la graffa di chiusura</mark> — dimenticarlo è un errore classico. Da lì,
+            <code>Punto</code> è un tipo come <code>int</code>, con cui creare variabili.</dd>
+        <dt>accesso ai campi col <span class="mono">.</span></dt>
+        <dd><code>p.x</code>, <code>p.y</code>: il punto (l'operatore, non la geometria!) accede ai membri. Come
+            <code>frase.length()</code> sulla string.</dd>
+        <dt>a cosa serve</dt>
+        <dd>invece di portarti dietro tre variabili sciolte (<code>x</code>, <code>y</code>, magari
+            <code>colore</code>), le <b>tieni unite</b> in un tipo dal significato chiaro. Puoi passare un intero
+            <code>Punto</code> a una funzione, metterlo in un vector, ecc.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>class: dati + metodi</h2>
+
+  <p class="lead">
+    La <code>class</code> fa un passo in più: unisce ai dati anche i <b>metodi</b> — le funzioni che operano su quei
+    dati. È l'oggetto completo: dati + comportamento, insieme.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una class <span class="tag">dati + metodi in un oggetto</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">conto.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Conto</span> {
+<span class="kw">public</span>:
+    <span class="ty">double</span> <span class="nm">saldo</span>;             <span class="cm">// dato membro</span>
+
+    <span class="ty">void</span> <span class="fn">deposita</span>(<span class="ty">double</span> <span class="nm">importo</span>) {   <span class="cm">// metodo</span>
+        <span class="nm">saldo</span> <span class="op">+=</span> <span class="nm">importo</span>;             <span class="cm">// accede direttamente al campo saldo</span>
+    }
+    <span class="ty">void</span> <span class="fn">preleva</span>(<span class="ty">double</span> <span class="nm">importo</span>) {
+        <span class="kw">if</span> (<span class="nm">importo</span> <span class="op">&lt;=</span> <span class="nm">saldo</span>) <span class="nm">saldo</span> <span class="op">-=</span> <span class="nm">importo</span>;
+    }
+};
+
+<span class="fn">Conto</span> <span class="nm">c</span>;
+<span class="nm">c</span><span class="op">.</span><span class="nm">saldo</span> <span class="op">=</span> <span class="nm">100</span>;
+<span class="nm">c</span><span class="op">.</span><span class="fn">deposita</span>(<span class="nm">50</span>);     <span class="cm">// chiama il metodo sull'oggetto → saldo 150</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">class Conto { … };</span></dt>
+        <dd>come la struct, ma pensata per contenere anche <b>metodi</b>. Dentro, i dati membro e le funzioni membro.</dd>
+        <dt>i <b>metodi</b> accedono ai campi direttamente</dt>
+        <dd>dentro un metodo, scrivi <code>saldo</code> e ti riferisci al campo <b>dell'oggetto su cui il metodo è
+            chiamato</b> (l'equivalente del <code>self</code> di Python, qui implicito). <mark>Ogni oggetto ha i
+            suoi dati</mark>: <code>c.deposita(50)</code> modifica il saldo di <code>c</code>.</dd>
+        <dt>chiamare un metodo</dt>
+        <dd><code>c.deposita(50)</code>: come <code>vettore.push_back(9)</code> o <code>stringa.length()</code>.
+            Ora sai cosa c'è dietro quei metodi che usi: sono funzioni membro di una classe.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-obj">
+    <div class="w-head">
+      <span>Un oggetto Conto: dati e metodi</span>
+      <span class="hint">chiama i metodi, guarda il campo saldo</span>
+    </div>
+    <div class="w-stage" style="min-height:160px">
+      <div id="wob-view" style="padding:1rem; text-align:center"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wob-dep">deposita(50)</button>
+      <button class="w-btn" id="wob-pre">preleva(30)</button>
+      <button class="w-btn" id="wob-big">preleva(999)</button>
+      <button class="w-btn" id="wob-reset">↺ nuovo Conto</button>
+    </div>
+    <div class="w-readout" id="wob-out"></div>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> struct o class? (quasi la stessa cosa)</div>
+    <p style="margin-bottom:0">
+      Tecnicamente, in C++ <code>struct</code> e <code>class</code> sono <b>quasi identiche</b>: l'unica differenza è
+      il default di visibilità (nella struct i membri sono <code>public</code> di default, nella class
+      <code>private</code>). <mark>Convenzione diffusa</mark>: usa <code>struct</code> per semplici «sacchetti di
+      dati» pubblici (come <code>Punto</code>), e <code>class</code> quando c'è comportamento e incapsulamento (dati
+      da proteggere, metodi). Non è una regola ferrea, ma un'abitudine utile.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>public e private</h2>
+
+  <p class="lead">
+    L'<b>incapsulamento</b> è una delle idee più potenti dell'OOP: decidere cosa è accessibile <b>da fuori</b> la
+    classe (<code>public</code>) e cosa resta <b>protetto all'interno</b> (<code>private</code>). Protegge i dati da
+    usi scorretti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Incapsulamento <span class="tag">nascondi i dati, esponi i metodi</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">conto.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Conto</span> {
+<span class="kw">private</span>:                     <span class="cm">// accessibile SOLO dai metodi della classe</span>
+    <span class="ty">double</span> <span class="nm">saldo</span> <span class="op">=</span> <span class="nm">0</span>;
+
+<span class="kw">public</span>:                      <span class="cm">// accessibile da fuori</span>
+    <span class="ty">void</span> <span class="fn">deposita</span>(<span class="ty">double</span> <span class="nm">x</span>) {
+        <span class="kw">if</span> (<span class="nm">x</span> <span class="op">&gt;</span> <span class="nm">0</span>) <span class="nm">saldo</span> <span class="op">+=</span> <span class="nm">x</span>;    <span class="cm">// controllo: solo importi positivi</span>
+    }
+    <span class="ty">double</span> <span class="fn">get_saldo</span>() {         <span class="cm">// un "getter" per leggere il saldo</span>
+        <span class="kw">return</span> <span class="nm">saldo</span>;
+    }
+};
+
+<span class="fn">Conto</span> <span class="nm">c</span>;
+<span class="nm">c</span><span class="op">.</span><span class="fn">deposita</span>(<span class="nm">50</span>);        <span class="cm">// OK (metodo public)</span>
+<span class="cm">// c.saldo = -1000000;    →  ERRORE! saldo è private, non accessibile da fuori</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">c</span><span class="op">.</span><span class="fn">get_saldo</span>();   <span class="cm">// 50</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="kw">private:</span> — nascosto</dt>
+        <dd>i membri sotto <code>private</code> sono accessibili <b>solo dai metodi della classe stessa</b>, non da
+            fuori. <mark>Rende <code>saldo</code> «intoccabile» dall'esterno</mark>: nessuno può metterlo a un valore
+            assurdo direttamente.</dd>
+        <dt><span class="kw">public:</span> — esposto</dt>
+        <dd>i membri sotto <code>public</code> sono l'<b>interfaccia</b> della classe: ciò che il mondo esterno può
+            usare. Qui i metodi <code>deposita</code> e <code>get_saldo</code>.</dd>
+        <dt>perché è potente</dt>
+        <dd>tenendo i <b>dati privati</b> e esponendo solo <b>metodi controllati</b>, garantisci che l'oggetto resti
+            sempre in uno <b>stato valido</b>: <code>deposita</code> rifiuta importi negativi, quindi il saldo non
+            può essere corrotto. <mark>Nascondi i dettagli, esponi un'interfaccia sicura</mark>: è il cuore
+            dell'incapsulamento, e il motivo per cui il codice a oggetti ben fatto è robusto.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Costruttori</h2>
+
+  <p class="lead">
+    Un <b>costruttore</b> è un metodo speciale che <b>prepara</b> ogni nuovo oggetto: viene chiamato automaticamente
+    alla creazione e inizializza i dati. Garantisce che un oggetto nasca sempre «pronto».
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il costruttore <span class="tag">stesso nome della classe, nessun tipo di ritorno</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">conto.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Conto</span> {
+<span class="kw">private</span>:
+    <span class="ty">double</span> <span class="nm">saldo</span>;
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">titolare</span>;
+<span class="kw">public</span>:
+    <span class="fn">Conto</span>(<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">nome</span>, <span class="ty">double</span> <span class="nm">iniziale</span>) {   <span class="cm">// COSTRUTTORE</span>
+        <span class="nm">titolare</span> <span class="op">=</span> <span class="nm">nome</span>;
+        <span class="nm">saldo</span> <span class="op">=</span> <span class="nm">iniziale</span>;
+    }
+    <span class="ty">double</span> <span class="fn">get_saldo</span>() { <span class="kw">return</span> <span class="nm">saldo</span>; }
+};
+
+<span class="fn">Conto</span> <span class="nm">c</span>(<span class="st">"Anna"</span>, <span class="nm">100</span>);   <span class="cm">// il costruttore parte in automatico: titolare="Anna", saldo=100</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">c</span><span class="op">.</span><span class="fn">get_saldo</span>();   <span class="cm">// 100</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">Conto(std::string nome, double iniziale)</span></dt>
+        <dd>il costruttore ha lo <b>stesso nome della classe</b> e <b>nessun tipo di ritorno</b> (nemmeno
+            <code>void</code>). Riceve i valori iniziali e li assegna ai campi.</dd>
+        <dt>chiamata automatica</dt>
+        <dd><code>Conto c("Anna", 100);</code> crea l'oggetto ed <b>esegue il costruttore</b> con quegli argomenti.
+            <mark>Garantisce che ogni Conto nasca con un titolare e un saldo</mark>: niente campi «spazzatura»
+            (Cap. 2). È il modo giusto per inizializzare gli oggetti.</dd>
+        <dt>overloading dei costruttori</dt>
+        <dd>puoi avere più costruttori con parametri diversi (Cap. 6): es. uno che parte da saldo 0. Il compilatore
+            sceglie quello giusto.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Il distruttore</h2>
+
+  <p class="lead">
+    Il gemello opposto del costruttore: il <b>distruttore</b> viene chiamato automaticamente quando un oggetto
+    <b>viene distrutto</b> (esce dal suo ambito o viene liberato). Serve a fare le «pulizie».
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Nascita e morte di un oggetto</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Risorsa</span> {
+<span class="kw">public</span>:
+    <span class="fn">Risorsa</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Creata\n"</span>; }        <span class="cm">// costruttore</span>
+    <span class="op">~</span><span class="fn">Risorsa</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Distrutta\n"</span>; }    <span class="cm">// DISTRUTTORE: ~ + nome</span>
+};
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="fn">Risorsa</span> <span class="nm">r</span>;        <span class="cm">// stampa "Creata"</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Uso r\n"</span>;
+}                     <span class="cm">// alla fine del blocco, r viene distrutto → stampa "Distrutta" (automatico!)</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Il distruttore ha lo stesso nome della classe preceduto da una <b>tilde <code>~</code></b>, e viene chiamato
+      <b>automaticamente</b> quando l'oggetto «muore» (qui, alla fine di <code>main</code>). <mark>Perché è
+      importante?</mark> Perché è il posto giusto per <b>rilasciare risorse</b>: chiudere un file, liberare
+      memoria, chiudere una connessione. Se un oggetto ha «preso» qualcosa nel costruttore, lo «restituisce» nel
+      distruttore — automaticamente, con certezza, anche se il programma esce per un errore. <mark>Questa coppia
+      costruttore/distruttore è la base dell'idea più elegante del C++, RAII</mark>, che affronteremo nel Capitolo
+      12. Per ora, tieni l'immagine: gli oggetti C++ hanno una nascita e una morte precise, ed entrambe possono
+      «fare» qualcosa in automatico.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Laboratorio: modellare qualcosa</h2>
+
+  <p class="lead">
+    Costruiamo una classe completa — un <code>Libro</code> — con dati privati, un costruttore, metodi che «fanno
+    qualcosa» e l'incapsulamento. È l'esempio-tipo di come si modella un'entità del mondo reale in C++.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La classe <code>Libro</code> <span class="tag">tutto insieme</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">libro.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="kw">class</span> <span class="fn">Libro</span> {
+<span class="kw">private</span>:
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">titolo</span>;
+    <span class="ty">int</span> <span class="nm">pagine</span>;
+    <span class="ty">int</span> <span class="nm">letta</span> <span class="op">=</span> <span class="nm">0</span>;
+<span class="kw">public</span>:
+    <span class="fn">Libro</span>(<span class="ns">std</span>::<span class="ns">string</span> <span class="nm">t</span>, <span class="ty">int</span> <span class="nm">p</span>) {   <span class="cm">// costruttore</span>
+        <span class="nm">titolo</span> <span class="op">=</span> <span class="nm">t</span>;
+        <span class="nm">pagine</span> <span class="op">=</span> <span class="nm">p</span>;
+    }
+    <span class="ty">void</span> <span class="fn">leggi</span>(<span class="ty">int</span> <span class="nm">n</span>) {
+        <span class="nm">letta</span> <span class="op">+=</span> <span class="nm">n</span>;
+        <span class="kw">if</span> (<span class="nm">letta</span> <span class="op">&gt;</span> <span class="nm">pagine</span>) <span class="nm">letta</span> <span class="op">=</span> <span class="nm">pagine</span>;   <span class="cm">// non superare la fine</span>
+    }
+    <span class="ty">int</span> <span class="fn">progresso</span>() {
+        <span class="kw">return</span> <span class="nm">letta</span> <span class="op">*</span> <span class="nm">100</span> <span class="op">/</span> <span class="nm">pagine</span>;   <span class="cm">// percentuale</span>
+    }
+};
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="fn">Libro</span> <span class="nm">b</span>(<span class="st">"C++"</span>, <span class="nm">200</span>);
+    <span class="nm">b</span><span class="op">.</span><span class="fn">leggi</span>(<span class="nm">50</span>);
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">b</span><span class="op">.</span><span class="fn">progresso</span>() <span class="op">&lt;&lt;</span> <span class="st">"%\n"</span>;   <span class="cm">// 25%</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Guarda com'è tutto <b>coeso e protetto</b>: i dati (<code>titolo</code>, <code>pagine</code>,
+      <code>letta</code>) sono <b>privati</b> — nessuno può manometterli da fuori; l'unico modo di interagire è
+      tramite i <b>metodi pubblici</b> (<code>leggi</code>, <code>progresso</code>), che mantengono l'oggetto sempre
+      coerente (<code>letta</code> non supera mai <code>pagine</code>). <mark>Tutto ciò che riguarda un libro sta in
+      un posto solo, e in uno stato sempre valido</mark>: questa è la potenza dell'OOP con l'incapsulamento. Compila
+      con <code>g++ libro.cpp -o libro</code>. Estendilo: aggiungi un metodo <code>finito()</code> che restituisce
+      <code>true</code> se hai letto tutto.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>La <b>struct</b> raggruppa <b>dati</b> (campi), accesso col <code>.</code>; occhio al <code>;</code> dopo
+          la graffa (§10.1). La <b>class</b> aggiunge i <b>metodi</b>: dati + comportamento in un oggetto (§10.2).</li>
+      <li>L'<b>incapsulamento</b>: <code>private</code> nasconde i dati (protetti), <code>public</code> espone
+          l'interfaccia (metodi). <mark>Nascondi i dettagli, esponi operazioni sicure</mark> (§10.3).</li>
+      <li>Il <b>costruttore</b> (nome della classe, nessun tipo di ritorno) prepara ogni oggetto alla creazione,
+          garantendo dati validi (§10.4).</li>
+      <li>Il <b>distruttore</b> (<code>~Classe()</code>) è chiamato automaticamente alla «morte» dell'oggetto: il
+          posto per le pulizie. È la base di RAII (Cap. 12) (§10.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai progettare tipi tuoi. Ma spesso più tipi hanno molto in comune: un <code>Cane</code> e un <code>Gatto</code>
+    sono entrambi <code>Animale</code>; un <code>Cerchio</code> e un <code>Quadrato</code> sono entrambi
+    <code>Forma</code>. Riscrivere il codice comune sarebbe uno spreco. Nel <strong>Capitolo 11</strong> vediamo
+    l'<b>ereditarietà</b> (una classe che si basa su un'altra) e il <b>polimorfismo</b> — la capacità, tramite i
+    <b>metodi virtuali</b>, di trattare oggetti diversi con un'interfaccia comune, lasciando che ognuno risponda «a
+    modo suo». È una delle idee più potenti dell'OOP, e in C++ ha un legame profondo con i puntatori che hai già
+    imparato.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza pratica tra una <code>struct</code> e una <code>class</code> in C++? E la convenzione su
+      quando usare l'una o l'altra?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve rendere un dato <code>private</code>? Fai un esempio in cui questo impedisce di mettere l'oggetto
+      in uno stato assurdo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>costruttore</b>? Come si riconosce (nome, tipo di ritorno) e quando viene chiamato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      (Pratico) Scrivi una classe <code>Rettangolo</code> con campi privati <code>base</code> e <code>altezza</code>,
+      un costruttore che li inizializza, e un metodo pubblico <code>area()</code>. Crea un rettangolo 4×3 e stampane
+      l'area.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-8"><span class="secnum">Sezione 10.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Tecnicamente differiscono solo per il <b>default di visibilità</b>: nella <code>struct</code> i membri sono
+      <code>public</code> di default, nella <code>class</code> <code>private</code>. Convenzione: <b>struct</b> per
+      semplici sacchetti di dati pubblici (es. <code>Punto</code>), <b>class</b> quando c'è comportamento e
+      incapsulamento (dati da proteggere, metodi).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      Rendere un dato <code>private</code> impedisce di modificarlo <b>direttamente dall'esterno</b>, costringendo a
+      passare per metodi controllati. Esempio: se <code>saldo</code> fosse public, chiunque potrebbe scrivere
+      <code>c.saldo = -1000000</code>; rendendolo private ed esponendo solo <code>deposita</code>/<code>preleva</code>
+      (che controllano gli importi), l'oggetto resta sempre in uno stato valido.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      Un <b>costruttore</b> è un metodo speciale che inizializza un oggetto alla creazione. Si riconosce perché ha
+      lo <b>stesso nome della classe</b> e <b>nessun tipo di ritorno</b> (nemmeno void). Viene chiamato
+      <b>automaticamente</b> quando crei un oggetto (<code>Conto c("Anna", 100);</code>), garantendo che nasca con
+      dati validi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">rettangolo.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Rettangolo</span> {
+<span class="kw">private</span>:
+    <span class="ty">int</span> <span class="nm">base</span>, <span class="nm">altezza</span>;
+<span class="kw">public</span>:
+    <span class="fn">Rettangolo</span>(<span class="ty">int</span> <span class="nm">b</span>, <span class="ty">int</span> <span class="nm">h</span>) { <span class="nm">base</span> <span class="op">=</span> <span class="nm">b</span>; <span class="nm">altezza</span> <span class="op">=</span> <span class="nm">h</span>; }
+    <span class="ty">int</span> <span class="fn">area</span>() { <span class="kw">return</span> <span class="nm">base</span> <span class="op">*</span> <span class="nm">altezza</span>; }
+};
+
+<span class="fn">Rettangolo</span> <span class="nm">r</span>(<span class="nm">4</span>, <span class="nm">3</span>);
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">r</span><span class="op">.</span><span class="fn">area</span>();   <span class="cm">// 12</span></pre>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.2 — un oggetto Conto: metodi che modificano il campo saldo
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wob-view');
+  if (!view) return;
+  const out = document.getElementById('wob-out');
+  let saldo = 100, msg = 'Un oggetto <code>Conto</code> con campo <b>saldo = 100</b>. Chiama i suoi metodi.';
+  const set = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+  set('wob-dep', () => { saldo += 50; msg = '<code>c.deposita(50)</code> → il metodo esegue <code>saldo += 50</code> sul campo dell\'oggetto.'; draw(); });
+  set('wob-pre', () => { if (30 > saldo) { msg = '<code>c.preleva(30)</code> → fondi insufficienti, rifiutato.'; } else { saldo -= 30; msg = '<code>c.preleva(30)</code> → <code>saldo -= 30</code>.'; } draw(); });
+  set('wob-big', () => { if (999 > saldo) { msg = '<code>c.preleva(999)</code> → il metodo controlla <code>if (importo &lt;= saldo)</code> e <b style="color:var(--warm)">rifiuta</b>, proteggendo l\'oggetto.'; } else { saldo -= 999; } draw(); });
+  set('wob-reset', () => { saldo = 100; msg = 'Nuovo oggetto: <code>Conto c;</code> con saldo 100.'; draw(); });
+  function draw() {
+    view.innerHTML = `
+      <div style="display:inline-block; padding:1rem 1.5rem; border:2px solid var(--violet); border-radius:14px; background:color-mix(in srgb,var(--violet) 8%,transparent)">
+        <div style="color:var(--violet); font-weight:700; font-family:var(--mono); margin-bottom:.4rem">Conto c;</div>
+        <div style="font-family:var(--mono); font-size:.85rem; color:var(--ink-soft)">campo privato</div>
+        <div style="font-family:var(--mono); font-size:1.8rem; font-weight:700; color:var(--green)">saldo = ${saldo}</div>
+        <div style="font-family:var(--mono); font-size:.76rem; color:var(--ink-faint); margin-top:.4rem">metodi: deposita() · preleva()</div>
+      </div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

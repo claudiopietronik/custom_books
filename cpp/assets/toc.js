@@ -156,7 +156,7 @@ const TOC = [
     n: 10,
     titolo: "Struct e classi",
     file: "cap10-classi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "struct: dati insieme" },
       { id: "s10-2", n: "10.2", t: "class: dati + metodi" },
