@@ -151,7 +151,7 @@ const TOC = [
     n: 10,
     titolo: "SQLAlchemy: l'ORM",
     file: "cap10-sqlalchemy.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Cos'è un ORM" },
       { id: "s10-2", n: "10.2", t: "Engine e connessione" },

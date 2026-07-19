@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · SQLAlchemy: l'ORM — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>SQLAlchemy: l'ORM</h1>
+    <p class="standfirst">
+      Nel Capitolo 8 hai scritto SQL a mano. Funziona, ma nel codice di un backend diventa scomodo e rischioso:
+      stringhe SQL infilate nelle funzioni, risultati da «cucire» a mano dentro oggetti Python, dialetti diversi tra
+      Postgres e MySQL, e — pericolo serio — la porta aperta a un tipo di attacco chiamato SQL injection. La soluzione
+      elegante è un <b>ORM</b> (Object-Relational Mapping): uno strato che fa corrispondere <b>classi Python ↔
+      tabelle</b> e <b>oggetti ↔ righe</b>, generando l'SQL per te. Scrivi Python normale — crei oggetti, li aggiungi,
+      li interroghi con metodi — e l'ORM traduce tutto in SQL, nel dialetto giusto per il tuo database. In Python lo
+      strumento standard è <b>SQLAlchemy</b>. In questo capitolo capisci cos'è un ORM (§10.1), come aprire la
+      connessione con l'<b>engine</b> (§10.2), come definire i <b>modelli</b> (§10.3) e come leggere e scrivere
+      tramite la <b>sessione</b> (§10.4). <mark>È il ponte che, nel prossimo capitolo, unirà la nostra API FastAPI a
+      un database vero e persistente.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>ORM</b> (§10.1), l'<b>engine</b> e la connessione (§10.2), i <b>modelli</b> come classi (§10.3), la
+      <b>sessione</b> per leggere/scrivere (§10.4). Nel laboratorio (§10.5) definisci un modello e fai le tue prime
+      query dagli oggetti.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è come lavoreremo coi dati d'ora in poi</div>
+    <p style="margin-bottom:0">
+      Da qui in avanti non scriveremo quasi più SQL a mano: <mark>lavoreremo con oggetti Python, e SQLAlchemy si
+      occuperà del database.</mark> È il modo standard di costruire backend Python: più leggibile, più sicuro (niente
+      SQL injection), e <b>portabile</b> (lo stesso codice su SQLite in sviluppo e Postgres in produzione). Investire
+      qui rende semplici e piacevoli tutti i capitoli sui dati che seguono.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Cos'è un ORM</h2>
+
+  <p class="lead">
+    <b>ORM</b> sta per <b>Object-Relational Mapping</b>: «mappatura oggetti-relazionale». È lo strato che collega due
+    mondi — gli <b>oggetti</b> del tuo codice Python e le <b>tabelle</b> del database relazionale — traducendo
+    automaticamente tra loro.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La mappatura dell'ORM <span class="tag">i due mondi che si corrispondono</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>classe Python</b> ↔ <b>tabella</b></dt>
+        <dd>una classe (es. <code>Utente</code>) rappresenta una tabella (<code>utenti</code>). La definisci una
+            volta, in Python.</dd>
+        <dt><b>oggetto</b> (istanza) ↔ <b>riga</b></dt>
+        <dd>un oggetto <code>Utente(nome="Anna")</code> rappresenta una riga della tabella. Crearne uno e «salvarlo»
+            = una <code>INSERT</code>.</dd>
+        <dt><b>attributo</b> ↔ <b>colonna</b></dt>
+        <dd><code>utente.nome</code> corrisponde alla colonna <code>nome</code>. Leggere/cambiare l'attributo =
+            leggere/aggiornare la colonna.</dd>
+        <dt>le <b>query</b> ↔ <b>SELECT</b></dt>
+        <dd><mark>chiedi i dati con metodi Python</mark> (<code>.filter(...)</code>, <code>.all()</code>) e l'ORM
+            genera la <code>SELECT</code> giusta, ti restituisce <b>oggetti</b> Python già pronti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riconosci lo schema? È lo <b>stesso</b> parallelo del Cap. 8 (tabella/riga/colonna ↔ risorsa/oggetto/campo), ma
+      ora <b>automatizzato</b>. I vantaggi concreti: <b>(1)</b> scrivi Python, non stringhe SQL; <b>(2)</b> l'ORM usa
+      il <b>dialetto giusto</b> per il tuo database (SQLite, Postgres, MySQL) — codice portabile; <b>(3)</b> protegge
+      da <b>SQL injection</b>, perché non concateni mai input dell'utente in stringhe SQL. <mark>Lo svantaggio: uno
+      strato in più da capire</mark> — ma i benefici lo ripagano ampiamente, e per i casi rari puoi sempre scendere a
+      SQL grezzo.
+    </div>
+  </div>
+
+  <div class="widget" id="w-orm">
+    <div class="w-head">
+      <span>Da oggetto Python a SQL</span>
+      <span class="hint">l'ORM traduce, tu scrivi Python</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:stretch">
+      <div style="flex:1; min-width:230px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🐍 il tuo codice Python</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="or-py" style="margin:0; min-height:70px"></pre></div>
+      </div>
+      <div style="flex:1; min-width:230px">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">🗄️ l'SQL generato dall'ORM</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="or-sql" style="margin:0; min-height:70px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="flex-wrap:wrap; gap:.4rem; justify-content:center">
+      <button class="btn" data-orm="add">crea (add + commit)</button>
+      <button class="btn" data-orm="get">leggi per id</button>
+      <button class="btn" data-orm="filter">filtra (WHERE)</button>
+      <button class="btn" data-orm="all">tutti</button>
+      <button class="btn" data-orm="delete">cancella</button>
+    </div>
+    <div class="w-readout" id="or-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Engine e connessione</h2>
+
+  <p class="lead">
+    Il primo pezzo di SQLAlchemy è l'<b>engine</b>: l'oggetto che gestisce la <b>connessione</b> al database. Lo crei
+    una volta, passandogli la <b>stringa di connessione</b> del Cap. 9.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">database.py</div>
+    <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> create_engine
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> sessionmaker, declarative_base
+
+<span class="cm"># la stringa di connessione (qui SQLite, un file locale)</span>
+DATABASE_URL <span class="op">=</span> <span class="st">"sqlite:///./rubrica.db"</span>
+
+engine <span class="op">=</span> <span class="fn">create_engine</span>(DATABASE_URL)         <span class="cm"># la "connessione" al database</span>
+SessionLocal <span class="op">=</span> <span class="fn">sessionmaker</span>(bind<span class="op">=</span>engine)  <span class="cm"># fabbrica di sessioni (§10.4)</span>
+Base <span class="op">=</span> <span class="fn">declarative_base</span>()                   <span class="cm"># base per i modelli (§10.3)</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I tre oggetti fondamentali <span class="tag">engine · SessionLocal · Base</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">engine = create_engine(URL)</span></dt>
+        <dd>l'oggetto che sa <b>come raggiungere</b> il database, a partire dalla stringa di connessione.
+            <mark>Cambiando solo l'URL passi da SQLite a Postgres</mark> senza toccare altro — la portabilità
+            promessa. Per Postgres: <code>"postgresql://utente:pw@host:5432/db"</code>.</dd>
+        <dt><span class="mono">SessionLocal = sessionmaker(bind=engine)</span></dt>
+        <dd>una <b>fabbrica di sessioni</b>: la userai per aprire una «conversazione» col database a ogni operazione
+            (§10.4). Legata all'engine.</dd>
+        <dt><span class="mono">Base = declarative_base()</span></dt>
+        <dd>la <b>classe base</b> da cui erediteranno tutti i tuoi modelli (§10.3). Tiene il «registro» delle tabelle
+            che definisci.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questo file <code>database.py</code> è l'infrastruttura: lo scrivi una volta e lo importi ovunque serva.
+      <mark>La riga <code>DATABASE_URL</code> è l'unico punto che cambia tra sviluppo e produzione</mark> — e in un
+      progetto vero non la scriveresti «in chiaro», ma la leggeresti da una variabile d'ambiente (Cap. 9), per non
+      mettere la password su git.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>I modelli: classi = tabelle</h2>
+
+  <p class="lead">
+    Un <b>modello</b> SQLAlchemy è una classe che descrive una tabella: eredita da <code>Base</code>, dichiara il nome
+    della tabella e le sue colonne. È il «progetto» della tabella, scritto in Python.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">models.py</div>
+    <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> Column, Integer, String
+<span class="kw">from</span> database <span class="kw">import</span> Base
+
+<span class="kw">class</span> <span class="fn">Contatto</span>(Base):
+    __tablename__ <span class="op">=</span> <span class="st">"contatti"</span>          <span class="cm"># nome della tabella nel database</span>
+
+    id <span class="op">=</span> <span class="fn">Column</span>(Integer, primary_key<span class="op">=</span><span class="kw">True</span>, index<span class="op">=</span><span class="kw">True</span>)
+    nome <span class="op">=</span> <span class="fn">Column</span>(String, nullable<span class="op">=</span><span class="kw">False</span>)   <span class="cm"># NOT NULL</span>
+    telefono <span class="op">=</span> <span class="fn">Column</span>(String)
+    email <span class="op">=</span> <span class="fn">Column</span>(String, unique<span class="op">=</span><span class="kw">True</span>)     <span class="cm"># UNIQUE</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di un modello <span class="tag">__tablename__ · Column · vincoli</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">class Contatto(Base)</span></dt>
+        <dd>eredita da <code>Base</code>: così SQLAlchemy sa che è una tabella. Il nome della classe è la
+            convenzione singolare (<code>Contatto</code>), il nome della tabella il plurale.</dd>
+        <dt><span class="mono">__tablename__ = "contatti"</span></dt>
+        <dd>il nome reale della tabella nel database. Obbligatorio.</dd>
+        <dt><span class="mono">id = Column(Integer, primary_key=True)</span></dt>
+        <dd>una colonna: tipo <code>Integer</code>, chiave primaria. <mark>SQLAlchemy la rende auto-incrementale</mark>
+            (come <code>SERIAL</code>/<code>AUTOINCREMENT</code> del Cap. 8-9, ma senza pensarci). <code>index=True</code>
+            la rende veloce da cercare.</dd>
+        <dt>i tipi e i vincoli</dt>
+        <dd><code>Integer</code>, <code>String</code>, <code>Float</code>, <code>Boolean</code>, <code>DateTime</code>…
+            più vincoli come <code>nullable=False</code> (obbligatorio), <code>unique=True</code> (senza duplicati).
+            <mark>Sono i tipi e i vincoli SQL del Cap. 8, dichiarati in Python.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota le <b>tre facce</b> ormai familiari: il modello <b>Pydantic</b> (Cap. 6) valida i dati dell'API; il modello
+      <b>SQLAlchemy</b> (questo) descrive la tabella del database; e la <b>tabella SQL</b> è ciò che ne risulta. Nel
+      prossimo capitolo li useremo <b>insieme</b>: Pydantic per l'input/output dell'API, SQLAlchemy per la
+      persistenza. Una volta definiti i modelli, questa riga crea le tabelle nel database:
+      <code>Base.metadata.create_all(bind=engine)</code>.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>La sessione</h2>
+
+  <p class="lead">
+    La <b>sessione</b> è la «conversazione» con il database: la apri, fai le tue operazioni (aggiungi, interroga,
+    modifica), e la chiudi. È attraverso la sessione che oggetti Python e righe del database si scambiano.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">esempi d'uso della sessione</div>
+    <pre><span class="kw">from</span> database <span class="kw">import</span> SessionLocal
+<span class="kw">from</span> models <span class="kw">import</span> Contatto
+
+db <span class="op">=</span> <span class="fn">SessionLocal</span>()          <span class="cm"># apri la sessione</span>
+
+<span class="cm"># CREARE: costruisci un oggetto, aggiungilo, conferma</span>
+c <span class="op">=</span> <span class="fn">Contatto</span>(nome<span class="op">=</span><span class="st">"Anna"</span>, telefono<span class="op">=</span><span class="st">"333-111"</span>)
+db.<span class="fn">add</span>(c)                   <span class="cm"># "prepara" l'inserimento</span>
+db.<span class="fn">commit</span>()                 <span class="cm"># CONFERMA: scrive davvero nel database (INSERT)</span>
+db.<span class="fn">refresh</span>(c)               <span class="cm"># ricarica c: ora c.id è valorizzato dal DB</span>
+
+<span class="cm"># LEGGERE uno per id:</span>
+uno <span class="op">=</span> db.<span class="fn">query</span>(Contatto).<span class="fn">filter</span>(Contatto.id <span class="op">==</span> <span class="nm">1</span>).<span class="fn">first</span>()
+
+<span class="cm"># LEGGERE con filtro, tutti i risultati:</span>
+lista <span class="op">=</span> db.<span class="fn">query</span>(Contatto).<span class="fn">filter</span>(Contatto.nome <span class="op">==</span> <span class="st">"Anna"</span>).<span class="fn">all</span>()
+
+db.<span class="fn">close</span>()                  <span class="cm"># chiudi la sessione</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il vocabolario della sessione <span class="tag">add · commit · query · filter · first/all</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">db.add(oggetto)</span></dt>
+        <dd>«prepara» l'inserimento di un oggetto (una nuova riga). Non scrive ancora nel database: lo mette in coda.</dd>
+        <dt><span class="mono">db.commit()</span></dt>
+        <dd><mark>conferma e rende <b>permanenti</b> le modifiche</mark> (esegue davvero le INSERT/UPDATE/DELETE in
+            coda). Fondamentale: senza <code>commit</code>, le modifiche vanno perse. È la «transazione».</dd>
+        <dt><span class="mono">db.query(Modello)</span></dt>
+        <dd>inizia una interrogazione su quella tabella. Ci concateni i filtri.</dd>
+        <dt><span class="mono">.filter(Contatto.nome == "Anna")</span></dt>
+        <dd>il <b>WHERE</b> dell'ORM: condizioni scritte come espressioni Python. <mark>Componibili</mark>:
+            <code>.filter(...).filter(...)</code>.</dd>
+        <dt><span class="mono">.first()</span> / <span class="mono">.all()</span></dt>
+        <dd><b>eseguono</b> la query: <code>first()</code> restituisce il primo oggetto (o <code>None</code>),
+            <code>all()</code> la lista di tutti. Ottieni <b>oggetti <code>Contatto</code></b>, non righe grezze.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il ritmo è sempre lo stesso: <b>apri</b> la sessione, <b>operi</b>, <b>commit</b> se hai modificato, <b>chiudi</b>.
+      Modificare è naturale: <code>uno.telefono = "999"; db.commit()</code> genera l'UPDATE; cancellare:
+      <code>db.delete(uno); db.commit()</code>. <mark>Aprire e chiudere una sessione a ogni richiesta è un lavoro
+      ripetitivo</mark> — e nel prossimo capitolo vedremo come FastAPI lo automatizza elegantemente con la
+      <b>dependency injection</b>, così non dovrai scriverlo ogni volta.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Laboratorio: primo modello e query</h2>
+
+  <p class="lead">
+    Mettiamo insieme i tre file e facciamo un giro completo: crea, leggi, filtra — tutto da Python, con SQLite (nessun
+    server da avviare). Installa prima SQLAlchemy: <code>pip install sqlalchemy</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">prova.py — un giro completo</div>
+    <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> create_engine, Column, Integer, String
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> sessionmaker, declarative_base
+
+engine <span class="op">=</span> <span class="fn">create_engine</span>(<span class="st">"sqlite:///./prova.db"</span>)
+SessionLocal <span class="op">=</span> <span class="fn">sessionmaker</span>(bind<span class="op">=</span>engine)
+Base <span class="op">=</span> <span class="fn">declarative_base</span>()
+
+<span class="kw">class</span> <span class="fn">Contatto</span>(Base):
+    __tablename__ <span class="op">=</span> <span class="st">"contatti"</span>
+    id <span class="op">=</span> <span class="fn">Column</span>(Integer, primary_key<span class="op">=</span><span class="kw">True</span>)
+    nome <span class="op">=</span> <span class="fn">Column</span>(String, nullable<span class="op">=</span><span class="kw">False</span>)
+
+Base.metadata.<span class="fn">create_all</span>(bind<span class="op">=</span>engine)   <span class="cm"># crea la tabella se non esiste</span>
+
+db <span class="op">=</span> <span class="fn">SessionLocal</span>()
+db.<span class="fn">add</span>(<span class="fn">Contatto</span>(nome<span class="op">=</span><span class="st">"Anna"</span>))
+db.<span class="fn">add</span>(<span class="fn">Contatto</span>(nome<span class="op">=</span><span class="st">"Luca"</span>))
+db.<span class="fn">commit</span>()
+
+<span class="kw">for</span> c <span class="kw">in</span> db.<span class="fn">query</span>(Contatto).<span class="fn">all</span>():
+    <span class="fn">print</span>(c.id, c.nome)
+db.<span class="fn">close</span>()</pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — eseguilo</div>
+    <pre><span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">python</span> <span class="ar">prova.py</span>
+<span class="out">1 Anna
+2 Luca</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa è successo (e cosa non hai scritto)</div>
+    <p style="margin-bottom:0">
+      Hai definito una tabella <b>senza scrivere <code>CREATE TABLE</code></b>, inserito righe <b>senza scrivere
+      <code>INSERT</code></b>, e letto i dati <b>senza scrivere <code>SELECT</code></b>: SQLAlchemy ha generato tutto
+      l'SQL per te. Gli <b>id</b> (1, 2) sono stati assegnati dal database. <mark>E il file
+      <code>prova.db</code> ora contiene i dati in modo permanente</mark>: rilancia lo script (togliendo gli
+      <code>add</code>) e i contatti sono ancora lì. Prova a cambiare l'URL in un Postgres (Cap. 9): lo stesso codice
+      funzionerà, scrivendo lì invece che nel file. <b>Questa è la potenza dell'ORM.</b>
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>ORM</b> mappa <b>classi↔tabelle</b>, <b>oggetti↔righe</b>, <b>attributi↔colonne</b>: scrivi Python,
+          genera SQL. Più sicuro (no SQL injection) e portabile (§10.1).</li>
+      <li>L'<b>engine</b> (<code>create_engine(URL)</code>) gestisce la connessione; <code>sessionmaker</code> crea le
+          sessioni; <code>declarative_base()</code> è la base dei modelli (§10.2).</li>
+      <li>Un <b>modello</b> = classe che eredita da <code>Base</code>, con <code>__tablename__</code> e le
+          <code>Column(...)</code> (tipi e vincoli). <code>create_all</code> crea le tabelle (§10.3).</li>
+      <li>La <b>sessione</b>: <code>add</code>+<code>commit</code> per scrivere; <code>query().filter().first()/.all()</code>
+          per leggere oggetti. Ricorda il <b>commit</b> (§10.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo tutti i pezzi separati: un'API FastAPI (Cap. 4-7) e un modo pulito per parlare al database (questo
+    capitolo). È ora di <b>saldarli insieme</b>. Nel <strong>Capitolo 11</strong> colleghiamo FastAPI a SQLAlchemy:
+    riscriveremo la rubrica del Cap. 7 sostituendo il <code>DB = {}</code> in memoria con un database vero, usando la
+    <b>dependency injection</b> di FastAPI per gestire le sessioni in modo automatico e pulito. La nostra rubrica
+    diventerà finalmente <b>persistente</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Nella mappatura di un ORM, a cosa corrispondono una <b>classe</b>, un <b>oggetto</b> (istanza) e un
+      <b>attributo</b>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Elenca due vantaggi concreti di usare un ORM invece di scrivere query SQL a mano nel codice.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Scrivi un modello SQLAlchemy <code>Prodotto</code> per la tabella <code>prodotti</code> con: <code>id</code>
+      (intero, chiave primaria), <code>nome</code> (stringa, obbligatorio), <code>prezzo</code> (Float).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      Cosa succede se aggiungi un oggetto con <code>db.add(...)</code> ma <b>dimentichi</b> <code>db.commit()</code>?
+      E perché <code>db.query(Prodotto).filter(Prodotto.prezzo &lt; 10).all()</code> è preferibile a scrivere la
+      stringa SQL corrispondente?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Una <b>classe</b> corrisponde a una <b>tabella</b> (es. classe <code>Contatto</code> ↔ tabella
+      <code>contatti</code>); un <b>oggetto</b> (istanza della classe) corrisponde a una <b>riga</b> (un contatto
+      specifico); un <b>attributo</b> dell'oggetto corrisponde a una <b>colonna</b> (<code>contatto.nome</code> ↔
+      colonna <code>nome</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <p style="margin-bottom:0">
+      Tra i vantaggi: <b>(1)</b> scrivi <b>Python leggibile</b> invece di stringhe SQL sparse nel codice, con
+      l'autocompletamento e il controllo dell'editor; <b>(2)</b> <b>portabilità</b>: lo stesso codice funziona su
+      SQLite, Postgres o MySQL cambiando solo l'URL, perché l'ORM genera il dialetto giusto; inoltre <b>protezione da
+      SQL injection</b>, perché non concateni mai input in stringhe SQL.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">models.py</div>
+      <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> Column, Integer, String, Float
+<span class="kw">from</span> database <span class="kw">import</span> Base
+
+<span class="kw">class</span> <span class="fn">Prodotto</span>(Base):
+    __tablename__ <span class="op">=</span> <span class="st">"prodotti"</span>
+    id <span class="op">=</span> <span class="fn">Column</span>(Integer, primary_key<span class="op">=</span><span class="kw">True</span>)
+    nome <span class="op">=</span> <span class="fn">Column</span>(String, nullable<span class="op">=</span><span class="kw">False</span>)
+    prezzo <span class="op">=</span> <span class="fn">Column</span>(Float)</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      Senza <code>db.commit()</code>, l'inserimento resta «in sospeso» nella sessione e <b>non viene scritto</b> nel
+      database: chiudendo la sessione (o riavviando) la modifica va <b>persa</b>. Il <code>commit</code> è ciò che
+      rende permanenti le modifiche. Quanto al filtro: <code>.filter(Prodotto.prezzo &lt; 10)</code> è preferibile
+      perché è Python controllabile dall'editor, <b>portabile</b> tra database e <b>sicuro</b> (l'ORM gestisce i
+      valori senza concatenarli nella stringa SQL, evitando la SQL injection).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.1 — da oggetto Python a SQL: mostra il codice ORM e l'SQL generato
+   ========================================================================= */
+(function () {
+  const pyEl = document.getElementById('or-py');
+  if (!pyEl) return;
+  const sqlEl = document.getElementById('or-sql');
+  const out = document.getElementById('or-out');
+
+  const OPS = {
+    add: {
+      py: '<span class="nm">c</span> <span class="op">=</span> <span class="fn">Contatto</span>(nome<span class="op">=</span><span class="st">"Anna"</span>, telefono<span class="op">=</span><span class="st">"333"</span>)\ndb.<span class="fn">add</span>(c)\ndb.<span class="fn">commit</span>()',
+      sql: '<span class="kw">INSERT INTO</span> contatti (nome, telefono)\n<span class="kw">VALUES</span> (<span class="st">\'Anna\'</span>, <span class="st">\'333\'</span>);',
+      msg: '<b>Creare</b>: costruisci un oggetto e fai add+commit. L\'ORM genera l\'<b>INSERT</b>. L\'id viene assegnato dal database.'
+    },
+    get: {
+      py: 'db.<span class="fn">query</span>(Contatto).<span class="fn">filter</span>(\n    Contatto.id <span class="op">==</span> <span class="nm">1</span>\n).<span class="fn">first</span>()',
+      sql: '<span class="kw">SELECT</span> * <span class="kw">FROM</span> contatti\n<span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">1</span>\n<span class="kw">LIMIT</span> <span class="nm">1</span>;',
+      msg: '<b>Leggere per id</b>: <code>.filter(...).first()</code> → una <b>SELECT ... WHERE ... LIMIT 1</b>. Restituisce un oggetto <code>Contatto</code> (o None).'
+    },
+    filter: {
+      py: 'db.<span class="fn">query</span>(Contatto).<span class="fn">filter</span>(\n    Contatto.nome <span class="op">==</span> <span class="st">"Anna"</span>\n).<span class="fn">all</span>()',
+      sql: '<span class="kw">SELECT</span> * <span class="kw">FROM</span> contatti\n<span class="kw">WHERE</span> nome <span class="op">=</span> <span class="st">\'Anna\'</span>;',
+      msg: '<b>Filtrare</b>: <code>.filter(...).all()</code> → <b>SELECT ... WHERE</b>. Restituisce la lista di tutti gli oggetti che combaciano.'
+    },
+    all: {
+      py: 'db.<span class="fn">query</span>(Contatto).<span class="fn">all</span>()',
+      sql: '<span class="kw">SELECT</span> * <span class="kw">FROM</span> contatti;',
+      msg: '<b>Tutti</b>: <code>.all()</code> senza filtro → <b>SELECT *</b>. Lista di tutti i contatti come oggetti.'
+    },
+    delete: {
+      py: '<span class="nm">c</span> <span class="op">=</span> db.<span class="fn">query</span>(Contatto).<span class="fn">get</span>(<span class="nm">1</span>)\ndb.<span class="fn">delete</span>(c)\ndb.<span class="fn">commit</span>()',
+      sql: '<span class="kw">DELETE FROM</span> contatti\n<span class="kw">WHERE</span> id <span class="op">=</span> <span class="nm">1</span>;',
+      msg: '<b>Cancellare</b>: <code>db.delete(oggetto)</code> + commit → <b>DELETE ... WHERE</b>. Anche qui, ricorda il commit.'
+    }
+  };
+
+  function show(k) {
+    const o = OPS[k];
+    pyEl.innerHTML = o.py;
+    sqlEl.innerHTML = o.sql;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + o.msg + '</div>';
+  }
+
+  document.querySelectorAll('#w-orm .btn[data-orm]').forEach(function (b) {
+    b.addEventListener('click', function () { show(b.getAttribute('data-orm')); });
+  });
+  show('add');
+})();
+</script>
+</body>
+</html>

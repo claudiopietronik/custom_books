@@ -21,7 +21,7 @@ Internet** e **Il Web**.
 - [x] 7 — Un'API CRUD completa
 - [x] 8 — I database relazionali
 - [x] 9 — PostgreSQL e MySQL
-- [ ] 10 — SQLAlchemy: l'ORM
+- [x] 10 — SQLAlchemy: l'ORM
 - [ ] 11 — FastAPI + database
 - [ ] 12 — Relazioni tra tabelle
 - [ ] 13 — Autenticazione e sicurezza
