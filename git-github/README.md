@@ -21,7 +21,7 @@ nessun linguaggio di programmazione richiesto.
 - [x] 7 — I branch
 - [x] 8 — Unire i branch: il merge
 - [x] 9 — Risolvere i conflitti
-- [ ] 10 — GitHub: il repository remoto
+- [x] 10 — GitHub: il repository remoto
 - [ ] 11 — Collaborare: push, pull, fetch
 - [ ] 12 — Pull request e code review
 - [ ] 13 — Ignorare file e buone pratiche

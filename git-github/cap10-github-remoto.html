@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · GitHub: il repository remoto — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="10">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 10</div>
+    <h1>GitHub: il repository remoto</h1>
+    <p class="standfirst">
+      Hai imparato a versionare sul tuo computer: creare commit, ramificare, unire. Tutto questo vive però in un solo
+      posto — il tuo disco. Se il computer si rompe, se vuoi lavorare da un'altra macchina, o se vuoi collaborare con
+      qualcuno, hai bisogno di una <b>copia condivisa e online</b> del repository. È il <b>repository remoto</b>, e il
+      luogo più diffuso dove ospitarlo è <b>GitHub</b>. Da qui in poi il libro cambia scenario: dal Git «in solitaria»
+      alla <b>collaborazione</b>. In questo capitolo capiamo cos'è un repository remoto (§10.1), come creare un account
+      e un repository su GitHub (§10.2), come <b>collegare</b> il tuo repository locale a quello remoto (§10.3), e come
+      <b>clonare</b> un progetto già esistente (§10.4). <mark>È il ponte tra il tuo computer e il resto del mondo:
+      backup, accesso da ovunque, e collaborazione.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>repository remoto</b> (§10.1), creare account e repo su <b>GitHub</b> (§10.2), collegare locale e
+      remoto con <code>git remote</code> (§10.3), <code>git clone</code> per scaricare un progetto (§10.4). Nel
+      laboratorio (§10.5) pubblichi il tuo primo repo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: senza remoto non c'è collaborazione (né backup)</div>
+    <p style="margin-bottom:0">
+      Un repository solo locale è fragile e solitario: un guasto e sparisce, e nessuno può lavorarci con te. Il remoto
+      risolve entrambe le cose: è un <b>backup</b> sempre aggiornato e il <b>punto d'incontro</b> del team.
+      <mark>GitHub è, di fatto, dove vive il codice del mondo</mark> — dalle piccole app ai grandi progetti open
+      source. Saperci pubblicare e collaborare è indispensabile per lavorare con altri e per costruirti un portfolio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-1"><span class="secnum">Sezione 10.1</span>Cos'è un repository remoto</h2>
+
+  <p class="lead">
+    Un <b>repository remoto</b> è una copia del tuo repository che vive su un <b>server</b>, accessibile via rete
+    (come su GitHub). Tu continui a lavorare sul tuo repo <b>locale</b>, e periodicamente lo <b>sincronizzi</b> con
+    quello remoto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Locale e remoto: due copie che si sincronizzano <span class="tag">il modello di GitHub</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il repository <b>locale</b></dt>
+        <dd>quello sul tuo computer, dove fai commit, branch, merge (tutto il libro finora). <mark>Qui lavori
+            offline</mark>, come sempre.</dd>
+        <dt>il repository <b>remoto</b></dt>
+        <dd>una copia su un server (GitHub), condivisa. <mark>Non ci «lavori» direttamente</mark>: è un punto di
+            raccolta e scambio. Ci mandi le tue commit e da lì scarichi quelle degli altri.</dd>
+        <dt>la <b>sincronizzazione</b></dt>
+        <dd>due direzioni: <b>push</b> (manda le tue commit al remoto) e <b>pull</b> (scarica quelle nuove dal
+            remoto). Sono il tema del Cap. 11. <mark>Il remoto è il «terreno comune»</mark> su cui tutti convergono.</dd>
+        <dt><span class="mono">origin</span></dt>
+        <dd>il nome convenzionale del remoto principale (quello da cui hai clonato o a cui ti sei collegato). Lo vedrai
+            spesso: <code>git push origin main</code> = «manda a origin il branch main».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un punto importante: <mark>ogni collaboratore ha una <b>copia locale completa</b></mark> del repository (con
+      tutta la storia!), e il remoto è la copia «ufficiale» condivisa. Non è come un file su un disco condiviso che
+      tutti modificano insieme: ognuno lavora sulla sua copia e sincronizza col remoto quando è pronto. Questo modello
+      «distribuito» è ciò che rende Git robusto e adatto al lavoro di gruppo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-2"><span class="secnum">Sezione 10.2</span>Creare un account e un repository su GitHub</h2>
+
+  <p class="lead">
+    GitHub è un sito web: per usarlo crei un account gratuito, poi puoi creare repository (pubblici o privati). Non
+    servono comandi qui — si fa dal browser.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I passi su GitHub <span class="tag">dal browser, una volta</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>crea un account</b></dt>
+        <dd>su <code>github.com</code>, gratuito. <mark>Usa la stessa email che hai messo in <code>git config</code></mark>
+            (Cap. 2), così GitHub collega le tue commit al profilo.</dd>
+        <dt>2 · <b>crea un nuovo repository</b></dt>
+        <dd>col pulsante «New repository»: gli dai un <b>nome</b>, scegli se <b>pubblico</b> (visibile a tutti) o
+            <b>privato</b> (solo tu e chi inviti), e crei. Ottieni un repository remoto vuoto, con un <b>URL</b>.</dd>
+        <dt>3 · <b>l'URL del repository</b></dt>
+        <dd>qualcosa come <code>https://github.com/tuo-nome/mio-progetto.git</code>. <mark>È l'indirizzo che userai</mark>
+            per collegare il tuo repo locale (§10.3) o per clonarlo (§10.4).</dd>
+        <dt>l'autenticazione</dt>
+        <dd>per mandare dati a GitHub dovrai autenticarti. Oggi si usa di solito un <b>token di accesso</b> (Personal
+            Access Token) o SSH, non la password. <mark>GitHub ti guida</mark> la prima volta; è un passaggio una
+            tantum.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>Pubblico o privato?</b> Un repo <b>pubblico</b> è visibile a tutti (ideale per progetti open source e per il
+      tuo portfolio); uno <b>privato</b> solo a te e a chi inviti (per lavori personali o riservati). <mark>Puoi
+      cambiarlo in seguito</mark>. Per imparare, un repo pubblico va benissimo — ma ricorda la regola d'oro (Cap. 13):
+      <b>non mettere mai password o segreti</b> in un repository, tanto meno pubblico.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>Collegare locale e remoto</h2>
+
+  <p class="lead">
+    Hai un repository locale (creato con <code>git init</code>) e ne hai creato uno vuoto su GitHub. Ora li
+    <b>colleghi</b> con <code>git remote add</code>, poi mandi su GitHub la tua storia con il primo <code>push</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — collegare il locale a GitHub</div>
+    <pre><span class="c"># 1) collega il tuo repo locale al remoto, chiamandolo "origin"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">remote</span> <span class="ar">add</span> <span class="ar">origin</span> <span class="ar">https://github.com/anna/mio-progetto.git</span>
+
+<span class="c"># 2) verifica il collegamento</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">remote</span> <span class="fl">-v</span>
+<span class="out">origin  https://github.com/anna/mio-progetto.git (fetch)
+origin  https://github.com/anna/mio-progetto.git (push)</span>
+
+<span class="c"># 3) manda la storia locale al remoto (prima volta: -u imposta il collegamento)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">main</span>
+<span class="out">... il tuo codice è ora su GitHub!</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git remote e il primo push <span class="tag">remote add · remote -v · push -u</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git remote add origin &lt;url&gt;</span></dt>
+        <dd>collega il repo locale a un remoto, dandogli il nome <code>origin</code> (la convenzione). <mark>Non copia
+            nulla ancora</mark>: dice solo «il mio remoto ufficiale è a questo URL».</dd>
+        <dt><span class="mono">git remote -v</span></dt>
+        <dd>elenca i remoti collegati (con i loro URL). Un modo per controllare che il collegamento sia giusto.</dd>
+        <dt><span class="mono">git push -u origin main</span></dt>
+        <dd>il <b>primo push</b>: manda il branch <code>main</code> a <code>origin</code>. <mark>Il <code>-u</code>
+            («upstream») imposta il collegamento</mark>, così dalla volta dopo ti basterà <code>git push</code> (senza
+            specificare origin e main). Il push lo vediamo a fondo al Cap. 11.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Dopo questo, ricaricando la pagina del repository su GitHub, <mark>vedrai i tuoi file e tutta la storia delle
+      commit</mark>, online. Il tuo lavoro locale ha ora una copia remota: sei protetto da guasti e pronto a
+      collaborare. Nota che questa procedura serve quando <b>parti dal locale</b>; se invece il progetto esiste già su
+      GitHub, non colleghi: lo <b>cloni</b> (§10.4).
+    </div>
+  </div>
+
+  <div class="widget" id="w-remote">
+    <div class="w-head">
+      <span>Locale ⇄ GitHub: i due scenari di partenza</span>
+      <span class="hint">collegare (dal locale) o clonare (dal remoto)</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div style="display:flex; align-items:center; justify-content:center; gap:1rem; flex-wrap:wrap; margin-bottom:.8rem">
+        <div id="rm-local" style="text-align:center; border:2px solid var(--ink-soft); border-radius:10px; padding:.7rem 1rem; min-width:130px; transition:all .3s">
+          <div style="font-size:1.6rem">💻</div><b>repo locale</b><div style="font-size:.72rem; color:var(--ink-soft)" id="rm-local-s">il tuo computer</div>
+        </div>
+        <div id="rm-arrow" style="font-size:1.5rem; color:var(--ink-faint)">⇄</div>
+        <div id="rm-github" style="text-align:center; border:2px solid var(--ink-soft); border-radius:10px; padding:.7rem 1rem; min-width:130px; transition:all .3s">
+          <div style="font-size:1.6rem">☁️</div><b>GitHub (origin)</b><div style="font-size:.72rem; color:var(--ink-soft)" id="rm-github-s">il remoto</div>
+        </div>
+      </div>
+      <div class="term" style="margin:0 auto; max-width:100%"><pre id="rm-cmd" style="margin:0; min-height:44px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="rm-connect">ho già il locale → collega &amp; push</button>
+      <button class="btn" id="rm-clone">esiste su GitHub → git clone</button>
+      <button class="btn ghost" id="rm-reset">reset</button>
+    </div>
+    <div class="w-readout" id="rm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-4"><span class="secnum">Sezione 10.4</span>Clonare un repository esistente</h2>
+
+  <p class="lead">
+    L'altro scenario: il progetto <b>esiste già</b> su GitHub (tuo o di qualcun altro) e vuoi una copia sul tuo
+    computer per lavorarci. Si fa con <code>git clone</code>, che scarica <b>tutto</b> — file, storia, branch — in una
+    volta sola.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — clonare un repository</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">clone</span> <span class="ar">https://github.com/anna/mio-progetto.git</span>
+<span class="out">Cloning into 'mio-progetto'...
+... done.</span>
+
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">mio-progetto</span>          <span class="c"># entra nella cartella scaricata</span>
+<span class="c"># è già un repository completo, col remoto "origin" GIÀ collegato!</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git clone smontato <span class="tag">scarica tutto, già collegato</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git clone &lt;url&gt;</span></dt>
+        <dd>scarica una copia completa del repository remoto in una nuova cartella: <mark>tutti i file, tutta la
+            storia, tutti i branch</mark>. In un colpo solo hai un repository locale funzionante.</dd>
+        <dt>già collegato a <span class="mono">origin</span></dt>
+        <dd>clonare imposta automaticamente il remoto <code>origin</code> verso l'URL da cui hai clonato. <mark>Non
+            serve <code>git remote add</code></mark>: puoi subito fare <code>push</code> e <code>pull</code> (Cap. 11).</dd>
+        <dt>clone vs init + remote add</dt>
+        <dd>due modi di ottenere un repo locale collegato: <b><code>init</code> + <code>remote add</code></b> quando
+            <b>parti dal tuo locale</b> (§10.3); <b><code>clone</code></b> quando <b>parti da un remoto esistente</b>.
+            <mark>Stesso risultato, punti di partenza opposti.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>git clone</code> è il modo in cui contribuisci a progetti altrui: cloni il loro repository, ci lavori in
+      locale, e proponi le tue modifiche (con le pull request, Cap. 12). <mark>È il primo comando che dai quando ti
+      unisci a un progetto esistente</mark> — al lavoro, o nell'open source. Ricorda dal Cap. 3: non si usa
+      <code>git init</code> su un progetto che si clona; <code>clone</code> crea già tutto.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-5"><span class="secnum">Sezione 10.5</span>Laboratorio: il tuo primo repo su GitHub</h2>
+
+  <p class="lead">
+    Pubblica il repository <code>diario</code> (dei capitoli scorsi) su GitHub. È il momento in cui il tuo lavoro
+    locale diventa online e condivisibile.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — dal locale a GitHub</div>
+    <pre><span class="c"># --- su github.com (browser): crea un nuovo repo vuoto "diario", copia il suo URL ---</span>
+
+<span class="c"># --- nel terminale, dentro la cartella "diario": ---</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">remote</span> <span class="ar">add</span> <span class="ar">origin</span> <span class="ar">https://github.com/TUO-NOME/diario.git</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="fl">-M</span> <span class="ar">main</span>          <span class="c"># assicura che il branch si chiami "main"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">main</span>    <span class="c"># manda tutto su GitHub</span>
+
+<span class="c"># ora ricarica la pagina del repo su GitHub: ci sono i tuoi file e le commit!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai ottenuto</div>
+    <p style="margin-bottom:0">
+      Il tuo repository <code>diario</code> è ora anche su GitHub: <mark>hai un backup online e un punto da cui
+      condividere e collaborare</mark>. Su GitHub puoi vedere i file, sfogliare la storia delle commit, i branch — tutto
+      il lavoro fatto in locale, ora nel cloud. Da qui in avanti, il ciclo quotidiano avrà un passo in più: dopo aver
+      committato in locale, farai <code>git push</code> per mandare le novità su GitHub (Cap. 11). E se lavori da
+      un'altra macchina, ti basterà <code>git clone</code> per riavere tutto. Il tuo Git è «uscito» dal computer: la
+      collaborazione può iniziare.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 10</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>repository remoto</b> è una copia del repo su un server (GitHub): backup + punto d'incontro. Ognuno ha
+          la sua copia <b>locale</b> completa; si sincronizza col remoto (§10.1).</li>
+      <li>Su <b>GitHub</b> (browser): crei account e un repository (pubblico/privato), ottieni un <b>URL</b>. Usa
+          l'email di <code>git config</code> (§10.2).</li>
+      <li>Se parti dal locale: <code>git remote add origin &lt;url&gt;</code> + <code>git push -u origin main</code>.
+          <code>origin</code> è il nome del remoto (§10.3).</li>
+      <li>Se il progetto esiste già su GitHub: <code>git clone &lt;url&gt;</code> scarica tutto, con <code>origin</code>
+          già collegato (§10.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il tuo repository è online. Ora comincia la vera collaborazione: come mandi le nuove commit al remoto, e come
+    ricevi quelle degli altri? Nel <strong>Capitolo 11</strong> impariamo i comandi di sincronizzazione —
+    <code>git push</code>, <code>git pull</code> e <code>git fetch</code> — e come restare allineati quando più
+    persone lavorano sullo stesso progetto. È il ritmo quotidiano del lavoro in team.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-6"><span class="secnum">Sezione 10.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un repository <b>locale</b> e uno <b>remoto</b>? Cosa rappresenta il nome
+      <code>origin</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.2</div>
+    <p style="margin-bottom:0">
+      Hai già un repository locale (fatto con <code>git init</code>) e un repository vuoto appena creato su GitHub.
+      Scrivi i comandi per collegarli e mandare la storia su GitHub per la prima volta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.3</div>
+    <p style="margin-bottom:0">
+      Quando useresti <code>git clone</code> invece di <code>git init</code> + <code>git remote add</code>? Cosa fa
+      <code>clone</code> in più, automaticamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 10.4</div>
+    <p style="margin-bottom:0">
+      Perché non si dovrebbero mai mettere password o segreti in un repository, soprattutto se pubblico su GitHub?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s10-7"><span class="secnum">Sezione 10.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.1</div>
+    <p style="margin-bottom:0">
+      Il repository <b>locale</b> è la copia sul tuo computer, dove lavori (commit, branch, merge). Il repository
+      <b>remoto</b> è una copia su un server (es. GitHub), condivisa e usata come backup e punto d'incontro: non ci
+      lavori direttamente, ci sincronizzi le modifiche. <code>origin</code> è il <b>nome convenzionale</b> del remoto
+      principale a cui il tuo locale è collegato (quello da cui hai clonato o a cui ti sei collegato).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">remote</span> <span class="ar">add</span> <span class="ar">origin</span> <span class="ar">&lt;url-del-repo-su-github&gt;</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">push</span> <span class="fl">-u</span> <span class="ar">origin</span> <span class="ar">main</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Prima colleghi il remoto (<code>remote add origin</code>), poi mandi il branch
+      <code>main</code> con <code>push -u</code> (il <code>-u</code> imposta il collegamento per i push successivi).</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.3</div>
+    <p style="margin-bottom:0">
+      Usi <code>git clone</code> quando il progetto <b>esiste già su un remoto</b> (GitHub) e vuoi scaricarne una copia
+      locale: è il punto di partenza opposto a <code>init</code> (che si usa quando crei un progetto <b>nuovo dal tuo
+      computer</b>). <code>clone</code> fa in più, automaticamente: scarica <b>tutti i file, la storia e i branch</b>,
+      e imposta già il remoto <code>origin</code> verso l'URL clonato — quindi puoi subito fare push e pull senza
+      <code>git remote add</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 10.4</div>
+    <p style="margin-bottom:0">
+      Perché un repository conserva <b>tutta la storia</b>: anche se cancelli un segreto in una commit successiva,
+      resta visibile nelle commit precedenti. Su un repo <b>pubblico</b> chiunque potrebbe leggerlo; e se il repo è del
+      tuo lavoro, il segreto è comunque esposto a tutti i collaboratori e a eventuali fughe. Password, chiavi API e
+      token vanno tenuti <b>fuori</b> dal repository (in variabili d'ambiente o file esclusi con <code>.gitignore</code>,
+      Cap. 13). Una credenziale finita per errore in un repo va considerata compromessa e <b>cambiata</b>.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §10.3 — locale ⇄ GitHub: i due scenari (collega dal locale / clona dal remoto)
+   ========================================================================= */
+(function () {
+  const local = document.getElementById('rm-local');
+  if (!local) return;
+  const github = document.getElementById('rm-github');
+  const localS = document.getElementById('rm-local-s');
+  const githubS = document.getElementById('rm-github-s');
+  const cmdEl = document.getElementById('rm-cmd');
+  const out = document.getElementById('rm-out');
+  const arrow = document.getElementById('rm-arrow');
+
+  function reset() {
+    local.style.borderColor = 'var(--ink-soft)'; local.style.background = 'transparent';
+    github.style.borderColor = 'var(--ink-soft)'; github.style.background = 'transparent';
+    localS.textContent = 'il tuo computer'; githubS.textContent = 'il remoto';
+    arrow.style.color = 'var(--ink-faint)';
+    cmdEl.innerHTML = '<span class="out">Scegli lo scenario di partenza.</span>';
+    out.innerHTML = note('', 'Due modi di collegare locale e remoto, a seconda di <b>dove esiste già il progetto</b>. Prova entrambi.');
+  }
+  function note(c, html) {
+    const col = c === 'green' ? 'var(--green)' : 'var(--ink-soft)';
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+  function light(el, color) { el.style.borderColor = color; el.style.background = 'color-mix(in srgb, ' + color + ' 12%, transparent)'; }
+
+  document.getElementById('rm-connect').addEventListener('click', function () {
+    reset();
+    light(local, 'var(--green)'); localS.textContent = 'ha già le commit';
+    light(github, 'var(--accent)'); githubS.textContent = 'repo vuoto → si riempie';
+    arrow.textContent = '→'; arrow.style.color = 'var(--green)';
+    cmdEl.innerHTML = '<span class="p">$</span> <span class="cmd">git remote add origin</span> <span class="ar">&lt;url&gt;</span>\n<span class="p">$</span> <span class="cmd">git push</span> <span class="fl">-u</span> <span class="ar">origin main</span>';
+    out.innerHTML = note('green', 'Scenario <b>parti dal locale</b>: hai già le commit sul computer. Colleghi il remoto vuoto (<code>remote add</code>) e ci <b>mandi</b> la storia col primo <code>push -u</code>. Il progetto «sale» su GitHub.');
+  });
+  document.getElementById('rm-clone').addEventListener('click', function () {
+    reset();
+    light(github, 'var(--green)'); githubS.textContent = 'ha già il progetto';
+    light(local, 'var(--accent)'); localS.textContent = 'vuoto → si riempie';
+    arrow.textContent = '←'; arrow.style.color = 'var(--green)';
+    cmdEl.innerHTML = '<span class="p">$</span> <span class="cmd">git clone</span> <span class="ar">&lt;url&gt;</span>';
+    out.innerHTML = note('green', 'Scenario <b>parti dal remoto</b>: il progetto esiste già su GitHub. Con <code>git clone</code> lo <b>scarichi</b> tutto in locale (file, storia, branch), con <code>origin</code> già collegato. Il progetto «scende» sul tuo computer.');
+  });
+  document.getElementById('rm-reset').addEventListener('click', reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>

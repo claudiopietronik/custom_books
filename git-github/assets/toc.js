@@ -148,7 +148,7 @@ const TOC = [
     n: 10,
     titolo: "GitHub: il repository remoto",
     file: "cap10-github-remoto.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Cos'è un repository remoto" },
       { id: "s10-2", n: "10.2", t: "Creare un account e un repository su GitHub" },
