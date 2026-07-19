@@ -105,7 +105,7 @@ const TOC = [
     n: 7,
     titolo: "Classificazione lineare: LDA e QDA",
     file: "cap07-lda-qda.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Il problema della classificazione" },
       { id: "s7-2", n: "7.2", t: "I confini decisionali" },

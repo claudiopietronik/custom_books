@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Classificazione lineare: LDA e QDA — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>Classificazione lineare: LDA e QDA</h1>
+    <p class="standfirst">
+      Finora abbiamo sempre previsto <b>numeri</b>: un prezzo, un rendimento, una temperatura. Ma pensa a quante
+      domande hanno per risposta una <b>categoria</b>, non un numero: questa email è <b>spam</b> o no? questo tumore è
+      <b>benigno</b> o <b>maligno</b>? che <b>cifra</b> (0–9) è scritta in questa immagine? Prevedere una categoria si
+      chiama <b>classificazione</b>, ed è, insieme alla regressione, uno dei due grandi tipi di problema supervisionato.
+      In questo capitolo ci entriamo con calma. Prima capiamo <b>cosa cambia</b> rispetto alla regressione (§7.1) e
+      cos'è un <b>confine decisionale</b> — la «frontiera» invisibile che il modello traccia per separare le categorie
+      (§7.2). Poi conosciamo il nostro primo classificatore vero e proprio, l'<b>analisi discriminante lineare</b> (LDA),
+      con un'idea sorprendentemente intuitiva: <mark>descrivo ogni categoria come una «nuvola» di punti e assegno ogni
+      nuovo caso alla nuvola più vicina</mark> (§7.3). Infine la sua versione «curva», la <b>QDA</b> (§7.4). Nessun
+      prerequisito: costruiamo tutto da zero, con cura, entrando nel significato di ogni pezzo.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>problema della classificazione</b> (§7.1), i <b>confini decisionali</b> (§7.2), l'<b>analisi discriminante
+      lineare</b> LDA (§7.3), la sua versione curva <b>QDA</b> e il confronto (§7.4). Nel laboratorio (§7.5) classifichi
+      con scikit-learn.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: metà del mondo è a categorie</div>
+    <p style="margin-bottom:0">
+      La classificazione è ovunque: diagnosi, riconoscimento, filtri anti-spam, approvazione di un prestito. LDA e QDA
+      sono i primi classificatori da imparare perché <mark>rendono visibile l'idea più importante di tutta la
+      classificazione</mark>: descrivere ogni categoria e poi assegnare ogni nuovo caso alla descrizione che gli calza
+      meglio. Da qui capiremo la regressione logistica (cap. 8), Naive Bayes (cap. 9) e le SVM (cap. 10).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Il problema della classificazione</h2>
+
+  <p class="lead">
+    Partiamo dalla differenza di fondo, quella che cambia tutto il resto.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Regressione vs classificazione</div>
+    <p style="margin-bottom:.5rem">
+      In entrambi i casi impariamo una funzione da esempi $(x, y)$. La differenza sta in <b>cos'è $y$</b>:
+    </p>
+    <ul style="margin:0 0 .6rem 1.1rem">
+      <li><b>Regressione</b> (capitoli 4–6): $y$ è un <b>numero</b> su una scala continua (12,50 €; 37,2 °C). Le
+          previsioni possono essere «vicine» o «lontane» dalla verità.</li>
+      <li><b>Classificazione</b> (da qui in poi): $y$ è una <b>categoria</b> presa da un elenco finito (spam / non-spam;
+          benigno / maligno; cane / gatto / cavallo). Le categorie si chiamano <b>classi</b>. Una previsione è
+          semplicemente <b>giusta</b> o <b>sbagliata</b>: non ha senso dire che «gatto» è più vicino a «cane» di quanto
+          lo sia «cavallo».</li>
+    </ul>
+    <p style="margin-bottom:0">
+      <mark>Il modello, dato un nuovo caso, deve rispondere con una delle classi.</mark> Quando le classi sono due
+      (spam/non-spam) si parla di classificazione <b>binaria</b>, il caso più semplice da cui partiamo.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Non solo la risposta: anche la fiducia</div>
+    <p style="margin-bottom:0">
+      Un buon classificatore, oltre a dire «spam», sa dire <b>quanto</b> è sicuro: «spam con probabilità del 97 %».
+      Questa probabilità è preziosa — <mark>ci dice quando fidarci e quando chiedere un controllo umano</mark> (una
+      diagnosi al 55 % va rivista; una al 99 % meno). Molti classificatori, LDA compreso, non danno solo la risposta
+      secca ma anche una <b>probabilità per ciascuna classe</b>. Tienilo a mente: è una delle cose che rende un modello
+      davvero utile nella pratica.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>I confini decisionali</h2>
+
+  <p class="lead">
+    C'è un modo bellissimo di «vedere» cosa fa un classificatore, e conviene fissarlo subito perché ci accompagnerà per
+    tutti i prossimi capitoli.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La frontiera che separa le classi</div>
+    <p style="margin-bottom:0">
+      Immagina lo «spazio» dei dati: ogni caso è un punto, e le sue coordinate sono le sue caratteristiche (per esempio:
+      dimensione del tumore sull'asse orizzontale, età del paziente su quello verticale). I casi di ogni classe tendono
+      a raggrupparsi in zone diverse. Un classificatore, in fondo, <b>divide questo spazio in regioni</b>: «qui dico
+      benigno, là dico maligno». La linea (o superficie) che separa una regione dall'altra si chiama <b>confine
+      decisionale</b> (in inglese «decision boundary»). <mark>Da che lato del confine cade un nuovo punto, quella è la
+      classe che il modello gli assegna.</mark> Capire un classificatore vuol dire, spesso, capire che <b>forma</b> ha
+      il suo confine.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Confini dritti e confini curvi</div>
+    <p style="margin-bottom:0">
+      La <b>forma</b> del confine dice quanto è flessibile il classificatore, ed è il filo che lega tutto il capitolo:
+      un confine <b>dritto</b> (una retta, o un piano) è semplice e stabile — è quello che traccia la <b>LDA</b>; un
+      confine <b>curvo</b> è più flessibile e può separare classi con forme più complicate — è quello della <b>QDA</b>.
+      Ritrovi, travestito, il compromesso bias-varianza del capitolo 3: <mark>confine dritto = più bias ma più
+      stabile; confine curvo = più flessibile ma più a rischio di overfitting.</mark> Lo vedrai coi tuoi occhi nel
+      widget del laboratorio.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>Analisi discriminante lineare (LDA)</h2>
+
+  <p class="lead">
+    Ecco il nostro primo classificatore. L'idea è tanto naturale che, spiegata bene, sembra ovvia. Andiamo pianissimo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'idea in una frase: la nuvola più adatta</div>
+    <p style="margin-bottom:0">
+      Guarda i dati di ogni classe: formano una <b>nuvola</b> di punti, con un <b>centro</b> (dove stanno mediamente) e
+      una certa <b>larghezza/forma</b> (quanto sono sparpagliati). L'LDA fa proprio questo: <mark>descrive ogni classe
+      come una nuvola — un centro e una forma — e poi, dato un nuovo punto, gli chiede: «a quale nuvola appartieni più
+      probabilmente?»</mark> e lo assegna a quella. Tutto qui. Il resto è mettere questa idea in formule, con delicatezza.
+    </p>
+  </div>
+
+  <h3>Passo 1 — descrivere ogni classe con una gaussiana</h3>
+  <p>
+    Per «descrivere una nuvola» serve un modo matematico. LDA usa la <b>gaussiana</b> (la famosa curva «a campana»):
+    è la forma che assumono naturalmente tanti dati sparsi attorno a un valore tipico. Una gaussiana è definita da due
+    ingredienti, ed entrambi hanno un significato concreto e visibile:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I due ingredienti di una nuvola <span class="tag">centro + forma</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>media</b> $\mu_k$ — il centro della nuvola della classe $k$</dt>
+        <dd>è il «punto tipico» di quella classe: la media di tutte le sue caratteristiche. Se la classe «benigno» ha
+            in media tumori piccoli in pazienti giovani, $\mu_{\text{benigno}}$ è proprio lì. <mark>Il pedice $k$ vuol
+            dire «della classe $k$»</mark>: c'è una media per ogni classe.</dd>
+        <dt>la <b>covarianza</b> $\Sigma$ — la forma e la larghezza della nuvola</dt>
+        <dd>descrive <b>quanto</b> la nuvola è sparpagliata e in <b>che direzione</b> si allunga (è la versione a più
+            dimensioni della «varianza» che già conosci). Una $\Sigma$ «grande» = nuvola larga; una $\Sigma$ allungata
+            = nuvola a sigaro. <mark>La grande scelta dell'LDA: assume una <b>sola</b> $\Sigma$, uguale per tutte le
+            classi</mark> (le nuvole hanno forma diversa solo nella posizione del centro, non nella forma). Vedremo tra
+            poco che è proprio questa assunzione a rendere il confine una <b>retta</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non spaventarti della parola «covarianza»: pensala solo come «la forma della nuvola». Il suo ruolo qui è
+      permetterci di misurare la distanza in modo giusto — un punto lontano nella direzione in cui la nuvola è larga
+      «conta» meno di un punto lontano nella direzione in cui è stretta.
+    </div>
+  </div>
+
+  <h3>Passo 2 — girare la domanda con la regola di Bayes</h3>
+  <p>
+    Noi sappiamo descrivere quanto un punto è «tipico» di una classe (quanto è vicino al centro di quella nuvola). Ma
+    la domanda che ci interessa è l'<b>inversa</b>: dato il punto, <b>qual è la classe più probabile</b>? Per girare la
+    domanda si usa un'idea semplice e potentissima, la <b>regola di Bayes</b>. In parole:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La regola di Bayes, a parole <span class="tag">gira la domanda</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">
+      $$ \underbrace{P(\text{classe}\mid \text{punto})}_{\text{quello che vogliamo}} \;\propto\;
+         \underbrace{P(\text{punto}\mid \text{classe})}_{\text{quanto è tipico}} \;\times\;
+         \underbrace{P(\text{classe})}_{\text{quanto è comune}} $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>$P(\text{classe}\mid \text{punto})$ — quello che vogliamo</dt>
+        <dd>la barra verticale «$\mid$» si legge <b>«dato»</b>. Quindi: «probabilità della classe, <b>dato</b> il
+            punto». <mark>È la risposta che cerchiamo</mark>: assegneremo il punto alla classe per cui questo valore è
+            più alto.</dd>
+        <dt>$P(\text{punto}\mid \text{classe})$ — quanto è tipico</dt>
+        <dd>«probabilità del punto, dato che è di quella classe»: quanto quel punto è <b>tipico</b> della nuvola della
+            classe. Questo lo sappiamo calcolare con la gaussiana del Passo 1! Un punto vicino al centro $\mu_k$ ha
+            valore alto.</dd>
+        <dt>$P(\text{classe})$ — quanto è comune (la «prior»)</dt>
+        <dd>quanto quella classe è frequente <b>in generale</b>, prima ancora di guardare il punto. Se il 90 % delle
+            email è spam, questo pesa: a parità di tutto, «spam» è più probabile. <mark>Si stima con la frazione di
+            esempi di quella classe.</mark></dd>
+        <dt>il simbolo $\propto$ — «proporzionale a»</dt>
+        <dd>vuol dire «uguale a meno di un fattore comune a tutte le classi». Siccome noi vogliamo solo sapere <b>quale
+            classe vince</b> (non il valore esatto), quel fattore comune non conta e possiamo ignorarlo. <mark>Ci basta
+            confrontare il lato destro tra le classi e prendere la più grande.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In una frase sola: <mark>la classe più probabile è quella le cui nuvola «spiega» meglio il punto (lo trova
+      tipico) <b>e</b> che è anche abbastanza comune di suo.</mark> Bayes non fa che pesare queste due cose insieme.
+    </div>
+  </div>
+
+  <h3>Passo 3 — perché il confine viene dritto</h3>
+  <p>
+    Qui sta la parte bella, e il motivo del nome «lineare». Facciamo il conto per due classi. Il confine è dove le due
+    classi sono <b>ugualmente probabili</b> (di là vince una, di qua l'altra). Se scriviamo le due gaussiane con la
+    <b>stessa</b> $\Sigma$ e imponiamo che i due valori siano uguali, succede una piccola magia algebrica:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La funzione discriminante lineare <span class="tag">i termini curvi si cancellano</span></div>
+    <p style="text-align:center; font-size:1.1rem; margin:.5rem 0 1rem">
+      $$ \delta_k(x) = x^\top \Sigma^{-1}\mu_k \;-\; \tfrac{1}{2}\,\mu_k^\top \Sigma^{-1}\mu_k \;+\; \log P(\text{classe }k) $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>$\delta_k(x)$ — il «punteggio» della classe $k$ per il punto $x$</dt>
+        <dd>è un numero: <mark>quanto il punto $x$ «tira» verso la classe $k$.</mark> Si calcola per ogni classe, e si
+            assegna il punto alla classe col <b>punteggio più alto</b>. (Deriva dal prendere il logaritmo di Bayes del
+            Passo 2 — il log trasforma le moltiplicazioni in somme, più comode.)</dd>
+        <dt>$x^\top \Sigma^{-1}\mu_k$ — il termine che cambia da classe a classe</dt>
+        <dd>senza spaventarci: è un modo di misurare <b>quanto il punto $x$ è allineato col centro $\mu_k$</b>, tenendo
+            conto della forma della nuvola ($\Sigma^{-1}$ «corregge» le distanze per la forma). L'apice $\top$ è la
+            <b>trasposta</b> (serve solo a far combaciare le forme nel prodotto, come visto al cap. 4). La cosa cruciale:
+            <mark>$x$ compare qui una volta sola, elevato alla prima</mark> — non c'è nessun $x^2$.</dd>
+        <dt>il fatto che non ci sia $x^2$ — ecco la retta</dt>
+        <dd>quando le due classi hanno la <b>stessa</b> $\Sigma$, i termini con $x^2$ (che ci sarebbero nella gaussiana)
+            sono <b>identici</b> per le due classi e, nel confronto, <b>si cancellano</b>. Resta solo $x$ alla prima:
+            e un'equazione dove $x$ compare alla prima potenza descrive una <b>retta</b> (o un piano). <mark>Ecco perché
+            il confine dell'LDA è dritto</mark> — è tutto merito dell'assunzione «una sola $\Sigma$».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve saper rifare questi passaggi a memoria. Serve capire la <b>storia</b>: descrivo le classi come nuvole
+      gaussiane con la stessa forma → uso Bayes per chiedere «quale classe?» → i termini quadratici si cancellano → il
+      confine è una <b>retta</b>. Questa è la LDA.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>QDA e il confronto</h2>
+
+  <p class="lead">
+    Cosa succede se togliamo l'assunzione «una sola forma per tutte»? Otteniamo la QDA — e un confine che si incurva.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> QDA: ogni classe con la sua forma</div>
+    <p style="margin-bottom:0">
+      La <b>QDA</b> («Quadratic Discriminant Analysis», analisi discriminante <b>quadratica</b>) è identica alla LDA in
+      tutto — nuvole gaussiane, regola di Bayes — tranne un dettaglio: <mark>ogni classe ha la <b>sua</b> covarianza
+      $\Sigma_k$</mark> (la sua forma), non una condivisa. Sembra poco, ma cambia il finale: ora i termini con $x^2$
+      delle due classi <b>non</b> sono più identici, quindi <b>non si cancellano</b>. Resta $x^2$ nell'equazione del
+      confine — e un'equazione con $x^2$ descrive una <b>curva</b> (una parabola, un'ellisse…). Ecco perché il confine
+      della QDA è <b>curvo</b>: la «Q» sta per «quadratica».
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">LDA o QDA? Il solito compromesso <span class="tag">flessibilità vs stabilità</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>LDA</b> — confine dritto, poche cose da stimare</dt>
+        <dd>assume una sola forma di nuvola: deve stimare <b>meno</b> parametri, quindi è più <b>stabile</b> e va bene
+            anche con pochi dati. Ma se le classi hanno forme davvero diverse, la retta è troppo rigida
+            (<mark>più bias</mark>).</dd>
+        <dt><b>QDA</b> — confine curvo, più cose da stimare</dt>
+        <dd>una forma per ogni classe: <b>più flessibile</b>, cattura confini curvi. Ma deve stimare una covarianza per
+            classe — <b>molti più numeri</b> — quindi serve <b>più dati</b> per stimarli bene, altrimenti
+            overfitta (<mark>più varianza</mark>).</dd>
+        <dt>quale scegliere?</dt>
+        <dd>la solita risposta onesta del machine learning: <mark>dipende, e lo decidi con la validazione</mark>
+            (cap. 3). Con pochi dati o classi dalla forma simile, spesso vince l'LDA per la sua stabilità; con tanti
+            dati e forme diverse, la QDA può fare meglio.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota il tema ricorrente: <b>più flessibile richiede più dati.</b> Ogni parametro in più che un modello deve
+      stimare è una richiesta di più esempi per stimarlo bene. È un principio che ritroverai in ogni modello del libro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget vedi due classi (due nuvole di punti) e il confine decisionale. Con un tocco passi da LDA (confine
+    <b>dritto</b>) a QDA (confine <b>curvo</b>) e vedi con gli occhi la differenza di cui abbiamo parlato.
+  </p>
+
+  <div class="widget" id="w-lda">
+    <div class="w-head">
+      <span>Il confine decisionale: dritto o curvo</span>
+      <span class="hint">LDA usa una forma sola, QDA una per classe</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <div style="display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem">
+        <button class="btn" data-mode="lda">LDA (confine dritto)</button>
+        <button class="btn ghost" data-mode="qda">QDA (confine curvo)</button>
+      </div>
+      <svg id="ld-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+    </div>
+    <div class="w-readout" id="ld-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">discriminante.py</div>
+    <pre><span class="kw">from</span> sklearn.discriminant_analysis <span class="kw">import</span> (
+    LinearDiscriminantAnalysis,      <span class="cm"># LDA: confine dritto</span>
+    QuadraticDiscriminantAnalysis )  <span class="cm"># QDA: confine curvo</span>
+
+lda <span class="op">=</span> <span class="fn">LinearDiscriminantAnalysis</span>()
+lda.<span class="fn">fit</span>(X, y)                       <span class="cm"># y qui sono CLASSI (es. 0/1), non numeri</span>
+
+<span class="cm"># .predict dà la classe; .predict_proba dà la fiducia per ciascuna classe</span>
+<span class="bi">print</span>(lda.<span class="fn">predict</span>(X_nuovi))          <span class="cm"># es. [0 1 1 0]</span>
+<span class="bi">print</span>(lda.<span class="fn">predict_proba</span>(X_nuovi))    <span class="cm"># es. [[0.9 0.1] ...] → 90% classe 0</span>
+
+<span class="cm"># QDA: stessa identica interfaccia, confine curvo</span>
+qda <span class="op">=</span> <span class="fn">QuadraticDiscriminantAnalysis</span>().<span class="fn">fit</span>(X, y)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: la <b>LDA</b> separa le due nuvole con una <b>retta</b>; passando a <b>QDA</b>, il confine si
+      <b>incurva</b> per adattarsi meglio alle forme diverse delle due nuvole. Da che lato del confine cade un punto,
+      quella è la classe prevista. Nel codice: <code>.fit(X, y)</code> con <code>y</code> = classi (non numeri!),
+      <code>.predict</code> per la classe e <code>.predict_proba</code> per la <b>fiducia</b> di cui parlavamo in §7.1.
+      LDA e QDA hanno la stessa interfaccia: cambi una parola e cambi la forma del confine. Hai messo le fondamenta
+      della classificazione: classi, confine decisionale, e l'idea «descrivi ogni classe, poi assegna alla più
+      probabile». Nel prossimo capitolo un classificatore che affronta il problema da un'angolazione diversa e
+      popolarissima: la <b>regressione logistica</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li><b>Classificazione</b> = prevedere una <b>categoria</b> (classe), non un numero. Una previsione è giusta o
+          sbagliata; spesso si dà anche una <b>probabilità</b> di fiducia (§7.1).</li>
+      <li>Il <b>confine decisionale</b> è la frontiera che divide lo spazio in regioni: da che lato cade un punto, quella
+          è la sua classe. La sua <b>forma</b> dice quanto è flessibile il modello (§7.2).</li>
+      <li><b>LDA</b>: descrivi ogni classe come una nuvola gaussiana (centro $\mu_k$ + forma $\Sigma$ <b>condivisa</b>),
+          usa Bayes per chiedere «quale classe?». I termini $x^2$ si cancellano → confine <b>dritto</b> (§7.3).</li>
+      <li><b>QDA</b>: una forma $\Sigma_k$ <b>per classe</b> → i termini $x^2$ restano → confine <b>curvo</b>. Più
+          flessibile ma richiede più dati: il solito compromesso bias-varianza (§7.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo mosso i primi passi nella classificazione descrivendo le classi come nuvole. Ma c'è un altro modo di
+    affrontare lo stesso problema, forse ancora più diffuso, che invece di descrivere le classi <b>modella
+    direttamente la probabilità</b> di appartenere a una classe con una curva a «S». Nel <strong>Capitolo 8</strong>
+    conosciamo la <b>regressione logistica</b>: capiremo cos'è quella curva a S (la sigmoide), perché è perfetta per le
+    probabilità, e come il modello impara — sempre spiegando ogni simbolo con la solita, paziente cura.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza di fondo tra regressione e classificazione? Fai un esempio di problema per ciascuna.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Cos'è un «confine decisionale»? Come lo usa il modello per assegnare una classe a un nuovo punto?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      L'LDA descrive ogni classe come una nuvola gaussiana. Quali sono i suoi due «ingredienti», e cosa significa
+      ciascuno? Qual è l'assunzione chiave dell'LDA che rende il suo confine una retta?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      In che cosa la QDA differisce dalla LDA? Perché il suo confine è curvo? In quale situazione conviene preferire la
+      LDA nonostante sia meno flessibile?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.5</div>
+    <p style="margin-bottom:0">
+      Nella regola di Bayes $P(\text{classe}\mid \text{punto}) \propto P(\text{punto}\mid \text{classe})\,P(\text{classe})$,
+      cosa rappresenta il fattore $P(\text{classe})$ (la «prior»)? Con un esempio, spiega perché può cambiare la
+      decisione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      Nella <b>regressione</b> l'obiettivo $y$ è un <b>numero</b> continuo (es. prevedere il prezzo di una casa); nella
+      <b>classificazione</b> $y$ è una <b>categoria</b> presa da un elenco finito (es. dire se un'email è spam o no).
+      La differenza pratica: in regressione una previsione può essere «vicina» alla verità, in classificazione è
+      semplicemente giusta o sbagliata (le classi non hanno un ordine o una distanza tra loro).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <p style="margin-bottom:0">
+      Il <b>confine decisionale</b> è la linea (o superficie) che divide lo spazio delle caratteristiche nelle regioni
+      assegnate a ciascuna classe. Dato un nuovo punto, il modello guarda <b>da che lato del confine</b> cade e gli
+      assegna la classe di quella regione. Capire la <b>forma</b> del confine (dritto o curvo) è spesso il modo migliore
+      per capire come si comporta un classificatore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      I due ingredienti sono la <b>media</b> $\mu_k$ — il <b>centro</b> della nuvola della classe (il suo punto tipico)
+      — e la <b>covarianza</b> $\Sigma$ — la <b>forma e larghezza</b> della nuvola (quanto e in che direzione è
+      sparpagliata). L'assunzione chiave dell'LDA è che tutte le classi abbiano la <b>stessa</b> covarianza $\Sigma$
+      (stessa forma, cambia solo il centro): con questa assunzione, nel confronto tra classi i termini con $x^2$ si
+      cancellano e resta solo $x$ alla prima potenza, cioè un confine <b>rettilineo</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      La <b>QDA</b> dà a <b>ogni classe la sua</b> covarianza $\Sigma_k$ (una forma per classe), invece di una
+      condivisa. Così i termini con $x^2$ delle diverse classi non si cancellano più: restano nell'equazione del
+      confine, che perciò diventa <b>curvo</b> (quadratico). Conviene preferire la <b>LDA</b> quando i dati sono
+      <b>pochi</b> (o le classi hanno forme simili): stimando meno parametri, è più stabile e rischia meno di
+      overfittare, mentre la QDA — con molti più parametri da stimare — avrebbe bisogno di più dati per funzionare bene.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.5</div>
+    <p style="margin-bottom:0">
+      $P(\text{classe})$, la <b>prior</b>, è quanto una classe è <b>frequente in generale</b>, prima di guardare il
+      punto specifico; si stima con la frazione di esempi di quella classe. Cambia la decisione perché pesa a favore
+      delle classi comuni. Esempio: una malattia rara colpisce 1 persona su 1000. Anche se un test rende un paziente
+      «un po' più simile» ai malati, la prior molto bassa della malattia può far sì che «sano» resti la previsione più
+      probabile — a meno che l'evidenza dal punto sia davvero forte. La prior evita di gridare al lupo per ogni minimo
+      indizio quando la classe è rara.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.5 — confine decisionale LDA (dritto) vs QDA (curvo).
+   Due classi gaussiane; boundary calcolato in JS dai discriminanti di Bayes.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('ld-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('ld-out');
+
+  // due nuvole con FORMA diversa (così LDA e QDA differiscono visibilmente)
+  const C0 = [ // classe 0 (blu) — tonda
+    [2.0,2.5],[2.8,3.2],[3.5,2.8],[2.2,3.8],[3.8,3.6],
+    [3.0,2.2],[2.5,3.0],[3.3,3.9],[1.8,2.9],[3.6,2.5],[2.6,2.0],[3.1,3.4]
+  ];
+  const C1 = [ // classe 1 (arancio) — allungata sulla diagonale
+    [5.0,4.2],[6.5,6.2],[7.2,6.8],[5.6,5.0],[6.8,6.4],
+    [7.6,7.2],[5.2,4.6],[6.2,5.6],[7.0,6.6],[6.0,5.4],[5.4,4.8],[6.9,6.9]
+  ];
+  const XMIN=0, XMAX=9, YMIN=0, YMAX=9;
+
+  // --- algebra 2x2 ---
+  function mean(P){let sx=0,sy=0;P.forEach(function(p){sx+=p[0];sy+=p[1];});return[sx/P.length,sy/P.length];}
+  function cov(P,m){let a=0,b=0,c=0;P.forEach(function(p){const dx=p[0]-m[0],dy=p[1]-m[1];a+=dx*dx;b+=dx*dy;c+=dy*dy;});
+    const n=P.length-1;a=a/n+0.15;c=c/n+0.15;b=b/n;return[[a,b],[b,c]];}
+  function inv2(M){const d=M[0][0]*M[1][1]-M[0][1]*M[1][0];return[[M[1][1]/d,-M[0][1]/d],[-M[1][0]/d,M[0][0]/d]];}
+  function det2(M){return M[0][0]*M[1][1]-M[0][1]*M[1][0];}
+
+  const m0=mean(C0), m1=mean(C1);
+  const S0=cov(C0,m0), S1=cov(C1,m1);
+  // covarianza condivisa (pooled) per LDA
+  const Sp=[[(S0[0][0]+S1[0][0])/2,(S0[0][1]+S1[0][1])/2],[(S0[1][0]+S1[1][0])/2,(S0[1][1]+S1[1][1])/2]];
+
+  // g(x,y) = delta1 - delta0. Restituisce coeff del quadratico in (x,y):
+  // g = A x^2 + B y^2 + C xy + D x + E y + F.  Boundary: g=0.
+  function coeffs(P1,P0){ // P = inverse covariance della classe
+    const Q=[[0.5*(P0[0][0]-P1[0][0]),0.5*(P0[0][1]-P1[0][1])],
+             [0.5*(P0[1][0]-P1[1][0]),0.5*(P0[1][1]-P1[1][1])]];
+    const A=Q[0][0], B=Q[1][1], C=Q[0][1]+Q[1][0];
+    // termine lineare: P1 m1 - P0 m0
+    const L=[P1[0][0]*m1[0]+P1[0][1]*m1[1] - (P0[0][0]*m0[0]+P0[0][1]*m0[1]),
+             P1[1][0]*m1[0]+P1[1][1]*m1[1] - (P0[1][0]*m0[0]+P0[1][1]*m0[1])];
+    const D=L[0], E=L[1];
+    function quad(m,P){return P[0][0]*m[0]*m[0]+2*P[0][1]*m[0]*m[1]+P[1][1]*m[1]*m[1];}
+    let F=-0.5*quad(m1,P1)+0.5*quad(m0,P0);
+    return {A:A,B:B,C:C,D:D,E:E,F:F};
+  }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function boundaryPts(k){ // per ogni x, risolvi il quadratico in y
+    const segs=[[]];
+    for(let x=XMIN;x<=XMAX;x+=0.05){
+      // B y^2 + (C x + E) y + (A x^2 + D x + F) = 0
+      const a=k.B, b=k.C*x+k.E, c=k.A*x*x+k.D*x+k.F;
+      let ys=[];
+      if(Math.abs(a)<1e-9){ if(Math.abs(b)>1e-9) ys=[-c/b]; }
+      else { const disc=b*b-4*a*c; if(disc>=0){const s=Math.sqrt(disc); ys=[(-b+s)/(2*a),(-b-s)/(2*a)];} }
+      ys.forEach(function(y){ if(y>=YMIN&&y<=YMAX) segs[0].push([x,y]); });
+    }
+    // ordina per x per una polilinea pulita (per LDA/QDA a un ramo va bene)
+    segs[0].sort(function(u,v){return u[0]-v[0];});
+    return segs[0];
+  }
+
+  function draw(mode){
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    const P1 = mode==='lda'? inv2(Sp): inv2(S1);
+    const P0 = mode==='lda'? inv2(Sp): inv2(S0);
+    const k = coeffs(P1,P0);
+    const bp = boundaryPts(k);
+    if(bp.length>1) p.poly(bp, { color:'var(--ink)', width:2.4, dash:'6 4', close:false });
+    C0.forEach(function(pt){ p.dot(pt[0],pt[1],{ color:'var(--accent)', r:4.5 }); });
+    C1.forEach(function(pt){ p.dot(pt[0],pt[1],{ color:'var(--warm)', r:4.5 }); });
+    p.dot(m0[0],m0[1],{ color:'var(--accent)', r:7, stroke:'#fff', sw:2 });
+    p.dot(m1[0],m1[1],{ color:'var(--warm)', r:7, stroke:'#fff', sw:2 });
+
+    let msg;
+    if(mode==='lda') msg='<b>LDA</b>: una sola forma di nuvola per entrambe le classi → il confine (tratteggiato) è una <b>retta</b>. Semplice e stabile. I cerchi grandi sono i centri μ delle due nuvole.';
+    else msg='<b>QDA</b>: ogni classe ha la <b>sua</b> forma → il confine si <b>incurva</b> per seguire meglio le nuvole. Più flessibile, ma con più numeri da stimare (serve più dati).';
+    out.innerHTML = '<div style="font-size:.9rem; text-align:left">'+msg+
+      ' <span style="color:var(--ink-soft)">Blu = classe 0, arancio = classe 1. Un nuovo punto prende la classe del lato su cui cade.</span></div>';
+  }
+
+  document.querySelectorAll('#w-lda .btn[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#w-lda .btn[data-mode]').forEach(function (x) { x.classList.add('ghost'); });
+      b.classList.remove('ghost');
+      draw(b.getAttribute('data-mode'));
+    });
+  });
+  draw('lda');
+})();
+</script>
+</body>
+</html>
