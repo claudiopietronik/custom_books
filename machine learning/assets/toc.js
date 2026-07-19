@@ -285,7 +285,7 @@ const TOC = [
     n: 19,
     titolo: "Feature engineering e pipeline",
     file: "cap19-pipeline.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s19-1", n: "19.1", t: "Preparare i dati" },
       { id: "s19-2", n: "19.2", t: "Scaling, encoding, valori mancanti" },

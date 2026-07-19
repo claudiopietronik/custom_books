@@ -31,5 +31,5 @@ usano Python/scikit-learn.
 - [x] 16 — DBSCAN e Gaussian Mixture Models
 - [x] 17 — Riduzione della dimensionalità: PCA
 - [x] 18 — Valutare i modelli
-- [ ] 19 — Feature engineering e pipeline
+- [x] 19 — Feature engineering e pipeline
 - [ ] 20 — Un progetto completo

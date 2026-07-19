@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 · Feature engineering e pipeline — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="19">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 19</div>
+    <h1>Feature engineering e pipeline</h1>
+    <p class="standfirst">
+      C'è un segreto poco romantico ma verissimo del machine learning pratico: <mark>il modello conta meno di quanto
+      pensi; i <b>dati</b> contano moltissimo.</mark> Un modello mediocre su dati ben preparati batte quasi sempre un
+      modello sofisticato su dati grezzi. La preparazione dei dati — pulirli, portarli in scala, trasformare le
+      categorie in numeri, gestire i buchi, creare caratteristiche nuove e informative — è dove si vince o si perde una
+      partita reale, e dove i professionisti passano la maggior parte del tempo. In questo capitolo impariamo questo
+      «mestiere sporco» ma decisivo: preparare i dati (§19.1); le tre operazioni fondamentali — <b>scaling</b>,
+      <b>encoding</b> delle categorie, gestione dei <b>valori mancanti</b> (§19.2); come incatenare tutto in modo pulito
+      e <b>sicuro</b> con le <b>pipeline</b> di scikit-learn — che, tra l'altro, prevengono il temuto data leakage del
+      capitolo 18 (§19.3); e come cercare automaticamente le migliori impostazioni con la <b>ricerca degli
+      iperparametri</b> (§19.4). Meno formule, più pratica concreta: il ponte tra la teoria e un progetto che funziona.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Preparare i dati</b> (§19.1), <b>scaling, encoding, valori mancanti</b> (§19.2), le <b>pipeline</b> di
+      scikit-learn (§19.3), la <b>ricerca degli iperparametri</b> (§19.4). Nel laboratorio (§19.5) esplori una griglia
+      di iperparametri e trovi la combinazione migliore.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: qui si vince la partita</div>
+    <p style="margin-bottom:0">
+      <mark>La preparazione dei dati è dove i professionisti passano l'80% del tempo, ed è ciò che più incide sul
+      risultato finale.</mark> E le pipeline non sono un vezzo: sono lo strumento che rende il tuo lavoro
+      <b>riproducibile</b>, <b>pulito</b> e soprattutto <b>al riparo</b> dagli errori subdoli (come il data leakage) che
+      falsano le valutazioni. Saperle usare è il segno di chi lavora bene.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-1"><span class="secnum">Sezione 19.1</span>Preparare i dati</h2>
+
+  <p class="lead">
+    I dati del mondo reale arrivano quasi sempre <b>«sporchi»</b>: incompleti, in formati misti, su scale diverse, con
+    errori. Prima di darli in pasto a qualsiasi modello, vanno messi in ordine. E si può fare di più: <b>creare</b>
+    caratteristiche nuove che aiutino il modello.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Feature engineering: dare al modello indizi migliori</div>
+    <p style="margin-bottom:0">
+      Il <b>feature engineering</b> è l'arte di <b>trasformare e creare caratteristiche</b> per rendere lo schema più
+      facile da cogliere. Un modello vede solo i numeri che gli dai: <mark>se glieli presenti nella forma giusta, il suo
+      lavoro diventa molto più facile.</mark> Esempi concreti: da una <b>data</b> di nascita estrarre l'<b>età</b> (più
+      utile della data grezza); da un <b>indirizzo</b> ricavare il <b>quartiere</b>; da «peso» e «altezza» costruire
+      l'indice di massa corporea; separare una parte fissa e una variabile. È spesso qui che la conoscenza del
+      <b>dominio</b> (la medicina, la finanza, il settore specifico) fa la differenza più grande — più che la scelta
+      dell'algoritmo. <mark>Un buon indizio, dato al modello, vale più di un modello più potente.</mark>
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Garbage in, garbage out»</div>
+    <p style="margin-bottom:0">
+      Un principio antico dell'informatica, sacrosanto qui: <mark>spazzatura in ingresso, spazzatura in uscita.</mark>
+      Nessun modello, per quanto avanzato, può estrarre uno schema affidabile da dati sbagliati, incoerenti o mal
+      preparati. Al contrario, dati puliti e ben congegnati fanno brillare anche un modello semplice. Ecco perché la
+      preparazione non è un noioso preliminare, ma <b>il cuore</b> del lavoro pratico.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-2"><span class="secnum">Sezione 19.2</span>Scaling, encoding, valori mancanti</h2>
+
+  <p class="lead">
+    Tre operazioni di preparazione tornano in quasi ogni progetto. Vediamole una a una, con il loro perché.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">⚖</span> Scaling: portare tutto alla stessa scala</div>
+    <p style="margin-bottom:0">
+      Abbiamo già incontrato il problema (k-NN, SVM, PCA): se una caratteristica è misurata in migliaia (lo stipendio) e
+      un'altra in unità (l'età), la prima <b>domina</b> per la sola unità di misura. La <b>standardizzazione</b> porta
+      ogni caratteristica a <b>media 0 e deviazione 1</b> (sottrai la media, dividi per la deviazione standard): così
+      <mark>tutte «pesano» allo stesso modo.</mark> È <b>obbligatoria</b> per tutti i metodi basati su distanze o
+      varianza (k-NN, SVM, k-means, PCA, regressione regolarizzata); gli alberi e i loro ensemble, invece, non ne hanno
+      bisogno (guardano le soglie, non le distanze). Nel dubbio, standardizza: non fa male.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔤</span> Encoding: trasformare le categorie in numeri</div>
+    <p style="margin-bottom:0">
+      I modelli lavorano con <b>numeri</b>, ma molti dati sono <b>categorie</b> testuali («rosso/verde/blu»,
+      «Milano/Roma»). Vanno tradotti in numeri, e il modo giusto conta. La trappola: <mark>assegnare rosso=1, verde=2,
+      blu=3 <b>inventa un ordine</b> e delle distanze che non esistono</mark> (blu non è «il triplo» di rosso, né «più
+      lontano» dal verde). La soluzione standard è il <b>one-hot encoding</b>: creare una colonna sì/no per ogni
+      categoria («è rosso? 0/1», «è verde? 0/1», …). Così nessuna categoria è artificialmente «più grande» di un'altra.
+      Per le categorie con un ordine <b>vero</b> (basso &lt; medio &lt; alto), invece, un numero ordinato va bene.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🕳</span> Valori mancanti: riempire i buchi</div>
+    <p style="margin-bottom:0">
+      I dati reali hanno spesso <b>buchi</b> (un valore non registrato, un campo vuoto). Molti modelli non li tollerano.
+      Le strategie: <b>eliminare</b> le righe/colonne con buchi (semplice, ma spreca dati), o — più spesso —
+      <b>imputare</b>, cioè riempire il buco con una stima ragionevole: <mark>la media o la mediana della colonna per i
+      numeri, il valore più frequente per le categorie</mark>, o metodi più sofisticati. A volte è utile anche
+      aggiungere una colonnina «era mancante? sì/no», perché <b>il fatto stesso</b> che un dato mancasse può essere
+      informativo (un esame non fatto racconta qualcosa).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-3"><span class="secnum">Sezione 19.3</span>Le pipeline di scikit-learn</h2>
+
+  <p class="lead">
+    Ora il pezzo che tiene tutto insieme e previene un errore pericoloso. Tutte queste operazioni vanno fatte
+    nell'ordine giusto e — attenzione — <b>imparate solo dal training</b>. Le <b>pipeline</b> lo garantiscono
+    automaticamente.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Una catena di operazioni, un unico oggetto</div>
+    <p style="margin-bottom:0">
+      Una <b>pipeline</b> incatena i passaggi (imputa i mancanti → codifica le categorie → standardizza → addestra il
+      modello) in <b>un solo oggetto</b> con la solita interfaccia <code>fit</code>/<code>predict</code>. <mark>Chiami
+      <code>fit</code> una volta e la pipeline esegue tutti i passaggi in ordine; chiami <code>predict</code> e li
+      riapplica identici ai nuovi dati.</mark> Vantaggi enormi: il codice è pulito e leggibile, non dimentichi passaggi,
+      applichi <b>esattamente</b> le stesse trasformazioni a training e test, e puoi trattare l'intera catena come un
+      unico modello (per la cross-validation, per salvarla, per metterla in produzione).
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🛡</span> Il vero motivo: niente data leakage</div>
+    <p style="margin-bottom:0">
+      Ecco il beneficio più importante, che collega tutto al capitolo 18. Ricorda: standardizzare o imputare significa
+      <b>calcolare qualcosa dai dati</b> (una media, una deviazione). Se lo calcoli su <b>tutti</b> i dati prima di
+      dividere, il test «sbircia» — <b>data leakage</b> — e la tua valutazione diventa una bugia ottimista. <mark>La
+      pipeline risolve alla radice: durante la cross-validation, <b>impara le trasformazioni solo sulla parte di
+      training</b> di ogni fold, e le applica alla parte di test <b>senza mai guardarla in fase di calcolo</b>.</mark>
+      Fai la cosa giusta automaticamente, ogni volta. È questa la ragione numero uno per cui i professionisti usano
+      <b>sempre</b> le pipeline, non solo per eleganza.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-4"><span class="secnum">Sezione 19.4</span>Ricerca degli iperparametri</h2>
+
+  <p class="lead">
+    Quasi ogni modello ha delle «manopole» da regolare — le abbiamo incontrate una per una: il grado del polinomio, il
+    $\lambda$ di Ridge, il $k$ del k-NN, il $C$ e $\gamma$ dell'SVM, la profondità e il learning rate del boosting.
+    Come trovare i valori migliori? Provando, ma in modo <b>sistematico</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Iperparametri: le impostazioni che scegli tu</div>
+    <p style="margin-bottom:0">
+      Distinzione utile: i <b>parametri</b> (come i pesi $\beta$) li impara il modello dai dati; gli <b>iperparametri</b>
+      (grado, $\lambda$, $k$, $C$…) li scegli <b>tu</b> prima dell'allenamento, e controllano la <b>complessità</b> del
+      modello — cioè il compromesso bias-varianza. <mark>Non esiste un valore giusto universale: dipende dai dati e va
+      trovato provando.</mark> La regola d'oro: si prova ogni combinazione con la <b>cross-validation</b> (cap. 18) e si
+      tiene quella con la stima migliore — <b>mai</b> guardando il test set finale, che resta sigillato per il giudizio
+      conclusivo.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Due strategie di ricerca <span class="tag">griglia o casuale</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Grid Search</b> — prova tutte le combinazioni di una griglia</dt>
+        <dd>elenchi alcuni valori candidati per ogni iperparametro (es. $C \in \{0{,}1, 1, 10\}$ e
+            $\gamma \in \{0{,}01, 0{,}1, 1\}$) e <mark>provi <b>tutte</b> le combinazioni</mark> (qui $3\times 3 = 9$),
+            valutando ognuna in cross-validation. Esaustivo e semplice, ma il numero di combinazioni <b>esplode</b> con
+            tanti iperparametri.</dd>
+        <dt><b>Random Search</b> — prova combinazioni a caso</dt>
+        <dd>invece di tutta la griglia, provi un numero fissato di combinazioni <b>estratte a caso</b>. Sorprendentemente,
+            <mark>con lo stesso budget di prove trova spesso soluzioni buone quanto (o meglio di) la griglia</mark>,
+            perché non spreca prove su valori che contano poco. È la scelta pratica quando gli iperparametri sono molti.</dd>
+        <dt>metodi più furbi</dt>
+        <dd>esistono tecniche che «imparano dove cercare» (ottimizzazione bayesiana — ricordi i Gaussian Processes del
+            cap. 11? servono anche a questo), concentrando le prove nelle zone promettenti. Utili quando ogni allenamento
+            è costoso.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      In scikit-learn: <code>GridSearchCV</code> e <code>RandomizedSearchCV</code> fanno tutto — provano le
+      combinazioni, ognuna in cross-validation, e ti restituiscono la migliore già riallenata. <mark>E se ci metti
+      dentro una <b>pipeline</b>, la ricerca è automaticamente al riparo dal data leakage</mark>: la combinazione
+      perfetta dei due strumenti di questo capitolo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-5"><span class="secnum">Sezione 19.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Nel widget esplori una <b>griglia</b> di iperparametri (come farebbe una Grid Search): ogni cella è una combinazione,
+    colorata secondo il suo punteggio in cross-validation. <b>Clicca le celle</b> per leggerne il valore e trova la
+    migliore (la ⭐).
+  </p>
+
+  <div class="widget" id="w-grid">
+    <div class="w-head">
+      <span>Grid Search: la mappa degli iperparametri</span>
+      <span class="hint">clicca una combinazione per vederne il punteggio</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="gs-svg" viewBox="0 0 460 340" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+    </div>
+    <div class="w-readout" id="gs-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">pipeline.py</div>
+    <pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.impute <span class="kw">import</span> SimpleImputer
+<span class="kw">from</span> sklearn.svm <span class="kw">import</span> SVC
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> GridSearchCV
+
+<span class="cm"># la catena: riempi i buchi → standardizza → addestra. Un solo oggetto.</span>
+pipe <span class="op">=</span> <span class="fn">Pipeline</span>([
+    (<span class="st">"imputa"</span>, <span class="fn">SimpleImputer</span>(strategy<span class="op">=</span><span class="st">"median"</span>)),
+    (<span class="st">"scala"</span>,  <span class="fn">StandardScaler</span>()),
+    (<span class="st">"modello"</span>, <span class="fn">SVC</span>()),
+])
+
+<span class="cm"># cerca i migliori iperparametri IN cross-validation, senza data leakage</span>
+griglia <span class="op">=</span> {<span class="st">"modello__C"</span>: [<span class="nm">0.1</span>, <span class="nm">1</span>, <span class="nm">10</span>], <span class="st">"modello__gamma"</span>: [<span class="nm">0.01</span>, <span class="nm">0.1</span>, <span class="nm">1</span>]}
+ricerca <span class="op">=</span> <span class="fn">GridSearchCV</span>(pipe, griglia, cv<span class="op">=</span><span class="nm">5</span>, scoring<span class="op">=</span><span class="st">"f1"</span>)
+ricerca.<span class="fn">fit</span>(X_train, y_train)
+<span class="bi">print</span>(ricerca.best_params_)      <span class="cm"># la combinazione vincente</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: la griglia mostra come il punteggio cambi con gli iperparametri — celle chiare (scarse, verso
+      underfitting o overfitting ai bordi) e celle scure (buone), con una <b>⭐</b> sulla migliore. È esattamente ciò che
+      fa <code>GridSearchCV</code>, valutando ogni cella in cross-validation. Nel codice: la <code>Pipeline</code> che
+      incatena imputazione, scaling e modello (niente leakage), e <code>GridSearchCV</code> che ci cerca dentro la
+      combinazione migliore. Hai gli strumenti del mestiere: preparare i dati e orchestrare tutto in modo pulito e
+      sicuro. Nel <b>capitolo finale</b> mettiamo insieme <b>tutto</b> il libro in un progetto completo, dall'inizio
+      alla fine, come in un caso reale.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 19</div>
+    <ol style="margin-bottom:0">
+      <li>I <b>dati</b> contano più del modello: il <b>feature engineering</b> (trasformare/creare caratteristiche con
+          la conoscenza del dominio) è spesso ciò che fa la differenza. «Garbage in, garbage out» (§19.1).</li>
+      <li>Tre preparazioni ricorrenti: <b>scaling</b> (stessa scala, per metodi a distanza/varianza), <b>encoding</b>
+          delle categorie (one-hot, per non inventare ordini), gestione dei <b>valori mancanti</b> (eliminare o
+          imputare) (§19.2).</li>
+      <li>Le <b>pipeline</b> incatenano i passaggi in un unico oggetto <code>fit</code>/<code>predict</code>, e —
+          fondamentale — <b>imparano le trasformazioni solo dal training</b>, prevenendo il <b>data leakage</b> (§19.3).</li>
+      <li>Gli <b>iperparametri</b> (le manopole che scegli tu) si cercano con <b>Grid</b> o <b>Random Search</b>,
+          valutando ogni combinazione in <b>cross-validation</b> — meglio se dentro una pipeline (§19.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai completato la cassetta degli attrezzi del professionista: sai preparare i dati, incatenare le operazioni senza
+    errori, cercare le impostazioni migliori e valutare con onestà. Ti manca solo un'ultima cosa: vedere <b>tutto questo
+    insieme</b>, dall'inizio alla fine, su un problema concreto. Nel <strong>Capitolo 20</strong>, il gran finale,
+    affrontiamo un <b>progetto completo</b> come nella realtà: dai dati grezzi alla domanda, passando per esplorazione,
+    preparazione, scelta e confronto dei modelli, valutazione onesta e interpretazione dei risultati. Tutto il libro, in
+    un unico filo conduttore.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-6"><span class="secnum">Sezione 19.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.1</div>
+    <p style="margin-bottom:0">
+      Cos'è il feature engineering? Fai due esempi di caratteristiche «create» a partire da dati grezzi che potrebbero
+      aiutare un modello.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.2</div>
+    <p style="margin-bottom:0">
+      Perché codificare le categorie «rosso/verde/blu» come 1/2/3 è problematico? Qual è l'alternativa corretta e perché
+      funziona meglio?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.3</div>
+    <p style="margin-bottom:0">
+      Per quali tipi di modello lo scaling è indispensabile e per quali no? Motiva.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.4</div>
+    <p style="margin-bottom:0">
+      Spiega perché usare una pipeline previene il data leakage durante la standardizzazione in cross-validation. Cosa
+      accadrebbe, in concreto, standardizzando prima di dividere training e test?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 19.5</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra parametri e iperparametri? Descrivi la differenza tra Grid Search e Random Search e quando
+      preferiresti la seconda.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s19-7"><span class="secnum">Sezione 19.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.1</div>
+    <p style="margin-bottom:0">
+      Il <b>feature engineering</b> è l'arte di trasformare e creare caratteristiche per rendere lo schema più facile da
+      cogliere per il modello. Due esempi: da una <b>data di nascita</b> ricavare l'<b>età</b> (più direttamente utile);
+      da <b>peso</b> e <b>altezza</b> costruire l'<b>indice di massa corporea</b> (una sintesi informativa che il modello
+      non dovrebbe «scoprire» da solo). In generale, sfruttare la conoscenza del dominio per fornire indizi già pronti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.2</div>
+    <p style="margin-bottom:0">
+      Codificarle 1/2/3 <b>inventa un ordine e delle distanze</b> che non esistono: il modello penserebbe che blu (3)
+      sia «maggiore» o «più lontano» da rosso (1) che da verde (2), il che è privo di senso per colori senza ordine.
+      L'alternativa corretta è il <b>one-hot encoding</b>: una colonna sì/no per ogni categoria («è rosso? 0/1», ecc.).
+      Funziona meglio perché tratta le categorie come alternative <b>simmetriche</b>, senza imporre ordini o distanze
+      artificiali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.3</div>
+    <p style="margin-bottom:0">
+      Lo scaling è <b>indispensabile</b> per i modelli basati su <b>distanze</b> o <b>varianza</b>: k-NN, SVM, k-means,
+      PCA, regressione regolarizzata (Ridge/Lasso). In questi, una caratteristica su scala molto grande dominerebbe il
+      calcolo per la sola unità di misura. <b>Non</b> è necessario per gli <b>alberi</b> e i loro ensemble (Random
+      Forest, boosting), perché decidono in base a <b>soglie</b> su una caratteristica alla volta e sono insensibili
+      alla scala.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.4</div>
+    <p style="margin-bottom:0">
+      Una pipeline, durante la cross-validation, calcola le statistiche di standardizzazione (media e deviazione)
+      <b>solo sulla parte di training</b> di ogni fold e le applica al fold di test senza mai usarlo per il calcolo:
+      così il test resta «non visto». Se invece si standardizzasse <b>prima</b> di dividere, la media e la deviazione
+      sarebbero calcolate anche sui dati di test: informazione del test «trapelerebbe» nell'allenamento (data leakage),
+      rendendo la valutazione falsamente ottimista e non rappresentativa delle prestazioni reali su dati nuovi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 19.5</div>
+    <p style="margin-bottom:0">
+      I <b>parametri</b> (es. i pesi $\beta$) sono appresi dal modello durante l'allenamento; gli <b>iperparametri</b>
+      (es. grado, $\lambda$, $k$, $C$) sono scelti dall'utente prima e controllano la complessità del modello. La
+      <b>Grid Search</b> prova <b>tutte</b> le combinazioni di una griglia di valori; la <b>Random Search</b> ne prova
+      un numero fissato estratte <b>a caso</b>. Si preferisce la Random Search quando gli iperparametri sono <b>molti</b>
+      (la griglia esploderebbe) o quando alcuni contano poco: con lo stesso budget di prove spesso trova soluzioni buone
+      quanto o migliori, senza sprecare tentativi.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §19.5 — Grid Search: heatmap 5×5 di punteggi CV su (C, gamma).
+   Punteggio sintetico con un massimo interno + bordi scarsi. Clic = leggi cella.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('gs-svg');
+  if (!svg) return;
+  const out = document.getElementById('gs-out');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const Cvals = [0.1, 1, 10, 100, 1000];
+  const Gvals = [0.001, 0.01, 0.1, 1, 10];
+  const n = 5;
+  // punteggio: massimo attorno a (C idx 2, gamma idx 2), decrescente ai bordi
+  function score(i,j){
+    const dc = (i-2), dg=(j-2);
+    let s = 0.94 - 0.05*(dc*dc) - 0.055*(dg*dg) + 0.012*Math.sin(i*3.1+j*1.7);
+    return Math.max(0.55, Math.min(0.95, s));
+  }
+  // trova la migliore
+  let best={i:0,j:0,s:0};
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){ const s=score(i,j); if(s>best.s) best={i:i,j:j,s:s}; }
+
+  const X0=70, Y0=30, CELL=64;
+  function color(s){ // scuro=buono. mappa 0.55..0.95 → chiaro..scuro accent
+    const t=(s-0.55)/0.40; const light=92-52*t; return 'hsl(222 55% '+light+'%)';
+  }
+
+  function el(tag,attr){ const e=document.createElementNS(NS,tag); for(const k in attr) e.setAttribute(k,attr[k]); return e; }
+
+  function build(){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    // titoli assi
+    const tG=el('text',{x:X0+n*CELL/2, y:16, 'text-anchor':'middle', 'font-size':12.5, fill:'var(--ink)', 'font-weight':'700'}); tG.textContent='gamma (γ) →'; svg.appendChild(tG);
+    const tC=el('text',{x:16, y:Y0+n*CELL/2, 'text-anchor':'middle', 'font-size':12.5, fill:'var(--ink)', 'font-weight':'700', transform:'rotate(-90 16 '+(Y0+n*CELL/2)+')'}); tC.textContent='C ↑'; svg.appendChild(tC);
+    for(let i=0;i<n;i++){ // i = riga = C (dall'alto: C grande in alto)
+      const cIdx=n-1-i;
+      const lab=el('text',{x:X0-8, y:Y0+i*CELL+CELL/2+4, 'text-anchor':'end', 'font-size':10.5, fill:'var(--ink-soft)'}); lab.textContent=Cvals[cIdx]; svg.appendChild(lab);
+      for(let j=0;j<n;j++){
+        const s=score(cIdx,j);
+        const x=X0+j*CELL, y=Y0+i*CELL;
+        const rect=el('rect',{x:x, y:y, width:CELL-3, height:CELL-3, rx:5, fill:color(s), stroke:'#fff', 'stroke-width':1.5, style:'cursor:pointer'});
+        rect.addEventListener('click', function(){ select(cIdx,j); });
+        svg.appendChild(rect);
+        const st=el('text',{x:x+(CELL-3)/2, y:y+(CELL-3)/2+4, 'text-anchor':'middle', 'font-size':11, fill:(s>0.78?'#fff':'var(--ink)'), 'pointer-events':'none'}); st.textContent=s.toFixed(2); svg.appendChild(st);
+        if(cIdx===best.i && j===best.j){ const star=el('text',{x:x+(CELL-3)/2, y:y+14, 'text-anchor':'middle', 'font-size':15, 'pointer-events':'none'}); star.textContent='⭐'; svg.appendChild(star); }
+      }
+    }
+    for(let j=0;j<n;j++){ const lab=el('text',{x:X0+j*CELL+CELL/2, y:Y0+n*CELL+16, 'text-anchor':'middle', 'font-size':10.5, fill:'var(--ink-soft)'}); lab.textContent=Gvals[j]; svg.appendChild(lab); }
+  }
+  function select(ci,j){
+    const s=score(ci,j);
+    const isBest = (ci===best.i && j===best.j);
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">Combinazione <b>C = '+Cvals[ci]+'</b>, <b>γ = '+Gvals[j]+'</b> → punteggio CV (F1) <b>'+s.toFixed(2)+'</b>. '+
+      (isBest? '⭐ <b>È la migliore della griglia!</b> Questa combinazione verrà scelta e riallenata su tutto il training.' :
+       'Prova a cercare la ⭐: le celle scure al centro sono le migliori; ai bordi il modello underfitta o overfitta.')+'</div>';
+  }
+  build();
+  out.innerHTML='<div style="font-size:.9rem; text-align:left">Ogni cella è una combinazione di iperparametri, valutata in cross-validation. <b>Clicca</b> una cella per leggerne il punteggio, e trova la ⭐ (la migliore). <span style="color:var(--ink-soft)">Scuro = punteggio alto.</span></div>';
+})();
+</script>
+</body>
+</html>
