@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Regolarizzazione: Ridge, Lasso, Elastic Net — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>Regolarizzazione: Ridge, Lasso, Elastic Net</h1>
+    <p class="standfirst">
+      La regressione lineare del capitolo scorso è potente, ma ha un punto debole che ora impariamo a curare. Quando le
+      caratteristiche sono <b>tante</b>, o <b>somigliano</b> troppo tra loro, i minimi quadrati possono produrre pesi
+      $\beta$ enormi e instabili: il modello si «aggrappa» ai dati con troppa forza e va in <b>overfitting</b> (capitolo
+      3). Il rimedio è tanto semplice quanto elegante e si chiama <b>regolarizzazione</b>: aggiungiamo alla nostra
+      misura d'errore una <b>penalità</b> che «scoraggia» i pesi grandi. In pratica diciamo al modello: «adàttati ai
+      dati, sì, ma <em>senza esagerare</em> con i pesi». Il risultato sono modelli più semplici, stabili, che
+      generalizzano meglio. Ne vedremo tre versioni, sempre più utili: <b>Ridge</b> (che rimpicciolisce tutti i pesi),
+      <b>Lasso</b> (che ne azzera alcuni del tutto — scegliendo, di fatto, quali caratteristiche tenere!) ed <b>Elastic
+      Net</b> (un mix dei due). Come sempre, ogni formula la costruiremo con calma, capendone il significato. In questo
+      capitolo: perché regolarizzare (§5.1), Ridge (§5.2), Lasso e la sparsità (§5.3), Elastic Net e la scelta di
+      $\lambda$ (§5.4). <mark>È il primo strumento vero per domare l'overfitting.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché <b>regolarizzare</b> (§5.1), <b>Ridge</b> (penalità L2) (§5.2), <b>Lasso</b> (L1) e la sparsità (§5.3),
+      <b>Elastic Net</b> e la scelta di $\lambda$ (§5.4). Nel laboratorio (§5.5) vedi i pesi rimpicciolirsi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: semplicità su richiesta</div>
+    <p style="margin-bottom:0">
+      La regolarizzazione è un'idea così centrale che la ritroverai <b>ovunque</b> nel machine learning, ben oltre la
+      regressione (persino nelle reti neurali). <mark>È il modo standard di spingere un modello verso la semplicità</mark>,
+      e quindi verso la buona generalizzazione (il compromesso bias-varianza del capitolo 3, gestito con una
+      «manopola»). E il Lasso, in più, ti regala qualcosa di prezioso: la capacità di <b>scegliere automaticamente</b>
+      le caratteristiche importanti.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Perché regolarizzare</h2>
+
+  <p class="lead">
+    Prima capiamo il problema, con un esempio, poi il rimedio. Perché mai i pesi dovrebbero «impazzire»?
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Due caratteristiche quasi gemelle mandano in tilt i pesi</div>
+    <p style="margin-bottom:0">
+      Immagina di prevedere il prezzo di una casa usando due caratteristiche quasi identiche: «superficie in metri
+      quadri» e «superficie in piedi quadri» (che è la stessa cosa, solo in un'altra unità). Il modello non sa quale
+      «premiare»: potrebbe dare un peso enorme positivo alla prima e uno enorme negativo alla seconda, che quasi si
+      annullano — una soluzione assurda, fragilissima, che cambia del tutto se sposti un solo dato. <mark>Quando le
+      caratteristiche si somigliano (sono «correlate»), o sono tante, i pesi dei minimi quadrati possono gonfiarsi e
+      diventare instabili</mark>: il modello «memorizza» invece di cogliere lo schema. È l'overfitting del capitolo 3,
+      visto dal lato dei pesi.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'idea del rimedio: aggiungere una «tassa» sui pesi grandi</div>
+    <p style="margin-bottom:0">
+      Fino a ora chiedevamo al modello solo di <b>minimizzare l'errore</b> (l'SSE). Ma se questo porta a pesi mostruosi,
+      cambiamo la richiesta: <mark>«minimizza l'errore <b>e, insieme</b>, tieni piccoli i pesi».</mark> Lo facciamo
+      aggiungendo alla quantità da minimizzare una <b>penalità</b> che cresce quando i pesi crescono — come una «tassa»
+      sui coefficienti grandi. Il modello dovrà allora bilanciare due desideri: adattarsi ai dati (errore basso) <em>e</em>
+      restare «modesto» (pesi piccoli). <mark>Questo compromesso lo rende più semplice e stabile</mark>, cioè meno
+      soggetto a overfitting. Cambia solo <em>quanto</em> pesa la penalità, e a seconda della forma della penalità
+      otteniamo Ridge, Lasso o Elastic Net. Vediamoli.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Ridge (penalità L2)</h2>
+
+  <p class="lead">
+    La prima ricetta, <b>Ridge</b>, penalizza la <b>somma dei quadrati</b> dei pesi. Scriviamo cosa il modello ora
+    minimizza, e leggiamolo pezzo per pezzo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cosa minimizza la Ridge <span class="tag">errore + tassa sui pesi al quadrato</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \underbrace{\sum_{i=1}^{n}\big(y_i - \hat{y}_i\big)^2}_{\text{errore (come prima)}} \; + \; \underbrace{\lambda \sum_{j=1}^{p} \beta_j^2}_{\text{penalità (nuova)}} $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>il primo pezzo — l'<b>errore</b> di sempre</dt>
+        <dd>è l'SSE del capitolo 2: la somma dei quadrati degli errori. <mark>Questa parte spinge il modello ad
+            adattarsi ai dati.</mark> Nulla di nuovo.</dd>
+        <dt>il secondo pezzo — la <b>penalità</b> sui pesi</dt>
+        <dd>$\sum_j \beta_j^2$ è la <b>somma dei quadrati dei pesi</b>: cresce quando i pesi diventano grandi (in
+            positivo o negativo, grazie al quadrato). <mark>Questa parte spinge il modello a tenere piccoli i pesi.</mark>
+            Elevando al quadrato, un peso di 10 «costa» 100, uno di 100 «costa» 10.000: i pesi enormi vengono puniti
+            severamente. (È detta penalità «L2», dal nome tecnico di questa somma di quadrati.)</dd>
+        <dt>$\lambda$ — la <b>manopola</b> della regolarizzazione</dt>
+        <dd>la lettera greca <b>lambda</b> decide <b>quanto pesa</b> la penalità rispetto all'errore. <mark>È il bottone
+            che regoli tu.</mark> Se $\lambda = 0$, la penalità sparisce e torni ai minimi quadrati normali. Se $\lambda$
+            è grande, il modello dà molta importanza a «tenere piccoli i pesi», anche a costo di adattarsi un po' peggio
+            ai dati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      A parole: <mark>«trova i pesi che rendono piccolo l'errore, <b>ma</b> paga una tassa proporzionale a $\lambda$ per
+      ogni peso grande».</mark> L'effetto della Ridge è <b>rimpicciolire tutti i pesi</b> verso lo zero (senza mai
+      annullarli del tutto), in modo dolce e proporzionato: i pesi «mostruosi» vengono ridimensionati, e il modello
+      diventa più stabile. Nell'esempio delle due caratteristiche gemelle, la Ridge le tratta equamente, dando a
+      entrambe un peso moderato invece di uno enorme positivo e uno enorme negativo. Bello e sensato. Guardalo succedere
+      nel widget del §5.5.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Lasso (L1) e la sparsità</h2>
+
+  <p class="lead">
+    Il <b>Lasso</b> cambia la penalità: invece della somma dei <em>quadrati</em> dei pesi, penalizza la somma dei loro
+    <b>valori assoluti</b>. Una modifica piccola all'apparenza, ma con una conseguenza sorprendente e utilissima.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cosa minimizza il Lasso <span class="tag">errore + tassa sui pesi in valore assoluto</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \sum_{i=1}^{n}\big(y_i - \hat{y}_i\big)^2 \; + \; \lambda \sum_{j=1}^{p} |\beta_j| $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$|\beta_j|$ — il <b>valore assoluto</b> del peso</dt>
+        <dd>le due barrette verticali significano «prendi il valore <b>senza segno</b>»: $|{-3}| = 3$, $|3| = 3$.
+            <mark>La penalità è ora la somma di quanto sono grandi i pesi «in modulo»</mark>, non i loro quadrati. (È
+            detta penalità «L1».)</dd>
+        <dt>la differenza col quadrato: sembra minima…</dt>
+        <dd>usare $|\beta_j|$ invece di $\beta_j^2$ pare un dettaglio. <mark>Ma cambia tutto</mark>: il valore assoluto,
+            a differenza del quadrato, «punisce» in modo costante anche i pesi piccoli, spingendoli fino a
+            <b>esattamente zero</b>.</dd>
+        <dt>…ma produce la <b>sparsità</b></dt>
+        <dd>ecco il regalo del Lasso: <mark>alza abbastanza $\lambda$ e alcuni pesi diventano <b>esattamente zero</b></mark>
+            (non solo piccoli: proprio nulli). Un peso zero significa che quella caratteristica <b>è stata scartata</b>:
+            il modello ha deciso da solo che non serve. Un modello con molti pesi a zero si dice <b>sparso</b>.</dd>
+      </dl>
+    </div>
+    <div class="box viola" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">💜</span> Da ricordare: il Lasso sceglie le caratteristiche</div>
+      <p style="margin-bottom:0">
+        Questa è la proprietà più preziosa del Lasso: <mark>azzerando i pesi delle caratteristiche inutili, esegue una
+        <b>selezione automatica</b> delle feature.</mark> Se hai 100 caratteristiche ma solo 10 contano davvero, il
+        Lasso (con la giusta $\lambda$) tende a dare peso solo a quelle 10 e a mettere a zero le altre 90. Ottieni un
+        modello <b>più semplice, più interpretabile e più economico</b> — e scopri, come bonus, <em>quali</em>
+        caratteristiche il modello ritiene importanti. La Ridge, invece, rimpicciolisce tutti i pesi ma non ne azzera
+        nessuno: tiene tutte le caratteristiche, solo «più modeste». <b>Ridge = rimpicciolisce tutto; Lasso =
+        rimpicciolisce e scarta.</b> Questa è la distinzione da tenere a mente.
+      </p>
+    </div>
+    <div class="f-note">
+      Perché il valore assoluto azzera e il quadrato no? L'intuizione geometrica (che la letteratura disegna spesso come
+      «un rombo contro un cerchio») è che il vincolo del valore assoluto ha degli «spigoli» proprio sugli assi — cioè
+      dove alcuni pesi sono zero — e la soluzione tende a finire su uno spigolo. <mark>Non serve approfondire la
+      geometria</mark>: ti basti l'effetto pratico, che è ciò che conta. E lo vedi chiaramente nel widget.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>Elastic Net e la scelta di λ</h2>
+
+  <p class="lead">
+    <b>Elastic Net</b> è semplicemente il <b>meglio dei due mondi</b>: usa <em>entrambe</em> le penalità insieme, quella
+    della Ridge (L2) e quella del Lasso (L1). E poi affrontiamo la domanda pratica che accomuna tutti e tre: come si
+    sceglie $\lambda$?
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Elastic Net e la manopola λ <span class="tag">un mix, e come regolarlo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Elastic Net</b> — Ridge + Lasso insieme</dt>
+        <dd>somma <b>entrambe</b> le penalità (una parte L1 e una L2). <mark>Prende il buono di ciascuna</mark>: come il
+            Lasso, sa azzerare le caratteristiche inutili (sparsità); come la Ridge, gestisce bene le caratteristiche
+            correlate (che il Lasso da solo tratta a fatica). <b>È spesso la scelta più robusta</b> quando hai molte
+            feature, alcune correlate tra loro.</dd>
+        <dt>la manopola $\lambda$ — quanto regolarizzare</dt>
+        <dd>vale per tutti e tre: <mark>$\lambda$ piccolo = poca penalità (vicino ai minimi quadrati, rischio
+            overfitting); $\lambda$ grande = molta penalità (pesi molto piccoli, rischio underfitting).</mark> C'è un
+            valore «giusto» nel mezzo — e riconosci il compromesso bias-varianza del capitolo 3, ora con una manopola in
+            mano.</dd>
+        <dt>come si sceglie $\lambda$? Con la <b>validazione</b></dt>
+        <dd>non si indovina: <mark>si provano diversi valori di $\lambda$ e si tiene quello che dà l'errore più basso
+            sui dati di <b>validazione</b></mark> (capitolo 3) — cioè su dati non usati per allenare. È la
+            «cross-validation» che vedremo bene al capitolo 18. In scikit-learn ci sono strumenti (<code>RidgeCV</code>,
+            <code>LassoCV</code>) che provano tanti $\lambda$ e scelgono il migliore da soli.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riassumendo la scelta pratica: <mark>parti con la Ridge se vuoi solo stabilizzare; usa il Lasso se sospetti che
+      molte caratteristiche siano inutili e vuoi selezionarle; usa Elastic Net quando hai tante feature e alcune sono
+      correlate.</mark> E in tutti i casi, lascia che sia la validazione a scegliere $\lambda$ — la quantità «giusta»
+      di regolarizzazione non si stabilisce a priori, si misura sui dati. È di nuovo il metodo del capitolo 3: prova,
+      valuta su dati nuovi, scegli.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Prima il widget, per <em>vedere</em> la differenza tra Ridge e Lasso all'aumentare di $\lambda$; poi il codice, per
+    farlo davvero con scikit-learn.
+  </p>
+
+  <div class="widget" id="w-reg">
+    <div class="w-head">
+      <span>Ridge vs Lasso: i pesi al crescere di λ</span>
+      <span class="hint">Ridge rimpicciolisce; Lasso azzera</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <div style="display:flex; gap:.5rem; justify-content:center; margin-bottom:.6rem">
+        <button class="btn" id="rg-ridge">Ridge (L2)</button>
+        <button class="btn ghost" id="rg-lasso">Lasso (L1)</button>
+      </div>
+      <div id="rg-bars" style="max-width:440px; margin:0 auto; display:flex; flex-direction:column; gap:.5rem"></div>
+      <div style="max-width:420px; margin:.7rem auto 0; display:flex; align-items:center; gap:.6rem">
+        <label style="font-size:.85rem; color:var(--ink-soft); white-space:nowrap">λ (regolarizzazione): <b id="rg-lv">0.0</b></label>
+        <input type="range" id="rg-l" min="0" max="3" step="0.05" value="0" style="flex:1">
+      </div>
+    </div>
+    <div class="w-readout" id="rg-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">regolarizzazione.py</div>
+    <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> Ridge, Lasso, ElasticNet, RidgeCV
+
+<span class="cm"># alpha è il nome di lambda in scikit-learn (la forza della penalità)</span>
+ridge <span class="op">=</span> <span class="fn">Ridge</span>(alpha<span class="op">=</span><span class="nm">1.0</span>).<span class="fn">fit</span>(X, y)     <span class="cm"># rimpicciolisce tutti i pesi</span>
+lasso <span class="op">=</span> <span class="fn">Lasso</span>(alpha<span class="op">=</span><span class="nm">0.1</span>).<span class="fn">fit</span>(X, y)     <span class="cm"># azzera i pesi inutili</span>
+enet  <span class="op">=</span> <span class="fn">ElasticNet</span>(alpha<span class="op">=</span><span class="nm">0.1</span>, l1_ratio<span class="op">=</span><span class="nm">0.5</span>).<span class="fn">fit</span>(X, y)  <span class="cm"># mix</span>
+
+<span class="cm"># guarda quanti pesi il Lasso ha messo a ZERO (selezione di feature!)</span>
+<span class="bi">print</span>(lasso.coef_)          <span class="rs"># [1.5, 0., 0., 0.8, 0.]  -> tenute solo 2 feature su 5</span>
+
+<span class="cm"># scegliere lambda automaticamente, con la validazione incrociata (Cap. 18)</span>
+best <span class="op">=</span> <span class="fn">RidgeCV</span>(alphas<span class="op">=</span>[<span class="nm">0.1</span>, <span class="nm">1.0</span>, <span class="nm">10.0</span>]).<span class="fn">fit</span>(X, y)
+<span class="bi">print</span>(best.alpha_)         <span class="rs"># il miglior lambda, scelto dai dati</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: alzando $\lambda$, la <b>Ridge</b> rimpicciolisce tutti i pesi in modo dolce (nessuno arriva a zero),
+      mentre il <b>Lasso</b> spinge i pesi piccoli fino a <b>esattamente zero</b>, uno dopo l'altro — scartando le
+      caratteristiche. <mark>Questa è, resa visibile, la differenza tra L2 e L1.</mark> Nel codice: nota
+      <code>alpha</code> (è il nome di $\lambda$ in scikit-learn), l'identica interfaccia <code>fit</code>/<code>coef_</code>,
+      e come <code>lasso.coef_</code> contenga degli zeri esatti (le feature scartate). Infine <code>RidgeCV</code>
+      sceglie $\lambda$ da solo, provando diversi valori in validazione — esattamente il metodo del §5.4. Con questi
+      strumenti, la regressione lineare diventa robusta anche con tante caratteristiche. Nel prossimo capitolo la
+      rendiamo anche <b>curva</b>: cosa fare quando la relazione tra $X$ e $y$ non è una retta?
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li>Con tante caratteristiche o correlate, i pesi dei minimi quadrati «impazziscono» → overfitting. La
+          <b>regolarizzazione</b> aggiunge una <b>penalità sui pesi grandi</b> per tenerli piccoli (§5.1).</li>
+      <li><b>Ridge (L2)</b>: penalizza $\sum \beta_j^2$ → <b>rimpicciolisce tutti i pesi</b> (senza azzerarli),
+          stabilizza (§5.2).</li>
+      <li><b>Lasso (L1)</b>: penalizza $\sum |\beta_j|$ → <b>azzera</b> i pesi inutili (<b>sparsità</b>): selezione
+          automatica delle caratteristiche (§5.3).</li>
+      <li><b>Elastic Net</b> = Ridge + Lasso (il meglio dei due). La manopola $\lambda$ (in sklearn: <code>alpha</code>)
+          regola la forza; si sceglie con la <b>validazione</b> (§5.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai imparato a domare i pesi e a scegliere le caratteristiche. Ma tutti i modelli visti finora hanno un limite di
+    fondo: sono <b>lineari</b>, cioè descrivono solo relazioni «a retta». E se il legame tra $X$ e $y$ fosse una
+    <b>curva</b> — cresce all'inizio e poi si appiattisce, o ha un massimo? Nel <strong>Capitolo 6</strong> impariamo a
+    dare al modello lineare la capacità di curvarsi, con le <b>espansioni di base</b>, la <b>regressione polinomiale</b>
+    e le <b>spline</b> — restando dentro la comoda cornice dei minimi quadrati, ma catturando forme molto più ricche.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Perché avere molte caratteristiche correlate tra loro può portare i minimi quadrati a produrre pesi enormi e
+      instabili? Come rimedia, in generale, la regolarizzazione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      Nella formula della Ridge, $\text{SSE} + \lambda \sum_j \beta_j^2$, cosa rappresentano i due pezzi? Cosa succede
+      se $\lambda = 0$? E se $\lambda$ è molto grande?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza pratica più importante tra Ridge e Lasso riguardo ai pesi? Perché si dice che il Lasso «fa
+      selezione delle caratteristiche»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      Come si sceglie il valore giusto di $\lambda$ (la forza della regolarizzazione)? Perché non si può semplicemente
+      decidere «a occhio» o metterlo sempre molto grande?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      Quando due (o più) caratteristiche si somigliano molto, il modello non sa a quale attribuire l'effetto: può
+      compensare dando un peso enorme positivo a una e uno enorme negativo all'altra (che quasi si annullano) — una
+      soluzione fragilissima, che cambia drasticamente al minimo spostamento dei dati. La regolarizzazione rimedia
+      aggiungendo una <b>penalità sui pesi grandi</b>: il modello, per evitare la «tassa», è costretto a tenere i pesi
+      <b>piccoli e ragionevoli</b>, diventando più stabile e meno soggetto a overfitting.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      Il primo pezzo, l'SSE, è l'<b>errore</b> sui dati (spinge il modello ad adattarsi). Il secondo,
+      $\lambda \sum_j \beta_j^2$, è la <b>penalità</b> sui pesi grandi (spinge a tenerli piccoli), con $\lambda$ che ne
+      regola la forza. Se $\lambda = 0$, la penalità sparisce e si torna ai minimi quadrati normali. Se $\lambda$ è
+      molto grande, la penalità domina: il modello schiaccia i pesi verso zero, adattandosi male ai dati (rischio
+      <b>underfitting</b>). Il valore giusto è un compromesso nel mezzo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p style="margin-bottom:0">
+      La Ridge (L2) <b>rimpicciolisce tutti</b> i pesi verso lo zero ma <b>non ne azzera nessuno</b>: tiene tutte le
+      caratteristiche, solo «più modeste». Il Lasso (L1) invece spinge alcuni pesi a diventare <b>esattamente zero</b>.
+      Un peso a zero significa che quella caratteristica è <b>scartata</b> dal modello: per questo si dice che il Lasso
+      «fa selezione delle caratteristiche» — sceglie automaticamente quali tenere (quelle con peso diverso da zero) e
+      quali eliminare, dando un modello più semplice e interpretabile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <p style="margin-bottom:0">
+      Si sceglie provando <b>diversi valori</b> di $\lambda$ e tenendo quello che dà l'errore più basso sui dati di
+      <b>validazione</b> (dati non usati per l'allenamento) — tipicamente con la cross-validation (Cap. 18); in
+      scikit-learn lo fanno strumenti come <code>RidgeCV</code>/<code>LassoCV</code>. Non si può decidere «a occhio»
+      perché il valore giusto dipende dai dati specifici, e non si può metterlo sempre molto grande perché troppa
+      regolarizzazione porta all'underfitting (il modello diventa troppo semplice): serve la quantità <b>giusta</b>,
+      che solo la validazione può indicare.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.5 — Ridge vs Lasso: i pesi al crescere di lambda (caso ortonormale).
+   Ridge: b/(1+lambda). Lasso: soft-threshold sign(b)*max(|b|-lambda,0).
+   ========================================================================= */
+(function () {
+  const barsEl = document.getElementById('rg-bars');
+  if (!barsEl) return;
+  const out = document.getElementById('rg-out');
+  const lEl = document.getElementById('rg-l');
+  const lvEl = document.getElementById('rg-lv');
+  const btnR = document.getElementById('rg-ridge');
+  const btnL = document.getElementById('rg-lasso');
+
+  const NOMI = ['metri quadri', 'stanze', 'bagni', 'piano', 'anno'];
+  const OLS = [3.0, 1.8, 1.1, 0.6, -2.4];   // pesi "veri" (minimi quadrati)
+  let modo = 'ridge';
+
+  function ridge(b, lam) { return b / (1 + lam); }
+  function lasso(b, lam) { const s = Math.sign(b); const m = Math.abs(b) - lam; return m > 0 ? s * m : 0; }
+
+  function draw() {
+    const lam = +lEl.value;
+    lvEl.textContent = lam.toFixed(1);
+    let nzero = 0;
+    barsEl.innerHTML = OLS.map(function (b, i) {
+      const v = modo === 'ridge' ? ridge(b, lam) : lasso(b, lam);
+      if (Math.abs(v) < 1e-9) nzero++;
+      const maxAbs = 3.2;
+      const pct = Math.min(100, Math.abs(v) / maxAbs * 100);
+      const zero = Math.abs(v) < 1e-9;
+      const col = zero ? 'var(--ink-faint)' : (v >= 0 ? 'var(--accent)' : 'var(--warm)');
+      return '<div style="display:flex; align-items:center; gap:.5rem">' +
+        '<span style="width:88px; font-size:.78rem; color:var(--ink-soft); text-align:right">' + NOMI[i] + '</span>' +
+        '<div style="flex:1; height:20px; background:var(--paper-3); border-radius:4px; position:relative">' +
+          '<div style="position:absolute; left:0; top:0; height:100%; width:' + pct + '%; background:' + col + '; border-radius:4px; transition:width .1s"></div>' +
+        '</div>' +
+        '<span style="width:52px; font-family:var(--mono); font-size:.78rem; color:' + (zero ? 'var(--ink-faint)' : 'var(--ink)') + '">' + (zero ? '0 ✕' : v.toFixed(2)) + '</span>' +
+      '</div>';
+    }).join('');
+
+    let msg;
+    if (modo === 'ridge') {
+      msg = '<b>Ridge (L2)</b>, λ = ' + lam.toFixed(1) + ': tutti i pesi si <b>rimpiccioliscono</b> verso zero in modo dolce, ma <b>nessuno arriva mai a zero</b>. Tutte le 5 caratteristiche restano nel modello, solo più «modeste». Alza λ e guardali calare tutti insieme.';
+    } else {
+      msg = '<b>Lasso (L1)</b>, λ = ' + lam.toFixed(1) + ': i pesi piccoli vengono spinti a <b>esattamente zero</b> (✕) — quelle caratteristiche sono <b>scartate</b>. Ora ' + nzero + ' su 5 sono a zero. È la <b>selezione automatica</b>: alza λ e guarda le feature sparire una a una.';
+    }
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + msg + '</div>';
+  }
+
+  btnR.addEventListener('click', function () { modo = 'ridge'; btnR.classList.remove('ghost'); btnL.classList.add('ghost'); draw(); });
+  btnL.addEventListener('click', function () { modo = 'lasso'; btnL.classList.remove('ghost'); btnR.classList.add('ghost'); draw(); });
+  lEl.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

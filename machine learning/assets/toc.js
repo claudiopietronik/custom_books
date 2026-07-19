@@ -75,7 +75,7 @@ const TOC = [
     n: 5,
     titolo: "Regolarizzazione: Ridge, Lasso, Elastic Net",
     file: "cap05-regolarizzazione.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Perché regolarizzare" },
       { id: "s5-2", n: "5.2", t: "Ridge (penalità L2)" },
