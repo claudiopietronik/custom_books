@@ -211,7 +211,7 @@ const TOC = [
     n: 14,
     titolo: "Eventi: reagire all'utente",
     file: "cap14-eventi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Cos'è un evento" },
       { id: "s14-2", n: "14.2", t: "addEventListener" },

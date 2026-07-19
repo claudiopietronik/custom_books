@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 · Eventi: reagire all'utente — Il Web</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="14">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 14</div>
+    <h1>Eventi: reagire all'utente</h1>
+    <p class="standfirst">
+      Fin qui il tuo codice ha «fatto le cose» appena la pagina si apriva. Ma un sito vero <b>aspetta</b> l'utente e
+      <b>reagisce</b>: clicchi un pulsante e succede qualcosa, digiti in un campo e vedi un'anteprima aggiornarsi,
+      premi un tasto e la pagina risponde. Ogni azione dell'utente genera un <b>evento</b> — un segnale che il
+      browser lancia — e tu puoi <b>metterti in ascolto</b> di quel segnale per eseguire il tuo codice quando accade.
+      Lo strumento è uno, elegante e universale: <code>addEventListener</code>. <mark>Questo è il capitolo che chiude
+      il cerchio: unisce tutto ciò che sai (selezionare, cambiare, creare elementi) al momento in cui l'utente
+      agisce.</mark> Da qui in poi le tue pagine non sono più dimostrazioni: <b>rispondono</b>.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un evento (§14.1), <code>addEventListener</code> (§14.2), gli eventi più comuni — <b>click, input,
+      tastiera</b> (§14.3), e l'<b>oggetto evento</b> che porta i dettagli (§14.4). Nel laboratorio (§14.5) costruisci
+      una paginetta che reagisce davvero.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è qui che nasce l'interattività</div>
+    <p style="margin-bottom:0">
+      Selezionare e modificare il DOM (Cap. 12–13) è metà del lavoro; l'altra metà è sapere <b>quando</b> farlo. Gli
+      eventi sono la risposta: <mark>«quando l'utente clicca questo, esegui quello»</mark>. Senza eventi, JavaScript
+      è un monologo; con gli eventi, è un dialogo. Ogni interfaccia che tu abbia mai usato — pulsanti, form, giochi,
+      menu — è costruita su questo semplice schema di ascolto e reazione. Impararlo bene significa saper costruire
+      <em>qualsiasi</em> comportamento.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-1"><span class="secnum">Sezione 14.1</span>Cos'è un evento</h2>
+
+  <p class="lead">
+    Un <b>evento</b> è qualcosa che «succede» nella pagina e che il browser ti segnala: un click del mouse, un tasto
+    premuto, un campo modificato, la pagina caricata. Il browser lancia questi segnali di continuo; sta a te decidere
+    quali <b>ascoltare</b> e cosa fare in risposta.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Il modello «ascolta e reagisci»</div>
+    <p>
+      Immagina un centralino: squilli in arrivo (gli eventi), e tu che rispondi solo a certi numeri. In JavaScript
+      dici a un elemento: «<mark>quando accade l'evento X, esegui questa funzione</mark>». Quella funzione si chiama
+      <b>gestore</b> (in inglese <em>handler</em>, o <em>callback</em>): è il tuo pezzo di codice che il browser
+      chiamerà <b>al momento giusto</b>, non subito.
+    </p>
+    <p style="margin-bottom:0">
+      Questa è un'idea profonda: il tuo codice non «scorre e finisce». Registra dei gestori e poi <b>aspetta</b>. La
+      pagina resta lì, viva, pronta a reagire — potenzialmente per ore — a ogni azione dell'utente. È il modello
+      «<b>guidato dagli eventi</b>» (event-driven), il modo in cui funzionano tutte le interfacce.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Gli eventi che incontrerai di più <span class="tag">un piccolo vocabolario</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">click</span></dt>
+        <dd>l'utente clicca (o tocca, sul telefono) un elemento. Il più comune di tutti.</dd>
+        <dt><span class="mono">input</span></dt>
+        <dd>l'utente <b>modifica</b> un campo (<code>&lt;input&gt;</code>, <code>&lt;textarea&gt;</code>): scatta a
+            <b>ogni</b> carattere digitato. Perfetto per anteprime dal vivo.</dd>
+        <dt><span class="mono">keydown</span></dt>
+        <dd>l'utente <b>preme un tasto</b> della tastiera. Utile per scorciatoie o per reagire a «Invio».</dd>
+        <dt><span class="mono">submit</span></dt>
+        <dd>l'utente <b>invia un form</b>. Lo intercetti per gestire i dati con JS invece di ricaricare la pagina.</dd>
+        <dt><span class="mono">mouseover</span> / <span class="mono">change</span> …</dt>
+        <dd>e molti altri (passaggio del mouse, cambio di una select…). Ma <code>click</code>, <code>input</code> e
+            <code>keydown</code> ti bastano per moltissimo.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>addEventListener</h2>
+
+  <p class="lead">
+    Lo strumento per «mettersi in ascolto» è un metodo che ogni elemento del DOM possiede:
+    <code>addEventListener</code>. Gli dici <b>quale</b> evento ascoltare e <b>quale funzione</b> eseguire quando
+    accade.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">ascoltare un click</div>
+    <pre><span class="kw">const</span> <span class="nm">bottone</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#mio-bottone"</span>);
+
+<span class="nm">bottone</span>.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, <span class="kw">function</span> () {
+    <span class="bi">console</span>.<span class="fn">log</span>(<span class="st">"Mi hai cliccato!"</span>);
+    <span class="cm">// qui dentro: qualsiasi cosa deve succedere al click</span>
+});</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Anatomia di <code>addEventListener</code> <span class="tag">elemento · evento · gestore</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">bottone</span> — su chi ascoltare</dt>
+        <dd>l'elemento (preso col DOM) che deve reagire. Ogni elemento può avere i suoi ascoltatori.</dd>
+        <dt><span class="mono">.addEventListener(…)</span></dt>
+        <dd>«aggiungi un ascoltatore». Prende <b>due</b> cose tra parentesi.</dd>
+        <dt>1° argomento: <span class="mono">"click"</span></dt>
+        <dd>il <b>nome dell'evento</b> da ascoltare, come stringa: <code>"click"</code>, <code>"input"</code>,
+            <code>"keydown"</code>… (nota: senza «on», è <code>"click"</code>, non <code>"onclick"</code>).</dd>
+        <dt>2° argomento: la <span class="mono">function () { … }</span></dt>
+        <dd>il <b>gestore</b>: la funzione che il browser eseguirà <b>ogni volta</b> che l'evento accade.
+            <mark>Nota che la passi senza eseguirla</mark> (niente parentesi dopo): la consegni al browser, che la
+            chiamerà lui al momento giusto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Spessissimo il gestore si scrive in forma <b>arrow</b>, più compatta:
+      <code>bottone.addEventListener("click", () =&gt; { … });</code> — identico. Un vantaggio di
+      <code>addEventListener</code> è che puoi <b>aggiungerne quanti vuoi</b> allo stesso elemento (più reazioni allo
+      stesso evento), e all'occorrenza rimuoverli. È il modo moderno e pulito; eviti il vecchio
+      <code>onclick="…"</code> scritto nell'HTML, che mescola comportamento e struttura.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-3"><span class="secnum">Sezione 14.3</span>Click, input, tastiera</h2>
+
+  <p class="lead">
+    Vediamo i tre eventi che coprono la stragrande maggioranza dei casi, ciascuno con lo schema tipico in cui lo
+    userai.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">i tre schemi più comuni</div>
+    <pre><span class="cm">// CLICK: fare qualcosa quando si preme un pulsante</span>
+<span class="nm">bottone</span>.<span class="fn">addEventListener</span>(<span class="st">"click"</span>, () <span class="op">=&gt;</span> {
+    <span class="nm">contatore</span><span class="op">++</span>;
+    <span class="nm">display</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">contatore</span>;
+});
+
+<span class="cm">// INPUT: reagire mentre l'utente digita in un campo</span>
+<span class="nm">campo</span>.<span class="fn">addEventListener</span>(<span class="st">"input"</span>, () <span class="op">=&gt;</span> {
+    <span class="nm">anteprima</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">campo</span>.<span class="nm">value</span>;   <span class="cm">// .value = ciò che ha scritto</span>
+});
+
+<span class="cm">// KEYDOWN: reagire a un tasto (es. Invio)</span>
+<span class="nm">campo</span>.<span class="fn">addEventListener</span>(<span class="st">"keydown"</span>, (e) <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (<span class="nm">e</span>.<span class="nm">key</span> <span class="op">===</span> <span class="st">"Enter"</span>) <span class="fn">invia</span>();
+});</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔗</span> Il trio DOM + evento: lo schema che userai ovunque</div>
+    <p style="margin-bottom:0">
+      Guarda il pattern ricorrente: <b>(1)</b> selezioni un elemento (Cap. 12), <b>(2)</b> ascolti un suo evento
+      (questo capitolo), <b>(3)</b> nel gestore leggi/cambi/crei elementi del DOM (Cap. 12–13). <mark>Selezionare →
+      ascoltare → modificare: è la spina dorsale di ogni interazione web.</mark> Nota nell'esempio «input» come
+      <code>campo.value</code> ti dà ciò che l'utente ha digitato, che poi scrivi altrove: è la base di anteprime,
+      ricerche dal vivo, validazioni.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-4"><span class="secnum">Sezione 14.4</span>L'oggetto evento</h2>
+
+  <p class="lead">
+    Hai notato la <code>(e)</code> nel gestore <code>keydown</code>? Quando l'evento scatta, il browser passa alla
+    tua funzione un <b>oggetto evento</b> pieno di dettagli su cosa è successo: quale tasto, quale elemento, dove ha
+    cliccato il mouse. Basta accettarlo come parametro.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">L'oggetto evento <span class="tag">event.target, event.key, preventDefault()</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il parametro <span class="mono">(e)</span> o <span class="mono">(event)</span></dt>
+        <dd>lo dichiari tu nel gestore: <code>(e) =&gt; { … }</code>. <mark>Il browser lo riempie con le informazioni
+            dell'evento</mark> e te lo passa. Il nome è libero (<code>e</code>, <code>evt</code>, <code>event</code>).</dd>
+        <dt><span class="mono">e.target</span></dt>
+        <dd>l'<b>elemento</b> su cui l'evento è avvenuto. Utilissimo: un solo gestore può servire tanti elementi e
+            capire «chi» è stato guardando <code>e.target</code>.</dd>
+        <dt><span class="mono">e.key</span></dt>
+        <dd>(per gli eventi di tastiera) <b>quale tasto</b> è stato premuto, come testo: <code>"Enter"</code>,
+            <code>"Escape"</code>, <code>"a"</code>… Come nell'esempio del §14.3.</dd>
+        <dt><span class="mono">e.preventDefault()</span></dt>
+        <dd>annulla il <b>comportamento predefinito</b> del browser. Il caso classico: su un <code>submit</code> di
+            form, <code>e.preventDefault()</code> impedisce il ricaricamento della pagina, così puoi gestire i dati
+            con JavaScript. <mark>Riga fondamentale ogni volta che «prendi il controllo» al posto del browser.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve memorizzare tutto: quando gestisci un evento e ti serve un dettaglio, sai che è dentro l'oggetto
+      evento — lo esplori con <code>console.log(e)</code> nella console (Cap. 11). <code>e.target</code>,
+      <code>e.key</code> e <code>e.preventDefault()</code> sono i tre che userai da subito.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-5"><span class="secnum">Sezione 14.5</span>Laboratorio: una pagina interattiva</h2>
+
+  <p class="lead">
+    Uniamo tutto: un <b>contatore</b> con pulsanti (evento <code>click</code>) e un <b>saluto dal vivo</b> che si
+    aggiorna mentre digiti (evento <code>input</code>). Due micro-app, tutti gli ingredienti del capitolo.
+  </p>
+
+  <div class="widget" id="w-ev">
+    <div class="w-head">
+      <span>Eventi dal vivo: click e input</span>
+      <span class="hint">reazioni reali all'utente</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem">
+      <div style="flex:1; min-width:200px; border:1px solid var(--ink-soft); border-radius:10px; padding:1rem; text-align:center">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.4rem">evento «click»</div>
+        <div id="wev-num" style="font-size:2.4rem; font-weight:800; color:var(--accent); margin:.3rem 0">0</div>
+        <div style="display:flex; gap:.4rem; justify-content:center">
+          <button class="btn" id="wev-meno">−1</button>
+          <button class="btn" id="wev-piu">+1</button>
+          <button class="btn ghost" id="wev-zero">azzera</button>
+        </div>
+      </div>
+      <div style="flex:1; min-width:200px; border:1px solid var(--ink-soft); border-radius:10px; padding:1rem; text-align:center">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.4rem">evento «input»</div>
+        <input type="text" id="wev-nome" placeholder="Scrivi il tuo nome…" autocomplete="off"
+               style="width:100%; box-sizing:border-box; padding:.55rem .7rem; border:2px solid var(--ink-soft); border-radius:8px; font-size:.95rem; background:var(--paper); color:var(--ink)">
+        <div id="wev-saluto" style="margin-top:.7rem; font-size:1.15rem; font-weight:700; color:var(--accent); min-height:1.5em">Ciao, sconosciuto!</div>
+      </div>
+    </div>
+    <div class="w-readout" id="wev-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>evento</b> è un'azione dell'utente che il browser segnala; tu registri un <b>gestore</b> e la pagina
+          <b>aspetta</b>, poi reagisce (modello event-driven) (§14.1).</li>
+      <li><code>elemento.addEventListener("evento", funzione)</code>: ascolta quell'evento ed esegue la funzione
+          quando accade. Passi la funzione <b>senza</b> eseguirla (§14.2).</li>
+      <li>I tre di base: <b>click</b> (pulsanti), <b>input</b> (mentre si digita, con <code>.value</code>),
+          <b>keydown</b> (tasti, con <code>e.key</code>) (§14.3).</li>
+      <li>L'<b>oggetto evento</b> <code>(e)</code> porta i dettagli: <code>e.target</code> (chi),
+          <code>e.key</code> (quale tasto), <code>e.preventDefault()</code> (blocca il default) (§14.4).</li>
+      <li>Lo schema universale: <b>selezionare → ascoltare → modificare</b> il DOM.</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con gli eventi le tue pagine sono ora <b>completamente interattive</b>: reagiscono, calcolano, cambiano. Ma tutto
+    ciò che mostrano viene ancora da <b>dentro</b> la pagina stessa. Le vere applicazioni, però, <b>parlano con il
+    mondo</b>: chiedono dati a un server — il meteo, i tuoi messaggi, i prezzi, i risultati di una ricerca — e li
+    mostrano. Come fa JavaScript a <b>chiedere dati a un server</b> mentre la pagina è aperta, senza ricaricarla? È
+    l'ultimo tassello prima del progetto finale: il <strong>Capitolo 15</strong>, dedicato a <b>fetch</b> e alla
+    comunicazione con le API.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-6"><span class="secnum">Sezione 14.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.1</div>
+    <p style="margin-bottom:0">
+      Scrivi la riga (o le righe) che, dato un pulsante con <code>id="saluta"</code>, mostra
+      <code>"Ciao!"</code> nella console a ogni click.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.2</div>
+    <p style="margin-bottom:0">
+      Perché nel passare il gestore a <code>addEventListener</code> si scrive <code>function () {…}</code> (o
+      <code>() =&gt; {…}</code>) e <b>non</b> si mettono le parentesi come in <code>miaFunzione()</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.3</div>
+    <p style="margin-bottom:0">
+      Un campo <code>&lt;input id="cerca"&gt;</code> deve, a ogni carattere digitato, copiare il testo in un
+      <code>&lt;p id="eco"&gt;</code>. Scrivi il codice.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 14.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve <code>e.preventDefault()</code> in un gestore di <code>submit</code> di un form?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s14-7"><span class="secnum">Sezione 14.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#saluta"</span>).<span class="fn">addEventListener</span>(<span class="st">"click"</span>, () <span class="op">=&gt;</span> {
+    <span class="bi">console</span>.<span class="fn">log</span>(<span class="st">"Ciao!"</span>);
+});</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.2</div>
+    <p style="margin-bottom:0">
+      Perché devi <b>passare la funzione</b> al browser, non il suo <b>risultato</b>. Scrivendo
+      <code>miaFunzione()</code> la <b>esegui subito</b> e passi ad <code>addEventListener</code> ciò che ritorna —
+      sbagliato. Senza parentesi (o con <code>function(){}</code> / <code>()=&gt;{}</code>) consegni la funzione
+      <b>stessa</b>: sarà il browser a chiamarla <b>al momento del click</b>. È la differenza tra «dare una ricetta» e
+      «dare il piatto già cucinato».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="kw">const</span> <span class="nm">cerca</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#cerca"</span>);
+<span class="kw">const</span> <span class="nm">eco</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#eco"</span>);
+<span class="nm">cerca</span>.<span class="fn">addEventListener</span>(<span class="st">"input"</span>, () <span class="op">=&gt;</span> {
+    <span class="nm">eco</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">cerca</span>.<span class="nm">value</span>;
+});</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 14.4</div>
+    <p style="margin-bottom:0">
+      Di default, l'invio di un form <b>ricarica la pagina</b> (o naviga altrove), inviando i dati al server alla
+      vecchia maniera. <code>e.preventDefault()</code> <b>annulla</b> questo comportamento, così la pagina resta dov'è
+      e <b>tu</b> gestisci i dati con JavaScript (per esempio leggendoli con <code>.value</code> e mostrando un
+      risultato, o inviandoli con <code>fetch</code> — prossimo capitolo). È ciò che rende i form «moderni», senza
+      ricaricamenti.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §14.5 — eventi dal vivo: click (contatore) e input (saluto)
+   ========================================================================= */
+(function () {
+  const num = document.getElementById('wev-num');
+  if (!num) return;
+  const nome   = document.getElementById('wev-nome');
+  const saluto = document.getElementById('wev-saluto');
+  const out    = document.getElementById('wev-out');
+  let contatore = 0;
+
+  function mostra() { num.textContent = contatore; }
+
+  // evento CLICK sui tre pulsanti
+  document.getElementById('wev-piu').addEventListener('click', () => { contatore++; mostra(); });
+  document.getElementById('wev-meno').addEventListener('click', () => { contatore--; mostra(); });
+  document.getElementById('wev-zero').addEventListener('click', () => { contatore = 0; mostra(); });
+
+  // evento INPUT sul campo nome
+  nome.addEventListener('input', () => {
+    const v = nome.value.trim();
+    saluto.textContent = v ? ('Ciao, ' + v + '!') : 'Ciao, sconosciuto!';
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">A sinistra: tre gestori <code>click</code> cambiano un contatore. A destra: un gestore <code>input</code> legge <code>nome.value</code> a ogni tasto e aggiorna il saluto <b>dal vivo</b>. Sono <code>addEventListener</code> reali — lo schema <b>seleziona → ascolta → modifica</b> al lavoro.</div>';
+})();
+</script>
+</body>
+</html>
