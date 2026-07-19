@@ -16,7 +16,7 @@ Contenuto originale scritto ex novo.
 - [x] 3 — I tag del testo
 - [x] 4 — Link, immagini e liste
 - [x] 5 — Form e input
-- [ ] 6 — CSS: dare stile
+- [x] 6 — CSS: dare stile
 - [ ] 7 — I selettori
 - [ ] 8 — Il box model
 - [ ] 9 — Layout con Flexbox

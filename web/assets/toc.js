@@ -88,7 +88,7 @@ const TOC = [
     n: 6,
     titolo: "CSS: dare stile",
     file: "cap06-css-stile.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Cos'è il CSS" },
       { id: "s6-2", n: "6.2", t: "Come collegare il CSS" },
