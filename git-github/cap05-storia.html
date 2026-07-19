@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · La storia del progetto — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>La storia del progetto</h1>
+    <p class="standfirst">
+      Hai iniziato a costruire una storia di commit: una sequenza di snapshot, ciascuno con il suo messaggio. Ma una
+      storia ha valore solo se sai <b>consultarla</b>. In questo capitolo impari a esplorarla con tre strumenti che
+      userai in continuazione: <code>git log</code> per <b>scorrere</b> l'elenco delle commit (chi, quando, cosa),
+      <code>git diff</code> per vedere <b>esattamente quali righe</b> sono cambiate, e <code>git show</code> per
+      <b>ispezionare una singola commit</b> nel dettaglio. Sono i comandi che trasformano la storia da «lista di
+      etichette» a risorsa navigabile: ti permettono di rispondere a domande come «cosa è cambiato ieri?», «chi ha
+      toccato questo file?», «quando è entrato questo comportamento?». <mark>Sono anche gli strumenti di base per il
+      debug: quando qualcosa si rompe, la storia spesso contiene la risposta.</mark> In questo capitolo:
+      <code>git log</code> (§5.1), leggere una commit (§5.2), <code>git diff</code> (§5.3), <code>git show</code>
+      (§5.4).
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <code>git log</code> e le sue viste (§5.1), <b>leggere</b> una commit — hash, autore, data (§5.2),
+      <code>git diff</code> per le modifiche riga per riga (§5.3), <code>git show</code> per una commit intera (§5.4).
+      Nel laboratorio (§5.5) esplori una storia reale.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la storia è una risorsa, se sai leggerla</div>
+    <p style="margin-bottom:0">
+      Un progetto versionato accumula centinaia di commit. <mark>Saperle interrogare significa poter capire come e
+      perché il codice è arrivato dov'è</mark> — indispensabile per correggere bug, riprendere un lavoro, o entrare in
+      un progetto altrui. Chi non sa leggere la storia «subisce» Git; chi sa farlo lo usa come una macchina del tempo
+      investigativa. Questi comandi sono di sola lettura: puoi esplorare liberamente, senza rischi.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>git log: la linea del tempo</h2>
+
+  <p class="lead">
+    <code>git log</code> mostra l'elenco delle commit, dalla più recente alla più vecchia: la linea del tempo del tuo
+    progetto. È il primo comando che lanci per «vedere cosa è successo».
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — git log completo</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">log</span>
+<span class="nm">commit e4f5g6h7i8j9...</span> <span class="out">(HEAD -&gt; main)</span>
+<span class="ar">Author:</span> Anna Rossi &lt;anna@esempio.com&gt;
+<span class="ar">Date:</span>   Sat Jul 19 10:32:00 2026
+
+    Aggiungi il secondo giorno
+
+<span class="nm">commit a1b2c3d4e5f6...</span>
+<span class="ar">Author:</span> Anna Rossi &lt;anna@esempio.com&gt;
+<span class="ar">Date:</span>   Sat Jul 19 10:15:00 2026
+
+    Aggiungi il primo giorno</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le viste di git log <span class="tag">completo · oneline · graph</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git log</span></dt>
+        <dd>la vista completa: per ogni commit mostra hash, autore, data e messaggio. Dettagliata ma lunga.
+            <mark>Premi <code>q</code> per uscire</mark> se il log riempie lo schermo (Git lo apre in un «pager»).</dd>
+        <dt><span class="mono">git log --oneline</span></dt>
+        <dd>una riga per commit: hash breve + messaggio. <mark>La vista più usata</mark> per avere un colpo d'occhio
+            rapido sulla storia.</dd>
+        <dt><span class="mono">git log --oneline --graph</span></dt>
+        <dd>aggiunge un grafico a sinistra che disegna i <b>branch</b> e i <b>merge</b> (Cap. 7-8). Utilissima quando
+            la storia si ramifica.</dd>
+        <dt><span class="mono">git log -n 3</span> · <span class="mono">git log nomefile</span></dt>
+        <dd>limita alle ultime N commit, o mostra solo le commit che hanno toccato un certo file. <mark>Modi per
+            filtrare</mark> quando la storia è lunga.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>git log --oneline</code> sarà la tua vista quotidiana. Nota, nella vista completa, l'annotazione
+      <code>(HEAD -&gt; main)</code> sulla commit più recente: indica <b>dove ti trovi</b> nella storia (<code>HEAD</code>)
+      e su quale branch (<code>main</code>) — concetti che chiariremo al Cap. 7. Per ora, ti basti sapere che segnala
+      «l'ultima commit, quella in cima».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Leggere una commit: hash, autore, data</h2>
+
+  <p class="lead">
+    Ogni commit nel log ha alcuni elementi fissi. Capirli ti permette di riferirti a una commit precisa e di
+    interpretare la storia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Gli elementi di una commit <span class="tag">hash · autore · data · messaggio</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>l'<b>hash</b> (es. <span class="mono">a1b2c3d</span>)</dt>
+        <dd>l'identificatore univoco della commit, un lungo codice esadecimale (mostrato accorciato nelle prime 7
+            cifre). <mark>È l'«indirizzo» della commit</mark>: lo usi per riferirti a lei in altri comandi (es.
+            <code>git show a1b2c3d</code>, Cap. 6). Bastano le prime ~7 cifre, sono già univoche.</dd>
+        <dt>l'<b>autore</b> e l'<b>email</b></dt>
+        <dd>chi ha creato la commit — proprio i <code>user.name</code> e <code>user.email</code> del Cap. 2.
+            <mark>Ecco perché li avevi configurati</mark>: appaiono qui.</dd>
+        <dt>la <b>data</b></dt>
+        <dd>quando è stata fatta la commit. Utile per orientarsi nel tempo.</dd>
+        <dt>il <b>messaggio</b></dt>
+        <dd>la descrizione che hai scritto (Cap. 4). <mark>La parte che leggi per capire cosa fa quella commit</mark>
+            — e il motivo per cui vanno scritti bene.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'hash merita una nota: non è un numero progressivo (1, 2, 3…) ma un codice calcolato dal contenuto della
+      commit. <mark>Sembra strano ma è potente</mark>: garantisce che ogni commit sia identificata in modo univoco e
+      immutabile in tutto il mondo (anche tra repository diversi). Quando dovrai indicare «quella commit», userai il
+      suo hash (o le sue prime cifre).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>git diff: cosa è cambiato</h2>
+
+  <p class="lead">
+    <code>git log</code> ti dice <em>quali</em> commit ci sono; <code>git diff</code> ti mostra <b>esattamente quali
+    righe</b> sono cambiate. È lo strumento per vedere le modifiche nel dettaglio, riga per riga.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — git diff mostra le modifiche non ancora in staging</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">diff</span>
+<span class="out">diff --git a/saluto.py b/saluto.py</span>
+<span class="out">@@ -1,2 +1,2 @@</span>
+<span class="out"> def saluta(nome):</span>
+<span style="color:#e0654f">-    print("ciao " + nome)</span>
+<span style="color:#5fd18a">+    print(f"Ciao, {nome}!")</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Leggere un diff <span class="tag">righe − rosse, + verdi</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>le righe con <span class="mono" style="color:var(--warm)">−</span> (rosse)</dt>
+        <dd>ciò che è stato <b>rimosso</b> (la versione <em>vecchia</em>).</dd>
+        <dt>le righe con <span class="mono" style="color:var(--green)">+</span> (verdi)</dt>
+        <dd>ciò che è stato <b>aggiunto</b> (la versione <em>nuova</em>). <mark>Una modifica appare come una riga tolta
+            + una aggiunta</mark>, come nell'esempio.</dd>
+        <dt>le righe senza segno</dt>
+        <dd>il <b>contesto</b> immutato attorno alla modifica, per farti capire dove sei.</dd>
+        <dt>le varianti</dt>
+        <dd><code>git diff</code> = modifiche non ancora in staging; <code>git diff --staged</code> = modifiche già in
+            staging (cosa entrerà nella prossima commit); <code>git diff a1b2c3d</code> = differenze rispetto a una
+            commit passata. <mark>Sempre lo stesso formato +/−.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il formato <code>diff</code> (righe rosse tolte, verdi aggiunte) è uno <b>standard universale</b>: lo ritrovi
+      identico su GitHub nelle pull request (Cap. 12), negli editor, ovunque si confronti codice. <mark>Imparare a
+      leggerlo qui ti servirà ovunque.</mark> Un'abitudine utilissima: <b>guarda il diff prima di ogni commit</b>
+      (<code>git diff --staged</code>) per controllare esattamente cosa stai per salvare — evita di committare per
+      sbaglio codice di debug o modifiche indesiderate.
+    </div>
+  </div>
+
+  <div class="widget" id="w-hist">
+    <div class="w-head">
+      <span>Esplora la storia: clicca una commit, vedi il diff</span>
+      <span class="hint">come git log + git show</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:220px">
+        <div style="font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">git log --oneline</div>
+        <ul id="hs-log" style="list-style:none; padding:0; margin:0"></ul>
+      </div>
+      <div style="flex:1.3; min-width:230px">
+        <div style="font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">git show &lt;commit&gt;</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="hs-show" style="margin:0; min-height:150px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="hs-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>git show: guardare una commit</h2>
+
+  <p class="lead">
+    <code>git show</code> unisce le due cose: prende una commit (per hash) e ne mostra <b>tutto</b> — i metadati (come
+    <code>git log</code>) <b>e</b> le modifiche che ha introdotto (come <code>git diff</code>). È lo strumento per
+    ispezionare «cosa ha fatto, di preciso, quella commit».
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — git show di una commit</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">show</span> <span class="ar">a1b2c3d</span>       <span class="c"># indichi la commit col suo hash</span>
+<span class="nm">commit a1b2c3d4e5f6...</span>
+<span class="ar">Author:</span> Anna Rossi &lt;anna@esempio.com&gt;
+<span class="ar">Date:</span>   Sat Jul 19 10:15:00 2026
+
+    Aggiungi il primo giorno
+
+<span class="out">diff --git a/giorno1.txt b/giorno1.txt</span>
+<span style="color:#5fd18a">+Giorno 1: ho imparato git init.</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> log, diff, show: quando usare cosa</div>
+    <p style="margin-bottom:0">
+      Un riepilogo per non confonderli: <b><code>git log</code></b> = «<b>elenco</b> delle commit» (la lista);
+      <b><code>git diff</code></b> = «cosa è cambiato <b>ora</b>» (le modifiche in corso, non ancora committate);
+      <b><code>git show &lt;hash&gt;</code></b> = «cosa ha fatto <b>quella</b> commit» (metadati + modifiche di una commit
+      passata). <mark>Prima trovi la commit con <code>log</code>, poi la ispezioni con <code>show</code>.</mark> Se ometti
+      l'hash, <code>git show</code> mostra l'<b>ultima</b> commit — un modo rapido per rivedere cosa hai appena salvato.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Laboratorio: esplorare la storia</h2>
+
+  <p class="lead">
+    Usa i comandi di questo capitolo sul repository <code>diario</code> (con le commit del Cap. 4). Esplorare una
+    storia reale fissa i concetti meglio di mille spiegazioni.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro di esplorazione</div>
+    <pre><span class="c"># 1) elenco compatto delle commit</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">log</span> <span class="fl">--oneline</span>
+<span class="out">e4f5g6h Aggiungi il secondo giorno
+a1b2c3d Aggiungi il primo giorno</span>
+
+<span class="c"># 2) ispeziona una commit specifica (copia il suo hash dal log)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">show</span> <span class="ar">a1b2c3d</span>
+<span class="out">... metadati + diff della prima commit ...</span>
+
+<span class="c"># 3) fai una modifica e guarda il diff PRIMA di committare</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"riga aggiunta"</span> &gt;&gt; <span class="ar">giorno1.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">diff</span>
+<span style="color:#5fd18a">+riga aggiunta</span>
+
+<span class="c"># 4) confronta due commit (differenze tra la prima e l'ultima)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">diff</span> <span class="ar">a1b2c3d</span> <span class="ar">e4f5g6h</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Ora sai <b>navigare la storia</b>: elencare le commit (<code>log</code>), ispezionarne una nel dettaglio
+      (<code>show</code>), e vedere le modifiche in corso o tra due punti (<code>diff</code>). <mark>Prova soprattutto
+      il passo 3</mark>: guardare il diff prima di committare è un'abitudine che ti salverà da tante commit
+      sbagliate. Sono tutti comandi di <b>sola lettura</b>: non modificano nulla, quindi esplora quanto vuoi. Nel
+      prossimo capitolo useremo questi stessi hash per fare qualcosa di più potente: <b>annullare e correggere</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><code>git log</code> elenca le commit (recente → vecchia). Vista quotidiana: <code>git log --oneline</code>;
+          con <code>--graph</code> per i branch (§5.1).</li>
+      <li>Ogni commit ha <b>hash</b> (identificatore univoco, usa le prime 7 cifre), <b>autore</b>, <b>data</b>,
+          <b>messaggio</b> (§5.2).</li>
+      <li><code>git diff</code> mostra le modifiche riga per riga: <b>− rosse</b> tolte, <b>+ verdi</b> aggiunte.
+          <code>--staged</code> per ciò che è in staging (§5.3).</li>
+      <li><code>git show &lt;hash&gt;</code> = metadati + diff di una commit passata. Prima <code>log</code> per trovarla,
+          poi <code>show</code> per ispezionarla (§5.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai creare la storia e ora sai leggerla. Ma cosa fai quando <b>sbagli</b>? Hai modificato un file e vuoi tornare
+    indietro; hai messo in staging la cosa sbagliata; hai scritto un messaggio di commit con un errore; hai fatto una
+    commit che non doveva esserci. Git ha una risposta per ognuno di questi casi. Nel <strong>Capitolo 6</strong>
+    impariamo ad <b>annullare e correggere</b> in sicurezza — <code>restore</code>, <code>reset</code>,
+    <code>amend</code>, <code>revert</code> — così sbagliare smetterà di far paura.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Quale comando usi per vedere la storia in modo compatto, una riga per commit? E per uscire da <code>git log</code>
+      quando riempie lo schermo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      In un diff, cosa rappresentano le righe che iniziano con <code>-</code> e quelle con <code>+</code>? Come appare
+      una riga che è stata <b>modificata</b> (non aggiunta né tolta)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>git log</code>, <code>git diff</code> e <code>git show</code>? In una frase per
+      ciascuno.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      Perché è una buona abitudine eseguire <code>git diff --staged</code> prima di fare una commit?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      Per la vista compatta: <code>git log --oneline</code> (hash breve + messaggio, una riga per commit). Per uscire
+      da <code>git log</code> (o da qualsiasi «pager» che riempie lo schermo) si preme <b><code>q</code></b> (quit).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      Le righe con <code>-</code> (spesso rosse) sono state <b>rimosse</b> (versione vecchia); quelle con <code>+</code>
+      (verdi) sono state <b>aggiunte</b> (versione nuova). Una riga <b>modificata</b> appare come <b>due</b> righe:
+      quella vecchia con <code>-</code> e quella nuova con <code>+</code> — Git non ha un simbolo «modificato», la
+      rappresenta come una rimozione seguita da un'aggiunta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <p style="margin-bottom:0">
+      <code>git log</code>: mostra l'<b>elenco</b> delle commit della storia. <code>git diff</code>: mostra le
+      <b>modifiche riga per riga</b> attualmente in corso (o tra due punti indicati). <code>git show &lt;hash&gt;</code>:
+      mostra <b>tutto di una singola commit</b> — i suoi metadati e le modifiche che ha introdotto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>git diff --staged</code> mostra <b>esattamente cosa sta per entrare nella commit</b> (le modifiche
+      in staging). Controllarlo prima di committare ti permette di <b>verificare</b> di salvare solo ciò che intendi —
+      evitando di includere per sbaglio codice di debug, file temporanei, o modifiche che volevi lasciare fuori. È un
+      controllo rapido che previene molte commit «sporche».
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.3 — esplora la storia: clicca una commit del log, vedi git show (diff)
+   ========================================================================= */
+(function () {
+  const logEl = document.getElementById('hs-log');
+  if (!logEl) return;
+  const showEl = document.getElementById('hs-show');
+  const out = document.getElementById('hs-out');
+
+  const COMMITS = [
+    { hash: 'a1b2c3d', msg: 'Aggiungi il primo giorno', autore: 'Anna Rossi',
+      diff: ['@@ file: giorno1.txt @@', '+Giorno 1: ho imparato git init.'] },
+    { hash: 'e4f5g6h', msg: 'Aggiungi il secondo giorno', autore: 'Anna Rossi',
+      diff: ['@@ file: giorno2.txt @@', '+Giorno 2: ho imparato add e commit.'] },
+    { hash: '9a8b7c6', msg: 'Correggi un refuso nel primo giorno', autore: 'Anna Rossi',
+      diff: ['@@ file: giorno1.txt @@', '-Giorno 1: ho imparato git iniit.', '+Giorno 1: ho imparato git init.'] },
+    { hash: '3d2e1f0', msg: 'Aggiungi il terzo giorno', autore: 'Anna Rossi',
+      diff: ['@@ file: giorno3.txt @@', '+Giorno 3: ho imparato log, diff, show.'] }
+  ];
+  let sel = COMMITS.length - 1;
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function drawLog() {
+    logEl.innerHTML = COMMITS.slice().reverse().map(function (c) {
+      const on = c.hash === COMMITS[sel].hash;
+      return '<li data-h="' + c.hash + '" style="cursor:pointer; font-family:var(--mono); font-size:.82rem; padding:.4rem .55rem; margin-bottom:.3rem; border-radius:6px; border:1.5px solid ' +
+        (on ? 'var(--accent)' : 'var(--ink-soft)') + '; background:' + (on ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent') + '">' +
+        '<span class="nm">' + c.hash + '</span> ' + esc(c.msg) + '</li>';
+    }).join('');
+    logEl.querySelectorAll('li[data-h]').forEach(function (li) {
+      li.addEventListener('click', function () {
+        sel = COMMITS.findIndex(function (c) { return c.hash === li.getAttribute('data-h'); });
+        render();
+      });
+    });
+  }
+
+  function render() {
+    const c = COMMITS[sel];
+    drawLog();
+    const diffHtml = c.diff.map(function (l) {
+      if (l[0] === '+') return '<span style="color:#5fd18a">' + esc(l) + '</span>';
+      if (l[0] === '-') return '<span style="color:#e0654f">' + esc(l) + '</span>';
+      return '<span class="out">' + esc(l) + '</span>';
+    }).join('\n');
+    showEl.innerHTML = '<span class="nm">commit ' + c.hash + '...</span>\n<span class="ar">Author:</span> ' + esc(c.autore) +
+      '\n\n    ' + esc(c.msg) + '\n\n' + diffHtml;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Hai selezionato <b>' + c.hash + '</b>. A destra, <code>git show</code>: i <b>metadati</b> (come git log) più il <b>diff</b> (come git diff) di quella commit. Nota le righe <span style="color:var(--green)">+ verdi</span> (aggiunte) e <span style="color:var(--warm)">− rosse</span> (tolte).</div>';
+  }
+  render();
+})();
+</script>
+</body>
+</html>

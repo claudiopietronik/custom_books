@@ -73,7 +73,7 @@ const TOC = [
     n: 5,
     titolo: "La storia del progetto",
     file: "cap05-storia.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "git log: la linea del tempo" },
       { id: "s5-2", n: "5.2", t: "Leggere una commit (hash, autore, data)" },

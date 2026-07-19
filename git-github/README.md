@@ -16,7 +16,7 @@ nessun linguaggio di programmazione richiesto.
 - [x] 2 — Installare e configurare Git
 - [x] 3 — Il primo repository
 - [x] 4 — Salvare le modifiche: la commit
-- [ ] 5 — La storia del progetto
+- [x] 5 — La storia del progetto
 - [ ] 6 — Annullare e correggere
 - [ ] 7 — I branch
 - [ ] 8 — Unire i branch: il merge
