@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 · Docker Compose — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="16">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 16</div>
+    <h1>Docker Compose</h1>
+    <p class="standfirst">
+      Il nostro backend non è un solo programma: è un <b>sistema</b> di servizi che collaborano — l'app FastAPI, il
+      database PostgreSQL, lo storage MinIO. Nel capitolo scorso abbiamo imparato a impacchettare <em>un</em> servizio
+      in un container; ma avviarli e collegarli tutti a mano, con tanti <code>docker run</code> pieni di opzioni,
+      diventa presto un incubo di comandi da ricordare e coordinare. La soluzione è <b>Docker Compose</b>: uno
+      strumento che ti fa descrivere <b>l'intero stack</b> — tutti i servizi, le loro configurazioni, le connessioni,
+      i dati persistenti — in un <b>unico file</b>, e avviarlo (o fermarlo) con un solo comando. In questo capitolo
+      capisci perché serve orchestrare più servizi (§16.1), impari il file <b>docker-compose.yml</b> (§16.2), le
+      <b>reti e i volumi</b> (§16.3) e componi lo stack completo del nostro backend (§16.4). <mark>È il passo che
+      trasforma un mucchio di container sparsi in un sistema coeso, pronto per andare online.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Orchestrare più servizi (§16.1), il file <b>docker-compose.yml</b> (§16.2), <b>reti e volumi</b> (§16.3), lo
+      stack <b>app + database + MinIO</b> (§16.4). Nel laboratorio (§16.5) avvii tutto con un comando.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: i backend reali sono multi-servizio</div>
+    <p style="margin-bottom:0">
+      Nessuna applicazione reale è un solo processo: c'è sempre almeno un'app e un database, spesso anche cache,
+      storage, code. <mark>Saper descrivere e avviare uno stack intero in modo riproducibile è una competenza operativa
+      chiave</mark>, e Docker Compose è lo strumento standard per farlo in sviluppo e per progetti piccoli/medi. È
+      anche il modello mentale che ti servirà per orchestratori più grandi (come Kubernetes), se un giorno ne avrai
+      bisogno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-1"><span class="secnum">Sezione 16.1</span>Più servizi insieme</h2>
+
+  <p class="lead">
+    Ricapitoliamo il nostro sistema: tre pezzi che devono girare insieme e parlarsi. Gestirli con
+    <code>docker run</code> separati è possibile, ma fragile e verboso.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il problema dei tanti <code>docker run</code></div>
+    <p style="margin-bottom:0">
+      Per avviare il nostro backend a mano dovresti: lanciare un <code>docker run</code> per Postgres (con password,
+      porta, volume…), uno per MinIO (con le sue variabili e porte), costruire e lanciare l'app, e poi
+      <b>collegarli</b> in una rete perché si trovino. <mark>Sono comandi lunghi, in un ordine preciso, da ripetere
+      ogni volta</mark> — e da tenere sincronizzati tra il tuo PC, quello dei colleghi e il server. Basta un'opzione
+      dimenticata e qualcosa non funziona. C'è bisogno di scrivere questa configurazione <b>una volta</b>, in un file,
+      e riusarla.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Compose: lo stack come file</div>
+    <p style="margin-bottom:0">
+      <b>Docker Compose</b> ti fa descrivere tutti i servizi in un file <code>docker-compose.yml</code>: chi sono,
+      quali immagini usano, quali porte espongono, come si configurano, come si collegano. Poi, <b>un solo comando</b>
+      — <code>docker compose up</code> — avvia <b>tutto insieme</b>, nell'ordine giusto, sulla stessa rete. E
+      <code>docker compose down</code> ferma tutto. <mark>Lo stack intero diventa codice versionabile e
+      riproducibile</mark>, esattamente come il Dockerfile ha reso codice il singolo ambiente.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-2"><span class="secnum">Sezione 16.2</span>Il file docker-compose.yml</h2>
+
+  <p class="lead">
+    Il file è scritto in <b>YAML</b>, un formato testuale basato sull'indentazione (come Python, la struttura è data
+    dagli spazi). Descrive una lista di <b>servizi</b>, ciascuno con la sua configurazione.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">docker-compose.yml — versione base (app + database)</div>
+    <pre><span class="kw">services</span>:
+  <span class="ar">api</span>:                          <span class="cm"># il nostro servizio FastAPI</span>
+    <span class="kw">build</span>: <span class="ar">.</span>                     <span class="cm"># costruisci dall'immagine locale (Dockerfile)</span>
+    <span class="kw">ports</span>:
+      - <span class="st">"8000:80"</span>                <span class="cm"># esponi la porta (come -p)</span>
+    <span class="kw">depends_on</span>:
+      - <span class="ar">db</span>                        <span class="cm"># avvia "db" prima di "api"</span>
+
+  <span class="ar">db</span>:                           <span class="cm"># il database PostgreSQL</span>
+    <span class="kw">image</span>: <span class="ar">postgres:16</span>          <span class="cm"># usa un'immagine pronta</span>
+    <span class="kw">environment</span>:
+      <span class="kw">POSTGRES_PASSWORD</span>: <span class="st">segreta</span>
+      <span class="kw">POSTGRES_DB</span>: <span class="st">rubrica</span>
+    <span class="kw">volumes</span>:
+      - <span class="ar">dati_db</span>:<span class="ar">/var/lib/postgresql/data</span>   <span class="cm"># dati persistenti (§16.3)</span>
+
+<span class="kw">volumes</span>:
+  <span class="ar">dati_db</span>:                      <span class="cm"># dichiara il volume nominato</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le chiavi principali <span class="tag">services · build/image · ports · environment · depends_on</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">services:</span></dt>
+        <dd>l'elenco dei servizi (container) dello stack. Ogni voce (<code>api</code>, <code>db</code>) è un servizio,
+            col nome che scegli tu. <mark>Quel nome diventa anche il suo «indirizzo» sulla rete</mark> (§16.3).</dd>
+        <dt><span class="mono">build: .</span> vs <span class="mono">image: postgres:16</span></dt>
+        <dd>due modi di ottenere l'immagine: <code>build</code> la costruisce dal tuo Dockerfile (per la <b>tua</b>
+            app); <code>image</code> usa un'immagine pronta dal registry (per Postgres, MinIO…).</dd>
+        <dt><span class="mono">ports</span>, <span class="mono">environment</span></dt>
+        <dd>l'equivalente delle opzioni <code>-p</code> e <code>-e</code> di <code>docker run</code>, ma scritte in
+            modo ordinato e permanente nel file.</dd>
+        <dt><span class="mono">depends_on: - db</span></dt>
+        <dd>dichiara le dipendenze di avvio: Compose avvia <code>db</code> <b>prima</b> di <code>api</code>. <mark>Ci
+            pensa lui a rispettare l'ordine.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>Attenzione all'indentazione</b>: in YAML gli spazi contano (come in Python). Un rientro sbagliato cambia il
+      significato. <mark>Tutta la configurazione dei tanti <code>docker run</code> del §16.1 sta ora in questo unico
+      file leggibile</mark>, versionato con il progetto. Chiunque lo abbia può avviare l'intero stack identico.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-3"><span class="secnum">Sezione 16.3</span>Reti e volumi</h2>
+
+  <p class="lead">
+    Due concetti fanno funzionare davvero uno stack multi-servizio: la <b>rete</b> (come i servizi si trovano e si
+    parlano) e i <b>volumi</b> (come i dati sopravvivono ai riavvii dei container).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Rete e volumi <span class="tag">trovarsi per nome · non perdere i dati</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>rete</b> automatica</dt>
+        <dd>Compose mette tutti i servizi sulla <b>stessa rete privata</b>, dove ognuno è raggiungibile <b>per
+            nome</b>. <mark>Dall'app, il database è semplicemente <code>db</code></mark>: la stringa di connessione
+            diventa <code>postgresql://…@<b>db</b>:5432/rubrica</code> — usi il <b>nome del servizio</b> come host, non
+            un indirizzo IP. Compose fa il «DNS» interno.</dd>
+        <dt>i <b>volumi</b>: dati che sopravvivono</dt>
+        <dd>i container sono «usa e getta»: se cancelli un container, <b>perdi ciò che c'era dentro</b>. Un
+            <b>volume</b> è uno spazio disco gestito da Docker, <b>separato</b> dal container, dove il database salva i
+            suoi dati. <mark>Così puoi ricreare il container del database senza perdere le tabelle</mark>: i dati
+            vivono nel volume, non nel container.</dd>
+        <dt>la sintassi <span class="mono">dati_db:/var/lib/postgresql/data</span></dt>
+        <dd>«monta il volume <code>dati_db</code> nella cartella dove Postgres tiene i dati». Da lì in poi, i dati del
+            database persistono anche se il container viene distrutto e ricreato.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La <b>rete per nome</b> è la comodità più grande: <mark>niente più indirizzi IP da configurare</mark> tra i
+      servizi. L'app cerca <code>db</code> e <code>minio</code>, e Compose li fa trovare. E i <b>volumi</b> risolvono
+      il paradosso «container effimeri, dati permanenti»: il container Postgres può andare e venire, ma le tue tabelle
+      restano al sicuro nel volume. Questi due meccanismi sono ciò che rende un backend containerizzato robusto e
+      manutenibile.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>App + database + MinIO</h2>
+
+  <p class="lead">
+    Componiamo lo stack completo del nostro backend: i tre servizi visti nel libro, con le loro connessioni.
+    L'osservazione chiave: l'app raggiunge database e storage <b>per nome</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">docker-compose.yml — lo stack completo</div>
+    <pre><span class="kw">services</span>:
+  <span class="ar">api</span>:
+    <span class="kw">build</span>: <span class="ar">.</span>
+    <span class="kw">ports</span>: [<span class="st">"8000:80"</span>]
+    <span class="kw">environment</span>:
+      DATABASE_URL: <span class="st">postgresql://postgres:segreta@db:5432/rubrica</span>   <span class="cm"># host = "db"!</span>
+      MINIO_ENDPOINT: <span class="st">minio:9000</span>                                    <span class="cm"># host = "minio"!</span>
+    <span class="kw">depends_on</span>: [<span class="ar">db</span>, <span class="ar">minio</span>]
+
+  <span class="ar">db</span>:
+    <span class="kw">image</span>: <span class="ar">postgres:16</span>
+    <span class="kw">environment</span>:
+      POSTGRES_PASSWORD: <span class="st">segreta</span>
+      POSTGRES_DB: <span class="st">rubrica</span>
+    <span class="kw">volumes</span>: [<span class="ar">dati_db</span>:<span class="ar">/var/lib/postgresql/data</span>]
+
+  <span class="ar">minio</span>:
+    <span class="kw">image</span>: <span class="ar">minio/minio</span>
+    <span class="kw">command</span>: <span class="ar">server /data --console-address ":9001"</span>
+    <span class="kw">environment</span>:
+      MINIO_ROOT_USER: <span class="st">admin</span>
+      MINIO_ROOT_PASSWORD: <span class="st">segreta123</span>
+    <span class="kw">ports</span>: [<span class="st">"9001:9001"</span>]
+    <span class="kw">volumes</span>: [<span class="ar">dati_minio</span>:<span class="ar">/data</span>]
+
+<span class="kw">volumes</span>:
+  <span class="ar">dati_db</span>:
+  <span class="ar">dati_minio</span>:</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔗</span> Il dettaglio che fa «clic»: gli host sono i nomi dei servizi</div>
+    <p style="margin-bottom:0">
+      Guarda le due righe evidenziate: <code>@<b>db</b>:5432</code> e <code><b>minio</b>:9000</code>. <mark>L'app non
+      usa <code>localhost</code> né indirizzi IP: usa i <b>nomi dei servizi</b></mark> definiti in
+      <code>services:</code>. Compose li risolve sulla rete interna. È elegante e robusto: cambi macchina, e tutto
+      continua a funzionare perché i nomi restano gli stessi. Nota anche che i <b>volumi</b> (<code>dati_db</code>,
+      <code>dati_minio</code>) tengono al sicuro i dati di Postgres e MinIO. Questo unico file <b>è</b> il nostro
+      backend, descritto per intero.
+    </p>
+  </div>
+
+  <div class="widget" id="w-compose">
+    <div class="w-head">
+      <span>Lo stack con «docker compose up»</span>
+      <span class="hint">un comando avvia tutto, connesso</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem; min-height:190px">
+      <div id="co-net" style="position:relative; min-height:160px; border:2px dashed transparent; border-radius:12px; transition:all .3s; padding:.5rem">
+        <div id="co-netlabel" style="position:absolute; top:.3rem; left:.6rem; font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); opacity:0; transition:opacity .3s">rete privata dello stack</div>
+        <div style="display:flex; flex-wrap:wrap; gap:.8rem; justify-content:center; align-items:center; padding-top:1rem">
+          <div class="co-svc" id="co-api" style="opacity:.25; text-align:center; border:2px solid var(--ink-soft); border-radius:10px; padding:.7rem 1rem; min-width:110px; transition:all .3s">
+            <div style="font-size:1.5rem">⚙️</div><b>api</b><div style="font-size:.7rem; color:var(--ink-soft)">:8000</div>
+          </div>
+          <div class="co-svc" id="co-db" style="opacity:.25; text-align:center; border:2px solid var(--ink-soft); border-radius:10px; padding:.7rem 1rem; min-width:110px; transition:all .3s">
+            <div style="font-size:1.5rem">🗄️</div><b>db</b><div style="font-size:.7rem; color:var(--ink-soft)">postgres</div>
+          </div>
+          <div class="co-svc" id="co-minio" style="opacity:.25; text-align:center; border:2px solid var(--ink-soft); border-radius:10px; padding:.7rem 1rem; min-width:110px; transition:all .3s">
+            <div style="font-size:1.5rem">🪣</div><b>minio</b><div style="font-size:.7rem; color:var(--ink-soft)">storage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="co-up">▶ docker compose up</button>
+      <button class="btn ghost" id="co-down">⏹ docker compose down</button>
+    </div>
+    <div class="w-readout" id="co-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-5"><span class="secnum">Sezione 16.5</span>Laboratorio: lo stack completo</h2>
+
+  <p class="lead">
+    Avviamo l'intero backend con un comando. Ti serve il file <code>docker-compose.yml</code> del §16.4 nella cartella
+    del progetto (accanto al <code>Dockerfile</code> del Cap. 15).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un comando per tutto</div>
+    <pre><span class="c"># avvia l'intero stack (costruisce l'api, scarica db e minio, li collega)</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">compose</span> <span class="ar">up</span>
+<span class="out">[+] Running 3/3
+ ✔ Container progetto-db-1     Started
+ ✔ Container progetto-minio-1  Started
+ ✔ Container progetto-api-1    Started</span>
+
+<span class="c"># in un altro terminale: verifica</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">compose</span> <span class="ar">ps</span>            <span class="c"># i servizi attivi</span>
+
+<span class="c"># per fermare tutto (i volumi, e quindi i dati, restano):</span>
+<span class="p">$</span> <span class="cmd">docker</span> <span class="ar">compose</span> <span class="ar">down</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai ottenuto</div>
+    <p style="margin-bottom:0">
+      Con <b>un comando</b> hai avviato l'app FastAPI, il database Postgres e lo storage MinIO, già <b>collegati</b>
+      tra loro sulla rete interna. L'app si connette a <code>db</code> e <code>minio</code> per nome; i dati sono al
+      sicuro nei volumi. <mark>Apri <code>http://localhost:8000/docs</code>: la tua API completa risponde, con database
+      e storage veri dietro.</mark> Questo stesso file <code>docker-compose.yml</code> è ciò che porterai sul server
+      per andare in produzione (Cap. 18): l'intero backend, riproducibile ovunque, con un comando. Usa
+      <code>docker compose up -d</code> per avviarlo «in background» (detached), e <code>docker compose logs</code>
+      per vedere cosa succede.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 16</div>
+    <ol style="margin-bottom:0">
+      <li><b>Docker Compose</b> descrive uno <b>stack di più servizi</b> in un unico file
+          <code>docker-compose.yml</code> e lo avvia/ferma con <code>up</code>/<code>down</code> (§16.1-16.2).</li>
+      <li>Ogni <b>service</b> ha <code>build</code>/<code>image</code>, <code>ports</code>, <code>environment</code>,
+          <code>depends_on</code>. È YAML: l'indentazione conta (§16.2).</li>
+      <li>Compose crea una <b>rete</b>: i servizi si trovano <b>per nome</b> (host = nome del servizio, es.
+          <code>db</code>). I <b>volumi</b> rendono i dati persistenti oltre la vita dei container (§16.3).</li>
+      <li>Lo stack completo (api + db + minio) sta in un file; l'app raggiunge gli altri servizi per nome; un comando
+          avvia tutto (§16.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il nostro backend è ora un sistema completo e riproducibile, avviabile con un comando. Manca l'ultimo miglio: da
+    «gira sul mio computer con Compose» a «<b>è online, sicuro, raggiungibile dal mondo</b>». Serve un <b>portiere</b>
+    davanti all'app — che gestisca le connessioni, l'HTTPS, e smisti il traffico: è <b>nginx</b>, il tema del
+    <strong>Capitolo 17</strong>. Poi, nel capitolo finale, metteremo tutto insieme su un server vero e faremo il
+    grande passo: il <b>deploy in produzione</b>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-6"><span class="secnum">Sezione 16.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.1</div>
+    <p style="margin-bottom:0">
+      Quali problemi risolve Docker Compose rispetto all'avviare ogni container con un <code>docker run</code>
+      separato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.2</div>
+    <p style="margin-bottom:0">
+      Nel file compose, qual è la differenza tra un servizio con <code>build: .</code> e uno con
+      <code>image: postgres:16</code>? Quando useresti l'uno e quando l'altro?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.3</div>
+    <p style="margin-bottom:0">
+      Nella stringa di connessione <code>postgresql://postgres:segreta@db:5432/rubrica</code> usata dall'app dentro lo
+      stack, perché l'host è <code>db</code> e non <code>localhost</code> o un indirizzo IP?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 16.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve un <b>volume</b> per il servizio del database? Cosa succederebbe ai dati, senza volume, se
+      ricreassi il container di Postgres?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s16-7"><span class="secnum">Sezione 16.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.1</div>
+    <p style="margin-bottom:0">
+      Compose elimina la necessità di ricordare e coordinare <b>tanti comandi lunghi</b> nell'ordine giusto: tutta la
+      configurazione dei servizi (immagini, porte, variabili, volumi, dipendenze e connessioni) sta in <b>un unico
+      file</b> versionabile, e si avvia/ferma con <b>un solo comando</b> (<code>up</code>/<code>down</code>). Rende lo
+      stack riproducibile identico su ogni macchina e riduce gli errori di configurazione manuale.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.2</div>
+    <p style="margin-bottom:0">
+      <code>build: .</code> fa <b>costruire</b> l'immagine dal Dockerfile locale: si usa per la <b>tua</b> applicazione
+      (di cui hai il codice). <code>image: postgres:16</code> usa un'immagine <b>pronta</b> scaricata dal registry: si
+      usa per software di terze parti già confezionato (Postgres, MinIO, Redis…), che non devi costruire tu. In
+      sintesi: <code>build</code> per il tuo codice, <code>image</code> per i servizi pronti.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.3</div>
+    <p style="margin-bottom:0">
+      Perché dentro lo stack Compose crea una <b>rete privata</b> dove ogni servizio è raggiungibile <b>per nome</b>:
+      il nome del servizio (<code>db</code>) funziona da hostname. <code>localhost</code>, dal punto di vista del
+      container dell'app, significherebbe «me stesso» (il container api), non il database. E un indirizzo IP sarebbe
+      fragile (può cambiare). Usare il nome <code>db</code> è stabile e portabile: Compose fa da «DNS» interno e lo
+      risolve verso il container del database.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 16.4</div>
+    <p style="margin-bottom:0">
+      Il volume conserva i dati del database in uno spazio <b>separato</b> dal container, gestito da Docker. Senza
+      volume, i dati vivrebbero <b>dentro</b> il container: ricreando il container di Postgres (per aggiornarlo,
+      dopo un <code>down</code> che lo rimuove, ecc.) <b>perderesti tutte le tabelle e le righe</b>. Con il volume,
+      invece, i dati persistono indipendentemente dal ciclo di vita del container: puoi distruggere e ricreare il
+      container quando vuoi, ritrovando i dati intatti.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §16.4 — docker compose up: avvia i 3 servizi, li mette in rete, connessi
+   ========================================================================= */
+(function () {
+  const net = document.getElementById('co-net');
+  if (!net) return;
+  const out = document.getElementById('co-out');
+  const netlabel = document.getElementById('co-netlabel');
+  const svc = { api: document.getElementById('co-api'), db: document.getElementById('co-db'), minio: document.getElementById('co-minio') };
+  let timers = [];
+
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'blue' ? 'var(--accent)' : 'var(--green)');
+    return '<div style="color:' + col + '; font-size:.92rem; text-align:left">' + html + '</div>';
+  }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  function accendi(el, color) {
+    el.style.opacity = '1';
+    el.style.borderColor = color;
+    el.style.background = 'color-mix(in srgb, ' + color + ' 12%, transparent)';
+  }
+
+  function up() {
+    clearTimers();
+    down(true);
+    const green = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#2c6b4f';
+    const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2f5d8c';
+    // 1) db, 2) minio, 3) api (depends_on), 4) rete
+    timers.push(setTimeout(function () { accendi(svc.db, green); out.innerHTML = note('', '1 · <b>db</b> avviato (postgres). <code>depends_on</code> lo fa partire per primo.'); }, 250));
+    timers.push(setTimeout(function () { accendi(svc.minio, green); out.innerHTML = note('', '2 · <b>minio</b> avviato (storage).'); }, 900));
+    timers.push(setTimeout(function () {
+      accendi(svc.api, acc);
+      net.style.borderColor = 'var(--ink-soft)'; netlabel.style.opacity = '.9';
+      out.innerHTML = note('green', '3 · <b>api</b> avviato e collegato: sulla <b>rete privata</b> raggiunge <code>db:5432</code> e <code>minio:9000</code> <b>per nome</b>. Tutto lo stack è su con <b>un comando</b>. 🎉');
+    }, 1550));
+  }
+
+  function down(silent) {
+    clearTimers();
+    Object.values(svc).forEach(function (el) { el.style.opacity = '.25'; el.style.borderColor = 'var(--ink-soft)'; el.style.background = 'transparent'; });
+    net.style.borderColor = 'transparent'; netlabel.style.opacity = '0';
+    if (!silent) out.innerHTML = note('blue', '⏹ <b>docker compose down</b>: tutti i servizi fermati. (I <b>volumi</b> restano: i dati del database sono al sicuro per il prossimo <code>up</code>.)');
+  }
+
+  document.getElementById('co-up').addEventListener('click', up);
+  document.getElementById('co-down').addEventListener('click', function () { down(false); });
+
+  out.innerHTML = note('', 'Premi <b>docker compose up</b>: i servizi si accendono nell\'ordine (db → minio → api per via di <code>depends_on</code>), si uniscono alla rete e si collegano <b>per nome</b>. Un comando per tutto lo stack.');
+})();
+</script>
+</body>
+</html>

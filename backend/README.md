@@ -27,6 +27,6 @@ Internet** e **Il Web**.
 - [x] 13 — Autenticazione e sicurezza
 - [x] 14 — File e storage con MinIO
 - [x] 15 — Docker: impacchettare l'app
-- [ ] 16 — Docker Compose
+- [x] 16 — Docker Compose
 - [ ] 17 — nginx: reverse proxy e HTTPS
 - [ ] 18 — Andare in produzione
