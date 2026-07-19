@@ -14,7 +14,7 @@ usano Python/scikit-learn.
 ## Capitoli
 
 - [x] 1 — Cos'è il machine learning
-- [ ] 2 — L'apprendimento supervisionato
+- [x] 2 — L'apprendimento supervisionato
 - [ ] 3 — Bias, varianza e generalizzazione
 - [ ] 4 — Regressione lineare
 - [ ] 5 — Regolarizzazione: Ridge, Lasso, Elastic Net

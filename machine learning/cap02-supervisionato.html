@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · L'apprendimento supervisionato — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="2">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 2</div>
+    <h1>L'apprendimento supervisionato</h1>
+    <p class="standfirst">
+      Nel capitolo scorso abbiamo detto che il machine learning «cerca la regola migliore». Ora rendiamo precisa questa
+      frase, con calma. Tre domande ci guidano: cos'è esattamente la «regola vera» che vorremmo trovare, e perché non
+      possiamo mai coglierla del tutto (c'è sempre un po' di <b>rumore</b>)? Come si misura, con un numero, <b>quanto
+      sbaglia</b> un modello — l'idea di <b>errore</b> (o «loss»)? E come si costruiscono i primi due veri modelli, i
+      <b>minimi quadrati</b> (una retta che si adatta ai dati) e il <b>k-NN</b> (che «chiede ai vicini»)? Sono i due
+      capostipiti, semplicissimi, da cui tutto il resto discende. Come promesso, <mark>ogni formula la introdurremo
+      partendo da un'intuizione, e poi la smonteremo simbolo per simbolo</mark> — niente formule «nude». In questo
+      capitolo: la funzione target e il rumore (§2.1), la loss e il rischio (§2.2), i minimi quadrati (§2.3), il k-NN
+      (§2.4) e la differenza cruciale tra errore sugli esempi visti e su quelli nuovi (§2.5). <mark>Qui costruiamo le
+      fondamenta concettuali di tutto il libro.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      La funzione target e il <b>rumore</b> (§2.1), la <b>loss</b> e il <b>rischio</b> (§2.2), i <b>minimi quadrati</b>
+      (§2.3), il <b>k-NN</b> (§2.4), <b>rischio empirico vs atteso</b> (§2.5). Nel laboratorio (§2.6) vedi la retta
+      minimizzare l'errore.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: due idee reggono tutto il ML</div>
+    <p style="margin-bottom:0">
+      Quasi ogni modello supervisionato è, in fondo, la stessa ricetta: <mark>«definisci come misurare l'errore, poi
+      cerca la regola che lo rende più piccolo».</mark> Capire bene queste due idee — <b>misurare l'errore</b> e
+      <b>minimizzarlo</b> — significa capire il meccanismo di tutti i modelli che verranno. Cambia solo la forma della
+      regola e il modo di cercarla; lo scheletro è questo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-1"><span class="secnum">Sezione 2.1</span>La funzione target e il rumore</h2>
+
+  <p class="lead">
+    Riprendiamo l'idea del Capitolo 1: esiste una «regola vera» $f$ che lega le caratteristiche $X$ alla risposta $y$.
+    Ma nel mondo reale c'è una complicazione onesta da riconoscere subito: <b>i dati non sono mai perfetti</b>. C'è
+    sempre una parte imprevedibile. Vediamo cosa significa.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché due case identiche hanno prezzi diversi</div>
+    <p style="margin-bottom:0">
+      Prendi due case <b>identiche</b> — stessi metri quadri, stesse stanze, stessa zona. Venderanno esattamente allo
+      stesso prezzo? Quasi mai: una l'ha venduta qualcuno che aveva fretta, l'altra un venditore paziente; una in un
+      mese buono, l'altra in uno fiacco. <mark>Il prezzo dipende dalle caratteristiche <em>più</em> mille piccole cause
+      che non possiamo misurare né prevedere.</mark> Questa parte imprevedibile si chiama <b>rumore</b> — non perché
+      «faccia rumore», ma perché «disturba» il segnale pulito, come il fruscio disturba una radio.
+    </p>
+  </div>
+
+  <p>
+    Mettiamo questa idea in una piccola formula. Fino a ora avevamo scritto $y = f(X)$ («la risposta è data dalla
+    regola»). Ora la correggiamo per essere onesti sul rumore:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La verità con il rumore <span class="tag">segnale + disturbo</span></div>
+    <p style="text-align:center; font-size:1.3rem; margin:.6rem 0 1rem">$$ y = f(X) + \varepsilon $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$y$ — la risposta che <b>osserviamo</b> (il prezzo reale di vendita)</dt>
+        <dd>è il numero che vediamo nei dati. <mark>Non è «puro»: contiene sia lo schema vero sia il disturbo.</mark></dd>
+        <dt>$f(X)$ — il <b>segnale vero</b>, la parte spiegabile</dt>
+        <dd>è quello che le caratteristiche $X$ <em>davvero</em> determinano: la parte del prezzo che dipende
+            ordinatamente da metri quadri, stanze, zona. <mark>È ciò che vorremmo imparare.</mark></dd>
+        <dt>$\varepsilon$ — il <b>rumore</b>, la parte imprevedibile</dt>
+        <dd>la lettera greca <b>epsilon</b> (si legge «èpsilon») indica il <b>disturbo</b>: tutte le cause che non
+            possiamo misurare (la fretta del venditore, l'umore del compratore…). <mark>È piccolo, casuale, a volte
+            positivo a volte negativo, e in media si annulla</mark> — ma su ogni singolo caso c'è.</dd>
+        <dt>il segno $+$ tra i due</dt>
+        <dd>dice semplicemente: <mark>ciò che osserviamo ($y$) è lo schema vero <b>più</b> un pizzico di disturbo</mark>.
+            Segnale più rumore.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa formuletta ha una conseguenza importante e liberatoria: <mark>nessun modello, per quanto perfetto, potrà
+      mai prevedere $y$ esattamente</mark>, perché una parte ($\varepsilon$) è genuinamente imprevedibile. Il meglio a
+      cui possiamo aspirare è catturare $f(X)$, il segnale. Chi promette previsioni «perfette» o non ha capito il
+      rumore, o sta imbrogliando. Il nostro obiettivo realistico: avvicinarci il più possibile a $f$, lasciando fuori
+      solo il rumore (non «imparare anche il rumore» — sarà la trappola dell'overfitting, capitolo 3).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-2"><span class="secnum">Sezione 2.2</span>Loss e rischio atteso</h2>
+
+  <p class="lead">
+    Per «cercare la regola migliore» ci serve prima un metro: un modo per dire, con un numero, <b>quanto sbaglia</b>
+    una previsione. Questo metro si chiama <b>funzione di perdita</b> (in inglese <b>loss</b>). Costruiamola partendo
+    dal caso più semplice.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Quanto ho sbagliato? La distanza tra vero e previsto</div>
+    <p style="margin-bottom:0">
+      Se il prezzo vero di una casa è $y = 250$ mila € e il mio modello prevede $\hat{y} = 230$, ho sbagliato di 20
+      mila. Se prevede $\hat{y} = 300$, ho sbagliato di 50. <mark>L'errore su un singolo esempio è, intuitivamente, la
+      <b>distanza</b> tra la risposta vera $y$ e quella prevista $\hat{y}$.</mark> Più sono lontane, peggio è. È tutto
+      qui il concetto di loss: mettere un numero su «quanto sono lontano dal giusto».
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La loss quadratica (per un esempio) <span class="tag">l'errore, al quadrato</span></div>
+    <p style="text-align:center; font-size:1.3rem; margin:.6rem 0 1rem">$$ L(y, \hat{y}) = (y - \hat{y})^2 $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$L(y, \hat{y})$ — la «perdita» (loss) su un esempio</dt>
+        <dd>è il numero che misura l'errore. La $L$ sta per «Loss»; tra parentesi ci sono le due cose che confronta:
+            la risposta vera $y$ e quella prevista $\hat{y}$. <mark>Più è grande, più il modello ha sbagliato su quel
+            caso.</mark></dd>
+        <dt>$y - \hat{y}$ — il <b>residuo</b>, cioè l'errore «grezzo»</dt>
+        <dd>la differenza tra vero e previsto. <mark>È la «distanza con segno»</mark>: se prevedo troppo poco è
+            positiva, se prevedo troppo è negativa. Si chiama <b>residuo</b> («ciò che resta» da spiegare).</dd>
+        <dt>l'elevamento al quadrato, $(\ldots)^2$</dt>
+        <dd>eleviamo al quadrato la differenza. Perché? Due ottimi motivi. <b>(1)</b> <mark>Toglie il segno</mark>: un
+            errore di $-20$ e uno di $+20$ sono ugualmente «errori» — il quadrato li rende entrambi $400$, positivi.
+            <b>(2)</b> <mark>Punisce di più gli errori grossi</mark>: sbagliare di 40 non è «il doppio» di sbagliare di
+            20, è <em>quattro volte</em> peggio ($40^2 = 1600$ contro $20^2 = 400$). Un modello che minimizza questa
+            loss quindi «odia» soprattutto gli errori grandi, e tende a evitarli.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa è la loss <b>quadratica</b> («squared loss»), la più usata per la regressione (risposte numeriche).
+      Esistono altre loss per altri problemi (per la classificazione ne vedremo di diverse), ma l'idea è sempre la
+      stessa: <mark>un numero che dice quanto la previsione è lontana dalla verità</mark>. Tieni a mente il quadrato: dà
+      il nome ai «minimi quadrati» del §2.3.
+    </div>
+  </div>
+
+  <p>
+    La loss misura l'errore su <b>un solo</b> esempio. Ma un modello va giudicato sul <b>complesso</b> dei casi. Se
+    prendessimo l'errore <b>medio</b> su <em>tutti</em> i casi possibili del mondo (non solo quelli che abbiamo, ma
+    ogni casa immaginabile), otterremmo il vero voto del modello: si chiama <b>rischio atteso</b> (o «test error»).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Rischio atteso: l'errore medio su tutto il mondo</div>
+    <p style="margin-bottom:0">
+      Il <b>rischio atteso</b> è la <b>media della loss su tutti i casi possibili</b> — l'errore che il modello farebbe,
+      in media, su qualsiasi nuovo esempio estratto dal mondo reale. <mark>È il numero che conta davvero</mark>: dice
+      quanto bene il modello <b>generalizzerà</b>. Il problema pratico? <b>Non possiamo calcolarlo</b>: richiederebbe di
+      conoscere <em>tutti</em> i casi possibili, che non abbiamo. Ne abbiamo solo un campione: gli esempi del nostro
+      dataset. Da questa tensione — «vorremmo l'errore su tutto il mondo, ma abbiamo solo un pugno di esempi» — nasce
+      tutta la difficoltà (e la bellezza) del machine learning, e in particolare il tema del §2.5. Per ora, tieni la
+      distinzione: <mark>c'è un errore «ideale» su tutto (il rischio atteso, che vogliamo piccolo) e un errore
+      «misurabile» sui nostri esempi (che useremo come guida).</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-3"><span class="secnum">Sezione 2.3</span>Minimi quadrati: il primo modello</h2>
+
+  <p class="lead">
+    Ora costruiamo il primo vero modello, il più semplice e il più importante: la <b>retta ai minimi quadrati</b>.
+    L'idea è: tra tutte le rette possibili, scegliamo quella che sbaglia di meno sui nostri esempi. «Sbagliare di meno»
+    lo misuriamo con la loss quadratica del §2.2. Vediamolo passo passo.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> La retta che passa più vicino a tutti i punti</div>
+    <p style="margin-bottom:0">
+      Immagina i tuoi esempi come punti su un grafico (metri quadri sull'asse orizzontale, prezzo su quello verticale).
+      Vuoi tracciare una <b>retta</b> che descriva la tendenza. Quale retta scegli? <mark>Quella che passa il più
+      «vicino possibile» a tutti i punti insieme.</mark> «Vicino» in che senso? Per ogni punto, guardi la sua distanza
+      verticale dalla retta (il residuo: quanto la retta sbaglia su quel punto); la elevi al quadrato (la loss); e le
+      sommi tutte. La retta «migliore» è quella che rende questa <b>somma dei quadrati</b> la più piccola possibile.
+      Ecco perché si chiama <b>«minimi quadrati»</b>: minimizziamo la somma dei quadrati degli errori.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Cosa minimizza il metodo dei minimi quadrati <span class="tag">la somma dei quadrati dei residui</span></div>
+    <p style="text-align:center; font-size:1.25rem; margin:.6rem 0 1rem">$$ \text{SSE} = \sum_{i=1}^{n} \big(y_i - \hat{y}_i\big)^2 $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>SSE — «Sum of Squared Errors» (somma degli errori quadratici)</dt>
+        <dd>è il numero totale che vogliamo rendere piccolo: <mark>l'errore complessivo della retta su tutti gli
+            esempi</mark>. Più è basso, meglio la retta descrive i dati.</dd>
+        <dt>il simbolo $\sum$ (sigma grande) — «somma di»</dt>
+        <dd>è la lettera greca <b>sigma maiuscola</b>, e significa semplicemente <b>«somma tutti questi pezzi»</b>. È
+            un modo compatto per non scrivere «primo + secondo + terzo + …». <mark>Pensa a $\sum$ come a un
+            «totalizzatore»</mark> che accumula i termini che gli metti a destra.</dd>
+        <dt>$i = 1$ (sotto) e $n$ (sopra) — da dove a dove sommare</dt>
+        <dd>dicono al totalizzatore: <b>parti dall'esempio numero $i=1$ e vai fino all'esempio numero $n$</b> (dove $n$
+            è quanti esempi hai). Cioè: <mark>«fai la somma per ogni esempio, dal primo all'ultimo».</mark> La lettera
+            $i$ è solo un contatore che scorre gli esempi.</dd>
+        <dt>$y_i - \hat{y}_i$ — il residuo dell'esempio $i$-esimo</dt>
+        <dd>il piccolo $i$ in basso (il «pedice») dice «di quale esempio parliamo»: $y_i$ è la risposta vera del
+            $i$-esimo esempio, $\hat{y}_i$ quella prevista dalla retta per quello stesso esempio. <mark>La loro
+            differenza è quanto la retta sbaglia su quel punto.</mark></dd>
+        <dt>il quadrato, $(\ldots)^2$</dt>
+        <dd>come nel §2.2: rende positivi tutti gli errori e punisce di più quelli grossi. <mark>Sommiamo i
+            <em>quadrati</em> dei residui, non i residui grezzi</mark> (che, avendo segni opposti, si annullerebbero
+            tra loro nascondendo gli errori).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Rileggiamo la formula a parole, tutta insieme: <mark>«per ogni esempio, prendi quanto la retta sbaglia ($y_i -
+      \hat{y}_i$), elevalo al quadrato, e somma tutto: questo è l'errore totale SSE».</mark> Il metodo dei minimi
+      quadrati sceglie, tra tutte le rette possibili, quella con l'SSE più piccola. Nel prossimo capitolo di
+      regressione (Cap. 4) vedremo <em>come</em> si trova esattamente quella retta con una formula; qui ci basta capire
+      <em>cosa</em> cerca. Guardalo succedere nel widget: sposta la retta e osserva l'SSE salire e scendere.
+    </div>
+  </div>
+
+  <div class="widget" id="w-lsq">
+    <div class="w-head">
+      <span>I minimi quadrati dal vivo</span>
+      <span class="hint">muovi la retta: minimizza la somma dei quadrati</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="lsq-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="max-width:420px; margin:.5rem auto 0; display:grid; grid-template-columns:auto 1fr; gap:.4rem .6rem; align-items:center; font-size:.82rem">
+        <label style="color:var(--ink-soft)">pendenza</label>
+        <input type="range" id="lsq-a" min="0.5" max="3" step="0.02" value="2.2">
+        <label style="color:var(--ink-soft)">intercetta</label>
+        <input type="range" id="lsq-b" min="-60" max="120" step="2" value="40">
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="lsq-best">trova il minimo (minimi quadrati)</button>
+      <button class="btn ghost" id="lsq-reset">reset</button>
+    </div>
+    <div class="w-readout" id="lsq-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-4"><span class="secnum">Sezione 2.4</span>k-NN: il secondo modello</h2>
+
+  <p class="lead">
+    Il secondo modello capostipite è agli antipodi del primo per filosofia, ed è ancora più intuitivo: il <b>k-NN</b>
+    («k-nearest neighbors», i «k vicini più prossimi»). Non cerca nessuna retta né formula: per prevedere, <b>guarda gli
+    esempi più simili</b>.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> «Chiedi ai vicini»</div>
+    <p style="margin-bottom:0">
+      Vuoi stimare il prezzo di una casa di 120 m². Il k-NN fa la cosa più naturale del mondo: <mark>trova, tra gli
+      esempi che ha, le case <b>più simili</b> a quella (quelle con metratura più vicina a 120), e fa la media dei loro
+      prezzi.</mark> Se le tre case più simili sono state vendute a 240, 250 e 260 mila €, il k-NN prevede circa 250.
+      È lo stesso ragionamento che fai tu quando stimi il valore di qualcosa «guardando cose simili». La «k» è quanti
+      vicini guardare (qui 3).
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La previsione del k-NN <span class="tag">la media dei k vicini</span></div>
+    <p style="text-align:center; font-size:1.2rem; margin:.6rem 0 1rem">$$ \hat{y} = \frac{1}{k} \sum_{i \,\in\, N_k} y_i $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>$\hat{y}$ — la previsione (per il nuovo caso)</dt>
+        <dd>il prezzo che stimiamo per la casa nuova.</dd>
+        <dt>$N_k$ — l'<b>insieme dei $k$ vicini più prossimi</b></dt>
+        <dd>è l'elenco dei $k$ esempi più <b>simili</b> al nuovo caso (le $k$ case con caratteristiche più vicine).
+            <mark>La scritta $i \in N_k$ sotto la somma significa «per ogni esempio $i$ che sta tra i $k$ vicini».</mark>
+            Il simbolo $\in$ vuol dire «appartiene a», «sta dentro».</dd>
+        <dt>$\sum_{i \in N_k} y_i$ — la <b>somma dei prezzi dei vicini</b></dt>
+        <dd>il totalizzatore $\sum$ (§2.3) qui accumula i valori $y_i$ (i prezzi veri) dei soli $k$ vicini. <mark>Cioè:
+            «somma i prezzi delle case simili».</mark></dd>
+        <dt>$\frac{1}{k}$ — dividere per $k$ = fare la <b>media</b></dt>
+        <dd>moltiplicare per $\frac{1}{k}$ (cioè dividere per $k$) trasforma la somma in una <b>media</b>: sommi i $k$
+            prezzi e li dividi per quanti sono. <mark>Il risultato è il prezzo medio delle case simili</mark> — la
+            nostra stima.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Tutta la formula, a parole: <mark>«guarda le $k$ case più simili, e prevedi la media dei loro prezzi».</mark>
+      Semplicissimo — eppure sorprendentemente efficace. Nota la differenza filosofica con i minimi quadrati: la retta
+      <b>riassume</b> tutti i dati in due numeri (pendenza e intercetta) e poi «dimentica» gli esempi; il k-NN invece
+      <b>non riassume nulla</b>, tiene tutti gli esempi e li consulta a ogni previsione. Due modi opposti di
+      «imparare»: uno cerca una regola compatta, l'altro si fida della somiglianza locale. Il valore di $k$ (quanti
+      vicini) è il suo unico «bottone da regolare», e lo studieremo bene al capitolo 9.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-5"><span class="secnum">Sezione 2.5</span>Rischio empirico vs atteso</h2>
+
+  <p class="lead">
+    Torniamo alla tensione del §2.2 e mettiamola a fuoco, perché è forse l'idea più importante di tutto il machine
+    learning. C'è l'errore che <b>vorremmo</b> minimizzare e l'errore che <b>possiamo</b> misurare: non sono la stessa
+    cosa, e confonderli è la fonte di quasi tutti gli errori dei principianti.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Due errori da non confondere <span class="tag">quello che vogliamo vs quello che vediamo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>rischio atteso</b> (test error) — quello che <b>vogliamo</b> piccolo</dt>
+        <dd>l'errore medio su <b>tutti i casi possibili</b>, compresi quelli mai visti (§2.2). <mark>È il vero voto del
+            modello, ma non lo possiamo calcolare</mark> (non abbiamo «tutti i casi»).</dd>
+        <dt>il <b>rischio empirico</b> (training error) — quello che <b>possiamo</b> misurare</dt>
+        <dd>l'errore medio sui <b>soli esempi che abbiamo</b> (il training set). <mark>Questo lo sappiamo calcolare</mark>:
+            è la media della loss sui nostri dati. È la grandezza che i modelli, come i minimi quadrati, effettivamente
+            minimizzano.</dd>
+        <dt>il salto di fede</dt>
+        <dd>speriamo che minimizzare l'errore sugli esempi che abbiamo (empirico) porti anche a un errore piccolo su
+            quelli nuovi (atteso). <mark>Spesso funziona — ma non sempre!</mark> Ed è qui il pericolo.</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> La trappola: azzerare l'errore sugli esempi non è vincere</div>
+      <p style="margin-bottom:0">
+        Un modello potrebbe rendere l'errore <b>sugli esempi visti</b> piccolissimo (persino zero!) semplicemente
+        <b>memorizzandoli</b> — passando esattamente per ogni punto, curva su curva. Ma su un caso <b>nuovo</b>
+        sbaglierebbe di brutto, perché ha imparato anche il <b>rumore</b> (§2.1), non solo il segnale. <mark>Errore
+        empirico basso + errore atteso alto = il modello ha «memorizzato» invece di «capire».</mark> Questo fenomeno si
+        chiama <b>overfitting</b> («sovra-adattamento»), ed è il nemico numero uno del machine learning. Gli dedichiamo
+        tutto il prossimo capitolo. Per ora, incidilo nella mente: <b>un errore basso sui dati di allenamento NON
+        garantisce un buon modello</b>. La prova del nove è sempre su dati mai visti.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-6"><span class="secnum">Sezione 2.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Vediamo in scikit-learn i due modelli di questo capitolo, con la loro identica interfaccia (<code>fit</code> /
+    <code>predict</code>), e misuriamo la loro loss.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">due_modelli.py</div>
+    <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+<span class="kw">from</span> sklearn.neighbors <span class="kw">import</span> KNeighborsRegressor
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> mean_squared_error
+
+X <span class="op">=</span> [[<span class="nm">50</span>], [<span class="nm">80</span>], [<span class="nm">120</span>], [<span class="nm">150</span>], [<span class="nm">200</span>]]   <span class="cm"># m²</span>
+y <span class="op">=</span> [<span class="nm">120</span>, <span class="nm">180</span>, <span class="nm">250</span>, <span class="nm">310</span>, <span class="nm">400</span>]           <span class="cm"># prezzi</span>
+
+<span class="cm"># modello 1: minimi quadrati (una retta)</span>
+retta <span class="op">=</span> <span class="fn">LinearRegression</span>().<span class="fn">fit</span>(X, y)
+
+<span class="cm"># modello 2: k-NN con k=3 (la media dei 3 vicini)</span>
+knn <span class="op">=</span> <span class="fn">KNeighborsRegressor</span>(n_neighbors<span class="op">=</span><span class="nm">3</span>).<span class="fn">fit</span>(X, y)
+
+<span class="cm"># previsione per una casa di 120 m², con entrambi</span>
+<span class="bi">print</span>(retta.<span class="fn">predict</span>([[<span class="nm">120</span>]]))   <span class="rs"># [252.9...]  la retta</span>
+<span class="bi">print</span>(knn.<span class="fn">predict</span>([[<span class="nm">120</span>]]))     <span class="rs"># [246.6...]  media di 180,250,310? no: dei 3 più vicini</span>
+
+<span class="cm"># la loss (MSE = errore quadratico MEDIO) sugli esempi di allenamento</span>
+<span class="bi">print</span>(<span class="fn">mean_squared_error</span>(y, retta.<span class="fn">predict</span>(X)))   <span class="rs"># errore della retta</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      Due modelli filosoficamente opposti — una retta e un «voto dei vicini» — ma <b>la stessa identica interfaccia</b>:
+      <code>fit</code> per imparare, <code>predict</code> per prevedere. <mark>Questa uniformità è il regalo di
+      scikit-learn</mark>: cambierai modello, non il modo di usarlo. Nota <code>mean_squared_error</code>: è la loss
+      quadratica del §2.2, ma <b>mediata</b> (MSE = «Mean Squared Error»), cioè l'SSE diviso per il numero di esempi —
+      il rischio <b>empirico</b> del §2.5. <mark>Attenzione</mark>: qui la calcoliamo sugli stessi dati con cui il
+      modello ha imparato, quindi è ottimistica (è l'errore «sugli esempi visti»). Nel prossimo capitolo impareremo a
+      misurare l'errore <b>onesto</b>, su dati nuovi — l'unico che conta davvero.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
+    <ol style="margin-bottom:0">
+      <li>La verità è <b>segnale + rumore</b>: $y = f(X) + \varepsilon$. Il rumore $\varepsilon$ è imprevedibile:
+          nessun modello può prevedere $y$ esatto (§2.1).</li>
+      <li>La <b>loss</b> misura l'errore di una previsione; quella quadratica $L = (y - \hat{y})^2$ toglie il segno e
+          punisce di più gli errori grossi (§2.2).</li>
+      <li>I <b>minimi quadrati</b> scelgono la retta che minimizza l'<b>SSE</b> = $\sum (y_i - \hat{y}_i)^2$ (somma dei
+          quadrati dei residui) (§2.3). Il <b>k-NN</b> prevede la <b>media dei $k$ vicini</b> più simili (§2.4).</li>
+      <li>Non confondere <b>rischio empirico</b> (errore sugli esempi visti, misurabile) e <b>atteso</b> (errore su
+          tutto, quello che conta): errore basso sui dati visti ≠ buon modello (overfitting!) (§2.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai le due idee-madre — misurare l'errore e minimizzarlo — e i due modelli capostipite. Ma abbiamo lasciato in
+    sospeso la domanda più importante, quella del §2.5: come facciamo a sapere se un modello ha <em>capito</em> o ha
+    solo <em>memorizzato</em>? Perché a volte un modello «più preciso» sugli esempi è in realtà peggiore? Nel
+    <strong>Capitolo 3</strong> affrontiamo con delicatezza il cuore del problema: <b>overfitting e underfitting</b>, la
+    magica <b>scomposizione bias-varianza</b> (un'equazione che spiega <em>da dove viene</em> l'errore), e come
+    dividere i dati per misurare l'errore onestamente. È il capitolo che ti insegna a non farti ingannare.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-7"><span class="secnum">Sezione 2.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.1</div>
+    <p style="margin-bottom:0">
+      Nella formula $y = f(X) + \varepsilon$, cosa rappresenta $\varepsilon$? Dai un esempio concreto (per il prezzo di
+      una casa) di cosa potrebbe «finire» dentro $\varepsilon$. Perché nessun modello può prevedere $y$ esattamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.2</div>
+    <p style="margin-bottom:0">
+      Nella loss quadratica $L = (y - \hat{y})^2$, perché si eleva al quadrato la differenza, invece di usarla così
+      com'è? Dai i due motivi. Quanto «costa» un errore di 30, rispetto a uno di 10?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.3</div>
+    <p style="margin-bottom:0">
+      Spiega a parole cosa significa la formula $\text{SSE} = \sum_{i=1}^{n}(y_i - \hat{y}_i)^2$, in particolare cosa
+      fanno il simbolo $\sum$ e il quadrato. Cosa cerca il metodo dei «minimi quadrati»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 2.4</div>
+    <p style="margin-bottom:0">
+      Un modello ha errore quasi zero sugli esempi con cui è stato allenato, ma errore grande su esempi nuovi. Come si
+      chiama questo fenomeno? Qual è la differenza tra rischio empirico e rischio atteso, e quale dei due conta davvero?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s2-8"><span class="secnum">Sezione 2.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.1</div>
+    <p style="margin-bottom:0">
+      $\varepsilon$ (epsilon) è il <b>rumore</b>: la parte imprevedibile della risposta, dovuta a cause che non
+      possiamo misurare. Per una casa, dentro $\varepsilon$ potrebbe finire la fretta del venditore, l'umore del
+      compratore, una trattativa fortunata, il momento del mercato — tutto ciò che sposta il prezzo ma non dipende
+      ordinatamente dalle caratteristiche $X$. Nessun modello può prevedere $y$ esattamente proprio perché una parte
+      ($\varepsilon$) è genuinamente casuale: il meglio possibile è catturare $f(X)$, il segnale, non il rumore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.2</div>
+    <p style="margin-bottom:0">
+      Si eleva al quadrato per due motivi: <b>(1)</b> per <b>togliere il segno</b> — un errore di $-20$ e uno di $+20$
+      sono ugualmente sbagliati, e il quadrato li rende entrambi positivi (400), così non si annullano tra loro;
+      <b>(2)</b> per <b>punire di più gli errori grossi</b> — il quadrato cresce più che proporzionalmente. Un errore
+      di 30 «costa» $30^2 = 900$, uno di 10 «costa» $10^2 = 100$: quindi l'errore di 30 pesa <b>9 volte</b> quello di
+      10 (non 3), perché $30 = 3 \times 10$ e $3^2 = 9$.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.3</div>
+    <p style="margin-bottom:0">
+      La formula dice: <b>per ogni esempio</b> (dal primo, $i=1$, all'ultimo, $n$), prendi il <b>residuo</b>
+      $y_i - \hat{y}_i$ (quanto la retta sbaglia su quell'esempio), <b>elevalo al quadrato</b> (per renderlo positivo e
+      pesare di più gli errori grossi), e <b>sommali tutti</b> — questo è il compito del simbolo $\sum$, un
+      «totalizzatore» che accumula i termini. Il risultato, SSE, è l'errore totale della retta. Il metodo dei <b>minimi
+      quadrati</b> cerca, tra tutte le rette possibili, quella che rende questo SSE il <b>più piccolo possibile</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 2.4</div>
+    <p style="margin-bottom:0">
+      Il fenomeno si chiama <b>overfitting</b> (sovra-adattamento): il modello ha «memorizzato» gli esempi (rumore
+      compreso) invece di cogliere lo schema vero, quindi va male sui casi nuovi. Il <b>rischio empirico</b> è l'errore
+      medio sugli esempi che abbiamo (misurabile, ma ottimistico se calcolato sugli stessi dati di allenamento); il
+      <b>rischio atteso</b> è l'errore medio su tutti i casi possibili, inclusi quelli nuovi. Quello che conta davvero è
+      il <b>rischio atteso</b> (la capacità di generalizzare): un errore empirico basso non basta.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §2.3 — minimi quadrati: retta regolabile, residui, SSE dal vivo, snap al minimo.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('lsq-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('lsq-out');
+  const aEl = document.getElementById('lsq-a');
+  const bEl = document.getElementById('lsq-b');
+
+  const DATA = [[50,120],[80,180],[120,250],[150,310],[200,400]];
+  // retta ottimale (minimi quadrati) precalcolata
+  const n = DATA.length;
+  let sx=0, sy=0, sxx=0, sxy=0;
+  DATA.forEach(function(d){ sx+=d[0]; sy+=d[1]; sxx+=d[0]*d[0]; sxy+=d[0]*d[1]; });
+  const aOpt = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+  const bOpt = (sy - aOpt*sx) / n;
+  const sseOpt = sseOf(aOpt, bOpt);
+
+  function sseOf(a, b) {
+    let s = 0;
+    DATA.forEach(function (d) { const e = d[1] - (a*d[0] + b); s += e*e; });
+    return s;
+  }
+
+  const p = new Plot(svg, { xmin: 20, xmax: 240, ymin: 60, ymax: 460 });
+
+  function draw() {
+    const a = +aEl.value, b = +bEl.value;
+    const sse = sseOf(a, b);
+    p.clear();
+    p.grid(40, 100);
+    p.axes({ numbers: false });
+    p.text(130, 66, 'metri quadri →', { size: 12, color: 'var(--ink-soft)' });
+
+    // residui (segmenti verticali) + quadrato dell'errore come nota
+    DATA.forEach(function (d) {
+      const yhat = a*d[0] + b;
+      p.line(d[0], d[1], d[0], yhat, { color: 'var(--warm)', width: 1.6 });
+    });
+    // la retta
+    p.line(20, a*20+b, 240, a*240+b, { color: 'var(--accent)', width: 2.4 });
+    // i punti
+    DATA.forEach(function (d) { p.dot(d[0], d[1], { color: 'var(--ink)', r: 5 }); });
+
+    const ratio = sse / sseOpt;
+    const vicino = ratio < 1.03;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' +
+      'I segmenti <b style="color:var(--warm)">rossi</b> sono i <b>residui</b> (di quanto la retta sbaglia su ogni punto). ' +
+      'La somma dei loro <b>quadrati</b> è: <b style="color:' + (vicino ? 'var(--green)' : 'var(--warm)') + '">SSE = ' + Math.round(sse).toLocaleString('it') + '</b>' +
+      (vicino ? ' ✅ — sei praticamente al <b>minimo</b>! Questa è la retta dei minimi quadrati.' : ' — prova a muovere pendenza e intercetta per <b>abbassarlo</b>. Il minimo possibile è ' + Math.round(sseOpt).toLocaleString('it') + '.') +
+      '</div>';
+  }
+
+  aEl.addEventListener('input', draw);
+  bEl.addEventListener('input', draw);
+  document.getElementById('lsq-best').addEventListener('click', function () {
+    aEl.value = aOpt.toFixed(2); bEl.value = Math.round(bOpt); draw();
+  });
+  document.getElementById('lsq-reset').addEventListener('click', function () {
+    aEl.value = 2.2; bEl.value = 40; draw();
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

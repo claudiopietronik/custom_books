@@ -29,7 +29,7 @@ const TOC = [
     n: 2,
     titolo: "L'apprendimento supervisionato",
     file: "cap02-supervisionato.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s2-1", n: "2.1", t: "La funzione target e il rumore" },
       { id: "s2-2", n: "2.2", t: "Loss e rischio atteso" },
