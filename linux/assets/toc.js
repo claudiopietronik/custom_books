@@ -179,7 +179,7 @@ const TOC = [
     n: 12,
     titolo: "Bash scripting: le basi",
     file: "cap12-bash-basi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Cos'è uno script" },
       { id: "s12-2", n: "12.2", t: "Lo shebang e l'esecuzione" },

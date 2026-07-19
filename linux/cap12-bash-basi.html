@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · Bash scripting: le basi — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>Bash scripting: le basi</h1>
+    <p class="standfirst">
+      Fin qui hai dato i comandi uno per uno. Ma il vero superpotere del terminale è l'<b>automazione</b>: mettere una
+      sequenza di comandi in un file e farli eseguire tutti insieme, tante volte, con un solo comando. Quel file è uno
+      <b>script bash</b> — e scriverne uno è più semplice di quanto pensi, perché è fatto degli <em>stessi</em> comandi
+      che già conosci, messi in fila. Ciò che fai a mano una volta, uno script lo fa per te per sempre: un backup, una
+      pulizia, un rapporto, un'installazione. È il passaggio da «usare Linux» a «far lavorare Linux al posto tuo». In
+      questo capitolo muoviamo i primi passi: cos'è uno script e perché è potente (§12.1), la riga magica iniziale
+      (<b>shebang</b>) e come eseguire uno script (§12.2), le <b>variabili</b> per dare nomi ai valori (§12.3), e come
+      far ricevere allo script dei <b>dati in ingresso</b> (§12.4). <mark>Se hai fatto il libro di Python, molte idee
+      ti saranno familiari: uno script è «programmare con i comandi del terminale».</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è uno <b>script</b> (§12.1), lo <b>shebang</b> e l'esecuzione (§12.2), <b>variabili ed echo</b> (§12.3),
+      leggere <b>input e argomenti</b> (§12.4). Nel laboratorio (§12.5) scrivi il tuo primo script.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: automatizzare è moltiplicare il tuo tempo</div>
+    <p style="margin-bottom:0">
+      Ogni compito ripetitivo che automatizzi è tempo (e errori) risparmiato per sempre. <mark>Uno script scritto una
+      volta lavora all'infinito</mark>: fa il backup ogni notte, controlla lo stato di un servizio, prepara un
+      ambiente. È la competenza che distingue chi «usa» il terminale da chi lo «comanda». E sui server, gli script sono
+      il pane quotidiano dell'amministrazione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Cos'è uno script</h2>
+
+  <p class="lead">
+    Uno <b>script bash</b> è semplicemente un <b>file di testo</b> che contiene una sequenza di comandi, uno per riga.
+    Quando lo esegui, la shell (bash) legge il file ed esegue i comandi in ordine, come se li avessi digitati tu uno
+    dopo l'altro.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Comandi in fila, in un file</div>
+    <div class="term" style="margin:.6rem auto">
+      <div class="t-head file">saluto.sh — uno script semplicissimo</div>
+      <pre><span class="cm">#!/bin/bash</span>
+<span class="bi">echo</span> <span class="st">"Ciao!"</span>
+<span class="bi">echo</span> <span class="st">"Oggi è:"</span>
+<span class="cmd">date</span>
+<span class="bi">echo</span> <span class="st">"I file qui sono:"</span>
+<span class="cmd">ls</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Ecco tutto: uno script è una <b>lista di comandi</b> (gli stessi che daresti a mano) in un file, di solito con
+      estensione <code>.sh</code>. <mark>Eseguendolo, bash fa scorrere i comandi dall'alto in basso</mark>: stampa
+      «Ciao!», poi la data, poi «I file qui sono:», poi l'elenco dei file. <b>La potenza:</b> invece di digitare
+      cinque comandi ogni volta, ne scrivi <b>uno</b> (lanciare lo script) e vengono eseguiti tutti. Moltiplica questo
+      per compiti di venti, cinquanta comandi, e capisci perché gli script sono così preziosi. Le righe che iniziano
+      con <code>#</code> (tranne lo shebang, §12.2) sono <b>commenti</b>: note per te, ignorate da bash.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Lo shebang e l'esecuzione</h2>
+
+  <p class="lead">
+    Due dettagli fanno di un file di testo uno script eseguibile: la prima riga speciale, lo <b>shebang</b>, e il
+    permesso di <b>esecuzione</b> (il Cap. 6 torna utile!).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — da file a script eseguibile</div>
+    <pre><span class="c"># 1) la prima riga dello script deve essere lo "shebang":</span>
+<span class="c">#    #!/bin/bash   -> dice al sistema "esegui questo con bash"</span>
+
+<span class="c"># 2) rendi lo script eseguibile (aggiungi il permesso x, Cap. 6)</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">saluto.sh</span>
+
+<span class="c"># 3) eseguilo indicando il percorso (./ = "in questa cartella")</span>
+<span class="p">$</span> <span class="cmd">./saluto.sh</span>
+<span class="out">Ciao!
+Oggi è:
+Sat Jul 19 ...</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I due requisiti <span class="tag">shebang · chmod +x · ./</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>lo <b>shebang</b>: <span class="mono">#!/bin/bash</span></dt>
+        <dd>la <b>prima riga</b> dello script. Dice al sistema <b>quale interprete</b> usare per eseguirlo (qui bash).
+            <mark>I caratteri <code>#!</code> sono lo «shebang»</mark>; senza questa riga, il sistema non saprebbe come
+            eseguire il file.</dd>
+        <dt><span class="mono">chmod +x saluto.sh</span></dt>
+        <dd>rende lo script <b>eseguibile</b> (aggiunge il permesso <code>x</code>, Cap. 6). <mark>Senza, otterresti
+            «Permission denied»</mark> provando a lanciarlo — l'errore che ora sai risolvere.</dd>
+        <dt><span class="mono">./saluto.sh</span></dt>
+        <dd>per eseguire uno script nella cartella corrente, premetti <code>./</code> («in questa cartella»).
+            <mark>Serve perché, per sicurezza, la shell non esegue automaticamente</mark> i programmi della cartella
+            corrente: devi indicarne esplicitamente il percorso.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il flusso completo, da ricordare: <mark>scrivi lo script (con lo shebang in cima) → <code>chmod +x</code> →
+      lancialo con <code>./nome.sh</code></mark>. In alternativa puoi eseguirlo senza renderlo eseguibile passandolo a
+      bash: <code>bash saluto.sh</code> (utile per una prova veloce). Ma per uno script che userai spesso, conviene
+      renderlo eseguibile una volta e lanciarlo con <code>./</code>. L'estensione <code>.sh</code> è una convenzione
+      (aiuta a riconoscerlo), non un obbligo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Variabili ed echo</h2>
+
+  <p class="lead">
+    Come in ogni linguaggio, negli script puoi usare <b>variabili</b>: contenitori con un nome per conservare un
+    valore e riusarlo. E <code>echo</code> è il comando per <b>stampare</b> — testo e valori delle variabili.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">esempio.sh — variabili</div>
+    <pre><span class="cm">#!/bin/bash</span>
+NOME<span class="op">=</span><span class="st">"Anna"</span>          <span class="cm"># assegna (NIENTE spazi attorno all'=!)</span>
+CITTA<span class="op">=</span><span class="st">"Roma"</span>
+
+<span class="bi">echo</span> <span class="st">"Ciao, </span><span class="rs">$NOME</span><span class="st">!"</span>          <span class="cm"># $NOME "espande" il valore</span>
+<span class="bi">echo</span> <span class="st">"Vivi a </span><span class="rs">${CITTA}</span><span class="st">."</span>      <span class="cm"># ${...} è più esplicito, equivalente</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">l'output</div>
+    <pre><span class="out">Ciao, Anna!
+Vivi a Roma.</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Variabili in bash <span class="tag">NOME=valore · $NOME</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>assegnare: <span class="mono">NOME="Anna"</span></dt>
+        <dd>dai un valore a una variabile. <mark>Attenzione: <b>niente spazi</b> attorno all'<code>=</code>!</mark>
+            <code>NOME = "Anna"</code> (con spazi) dà errore — è una delle trappole più comuni. La convenzione è
+            nominare le variabili in MAIUSCOLO.</dd>
+        <dt>usare: <span class="mono">$NOME</span> o <span class="mono">${NOME}</span></dt>
+        <dd>il <b>simbolo <code>$</code></b> davanti al nome «espande» il valore della variabile.
+            <code>echo "Ciao $NOME"</code> stampa «Ciao Anna». <mark>La forma <code>${NOME}</code></mark> (con graffe)
+            è equivalente e più esplicita (utile per evitare ambiguità).</dd>
+        <dt><span class="mono">echo</span> — stampare</dt>
+        <dd>stampa testo e valori. Usa le <b>virgolette doppie</b> <code>"..."</code> per far espandere le variabili
+            dentro il testo; le <b>virgolette singole</b> <code>'...'</code> le lasciano letterali (<code>$NOME</code>
+            resta <code>$NOME</code>). <mark>Nel dubbio, doppie</mark>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se hai fatto Python o JavaScript, l'idea di variabile ti è familiare — ma la sintassi di bash ha le sue
+      peculiarità: <mark>niente spazi attorno all'<code>=</code> in assegnazione, e il <code>$</code> per <b>leggere</b>
+      il valore</mark>. Queste due regole coprono la maggior parte degli errori dei principianti. Le variabili rendono
+      gli script flessibili: definisci un valore in cima (es. una cartella) e lo riusi ovunque, cambiandolo in un solo
+      punto. Prova il widget qui sotto.
+    </div>
+  </div>
+
+  <div class="widget" id="w-var">
+    <div class="w-head">
+      <span>Esegui uno script con variabili</span>
+      <span class="hint">cambia i valori, guarda l'output</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">saluto.sh</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="vr-code" style="margin:0; font-size:12px"></pre></div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:.4rem .5rem; margin-top:.6rem; align-items:center; font-size:.85rem">
+          <label style="color:var(--ink-soft)">NOME=</label>
+          <input type="text" id="vr-nome" value="Anna" style="padding:.3rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">EVENTO=</label>
+          <input type="text" id="vr-ev" value="festa" style="padding:.3rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+      </div>
+      <div style="flex:1; min-width:210px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">output (./saluto.sh)</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="vr-out-term" style="margin:0; min-height:80px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="vr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Leggere input e argomenti</h2>
+
+  <p class="lead">
+    Uno script diventa davvero utile quando può ricevere <b>dati dall'esterno</b>, invece di avere tutto «fisso».
+    Due modi: gli <b>argomenti</b> (dati passati al lancio) e l'input <b>interattivo</b> (chiesto durante l'esecuzione).
+  </p>
+
+  <div class="term">
+    <div class="t-head file">saluta.sh — argomenti e input</div>
+    <pre><span class="cm">#!/bin/bash</span>
+<span class="cm"># $1 è il PRIMO argomento passato allo script</span>
+<span class="bi">echo</span> <span class="st">"Ciao, </span><span class="rs">$1</span><span class="st">!"</span>
+
+<span class="cm"># read: chiedi un valore all'utente durante l'esecuzione</span>
+<span class="bi">echo</span> <span class="st">"Come stai?"</span>
+<span class="bi">read</span> RISPOSTA
+<span class="bi">echo</span> <span class="st">"Hai detto: </span><span class="rs">$RISPOSTA</span><span class="st">"</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — eseguirlo con un argomento</div>
+    <pre><span class="p">$</span> <span class="cmd">./saluta.sh</span> <span class="ar">Luca</span>       <span class="c"># "Luca" diventa $1</span>
+<span class="out">Ciao, Luca!
+Come stai?</span>
+<span class="p">$</span> bene                    <span class="c"># (l'utente digita)</span>
+<span class="out">Hai detto: bene</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Ricevere dati <span class="tag">$1 $2 ... · read</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>gli <b>argomenti</b>: <span class="mono">$1</span>, <span class="mono">$2</span>, …</dt>
+        <dd>i valori passati allo script al lancio: <code>./script.sh ciao mondo</code> mette «ciao» in
+            <code>$1</code> e «mondo» in <code>$2</code>. <mark><code>$0</code> è il nome dello script, <code>$#</code>
+            il numero di argomenti, <code>$@</code> tutti gli argomenti</mark>. Il modo standard di parametrizzare uno
+            script.</dd>
+        <dt>l'input interattivo: <span class="mono">read VARIABILE</span></dt>
+        <dd>ferma lo script e <b>aspetta</b> che l'utente digiti qualcosa, mettendolo nella variabile. <mark>Per
+            script che «dialogano»</mark> con chi li usa.</dd>
+        <dt>quale usare</dt>
+        <dd><b>argomenti</b> per dati noti al lancio (comodi per l'automazione: nessuna interazione); <b>read</b>
+            quando serve chiedere qualcosa durante l'esecuzione. <mark>Gli argomenti rendono lo script
+            «riutilizzabile»</mark> con valori diversi ogni volta.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Gli argomenti (<code>$1</code>, <code>$2</code>…) sono ciò che rende uno script un vero <b>strumento</b>: lo
+      stesso <code>saluta.sh</code> funziona per «Luca», «Anna», chiunque — passando un argomento diverso. <mark>È lo
+      stesso principio dei parametri di una funzione</mark> (se hai fatto Python/C++): un blocco di logica riutilizzabile
+      con input diversi. Nel prossimo capitolo, con condizioni e cicli, questi script diventeranno capaci di
+      «ragionare».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Laboratorio: il primo script</h2>
+
+  <p class="lead">
+    Scriviamo, rendiamo eseguibile e lanciamo un vero primo script — che usa variabili e un argomento.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale + file — dal nulla a uno script funzionante</div>
+    <pre><span class="c"># 1) crea lo script con nano (o il tuo editor)</span>
+<span class="p">$</span> <span class="cmd">nano</span> <span class="ar">info.sh</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">info.sh (scrivi questo dentro nano)</div>
+    <pre><span class="cm">#!/bin/bash</span>
+UTENTE<span class="op">=</span><span class="rs">$(</span><span class="cmd">whoami</span><span class="rs">)</span>          <span class="cm"># $(...) cattura l'output di un comando</span>
+<span class="bi">echo</span> <span class="st">"Ciao </span><span class="rs">$1</span><span class="st">, sei loggato come </span><span class="rs">$UTENTE</span><span class="st">."</span>
+<span class="bi">echo</span> <span class="st">"Ti trovi in: </span><span class="rs">$(</span><span class="cmd">pwd</span><span class="rs">)</span><span class="st">"</span>
+<span class="bi">echo</span> <span class="st">"Ci sono </span><span class="rs">$(</span><span class="cmd">ls</span> | <span class="cmd">wc</span> <span class="fl">-l</span><span class="rs">)</span><span class="st"> elementi qui."</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — rendilo eseguibile e lancialo</div>
+    <pre><span class="c"># 2) rendilo eseguibile</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">info.sh</span>
+
+<span class="c"># 3) lancialo passando il tuo nome come argomento</span>
+<span class="p">$</span> <span class="cmd">./info.sh</span> <span class="ar">Marco</span>
+<span class="out">Ciao Marco, sei loggato come anna.
+Ti trovi in: /home/anna
+Ci sono 7 elementi qui.</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai costruito</div>
+    <p style="margin-bottom:0">
+      Il tuo primo script <b>completo</b>: usa un <b>argomento</b> (<code>$1</code>, il nome), <b>variabili</b>
+      (<code>UTENTE</code>), e — bonus — la <b>sostituzione di comando</b> <code>$(...)</code>, che cattura l'output di
+      un comando in una variabile o in una stringa (qui <code>whoami</code>, <code>pwd</code>, la pipe
+      <code>ls | wc -l</code>). <mark>Nota quanto è potente <code>$(comando)</code></mark>: mette il <em>risultato</em>
+      di un comando dentro il testo. Hai messo insieme tutto il libro finora — comandi, pipe, variabili — in un file
+      riutilizzabile. Questo è scripting. Nel prossimo capitolo aggiungiamo il «cervello»: <b>condizioni</b> e
+      <b>cicli</b>, per far prendere decisioni e ripetere azioni ai tuoi script.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li>Uno <b>script</b> è un file con una lista di comandi, eseguiti in ordine. Automatizza sequenze ripetitive
+          (§12.1).</li>
+      <li>Prima riga <b>shebang</b> <code>#!/bin/bash</code>; poi <code>chmod +x</code>; poi lancia con
+          <code>./nome.sh</code> (§12.2).</li>
+      <li><b>Variabili</b>: <code>NOME="valore"</code> (niente spazi attorno all'<code>=</code>!), leggi con
+          <code>$NOME</code>. <code>echo</code> stampa (virgolette doppie per espandere le variabili) (§12.3).</li>
+      <li><b>Input</b>: <code>$1</code>, <code>$2</code>… (argomenti al lancio), <code>read VAR</code> (interattivo).
+          <code>$(comando)</code> cattura l'output di un comando (§12.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    I tuoi script sanno eseguire comandi e usare variabili — ma per ora vanno «dritti», senza scelte. Per renderli
+    davvero utili devono poter <b>decidere</b> («se il file esiste, fai questo; altrimenti quello») e <b>ripetere</b>
+    («per ogni file nella cartella, fai…»). Nel <strong>Capitolo 13</strong> aggiungiamo la logica: le <b>condizioni</b>
+    (<code>if</code>) e i <b>cicli</b> (<code>for</code>, <code>while</code>). È il salto che trasforma uno script da
+    «lista di comandi» a «piccolo programma intelligente».
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Cos'è, in sostanza, uno script bash? Quali sono i tre passi per creare ed eseguire uno script che si chiama
+      <code>ciao.sh</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve la riga <code>#!/bin/bash</code> in cima a uno script? E perché, dopo averlo scritto, spesso serve
+      <code>chmod +x</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Trova l'errore in questa riga di uno script: <code>NOME = "Luca"</code>. Come si scrive correttamente? E come
+      stamperesti poi «Ciao Luca» usando la variabile?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      In uno script, cosa contiene <code>$1</code>? Se lanci <code>./script.sh mela pera</code>, cosa valgono
+      <code>$1</code> e <code>$2</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Uno script bash è un <b>file di testo</b> che contiene una sequenza di comandi (gli stessi del terminale),
+      eseguiti in ordine dalla shell. I tre passi per <code>ciao.sh</code>: <b>(1)</b> scriverlo con un editor (con
+      <code>#!/bin/bash</code> in cima); <b>(2)</b> renderlo eseguibile con <code>chmod +x ciao.sh</code>; <b>(3)</b>
+      lanciarlo con <code>./ciao.sh</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      La riga <code>#!/bin/bash</code> (lo <b>shebang</b>) dice al sistema <b>quale interprete</b> usare per eseguire lo
+      script — qui bash. Senza, il sistema non saprebbe come farlo girare. Serve poi <code>chmod +x</code> per dare al
+      file il permesso di <b>esecuzione</b> (Cap. 6): senza quel permesso, tentando di lanciarlo otterresti «Permission
+      denied». In breve: lo shebang dice «come» eseguirlo, il permesso x dà il «diritto» di eseguirlo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      L'errore sono gli <b>spazi attorno all'<code>=</code></b>: in bash l'assegnazione non li ammette. Corretto:
+      <code>NOME="Luca"</code> (nessuno spazio). Per stampare «Ciao Luca» usando la variabile:
+      <code>echo "Ciao $NOME"</code> (con virgolette doppie, così <code>$NOME</code> viene espanso al suo valore).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      <code>$1</code> contiene il <b>primo argomento</b> passato allo script al momento del lancio. Lanciando
+      <code>./script.sh mela pera</code>: <code>$1</code> vale <code>mela</code> e <code>$2</code> vale
+      <code>pera</code>. (In più: <code>$0</code> è il nome dello script, <code>$#</code> il numero di argomenti = 2,
+      <code>$@</code> tutti gli argomenti.)
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.3 — esegui uno script con variabili: cambia i valori, vedi l'output
+   ========================================================================= */
+(function () {
+  const codeEl = document.getElementById('vr-code');
+  if (!codeEl) return;
+  const nomeEl = document.getElementById('vr-nome');
+  const evEl = document.getElementById('vr-ev');
+  const term = document.getElementById('vr-out-term');
+  const out = document.getElementById('vr-out');
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const nome = nomeEl.value || '';
+    const ev = evEl.value || '';
+    codeEl.innerHTML =
+      '<span class="cm">#!/bin/bash</span>\n' +
+      'NOME<span class="op">=</span><span class="st">"' + esc(nome) + '"</span>\n' +
+      'EVENTO<span class="op">=</span><span class="st">"' + esc(ev) + '"</span>\n' +
+      '<span class="bi">echo</span> <span class="st">"Ciao <span class="rs">$NOME</span>!"</span>\n' +
+      '<span class="bi">echo</span> <span class="st">"Sei invitato/a alla <span class="rs">$EVENTO</span>."</span>';
+    term.innerHTML =
+      '<span class="out">Ciao ' + esc(nome || '(vuoto)') + '!\n' +
+      'Sei invitato/a alla ' + esc(ev || '(vuoto)') + '.</span>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Cambia <code>NOME</code> ed <code>EVENTO</code> a sinistra: nell\'output, <code>$NOME</code> e <code>$EVENTO</code> vengono <b>sostituiti</b> dai loro valori (il <code>$</code> «espande» la variabile). Un solo script, tanti risultati diversi — è la potenza delle variabili.</div>';
+  }
+  nomeEl.addEventListener('input', render);
+  evEl.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>
