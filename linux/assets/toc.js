@@ -14,7 +14,7 @@ const TOC = [
     n: 1,
     titolo: "Cos'è Linux",
     file: "cap01-cos-e-linux.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s1-1", n: "1.1", t: "Un sistema operativo ovunque" },
       { id: "s1-2", n: "1.2", t: "Kernel, distribuzioni, GNU" },

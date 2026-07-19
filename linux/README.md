@@ -12,7 +12,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 
 ## Capitoli
 
-- [ ] 1 — Cos'è Linux
+- [x] 1 — Cos'è Linux
 - [ ] 2 — Il terminale e la shell
 - [ ] 3 — Il filesystem
 - [ ] 4 — File e cartelle
