@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · File e cartelle — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>File e cartelle</h1>
+    <p class="standfirst">
+      Ora che sai orientarti nell'albero, è ora di <b>agire</b> su di esso: creare, copiare, spostare e cancellare
+      file e cartelle. Sono i comandi che userai ogni giorno per organizzare il tuo lavoro, e sono pochi e logici:
+      <code>mkdir</code> e <code>touch</code> per creare, <code>cp</code> e <code>mv</code> per copiare e spostare,
+      <code>rm</code> per cancellare. C'è però una differenza importante rispetto all'interfaccia grafica, che va detta
+      subito e con chiarezza: <b>il terminale non ha un cestino</b>. Quando cancelli con <code>rm</code>, il file
+      sparisce <em>davvero</em>, senza possibilità di recupero facile. Non è un motivo per aver paura — è un motivo per
+      capire bene cosa fai. In questo capitolo: creare con <code>mkdir</code>/<code>touch</code> (§4.1), copiare e
+      spostare con <code>cp</code>/<code>mv</code> (§4.2), cancellare con <code>rm</code> (§4.3), e i comodissimi
+      <b>caratteri jolly</b> per agire su tanti file insieme (§4.4). <mark>Con questi comandi diventi padrone dei tuoi
+      file, con la responsabilità che ne consegue.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Creare con <b>mkdir/touch</b> (§4.1), copiare/spostare con <b>cp/mv</b> (§4.2), cancellare con <b>rm/rmdir</b>
+      (§4.3), i <b>caratteri jolly</b> <code>*</code> e <code>?</code> (§4.4). Nel laboratorio (§4.5) gestisci i file.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: organizzare (e non perdere) i dati</div>
+    <p style="margin-bottom:0">
+      Gestire i file è l'operazione più quotidiana su qualsiasi sistema. Farlo dal terminale è <b>veloce e potente</b>
+      (specie coi jolly), ma richiede <b>attenzione</b>: senza cestino, un comando avventato può cancellare cose
+      importanti. <mark>Imparare questi comandi <em>e</em> le loro precauzioni ti rende efficiente senza farti
+      rischiare disastri.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>Creare: mkdir, touch</h2>
+
+  <p class="lead">
+    Due comandi per creare: <code>mkdir</code> per le <b>cartelle</b>, <code>touch</code> per i <b>file</b> (vuoti).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — creare cartelle e file</div>
+    <pre><span class="c"># crea una cartella</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">progetto</span>
+
+<span class="c"># crea più cartelle annidate in un colpo (-p = crea i genitori mancanti)</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="fl">-p</span> <span class="ar">progetto/src/utils</span>
+
+<span class="c"># crea un file vuoto</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">note.txt</span>
+
+<span class="c"># crea più file insieme</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">a.txt b.txt c.txt</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Creare, smontato <span class="tag">mkdir · mkdir -p · touch</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">mkdir nome</span> — «make directory»</dt>
+        <dd>crea una cartella con quel nome nella posizione corrente (o al percorso indicato). <mark>Errore se esiste
+            già</mark> (te lo dice).</dd>
+        <dt><span class="mono">mkdir -p a/b/c</span></dt>
+        <dd>l'opzione <code>-p</code> («parents») crea anche le cartelle intermedie mancanti. <mark>Senza
+            <code>-p</code>, se <code>a/b</code> non esiste, <code>mkdir a/b/c</code> fallisce.</mark></dd>
+        <dt><span class="mono">touch nome</span></dt>
+        <dd>crea un file <b>vuoto</b> con quel nome. <mark>Utile per «preparare» un file</mark> che riempirai dopo (con
+            un editor, Cap. 10). (Tecnicamente <code>touch</code> aggiorna anche la data di un file esistente, ma
+            l'uso comune è creare file vuoti.)</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota che puoi passare <b>più nomi</b> a <code>touch</code> (e a molti comandi): crea tutti i file elencati.
+      <mark>Questa capacità di agire su più cose in un colpo</mark> — potenziata dai jolly (§4.4) — è una delle ragioni
+      per cui il terminale è più veloce dei clic. Suggerimento: usa il <b>Tab</b> (Cap. 3) per completare i nomi ed
+      evitare errori di battitura.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>Copiare e spostare: cp, mv</h2>
+
+  <p class="lead">
+    <code>cp</code> <b>copia</b> (l'originale resta), <code>mv</code> <b>sposta</b> (l'originale sparisce dalla vecchia
+    posizione). Entrambi prendono una <b>sorgente</b> e una <b>destinazione</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — copiare e spostare</div>
+    <pre><span class="c"># COPIA un file (l'originale resta)</span>
+<span class="p">$</span> <span class="cmd">cp</span> <span class="ar">note.txt</span> <span class="ar">note-backup.txt</span>
+
+<span class="c"># copia una CARTELLA (serve -r, "ricorsivo", per il contenuto)</span>
+<span class="p">$</span> <span class="cmd">cp</span> <span class="fl">-r</span> <span class="ar">progetto</span> <span class="ar">progetto-copia</span>
+
+<span class="c"># SPOSTA un file in un'altra cartella</span>
+<span class="p">$</span> <span class="cmd">mv</span> <span class="ar">note.txt</span> <span class="ar">documenti/</span>
+
+<span class="c"># mv serve anche per RINOMINARE (spostare = cambiare nome/posizione)</span>
+<span class="p">$</span> <span class="cmd">mv</span> <span class="ar">vecchio.txt</span> <span class="ar">nuovo.txt</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">cp e mv smontati <span class="tag">sorgente → destinazione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">cp sorgente destinazione</span></dt>
+        <dd><b>copia</b>: crea un duplicato. L'originale <b>resta</b>. Per copiare una <b>cartella</b> col suo
+            contenuto serve <code>-r</code> (ricorsivo).</dd>
+        <dt><span class="mono">mv sorgente destinazione</span></dt>
+        <dd><b>sposta</b>: l'originale <b>sparisce</b> dalla vecchia posizione e compare nella nuova. <mark>Non serve
+            <code>-r</code></mark> per le cartelle (spostare è un'operazione «leggera»).</dd>
+        <dt><span class="mono">mv</span> = anche <b>rinominare</b></dt>
+        <dd>«spostare» un file allo stesso posto con un nome diverso = <b>rinominarlo</b>. <mark>In Linux non c'è un
+            comando «rename»: si usa <code>mv</code></mark>. <code>mv vecchio.txt nuovo.txt</code> rinomina.</dd>
+        <dt>la destinazione conta</dt>
+        <dd>se la destinazione è una <b>cartella esistente</b>, il file ci finisce dentro; se è un <b>nome nuovo</b>,
+            il file viene copiato/spostato con quel nome. <mark>Attenzione</mark>: se la destinazione è un file
+            esistente, viene <b>sovrascritto</b> (vedi trappola sotto).</dd>
+      </dl>
+    </div>
+    <div class="box warn" style="margin:1rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> cp e mv sovrascrivono senza chiedere</div>
+      <p style="margin-bottom:0">
+        Se la destinazione esiste già, <code>cp</code> e <code>mv</code> la <b>sovrascrivono silenziosamente</b>, senza
+        avviso. <mark>Un file importante può sparire così</mark>. Precauzione: usa l'opzione <code>-i</code>
+        («interactive») — <code>cp -i</code>, <code>mv -i</code> — che chiede conferma prima di sovrascrivere. Prendi
+        l'abitudine di controllare con <code>ls</code> cosa c'è nella destinazione prima di un'operazione importante.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Cancellare: rm, rmdir</h2>
+
+  <p class="lead">
+    <code>rm</code> cancella file, <code>rmdir</code> cancella cartelle vuote. È qui che serve la massima attenzione:
+    nel terminale, cancellare è <b>definitivo</b>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — cancellare (con cautela)</div>
+    <pre><span class="c"># cancella un file</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="ar">note.txt</span>
+
+<span class="c"># cancella una cartella e TUTTO il suo contenuto (-r = ricorsivo)</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="fl">-r</span> <span class="ar">vecchia-cartella</span>
+
+<span class="c"># chiedi conferma prima di ogni cancellazione (-i)</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="fl">-i</span> <span class="ar">importante.txt</span>
+<span class="out">rm: remove regular file 'importante.txt'? </span>
+
+<span class="c"># cancella una cartella VUOTA</span>
+<span class="p">$</span> <span class="cmd">rmdir</span> <span class="ar">cartella-vuota</span></pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> rm non ha cestino: cancella per sempre</div>
+    <p style="margin-bottom:0">
+      Quando cancelli con <code>rm</code>, il file <b>non va nel cestino</b>: sparisce, e recuperarlo è difficile o
+      impossibile. <mark>Non c'è un «annulla»</mark>. Regole di sicurezza: <b>(1)</b> controlla sempre <em>cosa</em>
+      stai per cancellare (con <code>ls</code>); <b>(2)</b> usa <code>rm -i</code> per farti chiedere conferma su cose
+      importanti; <b>(3)</b> <mark>temi come la peste il comando <code>rm -rf</code></mark> (ricorsivo + forzato, senza
+      domande): cancella tutto ciò che indichi, in silenzio. In particolare, <code>rm -rf /</code> o percorsi
+      sbagliati con i jolly possono <b>distruggere il sistema</b>. È uno dei modi più famosi di «farsi male» con Linux:
+      pensa <b>due volte</b> prima di premere Invio su un <code>rm</code>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>I caratteri jolly (*, ?)</h2>
+
+  <p class="lead">
+    Ecco un superpotere che rende il terminale molto più veloce dei clic: i <b>caratteri jolly</b> (wildcard). Ti
+    permettono di indicare <b>molti file insieme</b> con un solo comando, in base a uno schema.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I jolly principali <span class="tag">* (qualsiasi) · ? (un carattere)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">*</span> — qualsiasi sequenza di caratteri</dt>
+        <dd><code>*.txt</code> = «tutti i file che finiscono in <code>.txt</code>»; <code>foto*</code> = «tutto ciò che
+            inizia con foto»; <code>*</code> da solo = «tutto». <mark>Il jolly più usato.</mark></dd>
+        <dt><span class="mono">?</span> — un singolo carattere qualsiasi</dt>
+        <dd><code>file?.txt</code> = <code>file1.txt</code>, <code>fileA.txt</code>… (un carattere al posto del
+            <code>?</code>), ma non <code>file10.txt</code> (sono due caratteri). Più preciso di <code>*</code>.</dd>
+        <dt>si combinano coi comandi</dt>
+        <dd><code>ls *.jpg</code> (elenca tutte le immagini), <code>cp *.txt backup/</code> (copia tutti i .txt),
+            <code>rm temp*</code> (cancella tutto ciò che inizia con temp). <mark>Un comando, tanti file.</mark></dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">terminale — i jolly in azione</div>
+      <pre><span class="p">$</span> <span class="cmd">ls</span> <span class="ar">*.txt</span>            <span class="c"># tutti i file .txt della cartella</span>
+<span class="out">note.txt  todo.txt  lista.txt</span>
+<span class="p">$</span> <span class="cmd">cp</span> <span class="ar">*.jpg</span> <span class="ar">foto/</span>       <span class="c"># copia tutte le immagini jpg in foto/</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="ar">temp?.log</span>        <span class="c"># cancella temp1.log, temp2.log... (un carattere)</span></pre>
+    </div>
+    <div class="box warn" style="margin:.8rem 0 0">
+      <div class="box-title"><span class="ico">⚠</span> I jolly + rm = molta potenza, molto rischio</div>
+      <p style="margin-bottom:0">
+        I jolly sono comodissimi, ma con <code>rm</code> vanno maneggiati con cura: <code>rm *</code> cancella
+        <b>tutti</b> i file della cartella; un <code>*</code> messo dove non doveva può cancellare più del previsto.
+        <mark>Trucco di sicurezza: prova <b>prima</b> con <code>ls</code></mark> (es. <code>ls temp*</code>) per vedere
+        <em>esattamente</em> quali file corrisponderebbero, e solo dopo, se sono quelli giusti, sostituisci
+        <code>ls</code> con <code>rm</code>. Così «guardi prima di sparare».
+      </p>
+    </div>
+  </div>
+
+  <div class="widget" id="w-fm">
+    <div class="w-head">
+      <span>File manager dal terminale</span>
+      <span class="hint">crea, copia, sposta, cancella — guarda la cartella</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:flex-start">
+      <div style="flex:1; min-width:190px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">📂 la cartella (ls)</div>
+        <div id="fm-files" style="display:flex; flex-wrap:wrap; gap:.35rem; min-height:80px; align-content:flex-start"></div>
+      </div>
+      <div style="flex:1; min-width:190px">
+        <div style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:.4rem">ultimo comando</div>
+        <div class="term" style="margin:0; max-width:100%"><pre id="fm-cmd" style="margin:0; min-height:40px"></pre></div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" data-op="touch">touch nuovo.txt</button>
+      <button class="btn" data-op="cp">cp note.txt copia.txt</button>
+      <button class="btn" data-op="mv">mv bozza.txt finale.txt</button>
+      <button class="btn" data-op="rmstar">rm *.tmp</button>
+      <button class="btn ghost" data-op="reset">reset</button>
+    </div>
+    <div class="w-readout" id="fm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>Laboratorio: gestire i file</h2>
+
+  <p class="lead">
+    Un giro completo di creazione, organizzazione e pulizia — in una cartella di prova, così puoi sperimentare senza
+    rischi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro sicuro (in una cartella di prova)</div>
+    <pre><span class="c"># crea una cartella di prova ed entra (così non tocchi altro)</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">prova</span> && <span class="cmd">cd</span> <span class="ar">prova</span>
+
+<span class="c"># crea alcuni file e una struttura</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">uno.txt due.txt tre.txt</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">backup</span>
+
+<span class="c"># copia tutti i .txt nella cartella backup (jolly!)</span>
+<span class="p">$</span> <span class="cmd">cp</span> <span class="ar">*.txt</span> <span class="ar">backup/</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="ar">backup</span>
+<span class="out">uno.txt  due.txt  tre.txt</span>
+
+<span class="c"># rinomina e cancella (con cautela)</span>
+<span class="p">$</span> <span class="cmd">mv</span> <span class="ar">uno.txt</span> <span class="ar">primo.txt</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="ar">*.txt</span>         <span class="c"># GUARDA prima cosa c'è</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="ar">due.txt</span>          <span class="c"># poi cancella con consapevolezza</span>
+
+<span class="c"># pulizia finale: torna su e cancella tutta la cartella di prova</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">..</span>
+<span class="p">$</span> <span class="cmd">rm</span> <span class="fl">-r</span> <span class="ar">prova</span>          <span class="c"># ricorsivo: cartella + contenuto</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai praticato</div>
+    <p style="margin-bottom:0">
+      Hai fatto il giro completo: <b>creato</b> (<code>mkdir</code>, <code>touch</code>), <b>copiato</b> con i jolly
+      (<code>cp *.txt</code>), <b>rinominato/spostato</b> (<code>mv</code>) e <b>cancellato</b> (<code>rm</code>,
+      <code>rm -r</code>). <mark>Nota la buona abitudine</mark>: prima di <code>rm</code>, hai guardato con
+      <code>ls</code> cosa c'era. E hai lavorato in una cartella di <b>prova</b>, così nessun errore poteva far danni
+      veri — un'ottima strategia quando impari. Ora sei padrone dei tuoi file. Nel prossimo capitolo impareremo a
+      <b>guardarne il contenuto</b> e a <b>cercare</b> testo e file — perché organizzare i file è metà del lavoro;
+      l'altra metà è ritrovarci dentro le informazioni.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><b>Creare</b>: <code>mkdir</code> (cartelle; <code>-p</code> per annidate), <code>touch</code> (file vuoti,
+          anche più insieme) (§4.1).</li>
+      <li><b>Copiare</b> <code>cp</code> (l'originale resta; <code>-r</code> per cartelle), <b>spostare/rinominare</b>
+          <code>mv</code>. Sovrascrivono senza chiedere: usa <code>-i</code> (§4.2).</li>
+      <li><b>Cancellare</b> <code>rm</code> (<code>-r</code> per cartelle): <b>niente cestino</b>, è definitivo. Temi
+          <code>rm -rf</code>; usa <code>rm -i</code>; guarda con <code>ls</code> prima (§4.3).</li>
+      <li><b>Jolly</b>: <code>*</code> (qualsiasi sequenza), <code>?</code> (un carattere) per agire su tanti file.
+          Provali prima con <code>ls</code> (§4.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai creare e organizzare i file. Ma un file serve a poco se non puoi <b>guardarci dentro</b> e <b>cercare</b> ciò
+    che ti serve. Nel <strong>Capitolo 5</strong> impariamo a leggere il contenuto (<code>cat</code>, <code>less</code>,
+    <code>head</code>, <code>tail</code>) e — potentissimo — a cercare: <code>grep</code> per trovare testo dentro i
+    file, e <code>find</code> per trovare i file stessi. Sono gli strumenti che trasformano una montagna di file in
+    informazioni raggiungibili.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Scrivi i comandi per: creare una cartella <code>lavoro</code>, e dentro di essa (in un colpo solo, anche se
+      <code>lavoro</code> non esistesse) la struttura <code>lavoro/2026/gennaio</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>cp</code> e <code>mv</code>? Quale dei due useresti per <b>rinominare</b> un file,
+      e perché in Linux non c'è un comando «rename»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>rm</code> richiede più attenzione rispetto al cancellare da un'interfaccia grafica? Cita due
+      precauzioni per usarlo in sicurezza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Cosa selezionano questi schemi con i jolly? (a) <code>*.log</code>; (b) <code>report?.pdf</code>; (c)
+      <code>foto*</code>. Perché conviene provarli prima con <code>ls</code> se poi vuoi usarli con <code>rm</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">lavoro</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="fl">-p</span> <span class="ar">lavoro/2026/gennaio</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">In realtà basta il secondo comando: <code>mkdir -p</code> crea anche
+      <code>lavoro</code> e <code>2026</code> se non esistono. L'opzione <code>-p</code> crea tutta la catena di
+      cartelle mancanti.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      <code>cp</code> <b>copia</b> (crea un duplicato, l'originale resta); <code>mv</code> <b>sposta</b> (l'originale
+      sparisce dalla vecchia posizione). Per <b>rinominare</b> si usa <code>mv</code>: rinominare equivale a
+      «spostare» il file nella stessa cartella con un nome diverso (<code>mv vecchio.txt nuovo.txt</code>). In Linux
+      non serve un comando «rename» separato perché cambiare nome e cambiare posizione sono, concettualmente, la
+      stessa operazione — entrambe gestite da <code>mv</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>rm</code> <b>non usa un cestino</b>: cancella in modo <b>definitivo</b>, senza possibilità di
+      «annulla» facile. Due precauzioni: <b>(1)</b> guardare sempre con <code>ls</code> cosa si sta per cancellare
+      (specie coi jolly) <b>prima</b> di eseguire; <b>(2)</b> usare <code>rm -i</code>, che chiede conferma prima di
+      ogni cancellazione. In generale, evitare <code>rm -rf</code> se non si è assolutamente certi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      (a) <code>*.log</code>: tutti i file che finiscono in <code>.log</code>. (b) <code>report?.pdf</code>: i file
+      tipo <code>report1.pdf</code>, <code>reportA.pdf</code> (un <b>singolo</b> carattere al posto del <code>?</code>),
+      ma non <code>report10.pdf</code>. (c) <code>foto*</code>: tutto ciò che inizia con <code>foto</code>. Conviene
+      provare prima con <code>ls</code> perché così vedi <b>esattamente</b> quali file corrisponderebbero: se sono
+      quelli giusti, sostituisci <code>ls</code> con <code>rm</code>; eviti così di cancellare per errore più file del
+      previsto.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.4 — file manager: touch/cp/mv/rm con jolly, la cartella cambia
+   ========================================================================= */
+(function () {
+  const filesEl = document.getElementById('fm-files');
+  if (!filesEl) return;
+  const cmdEl = document.getElementById('fm-cmd');
+  const out = document.getElementById('fm-out');
+
+  const BASE = ['note.txt', 'bozza.txt', 'dati.csv', 'log1.tmp', 'log2.tmp'];
+  let files = BASE.slice();
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function draw(cmd) {
+    filesEl.innerHTML = files.length ? files.map(function (f) {
+      const tmp = f.endsWith('.tmp');
+      return '<span style="background:' + (tmp ? 'color-mix(in srgb, var(--warm) 15%, var(--paper))' : 'var(--paper)') + '; border:1px solid var(--ink-soft); border-radius:6px; padding:.25rem .55rem; font-family:var(--mono); font-size:.8rem">📄 ' + esc(f) + '</span>';
+    }).join('') : '<span style="color:var(--ink-soft); font-family:var(--mono); font-size:.82rem">(cartella vuota)</span>';
+    cmdEl.innerHTML = cmd ? ('<span class="p">$</span> <span class="cmd">' + esc(cmd) + '</span>') : '<span class="out">Scegli un\'operazione.</span>';
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  const OPS = {
+    touch: function () {
+      if (files.indexOf('nuovo.txt') < 0) files.push('nuovo.txt');
+      draw('touch nuovo.txt');
+      out.innerHTML = note('green', '<b>touch</b>: creato il file vuoto <code>nuovo.txt</code>. Se esistesse già, ne aggiornerebbe solo la data.');
+    },
+    cp: function () {
+      if (files.indexOf('note.txt') < 0) { out.innerHTML = note('warm', 'note.txt non c\'è: fai reset.'); return; }
+      if (files.indexOf('copia.txt') < 0) files.push('copia.txt');
+      draw('cp note.txt copia.txt');
+      out.innerHTML = note('green', '<b>cp</b>: creata <code>copia.txt</code>, duplicato di note.txt. L\'originale <b>resta</b> (copiare, non spostare).');
+    },
+    mv: function () {
+      const i = files.indexOf('bozza.txt');
+      if (i < 0) { out.innerHTML = note('warm', 'bozza.txt non c\'è più: fai reset.'); return; }
+      files[i] = 'finale.txt';
+      draw('mv bozza.txt finale.txt');
+      out.innerHTML = note('green', '<b>mv</b>: <code>bozza.txt</code> è diventato <code>finale.txt</code> — rinominato (l\'originale <b>sparisce</b>, mv sposta).');
+    },
+    rmstar: function () {
+      const before = files.length;
+      const removed = files.filter(function (f) { return f.endsWith('.tmp'); });
+      files = files.filter(function (f) { return !f.endsWith('.tmp'); });
+      draw('rm *.tmp');
+      out.innerHTML = removed.length
+        ? note('warm', '<b>rm *.tmp</b>: il jolly <code>*</code> ha selezionato <b>' + removed.length + '</b> file (' + removed.join(', ') + ') e li ha cancellati <b>tutti insieme</b>. Nessun cestino! Sempre meglio un <code>ls *.tmp</code> prima.')
+        : note('', 'Nessun file .tmp da cancellare. Fai reset per ripristinarli.');
+    },
+    reset: function () { files = BASE.slice(); draw(''); out.innerHTML = note('', 'Cartella ripristinata.'); }
+  };
+
+  document.querySelectorAll('#w-fm .btn[data-op]').forEach(function (b) {
+    b.addEventListener('click', function () { OPS[b.getAttribute('data-op')](); });
+  });
+  draw('');
+  out.innerHTML = note('', 'Prova le operazioni e guarda la cartella cambiare. I file <span style="color:var(--warm)">.tmp</span> servono a testare il jolly: <code>rm *.tmp</code> li cancella tutti in un colpo. Ricorda: nel terminale non c\'è cestino.');
+})();
+</script>
+</body>
+</html>
