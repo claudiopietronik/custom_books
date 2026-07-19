@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · Ereditarietà e polimorfismo — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>Ereditarietà e polimorfismo</h1>
+    <p class="standfirst">
+      Spesso più tipi hanno molto in comune: un <code>Cane</code> e un <code>Gatto</code> sono entrambi
+      <code>Animale</code>; un <code>Cerchio</code> e un <code>Quadrato</code> sono entrambi <code>Forma</code>.
+      L'<b>ereditarietà</b> permette a una classe di <b>basarsi su un'altra</b>, riusandone dati e metodi. Ma la
+      vera magia è il <b>polimorfismo</b>: la capacità di trattare oggetti diversi attraverso un'<b>interfaccia
+      comune</b>, lasciando che ognuno risponda «a modo suo». Chiami <code>disegna()</code> su una <code>Forma</code>,
+      e se è un cerchio disegna un cerchio, se è un quadrato un quadrato — <mark>senza che il tuo codice debba sapere
+      quale forma sia</mark>. In C++ questo passa dai <b>metodi virtuali</b> e ha un legame profondo con i puntatori
+      che hai imparato. È una delle idee più potenti (e belle) della programmazione a oggetti.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Ereditare</b> da una classe base (§11.1), i <b>metodi virtuali</b> (§11.2), il <b>polimorfismo</b> (§11.3),
+      le <b>classi astratte</b> (§11.4). Nel laboratorio (§11.5) costruisci una gerarchia di forme.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: codice che si estende senza riscriversi</div>
+    <p style="margin-bottom:0">
+      Ereditarietà e polimorfismo sono ciò che rende il software <b>estensibile</b>: <mark>puoi aggiungere un nuovo
+      tipo (una nuova forma, un nuovo tipo di utente) senza toccare il codice che li usa</mark>. È il fondamento di
+      framework, motori di gioco, interfacce grafiche — ovunque serva trattare «cose diverse in modo uniforme». Il
+      polimorfismo, in particolare, è un salto concettuale importante: una volta capito, cambia il modo in cui
+      progetti i programmi. È il capitolo che completa la tua conoscenza dell'OOP in C++.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Ereditare da una classe</h2>
+
+  <p class="lead">
+    Una classe <b>derivata</b> (figlia) può <b>ereditare</b> da una classe <b>base</b> (genitore), ottenendone dati
+    e metodi «gratis», e aggiungendo o modificando ciò che serve.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Ereditarietà <span class="tag">class Figlia : public Base</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Animale</span> {
+<span class="kw">public</span>:
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">nome</span>;
+    <span class="ty">void</span> <span class="fn">dormi</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">nome</span> <span class="op">&lt;&lt;</span> <span class="st">" dorme\n"</span>; }
+};
+
+<span class="kw">class</span> <span class="fn">Cane</span> : <span class="kw">public</span> <span class="fn">Animale</span> {   <span class="cm">// Cane EREDITA da Animale</span>
+<span class="kw">public</span>:
+    <span class="ty">void</span> <span class="fn">abbaia</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Bau!\n"</span>; }   <span class="cm">// metodo in più</span>
+};
+
+<span class="fn">Cane</span> <span class="nm">c</span>;
+<span class="nm">c</span><span class="op">.</span><span class="nm">nome</span> <span class="op">=</span> <span class="st">"Fido"</span>;   <span class="cm">// campo EREDITATO da Animale</span>
+<span class="nm">c</span><span class="op">.</span><span class="fn">dormi</span>();           <span class="cm">// metodo ereditato → "Fido dorme"</span>
+<span class="nm">c</span><span class="op">.</span><span class="fn">abbaia</span>();          <span class="cm">// metodo proprio → "Bau!"</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">class Cane : public Animale</span></dt>
+        <dd>i due punti <code>:</code> seguiti da <code>public Animale</code> dicono «Cane <b>eredita</b> da
+            Animale». <code>Cane</code> ottiene <b>tutti</b> i membri pubblici di <code>Animale</code> (campo
+            <code>nome</code>, metodo <code>dormi</code>) senza riscriverli.</dd>
+        <dt>aggiungere</dt>
+        <dd><code>Cane</code> aggiunge ciò che gli è proprio (<code>abbaia</code>). Un oggetto <code>Cane</code>
+            <b>è anche un Animale</b>: ha tutto ciò che ha un Animale, più il suo.</dd>
+        <dt>la relazione «è-un»</dt>
+        <dd><mark>l'ereditarietà modella un «è-un»</mark>: un Cane <em>è un</em> Animale, un Cerchio <em>è una</em>
+            Forma. Se non regge («un motore <em>è-un</em> auto»? no, ne <em>fa parte</em>), probabilmente non è
+            ereditarietà che ti serve.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>Metodi virtuali</h2>
+
+  <p class="lead">
+    La classe figlia può <b>ridefinire</b> un metodo del genitore (override). Ma perché la ridefinizione «funzioni»
+    anche attraverso un puntatore alla classe base, il metodo dev'essere dichiarato <code>virtual</code>. È il
+    meccanismo che abilita il polimorfismo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Metodi virtuali <span class="tag">virtual · override</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Animale</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> <span class="ty">void</span> <span class="fn">verso</span>() {          <span class="cm">// VIRTUAL: può essere ridefinito polimorficamente</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"...\n"</span>;
+    }
+};
+
+<span class="kw">class</span> <span class="fn">Cane</span> : <span class="kw">public</span> <span class="fn">Animale</span> {
+<span class="kw">public</span>:
+    <span class="ty">void</span> <span class="fn">verso</span>() <span class="kw">override</span> {           <span class="cm">// override: ridefinisce verso()</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Bau!\n"</span>;
+    }
+};</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="kw">virtual</span> (nella base)</dt>
+        <dd>marca un metodo come «ridefinibile in modo polimorfico»: dice al C++ «se qualcuno chiama questo metodo,
+            usa la versione <b>dell'oggetto reale</b>, non quella scritta nel tipo del puntatore». <mark>Senza
+            <code>virtual</code>, il polimorfismo NON funziona</mark> (§11.3) — è la parola chiave cruciale.</dd>
+        <dt><span class="kw">override</span> (nella figlia)</dt>
+        <dd>parola opzionale ma <b>fortemente consigliata</b> che segna «questo ridefinisce un metodo virtuale della
+            base». Il compilatore controlla che sia davvero così: se sbagli firma (un typo, un tipo diverso), ti
+            avvisa invece di creare silenziosamente un metodo <em>nuovo</em>. Ti salva da bug sottili.</dd>
+        <dt>il distruttore virtuale</dt>
+        <dd>regola pratica: se una classe ha metodi virtuali (è pensata per l'ereditarietà), dovrebbe avere anche il
+            <b>distruttore virtual</b> (<code>virtual ~Animale() = default;</code>), per una distruzione corretta
+            attraverso puntatori base. Un dettaglio importante da ricordare.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Il polimorfismo</h2>
+
+  <p class="lead">
+    Ecco il cuore. Con i metodi virtuali, puoi tenere oggetti di tipi <b>diversi</b> tramite un puntatore (o
+    riferimento) alla <b>classe base comune</b>, e chiamare un metodo: <b>ognuno risponde a modo suo</b>,
+    automaticamente. Il tuo codice non deve sapere quale tipo concreto sia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il polimorfismo in azione <span class="tag">un'interfaccia, tanti comportamenti</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="cm">// un vector di PUNTATORI ad Animale, che contiene Cani e Gatti insieme:</span>
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Animale</span><span class="op">*</span><span class="op">&gt;</span> <span class="nm">zoo</span>;
+<span class="nm">zoo</span><span class="op">.</span><span class="fn">push_back</span>(<span class="kw">new</span> <span class="fn">Cane</span>());
+<span class="nm">zoo</span><span class="op">.</span><span class="fn">push_back</span>(<span class="kw">new</span> <span class="fn">Gatto</span>());
+
+<span class="kw">for</span> (<span class="fn">Animale</span><span class="op">*</span> <span class="nm">a</span> : <span class="nm">zoo</span>) {
+    <span class="nm">a</span><span class="op">-&gt;</span><span class="fn">verso</span>();     <span class="cm">// ognuno fa il SUO verso: "Bau!", poi "Miao!"</span>
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">Animale* a</span> — un puntatore alla base</dt>
+        <dd>il puntatore è di tipo <code>Animale*</code>, ma può puntare a un <code>Cane</code> o un
+            <code>Gatto</code> (perché «sono» Animali). <mark>Il polimorfismo in C++ funziona tramite <b>puntatori
+            (o riferimenti)</b> alla base</mark> — ecco perché il Cap. 7 era fondamentale.</dd>
+        <dt><span class="mono">a-&gt;verso()</span></dt>
+        <dd>la freccia <code>-&gt;</code> è «dereferenzia e chiama il metodo» (equivale a <code>(*a).verso()</code>).
+            Grazie a <code>virtual</code>, viene eseguito il <code>verso()</code> <b>dell'oggetto reale</b> (Cane o
+            Gatto), non quello generico di Animale. <b>Questa è la magia</b>: stesso codice, comportamenti diversi.</dd>
+        <dt>perché è potente</dt>
+        <dd>il ciclo <b>non sa né gli importa</b> quali animali ci sono: tratta tutti come <code>Animale</code> e
+            ognuno risponde correttamente. Vuoi aggiungere un <code>Uccello</code>? Lo scrivi, e il ciclo funziona
+            <b>senza modifiche</b>. <mark>Codice aperto all'estensione, chiuso alle modifiche</mark>: un principio
+            d'oro del design.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota: qui abbiamo usato <code>new</code> per creare oggetti (memoria dinamica, Cap. 12), necessario per tenere
+      tipi diversi in un vector di puntatori base. Nel C++ moderno si usano gli <b>smart pointer</b>
+      (<code>std::vector&lt;std::unique_ptr&lt;Animale&gt;&gt;</code>) per evitare i rischi del <code>new</code>/
+      <code>delete</code> — lo vedremo al Capitolo 12. Il concetto di polimorfismo, però, è questo. Prova il widget.
+    </div>
+  </div>
+
+  <div class="widget" id="w-poly">
+    <div class="w-head">
+      <span>Polimorfismo: una Forma*, tante aree</span>
+      <span class="hint">scegli la forma e la dimensione</span>
+    </div>
+    <div class="w-stage" style="min-height:170px">
+      <div id="wpo-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.7rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-s="cerchio">Cerchio</button>
+      <button class="w-btn" data-s="quadrato">Quadrato</button>
+      <button class="w-btn" data-s="triangolo">Triangolo</button>
+      <label style="font-size:.85rem; color:var(--ink-soft)">dim</label>
+      <input type="range" id="wpo-d" min="1" max="10" step="1" value="4" style="width:120px">
+    </div>
+    <div class="w-readout" id="wpo-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Classi astratte</h2>
+
+  <p class="lead">
+    A volte una classe base è solo un <b>concetto</b>: «Forma» in generale non ha un'area — solo le forme concrete
+    ce l'hanno. Una <b>classe astratta</b> definisce l'interfaccia comune senza poter essere istanziata da sola.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Metodi virtuali puri e classi astratte <span class="tag">= 0</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">class</span> <span class="fn">Forma</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> <span class="ty">double</span> <span class="fn">area</span>() <span class="op">=</span> <span class="nm">0</span>;   <span class="cm">// "= 0": metodo virtuale PURO (senza corpo)</span>
+    <span class="kw">virtual</span> <span class="op">~</span><span class="fn">Forma</span>() <span class="op">=</span> <span class="kw">default</span>;    <span class="cm">// distruttore virtuale (buona pratica)</span>
+};
+
+<span class="kw">class</span> <span class="fn">Cerchio</span> : <span class="kw">public</span> <span class="fn">Forma</span> {
+    <span class="ty">double</span> <span class="nm">raggio</span>;
+<span class="kw">public</span>:
+    <span class="fn">Cerchio</span>(<span class="ty">double</span> <span class="nm">r</span>) : <span class="nm">raggio</span>(<span class="nm">r</span>) {}   <span class="cm">// init con lista (comune in C++)</span>
+    <span class="ty">double</span> <span class="fn">area</span>() <span class="kw">override</span> { <span class="kw">return</span> <span class="nm">3.14159</span> <span class="op">*</span> <span class="nm">raggio</span> <span class="op">*</span> <span class="nm">raggio</span>; }
+};
+
+<span class="cm">// Forma f;   →  ERRORE! Forma è astratta, non si può creare "una Forma generica"</span>
+<span class="fn">Cerchio</span> <span class="nm">c</span>(<span class="nm">5</span>);   <span class="cm">// OK: Cerchio è concreto e fornisce area()</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">virtual double area() = 0;</span></dt>
+        <dd>il <code>= 0</code> rende il metodo <b>virtuale puro</b>: dichiara che esiste ma <b>non ha corpo</b> nella
+            base. È un obbligo: «ogni Forma <em>deve</em> fornire un'area, ma io (Forma) non so quale».</dd>
+        <dt>classe <b>astratta</b></dt>
+        <dd>una classe con almeno un metodo virtuale puro è <b>astratta</b>: <mark>non puoi crearne un'istanza</mark>
+            (non ha senso «una Forma generica»). Serve come <b>interfaccia/contratto</b>: definisce cosa devono
+            saper fare tutte le forme.</dd>
+        <dt>le figlie <b>devono</b> implementarlo</dt>
+        <dd>ogni classe concreta (Cerchio, Quadrato) <b>deve</b> fornire il proprio <code>area()</code>, altrimenti
+            resta astratta anch'essa. Così il compilatore <b>garantisce</b> che ogni forma concreta abbia un'area.
+            È un modo pulito per definire interfacce.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Piccola sintassi nuova: <code>Cerchio(double r) : raggio(r) {}</code> — la <b>lista di inizializzazione</b> del
+      costruttore (dopo i due punti) inizializza i campi direttamente. È lo stile idiomatico e preferito in C++
+      (più efficiente dell'assegnare nel corpo). Leggilo come «costruisci raggio col valore r».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Laboratorio: una gerarchia di forme</h2>
+
+  <p class="lead">
+    Mettiamo tutto insieme nell'esempio classico del polimorfismo: una <code>Forma</code> astratta e forme concrete,
+    trattate in modo uniforme in un ciclo. È il «hello world» dell'OOP polimorfica.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>forme.cpp</code> <span class="tag">interfaccia comune, aree diverse</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">forme.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="kw">class</span> <span class="fn">Forma</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> <span class="ty">double</span> <span class="fn">area</span>() <span class="op">=</span> <span class="nm">0</span>;
+    <span class="kw">virtual</span> <span class="op">~</span><span class="fn">Forma</span>() <span class="op">=</span> <span class="kw">default</span>;
+};
+
+<span class="kw">class</span> <span class="fn">Quadrato</span> : <span class="kw">public</span> <span class="fn">Forma</span> {
+    <span class="ty">double</span> <span class="nm">lato</span>;
+<span class="kw">public</span>:
+    <span class="fn">Quadrato</span>(<span class="ty">double</span> <span class="nm">l</span>) : <span class="nm">lato</span>(<span class="nm">l</span>) {}
+    <span class="ty">double</span> <span class="fn">area</span>() <span class="kw">override</span> { <span class="kw">return</span> <span class="nm">lato</span> <span class="op">*</span> <span class="nm">lato</span>; }
+};
+
+<span class="kw">class</span> <span class="fn">Cerchio</span> : <span class="kw">public</span> <span class="fn">Forma</span> {
+    <span class="ty">double</span> <span class="nm">r</span>;
+<span class="kw">public</span>:
+    <span class="fn">Cerchio</span>(<span class="ty">double</span> <span class="nm">raggio</span>) : <span class="nm">r</span>(<span class="nm">raggio</span>) {}
+    <span class="ty">double</span> <span class="fn">area</span>() <span class="kw">override</span> { <span class="kw">return</span> <span class="nm">3.14159</span> <span class="op">*</span> <span class="nm">r</span> <span class="op">*</span> <span class="nm">r</span>; }
+};
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::vector<span class="op">&lt;</span><span class="fn">Forma</span><span class="op">*</span><span class="op">&gt;</span> <span class="nm">forme</span> <span class="op">=</span> { <span class="kw">new</span> <span class="fn">Quadrato</span>(<span class="nm">4</span>), <span class="kw">new</span> <span class="fn">Cerchio</span>(<span class="nm">3</span>) };
+    <span class="kw">for</span> (<span class="fn">Forma</span><span class="op">*</span> <span class="nm">f</span> : <span class="nm">forme</span>) {
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Area: "</span> <span class="op">&lt;&lt;</span> <span class="nm">f</span><span class="op">-&gt;</span><span class="fn">area</span>() <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;   <span class="cm">// ognuna calcola la SUA</span>
+    }
+    <span class="kw">for</span> (<span class="fn">Forma</span><span class="op">*</span> <span class="nm">f</span> : <span class="nm">forme</span>) <span class="kw">delete</span> <span class="nm">f</span>;   <span class="cm">// libera la memoria (Cap. 12)</span>
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Output: «Area: 16» (quadrato 4×4), «Area: 28.27...» (cerchio r=3). <mark>Il ciclo tratta tutto come
+      <code>Forma*</code> e chiama <code>area()</code>: ognuna risponde con la propria formula</mark>, grazie a
+      <code>virtual</code>. Aggiungi un <code>Triangolo</code> con il suo <code>area()</code> e mettilo nel vector:
+      il ciclo lo gestisce senza cambiare una riga. Questa è l'estensibilità del polimorfismo. (Il <code>delete</code>
+      finale libera la memoria allocata con <code>new</code> — il tema del prossimo capitolo, dove imparerai a farlo
+      in automatico e in sicurezza.)
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li>L'<b>ereditarietà</b> (<code>class Figlia : public Base</code>) riusa dati e metodi della base e modella un
+          «<b>è-un</b>» (§11.1).</li>
+      <li>I <b>metodi virtuali</b> (<code>virtual</code> nella base, <code>override</code> nella figlia) permettono
+          la ridefinizione polimorfica; <mark>senza <code>virtual</code> il polimorfismo non funziona</mark> (§11.2).</li>
+      <li>Il <b>polimorfismo</b>: tramite un <b>puntatore/riferimento alla base</b>, chiami un metodo e <b>ognuno
+          risponde a modo suo</b> — codice estensibile senza modifiche (§11.3).</li>
+      <li>Una <b>classe astratta</b> (con <code>virtual … = 0;</code>) definisce un'interfaccia e <b>non si
+          istanzia</b>: obbliga le figlie a implementare i metodi (§11.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    In questo capitolo è tornato più volte un tema che avevamo accantonato: <code>new</code>, <code>delete</code>,
+    la <b>memoria dinamica</b>. Per il polimorfismo abbiamo dovuto allocare oggetti a mano e liberarli. Ma gestire
+    la memoria manualmente è la fonte numero uno di bug del C++ (fughe di memoria, doppie liberazioni). Nel
+    <strong>Capitolo 12</strong> affrontiamo la <b>memoria</b> di petto: <b>stack e heap</b>, <code>new</code> e
+    <code>delete</code>, le fughe di memoria — e poi l'idea che rende il C++ moderno sicuro ed elegante: <b>RAII</b>
+    e gli <b>smart pointer</b>, oggetti che gestiscono la memoria <em>per te</em>, automaticamente. È il capitolo
+    che unisce tutto ciò che sai su puntatori, costruttori e distruttori.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Cosa significa che <code>Cane</code> eredita da <code>Animale</code>? Cosa ottiene «gratis»? Come verifichi che
+      la relazione «è-un» sia sensata?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Perché il metodo <code>verso()</code> della base dev'essere <code>virtual</code> perché il polimorfismo
+      funzioni? Cosa fa la parola <code>override</code> nella figlia?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Cos'è una <b>classe astratta</b>? Perché non puoi creare un oggetto di tipo <code>Forma</code> se
+      <code>Forma</code> ha <code>virtual double area() = 0;</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      (Concettuale) Vuoi aggiungere un <code>Triangolo</code> alla gerarchia di forme del laboratorio. Cosa devi
+      scrivere, e cosa devi modificare nel ciclo che stampa le aree?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      Significa che <code>Cane</code> si basa su <code>Animale</code>, ottenendone «gratis» <b>tutti i membri
+      pubblici</b> (campi e metodi, come <code>nome</code> e <code>dormi</code>) senza riscriverli, e può aggiungere
+      i propri. La relazione è sensata se «un Cane <b>è un</b> Animale» è vero: se invece è un «fa parte di» o «ha
+      un», l'ereditarietà è la scelta sbagliata.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      Perché <code>virtual</code> dice al C++ di usare, alla chiamata, la versione del metodo dell'<b>oggetto
+      reale</b> (Cane) e non quella del tipo del puntatore (Animale). Senza <code>virtual</code>, chiamando
+      <code>verso()</code> su un <code>Animale*</code> verrebbe eseguita la versione di Animale, ignorando l'override.
+      <code>override</code> nella figlia segnala (e fa controllare al compilatore) che quel metodo ridefinisce uno
+      virtuale della base — evitando errori di firma silenziosi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      Una <b>classe astratta</b> ha almeno un metodo <b>virtuale puro</b> (<code>= 0</code>): dichiara un metodo
+      senza fornirne il corpo. Non puoi istanziarla perché sarebbe «incompleta» — <code>area()</code> non ha
+      implementazione, quindi «una Forma generica» non saprebbe calcolare la propria area. Serve come interfaccia:
+      solo le classi concrete che implementano tutti i metodi puri possono essere istanziate.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      Devi scrivere <b>solo</b> una nuova classe <code>Triangolo : public Forma</code> con il suo
+      <code>double area() override { … }</code>, e aggiungerne un'istanza al vector. Il <b>ciclo non va toccato</b>:
+      tratta ogni elemento come <code>Forma*</code> e chiama <code>area()</code>, che grazie al polimorfismo eseguirà
+      quella del Triangolo. È l'estensibilità: nuovi tipi senza modificare il codice esistente.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.3 — polimorfismo: Forma* → area() diversa per ogni forma
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wpo-view');
+  if (!view) return;
+  const out = document.getElementById('wpo-out');
+  const sD = document.getElementById('wpo-d');
+  const btns = document.querySelectorAll('#w-poly .w-btn');
+  let shape = 'cerchio';
+  const shapes = {
+    cerchio: { emoji: '⬤', col: 'var(--accent)', formula: '3.14159 · r · r', area: d => 3.14159 * d * d, dimlabel: 'raggio' },
+    quadrato: { emoji: '⬛', col: 'var(--green)', formula: 'lato · lato', area: d => d * d, dimlabel: 'lato' },
+    triangolo: { emoji: '▲', col: 'var(--warm)', formula: 'base · altezza / 2', area: d => d * d / 2, dimlabel: 'base=altezza' }
+  };
+  btns.forEach(b => b.addEventListener('click', () => { shape = b.dataset.s; draw(); }));
+  sD.addEventListener('input', draw);
+
+  function draw() {
+    const s = shapes[shape], d = +sD.value, a = s.area(d);
+    view.innerHTML = `
+      <div style="font-size:2.4rem; color:${s.col}">${s.emoji}</div>
+      <div style="font-family:var(--mono); font-size:1rem; margin-top:.4rem">Forma* f = new <span style="color:${s.col}; font-weight:700">${shape.charAt(0).toUpperCase() + shape.slice(1)}</span>(${d});</div>
+      <div style="font-family:var(--mono); font-size:1.1rem; margin-top:.6rem">f-&gt;area() &nbsp;=&nbsp; <span style="color:var(--ink-soft)">${s.formula}</span> &nbsp;=&nbsp; <b style="color:${s.col}">${a.toFixed(2)}</b></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">Lo stesso <code>f-&gt;area()</code> chiamato su un <code>Forma*</code> esegue la formula <b>di questa forma</b> (' + s.dimlabel + ' = ' + d + '). <mark>Il codice non sa quale forma sia</mark>: ci pensa il metodo <code>virtual</code> a scegliere quello giusto (§11.3).</div>';
+    btns.forEach(b => b.style.outline = b.dataset.s === shape ? '2px solid ' + s.col : 'none');
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

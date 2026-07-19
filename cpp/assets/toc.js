@@ -172,7 +172,7 @@ const TOC = [
     n: 11,
     titolo: "Ereditarietà e polimorfismo",
     file: "cap11-ereditarieta.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Ereditare da una classe" },
       { id: "s11-2", n: "11.2", t: "Metodi virtuali" },
