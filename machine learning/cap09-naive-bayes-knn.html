@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · Naive Bayes e k-NN — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>Naive Bayes e k-NN</h1>
+    <p class="standfirst">
+      In questo capitolo conosciamo due classificatori dall'idea disarmante, agli antipodi tra loro eppure entrambi
+      utilissimi. Il primo, <b>Naive Bayes</b>, si basa su un'assunzione così semplificatrice da sembrare «ingenua»
+      (ecco il «naive»), eppure funziona sorprendentemente bene — è uno dei re della classificazione di testi (spam,
+      analisi del sentimento). Il secondo, <b>k-NN</b> («k-Nearest Neighbors», i k vicini più prossimi), è forse
+      l'algoritmo più intuitivo dell'intero machine learning: <mark>per classificare un nuovo caso, guarda semplicemente
+      i suoi <b>vicini</b> e vota con loro.</mark> Prima però mettiamo ordine con una distinzione importante che spiega
+      perché LDA e logistica sembravano fare la stessa cosa in modi diversi: modelli <b>generativi</b> contro
+      <b>discriminativi</b> (§9.1). Poi Naive Bayes e la sua assunzione di indipendenza (§9.2), il k-NN (§9.3) e come
+      sceglierne i due ingredienti chiave, il numero di vicini $k$ e il modo di misurare la distanza (§9.4). Solita
+      cura: nulla dato per scontato.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Generativi vs discriminativi</b> (§9.1), <b>Naive Bayes</b> e l'indipendenza (§9.2), <b>k-NN</b> per
+      classificare (§9.3), scegliere <b>k</b> e la distanza (§9.4). Nel laboratorio (§9.5) un k-NN interattivo: sposti un
+      punto e voti coi vicini.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: semplici ma vivi</div>
+    <p style="margin-bottom:0">
+      Naive Bayes resta imbattibile per velocità e robustezza sui testi e con pochissimi dati; k-NN è il modo più
+      diretto di dire «i casi simili hanno esiti simili» ed è la porta d'ingresso a un'idea profonda (la
+      <b>somiglianza</b>), che tornerà nei metodi kernel (cap. 11). <mark>Due modelli che si imparano in cinque minuti
+      e si usano per una vita.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>Generativi vs discriminativi</h2>
+
+  <p class="lead">
+    Facciamo chiarezza su una distinzione che dà un ordine mentale a tutti i classificatori. Ne abbiamo già visti due
+    esempi, uno per tipo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Due filosofie per classificare</div>
+    <ul style="margin:0">
+      <li style="margin-bottom:.5rem"><b>Modelli generativi</b> — «prima descrivo, poi deduco». Descrivono
+          <b>com'è fatta</b> ciascuna classe (le sue nuvole di dati), e da lì, con la regola di Bayes, deducono la
+          classe di un nuovo caso. <mark>La <b>LDA</b> (cap. 7) è generativa</mark>: modellava le nuvole gaussiane delle
+          classi. Anche <b>Naive Bayes</b> lo è. Il nome «generativo» viene dal fatto che, avendo descritto le classi,
+          potresti perfino <b>generare</b> nuovi dati finti simili a quelli veri.</li>
+      <li><b>Modelli discriminativi</b> — «vado dritto al confine». Non si curano di descrivere le classi: modellano
+          <b>direttamente</b> il confine o la probabilità di classe. <mark>La <b>regressione logistica</b> (cap. 8) è
+          discriminativa</mark>: modellava direttamente $P(\text{classe}\mid x)$ senza descrivere le nuvole.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Quale è meglio?</div>
+    <p style="margin-bottom:0">
+      Nessuno dei due vince sempre. In genere: <mark>i <b>generativi</b> se la cavano meglio con <b>pochi dati</b></mark>
+      (le assunzioni sulla forma delle classi «riempiono i buchi» quando gli esempi scarseggiano) e sono veloci;
+      <mark>i <b>discriminativi</b> vincono quando i dati abbondano</mark> (non fanno assunzioni potenzialmente sbagliate
+      sulla forma delle classi, si concentrano solo su ciò che serve: separare). È un altro volto del compromesso
+      bias-varianza: più assunzioni = più stabilità con pochi dati, ma più rischio di sbagliare se le assunzioni sono
+      false.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>Naive Bayes e l'indipendenza</h2>
+
+  <p class="lead">
+    Naive Bayes è un modello generativo che parte dalla regola di Bayes (la stessa del cap. 7) e la rende
+    <b>calcolabilissima</b> con un'unica, coraggiosa semplificazione.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Di nuovo Bayes, ma con un problema <span class="tag">troppe combinazioni</span></div>
+    <p style="text-align:center; font-size:1.05rem; margin:.5rem 0 1rem">
+      $$ P(\text{classe}\mid x_1,x_2,\ldots,x_d) \;\propto\; P(x_1,x_2,\ldots,x_d\mid \text{classe})\;P(\text{classe}) $$
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt>il termine problematico: $P(x_1,x_2,\ldots,x_d\mid \text{classe})$</dt>
+        <dd>è la probabilità di vedere <b>tutte insieme</b> quelle caratteristiche in un caso di quella classe. Il guaio:
+            le caratteristiche possono combinarsi in un numero <b>astronomico</b> di modi (pensa a un testo con migliaia
+            di parole possibili). <mark>Stimare la probabilità di ogni combinazione richiederebbe una quantità
+            impossibile di dati.</mark> Serve una scorciatoia.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> L'assunzione «ingenua»: le caratteristiche indipendenti</div>
+    <p style="margin-bottom:.5rem">
+      La mossa di Naive Bayes: <mark>fingere che, all'interno di una classe, le caratteristiche siano <b>indipendenti</b>
+      tra loro</mark> — cioè che sapere una non dica nulla sulle altre. Con questa finzione, la probabilità della
+      combinazione diventa il semplice <b>prodotto</b> delle singole probabilità:
+    </p>
+    <p style="text-align:center; font-size:1.05rem; margin:.3rem 0 .9rem">
+      $$ P(x_1,\ldots,x_d\mid \text{classe}) \;\approx\; P(x_1\mid \text{classe})\times P(x_2\mid \text{classe})\times\cdots\times P(x_d\mid \text{classe}) $$
+    </p>
+    <p style="margin-bottom:0">
+      La differenza è enorme: invece di stimare la probabilità di ogni <b>combinazione</b> (impossibile), stimiamo la
+      probabilità di <b>una caratteristica alla volta</b> (facilissimo: basta contare). Per lo spam: «quanto è frequente
+      la parola <em>gratis</em> nelle email di spam?», «e <em>vincita</em>?», e così via, ognuna separatamente, poi si
+      moltiplica. <mark>Il simbolo $\approx$ («circa uguale») ci ricorda che è un'approssimazione</mark>: le parole non
+      sono davvero indipendenti («vincita» e «premio» vanno spesso insieme). Eppure funziona benissimo lo stesso.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché un'assunzione falsa funziona così bene</div>
+    <p style="margin-bottom:0">
+      Sembra un paradosso: l'assunzione è quasi sempre falsa, eppure Naive Bayes classifica benissimo. Il motivo:
+      <mark>per <b>classificare</b> non ci serve la probabilità esatta, ci basta indovinare <b>quale classe vince</b>.</mark>
+      Anche se i valori numerici sono distorti dall'assunzione ingenua, spesso la classe con il punteggio più alto resta
+      quella giusta. È robusto, richiede pochissimi dati, ed è velocissimo — per questo domina ancora la classificazione
+      di testi. Un promemoria prezioso: <b>un modello «sbagliato» può essere estremamente utile.</b>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>k-NN per la classificazione</h2>
+
+  <p class="lead">
+    Cambiamo completamente filosofia. Il k-NN è così semplice che non «impara» quasi nulla: si limita a <b>ricordare</b>
+    tutti gli esempi, e a usarli al momento giusto.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Vota coi tuoi vicini</div>
+    <p style="margin-bottom:.5rem">
+      Per classificare un nuovo punto, il k-NN fa esattamente ciò che faresti d'istinto: <mark>guarda i $k$ esempi già
+      noti che gli sono <b>più vicini</b>, e gli assegna la classe più diffusa tra loro</mark> (vince la maggioranza).
+      Nient'altro. Con $k=3$: trova i 3 punti più vicini; se 2 sono «spam» e 1 «non-spam», il verdetto è «spam».
+    </p>
+    <p style="margin-bottom:0">
+      L'assunzione è la più naturale del mondo: <b>i casi simili hanno esiti simili</b>. Punti vicini nello spazio delle
+      caratteristiche (pazienti con età e valori simili, email con parole simili) tendono ad appartenere alla stessa
+      classe. Il k-NN sfrutta solo questo. Non c'è nessuna formula da stimare, nessun allenamento vero e proprio:
+      <mark>tutto il «modello» è l'elenco degli esempi memorizzati.</mark> Per questo si chiama un metodo «pigro»
+      («lazy»): rimanda tutto il lavoro al momento della domanda.</p>
+  </div>
+
+  <div class="box trappola">
+    <div class="box-title"><span class="ico">⚠</span> Due prezzi da pagare</div>
+    <p style="margin-bottom:0">
+      Il k-NN è geniale nella semplicità, ma ha due debolezze da conoscere. <b>(1) È lento a prevedere</b>: per ogni
+      nuovo punto deve calcolare la distanza da <b>tutti</b> gli esempi memorizzati — pesante con molti dati. <b>(2)
+      Soffre le scale diverse</b>: se una caratteristica è misurata in migliaia (lo stipendio) e un'altra in unità
+      (l'età), la prima domina il calcolo della distanza e schiaccia l'altra. <mark>Per questo col k-NN è quasi sempre
+      obbligatorio <b>standardizzare</b> le caratteristiche</mark> (riportarle tutte alla stessa scala) prima di usarlo —
+      lo vedremo al cap. 19. E soffre la «maledizione della dimensionalità»: con moltissime caratteristiche, il concetto
+      di «vicino» perde di significato (cap. 17).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>Scegliere k e la distanza</h2>
+
+  <p class="lead">
+    Il k-NN ha due «manopole», e regolarle bene è tutto. Fortunatamente le capiamo con l'intuizione che già abbiamo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La manopola $k$: quanti vicini ascoltare <span class="tag">di nuovo bias-varianza</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>$k$ piccolo (es. $k=1$) — ascolti un solo vicino</dt>
+        <dd>il confine segue ogni minima increspatura dei dati: molto <b>flessibile</b>, ma <b>instabile</b>. Un solo
+            vicino sbagliato (un punto «rumoroso») cambia la risposta. <mark>Rischio overfitting (varianza alta).</mark></dd>
+        <dt>$k$ grande (es. $k=50$) — ascolti tanti vicini</dt>
+        <dd>la decisione media su molti punti: <b>stabile</b> ma <b>rigida</b>. Se $k$ è troppo grande, includi anche
+            vicini lontani e poco pertinenti, e il confine diventa troppo liscio. <mark>Rischio underfitting (bias
+            alto).</mark></dd>
+        <dt>il $k$ giusto sta nel mezzo</dt>
+        <dd>e — ormai lo sai a memoria — <mark>si sceglie con la validazione</mark> (cap. 3): si prova una gamma di
+            valori di $k$ e si tiene quello con l'errore più basso su dati nuovi. È lo <b>stesso identico</b> compromesso
+            bias-varianza del grado del polinomio: $k$ piccolo ↔ modello complesso, $k$ grande ↔ modello semplice.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La manopola «distanza»: cosa vuol dire «vicino»</div>
+    <p style="margin-bottom:.5rem">
+      «Vicino» ha bisogno di una definizione precisa: serve un modo di misurare la distanza tra due punti. Il più comune
+      è la <b>distanza euclidea</b>, cioè la lunghezza del segmento «in linea d'aria», il teorema di Pitagora esteso:
+    </p>
+    <p style="text-align:center; font-size:1.05rem; margin:.3rem 0 .9rem">
+      $$ d(a,b) = \sqrt{(a_1-b_1)^2 + (a_2-b_2)^2 + \cdots + (a_d-b_d)^2} $$
+    </p>
+    <p style="margin-bottom:0">
+      Si legge senza paura: per ogni caratteristica si fa la <b>differenza</b> tra i due punti ($a_1-b_1$, ecc.), la si
+      <b>eleva al quadrato</b> (per renderla positiva e dare più peso alle differenze grandi), si <b>sommano</b> tutti i
+      quadrati e si prende la <b>radice</b> (per tornare a un'unità di misura sensata). <mark>È esattamente il Pitagora
+      di scuola</mark>, solo con più di due caratteristiche. Esistono altre distanze (Manhattan, coseno per i testi…),
+      ma l'euclidea è quella di partenza. E qui si capisce di nuovo perché standardizzare è cruciale: la formula somma
+      le differenze di tutte le caratteristiche, quindi se una è su una scala molto più grande domina la somma.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Ecco il k-NN dal vivo. <b>Clicca (o trascina) dentro il riquadro</b> per posizionare un nuovo punto da classificare:
+    il widget evidenzia i suoi $k$ vicini più prossimi e mostra il voto. Cambia $k$ e osserva come cambia il verdetto.
+  </p>
+
+  <div class="widget" id="w-knn">
+    <div class="w-head">
+      <span>k-NN: vota coi vicini</span>
+      <span class="hint">clicca nel riquadro per posizionare il punto</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="kn-svg" viewBox="0 0 460 320" style="width:100%; max-width:480px; display:block; margin:0 auto; cursor:crosshair; touch-action:none"></svg>
+      <div class="w-controls" style="margin-top:.6rem">
+        <label>numero di vicini k <input type="range" id="kn-k" min="1" max="11" step="2" value="3"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="kn-out"></div>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">vicini.py</div>
+    <pre><span class="kw">from</span> sklearn.neighbors <span class="kw">import</span> KNeighborsClassifier
+<span class="kw">from</span> sklearn.naive_bayes <span class="kw">import</span> GaussianNB
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> make_pipeline
+
+<span class="cm"># k-NN: standardizza SEMPRE prima (le scale diverse rovinano la distanza!)</span>
+knn <span class="op">=</span> <span class="fn">make_pipeline</span>(
+    <span class="fn">StandardScaler</span>(),                <span class="cm"># tutte le feature sulla stessa scala</span>
+    <span class="fn">KNeighborsClassifier</span>(n_neighbors<span class="op">=</span><span class="nm">5</span>)   <span class="cm"># k = 5 vicini</span>
+)
+knn.<span class="fn">fit</span>(X, y)
+
+<span class="cm"># Naive Bayes gaussiano: velocissimo, nessun parametro da regolare</span>
+nb <span class="op">=</span> <span class="fn">GaussianNB</span>().<span class="fn">fit</span>(X, y)
+<span class="bi">print</span>(nb.<span class="fn">predict</span>(X_nuovi))</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai visto</div>
+    <p style="margin-bottom:0">
+      Nel widget: spostando il punto vicino a una nuvola, i $k$ vicini evidenziati sono quasi tutti di quella classe e
+      il voto è netto; posizionandolo <b>sul confine</b>, i vicini si mescolano e il voto diventa incerto — e cambiando
+      $k$ il verdetto può ribaltarsi. È il k-NN in azione. Nel codice: nota il <code>StandardScaler</code>
+      <b>obbligatorio</b> prima del k-NN (le scale!), e quanto è essenziale <code>GaussianNB</code> (zero parametri da
+      regolare). Hai due classificatori nuovi in tasca, agli antipodi: uno probabilistico e «ingenuo», uno pigro e
+      geometrico. Nel prossimo capitolo saliamo di livello con un classificatore elegante e potente, che cerca il
+      confine con il <b>massimo margine</b> possibile: le <b>Support Vector Machines</b>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>Modelli <b>generativi</b> (descrivono le classi, poi deducono: LDA, Naive Bayes) vs <b>discriminativi</b>
+          (vanno dritti al confine: logistica). I primi brillano con pochi dati, i secondi con molti (§9.1).</li>
+      <li><b>Naive Bayes</b>: assume (ingenuamente) le caratteristiche <b>indipendenti</b> dentro ogni classe → la
+          probabilità congiunta diventa un semplice <b>prodotto</b>. Assunzione falsa ma spesso utilissima, re dei testi
+          (§9.2).</li>
+      <li><b>k-NN</b>: classifica un punto col <b>voto di maggioranza</b> dei suoi $k$ vicini più prossimi. «Casi simili,
+          esiti simili». Nessun allenamento: memorizza e basta (§9.3).</li>
+      <li>$k$ piccolo = flessibile/instabile, $k$ grande = stabile/rigido (bias-varianza, scegli con validazione). La
+          <b>distanza</b> (di solito euclidea) definisce «vicino»; <b>standardizza sempre</b> le feature (§9.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai ora una cassetta degli attrezzi di classificatori sorprendentemente varia: descrittori di nuvole (LDA/QDA),
+    modellatori di probabilità (logistica), contatori ingenui (Naive Bayes), votanti pigri (k-NN). Nel
+    <strong>Capitolo 10</strong> arriva un'idea nuova ed elegantissima: e se, tra i tanti confini che separano le
+    classi, cercassimo <b>il migliore possibile</b> — quello che lascia più «spazio di sicurezza» ai lati? È l'idea del
+    <b>margine massimo</b> e delle <b>Support Vector Machines</b>, uno dei classificatori più belli e potenti mai
+    inventati.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un modello generativo e uno discriminativo? Colloca LDA e regressione logistica nelle due
+      categorie.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Qual è l'assunzione «ingenua» di Naive Bayes? A cosa serve, concretamente — cioè quale calcolo rende possibile che
+      altrimenti sarebbe impraticabile?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Descrivi in una frase come il k-NN classifica un nuovo punto. Perché si dice che è un metodo «pigro» e che «non
+      impara»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Cosa succede al confine del k-NN se $k$ è molto piccolo (es. 1)? E se è molto grande? Collega le due situazioni al
+      compromesso bias-varianza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.5</div>
+    <p style="margin-bottom:0">
+      Perché con il k-NN è quasi sempre necessario standardizzare le caratteristiche prima? Fai un esempio con due
+      caratteristiche su scale molto diverse.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      Un modello <b>generativo</b> descrive com'è fatta ciascuna classe (le sue distribuzioni di dati) e poi, con Bayes,
+      deduce la classe di un nuovo caso; un <b>discriminativo</b> modella direttamente il confine o la probabilità di
+      classe, senza descrivere le classi. La <b>LDA</b> è generativa (modella le nuvole gaussiane); la <b>regressione
+      logistica</b> è discriminativa (modella direttamente $P(\text{classe}\mid x)$).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <p style="margin-bottom:0">
+      L'assunzione ingenua è che, <b>dentro una classe</b>, le caratteristiche siano <b>indipendenti</b> tra loro (sapere
+      il valore di una non dice nulla sulle altre). Serve a trasformare la probabilità della <b>combinazione</b> di tutte
+      le caratteristiche — impossibile da stimare perché le combinazioni sono astronomicamente tante — nel semplice
+      <b>prodotto</b> delle probabilità di ciascuna caratteristica presa da sola, che invece si stimano facilmente
+      contando. È un'approssimazione (le feature raramente sono davvero indipendenti), ma rende il modello calcolabile e
+      spesso funziona benissimo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      Il k-NN classifica un nuovo punto assegnandogli la classe più diffusa (voto di maggioranza) tra i suoi $k$ esempi
+      più vicini. Si dice «pigro» e che «non impara» perché non stima nessun parametro né costruisce nessuna formula in
+      fase di allenamento: si limita a <b>memorizzare</b> tutti gli esempi, e rimanda tutto il lavoro (calcolo delle
+      distanze e voto) al momento in cui arriva la domanda.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      Con $k$ molto piccolo (es. 1) il confine segue ogni singolo punto, diventando molto frastagliato e sensibile al
+      rumore: modello flessibile e instabile → <b>varianza alta</b>, rischio overfitting. Con $k$ molto grande la
+      decisione media su tanti vicini rende il confine molto liscio e rigido, arrivando a ignorare la vera struttura
+      locale: modello troppo semplice → <b>bias alto</b>, rischio underfitting. Il $k$ giusto (scelto in validazione)
+      bilancia i due.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.5</div>
+    <p style="margin-bottom:0">
+      Perché il k-NN si basa sulla <b>distanza</b>, che somma i contributi di tutte le caratteristiche: se una è su una
+      scala molto più grande, domina la somma e le altre diventano quasi irrilevanti. Esempio: con «età» (da 20 a 70) e
+      «stipendio» (da 20 000 a 90 000), una differenza di stipendio di 10 000 pesa 10 000 mentre una di 30 anni pesa 30:
+      la distanza è di fatto <b>solo lo stipendio</b>, e l'età viene ignorata. Standardizzando (portando ogni
+      caratteristica a media 0 e deviazione 1) tutte contano allo stesso modo.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.5 — k-NN interattivo: clicca per posizionare un punto,
+   evidenzia i k vicini più prossimi e mostra il voto. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('kn-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('kn-out');
+  const sK = document.getElementById('kn-k');
+
+  // due classi con un po' di sovrapposizione al centro
+  const PTS = [];
+  [[2.3,3.0],[3.0,4.2],[2.6,5.0],[3.8,3.4],[3.2,5.6],[4.0,4.8],[2.9,3.7],[4.4,5.3],[2.1,4.4],[3.6,4.0],[4.6,3.9],[3.4,2.6]]
+    .forEach(function(p){ PTS.push({x:p[0],y:p[1],c:0}); });
+  [[6.0,5.2],[5.4,4.0],[6.6,4.4],[7.2,5.6],[5.8,6.2],[6.9,6.0],[7.4,4.8],[6.2,3.6],[5.6,5.0],[7.0,5.0],[6.4,6.6],[5.2,4.6]]
+    .forEach(function(p){ PTS.push({x:p[0],y:p[1],c:1}); });
+  const XMIN=1, XMAX=8.5, YMIN=1.5, YMAX=7.5;
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+  let qx = 4.9, qy = 4.6; // punto query iniziale (vicino al confine)
+
+  function draw(){
+    const k = +sK.value;
+    // ordina per distanza dal query
+    const d = PTS.map(function(pt){ return {pt:pt, d:Math.hypot(pt.x-qx, pt.y-qy)}; })
+                 .sort(function(a,b){ return a.d-b.d; });
+    const near = d.slice(0,k);
+    let v0=0,v1=0; near.forEach(function(o){ o.pt.c===0? v0++ : v1++; });
+    const winner = v1>v0 ? 1 : 0;
+    const rad = near[near.length-1].d; // raggio del cerchio dei vicini
+
+    p.clear(); p.grid(1,1); p.axes({ numbers:false });
+    // cerchio che racchiude i k vicini
+    const ACC = winner===0 ? 'var(--accent)' : 'var(--warm)';
+    p.line(qx,qy,qx,qy,{}); // no-op safeguard
+    // disegna cerchio via poly
+    const circ=[]; for(let a=0;a<=6.2832;a+=0.15) circ.push([qx+rad*Math.cos(a), qy+rad*Math.sin(a)]);
+    p.poly(circ,{ color:'var(--ink-soft)', width:1.2, dash:'4 4', close:true });
+    // tutti i punti (i vicini più marcati)
+    const nearSet = new Set(near.map(function(o){return o.pt;}));
+    PTS.forEach(function(pt){
+      const col = pt.c===0 ? 'var(--accent)' : 'var(--warm)';
+      if(nearSet.has(pt)) p.dot(pt.x,pt.y,{ color:col, r:6, stroke:'var(--ink)', sw:1.5 });
+      else p.dot(pt.x,pt.y,{ color:col, r:4, stroke:'#fff', sw:1 });
+    });
+    // punto query (una stella/rombo nero)
+    p.dot(qx,qy,{ color:ACC, r:8, stroke:'#111', sw:2.5 });
+
+    const nome = winner===0 ? 'classe 0 (blu)' : 'classe 1 (arancio)';
+    out.innerHTML='<div style="font-size:.9rem; text-align:left">Il punto (rombo) viene classificato guardando i suoi '+
+      '<b>k = '+k+'</b> vicini (cerchiati): <b>'+v0+'</b> di classe 0 e <b>'+v1+'</b> di classe 1 → vince <b style="color:'+ACC+'">'+nome+'</b>. '+
+      '<span style="color:var(--ink-soft)">Clicca vicino al confine e cambia k: il verdetto può ribaltarsi.</span></div>';
+  }
+
+  function place(e){
+    const evt = e.touches ? e.touches[0] : e;
+    const ptv = svg.createSVGPoint(); ptv.x = evt.clientX; ptv.y = evt.clientY;
+    const loc = ptv.matrixTransform(svg.getScreenCTM().inverse());
+    const m = p.mx(loc.x, loc.y);
+    qx = Math.max(XMIN, Math.min(XMAX, m[0]));
+    qy = Math.max(YMIN, Math.min(YMAX, m[1]));
+    draw();
+  }
+  let dragging=false;
+  svg.addEventListener('mousedown', function(e){ dragging=true; place(e); });
+  svg.addEventListener('mousemove', function(e){ if(dragging) place(e); });
+  window.addEventListener('mouseup', function(){ dragging=false; });
+  svg.addEventListener('touchstart', function(e){ e.preventDefault(); place(e); }, {passive:false});
+  svg.addEventListener('touchmove', function(e){ e.preventDefault(); place(e); }, {passive:false});
+  sK.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

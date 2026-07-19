@@ -135,7 +135,7 @@ const TOC = [
     n: 9,
     titolo: "Naive Bayes e k-NN",
     file: "cap09-naive-bayes-knn.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Generativi vs discriminativi" },
       { id: "s9-2", n: "9.2", t: "Naive Bayes e l'indipendenza" },
