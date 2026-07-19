@@ -14,7 +14,7 @@ Internet** e **Il Web**.
 
 - [x] 1 — Cos'è il backend
 - [x] 2 — HTTP e le API REST
-- [ ] 3 — Preparare l'ambiente Python
+- [x] 3 — Preparare l'ambiente Python
 - [ ] 4 — Il primo server con FastAPI
 - [ ] 5 — Rotte e parametri
 - [ ] 6 — Ricevere dati: Pydantic

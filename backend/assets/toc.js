@@ -45,7 +45,7 @@ const TOC = [
     n: 3,
     titolo: "Preparare l'ambiente Python",
     file: "cap03-ambiente-python.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Perché un ambiente isolato" },
       { id: "s3-2", n: "3.2", t: "Gli ambienti virtuali (venv)" },

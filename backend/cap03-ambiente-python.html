@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Preparare l'ambiente Python — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Preparare l'ambiente Python</h1>
+    <p class="standfirst">
+      Prima di scrivere una riga del nostro server, allestiamo il <b>banco di lavoro</b>. Sembra un passo noioso, ma
+      saltarlo è la causa numero uno di guai per chi inizia: pacchetti che entrano in conflitto, «sul mio computer
+      funzionava», progetti che si rompono a vicenda. La soluzione è un'abitudine semplice e universale: dare a
+      <b>ogni progetto</b> il suo <b>ambiente isolato</b>, una bolla con la sua copia di Python e i suoi pacchetti,
+      separata da tutto il resto. In questo capitolo capisci <b>perché</b> serve (§3.1), crei un ambiente virtuale con
+      <b>venv</b> (§3.2), installi pacchetti con <b>pip</b> (§3.3) e li «congeli» in un <b>requirements.txt</b> (§3.4)
+      — il file che permette a chiunque (incluso il tuo futuro server) di ricreare esattamente lo stesso ambiente.
+      <mark>È la disciplina che separa un progetto professionale da uno che si sfalda.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Perché isolare (§3.1), creare e attivare un <b>venv</b> (§3.2), installare con <b>pip</b> (§3.3), congelare le
+      dipendenze in <b>requirements.txt</b> (§3.4). Nel laboratorio (§3.5) prepari la cartella del progetto che
+      useremo per tutto il libro.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: le dipendenze sono metà del backend</div>
+    <p style="margin-bottom:0">
+      Un backend moderno non è solo il tuo codice: è il tuo codice <b>più decine di pacchetti</b> (FastAPI, il driver
+      del database, la libreria di sicurezza…). Gestire queste <b>dipendenze</b> in modo pulito e riproducibile è una
+      competenza tanto importante quanto saper programmare. <mark>Un ambiente ordinato oggi ti evita ore di debug
+      domani</mark>, e rende possibile il grande finale: impacchettare tutto in Docker (Cap. 15) e replicarlo
+      identico in produzione.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Perché un ambiente isolato</h2>
+
+  <p class="lead">
+    Immagina di avere due progetti sullo stesso computer: uno vecchio che usa la versione 1 di una libreria, uno
+    nuovo che richiede la versione 2. Se installi i pacchetti «globalmente», per tutto il sistema, i due progetti si
+    <b>contendono</b> la stessa copia — e uno dei due si romperà.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Il problema dell'installazione globale</div>
+    <p style="margin-bottom:0">
+      Se installi ogni pacchetto nel Python «di sistema», tutti i progetti (e persino strumenti del sistema
+      operativo) pescano dallo <b>stesso mucchio</b>. Basta un progetto che aggiorni una libreria a una versione
+      incompatibile per <b>rompere</b> gli altri. In più, il tuo elenco di pacchetti diventa un caos indistinto: non
+      sai più <b>quale</b> progetto ha bisogno di cosa. <mark>Non saprai mai ricreare l'ambiente esatto su un altro
+      computer o su un server</mark> — e il deploy diventa un incubo.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La soluzione: una bolla per progetto</div>
+    <p style="margin-bottom:0">
+      Un <b>ambiente virtuale</b> è una cartella, dentro il tuo progetto, che contiene una <b>copia isolata</b> di
+      Python e dei suoi pacchetti. Quando lo «attivi», <code>python</code> e <code>pip</code> lavorano <b>solo lì
+      dentro</b>: ciò che installi resta nella bolla, senza toccare il sistema né gli altri progetti.
+      <mark>Ogni progetto ha le sue dipendenze, alle sue versioni, senza interferenze.</mark> È lo standard assoluto
+      nello sviluppo Python: praticamente ogni progetto serio ne ha uno.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Gli ambienti virtuali (venv)</h2>
+
+  <p class="lead">
+    Python include lo strumento per creare queste bolle: il modulo <b>venv</b>. Sono due comandi — creare e attivare
+    — e poi lavori come sempre, ma dentro l'ambiente.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — creare e attivare (Windows)</div>
+    <pre><span class="c"># 1) crea l'ambiente: nasce una cartella ".venv" nel progetto</span>
+<span class="p">$</span> <span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">venv .venv</span>
+
+<span class="c"># 2) attivalo (Windows, PowerShell)</span>
+<span class="p">$</span> <span class="cmd">.venv\Scripts\Activate.ps1</span>
+<span class="out">(.venv)</span> <span class="p">$</span>                          <span class="c"># il prompt ora mostra (.venv): sei "dentro"</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — attivare su macOS / Linux</div>
+    <pre><span class="p">$</span> <span class="cmd">python3</span> <span class="fl">-m</span> <span class="ar">venv .venv</span>
+<span class="p">$</span> <span class="cmd">source</span> <span class="ar">.venv/bin/activate</span>
+<span class="out">(.venv)</span> <span class="p">$</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I comandi smontati <span class="tag">creare · attivare · disattivare</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">python -m venv .venv</span></dt>
+        <dd>esegue il modulo <code>venv</code> per <b>creare</b> un ambiente in una cartella. Il secondo
+            <code>.venv</code> è il <b>nome</b> della cartella (una convenzione diffusa; il punto la nasconde). Lo
+            fai <b>una volta sola</b> per progetto.</dd>
+        <dt><span class="mono">…Activate.ps1</span> / <span class="mono">source …/activate</span></dt>
+        <dd><b>attiva</b> l'ambiente nella sessione del terminale corrente. <mark>Da qui, <code>python</code> e
+            <code>pip</code> sono quelli della bolla.</mark> Lo rifai <b>ogni volta</b> che apri un nuovo terminale
+            per lavorare al progetto.</dd>
+        <dt>il prompt <span class="mono">(.venv)</span></dt>
+        <dd>il segnale visivo che l'ambiente è attivo: appare all'inizio della riga. <mark>Se non lo vedi, non sei
+            nell'ambiente</mark> — errore comunissimo che porta a installare i pacchetti nel posto sbagliato.</dd>
+        <dt><span class="mono">deactivate</span></dt>
+        <dd>esce dalla bolla e torni al Python di sistema. Raramente serve: di solito chiudi e basta il terminale.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Windows a volte blocca l'esecuzione di <code>Activate.ps1</code> per policy di sicurezza: se vedi un errore,
+      esegui una volta <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> in PowerShell, oppure usa il
+      Prompt dei comandi con <code>.venv\Scripts\activate.bat</code>. <mark>Regola d'oro: la cartella
+      <code>.venv</code> non va mai messa sotto git</mark> (si ricrea da <code>requirements.txt</code>) — la
+      aggiungerai al <code>.gitignore</code>.
+    </div>
+  </div>
+
+  <div class="widget" id="w-venv">
+    <div class="w-head">
+      <span>Simulatore dell'ambiente virtuale</span>
+      <span class="hint">esegui i passi e osserva lo stato</span>
+    </div>
+    <div class="w-stage" style="flex-wrap:wrap; gap:1rem; align-items:stretch">
+      <div style="flex:2; min-width:240px">
+        <div class="term" style="margin:0; max-width:100%">
+          <div class="t-head">terminale</div>
+          <pre id="vv-term" style="min-height:120px; margin:0"><span class="out">Cartella progetto pronta. Comincia dal passo 1.</span></pre>
+        </div>
+      </div>
+      <div style="flex:1; min-width:170px; border:1px solid var(--ink-soft); border-radius:10px; padding:.8rem">
+        <div style="font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.5rem">stato</div>
+        <div style="font-size:.9rem; line-height:2">
+          <div>venv creato: <b id="vv-creato" style="color:var(--warm)">no</b></div>
+          <div>venv attivo: <b id="vv-attivo" style="color:var(--warm)">no</b></div>
+          <div>FastAPI installato: <b id="vv-pkg" style="color:var(--warm)">no</b></div>
+          <div>requirements.txt: <b id="vv-req" style="color:var(--warm)">no</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="flex-wrap:wrap; gap:.4rem; justify-content:center">
+      <button class="btn" data-step="crea">1 · python -m venv .venv</button>
+      <button class="btn" data-step="attiva">2 · attiva</button>
+      <button class="btn" data-step="install">3 · pip install fastapi</button>
+      <button class="btn" data-step="freeze">4 · pip freeze &gt; requirements.txt</button>
+      <button class="btn ghost" data-step="reset">reset</button>
+    </div>
+    <div class="w-readout" id="vv-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>pip e i pacchetti</h2>
+
+  <p class="lead">
+    Con l'ambiente attivo, installi le librerie con <b>pip</b>, il gestore di pacchetti di Python. Attinge a
+    <b>PyPI</b> (il grande archivio pubblico dei pacchetti Python) e mette il pacchetto — con tutto ciò da cui
+    dipende — dentro la tua bolla.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale (con (.venv) attivo)</div>
+    <pre><span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">fastapi uvicorn</span>
+<span class="out">Collecting fastapi
+  Downloading fastapi-...-py3-none-any.whl
+Collecting uvicorn
+  ...
+Successfully installed fastapi-... uvicorn-... starlette-... pydantic-...</span>
+
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">list</span>            <span class="c"># cosa c'è installato nella bolla</span>
+<span class="out">Package    Version
+---------- -------
+fastapi    ...
+pydantic   ...
+uvicorn    ...</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I comandi pip essenziali <span class="tag">install · list · uninstall</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">pip install nome</span></dt>
+        <dd>scarica e installa un pacchetto (e le sue dipendenze) nell'ambiente attivo. Puoi indicarne più d'uno, o
+            fissare una versione: <code>pip install fastapi==0.115.0</code>.</dd>
+        <dt><span class="mono">pip list</span></dt>
+        <dd>elenca cosa è installato nella bolla. <mark>Nota come le dipendenze «a cascata»</mark> (starlette,
+            pydantic…) siano entrate insieme a FastAPI: pip risolve automaticamente ciò che serve.</dd>
+        <dt><span class="mono">pip uninstall nome</span></dt>
+        <dd>rimuove un pacchetto. Utile per fare pulizia.</dd>
+        <dt><span class="mono">pip install -r requirements.txt</span></dt>
+        <dd>installa <b>tutti</b> i pacchetti elencati in un file (§3.4): il comando che ricrea un ambiente identico
+            altrove. Lo userai in continuazione.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Se dimentichi di attivare il venv, <code>pip install</code> mette i pacchetti nel <b>Python globale</b> — di
+      nuovo il problema del §3.1. <mark>Controlla sempre il <code>(.venv)</code> nel prompt prima di installare.</mark>
+      È l'errore più comune, e ora sai riconoscerlo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>requirements.txt</h2>
+
+  <p class="lead">
+    C'è un ultimo pezzo che rende l'ambiente <b>riproducibile</b>: elencare le dipendenze del progetto in un file di
+    testo, il <b>requirements.txt</b>. È il «foglietto della spesa» delle librerie: chiunque lo abbia può ricreare il
+    tuo ambiente esatto con un comando.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="c"># "congela" l'elenco esatto (con le versioni) in un file</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">freeze</span> &gt; <span class="ar">requirements.txt</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">requirements.txt (esempio)</div>
+    <pre>fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+starlette==0.38.6</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Perché è il file più importante del progetto (dopo il codice)</div>
+    <p style="margin-bottom:0">
+      <code>pip freeze</code> stampa <b>ogni</b> pacchetto installato con la sua <b>versione esatta</b>; il
+      <code>&gt; requirements.txt</code> lo salva su file. Chiunque poi, su qualsiasi computer, crea un venv e lancia
+      <code>pip install -r requirements.txt</code> per avere <b>lo stesso ambiente, identico</b>. <mark>Questo file va
+      sotto git</mark> (a differenza della cartella <code>.venv</code>): è la ricetta, non gli ingredienti già
+      cucinati. È anche ciò che il <b>Dockerfile</b> userà (Cap. 15) per costruire l'immagine del tuo server, ed è
+      ciò che rende il tuo progetto <b>installabile ovunque</b> senza sorprese. Fissare le versioni (<code>==</code>)
+      garantisce che «funziona qui» significhi «funziona anche là».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Laboratorio: l'ambiente del progetto</h2>
+
+  <p class="lead">
+    Prepariamo <b>ora</b> la cartella che useremo per costruire il nostro backend nei prossimi capitoli. Segui i
+    passi: alla fine avrai un ambiente pulito, pronto per FastAPI.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — la ricetta completa (Windows / PowerShell)</div>
+    <pre><span class="c"># 1) crea la cartella del progetto ed entra</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">mia-api</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">mia-api</span>
+
+<span class="c"># 2) crea e attiva l'ambiente virtuale</span>
+<span class="p">$</span> <span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">venv .venv</span>
+<span class="p">$</span> <span class="cmd">.venv\Scripts\Activate.ps1</span>
+
+<span class="c"># 3) installa FastAPI e il server uvicorn</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">fastapi uvicorn</span>
+
+<span class="c"># 4) congela le dipendenze</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">freeze</span> &gt; <span class="ar">requirements.txt</span>
+
+<span class="c"># 5) proteggi la cartella .venv da git (creando .gitignore)</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">echo</span> <span class="ar">".venv/"</span> &gt; <span class="ar">.gitignore</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Come sapere che è andato tutto bene</div>
+    <p style="margin-bottom:0">
+      Alla fine, nella cartella <code>mia-api</code> devi avere: la cartella <code>.venv</code>, un file
+      <code>requirements.txt</code> con dentro <code>fastapi</code> e <code>uvicorn</code>, e un <code>.gitignore</code>.
+      Il prompt mostra <code>(.venv)</code>. Verifica con <code>pip list</code>: devi vedere <code>fastapi</code>
+      nell'elenco. <mark>Se tutto torna, il banco di lavoro è pronto</mark>: nel prossimo capitolo scriviamo finalmente
+      il server. Se qualcosa non torna, ricontrolla di aver <b>attivato</b> il venv (il <code>(.venv)</code> nel
+      prompt) prima del <code>pip install</code>.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li>Installare pacchetti <b>globalmente</b> crea conflitti e rende l'ambiente irriproducibile: <b>isola ogni
+          progetto</b> (§3.1).</li>
+      <li><b>venv</b>: <code>python -m venv .venv</code> (una volta) + attivazione (ogni terminale). Il prompt
+          <code>(.venv)</code> conferma che sei nella bolla (§3.2).</li>
+      <li><b>pip</b>: <code>install</code>, <code>list</code>, <code>uninstall</code>. Installa <b>solo</b> con il
+          venv attivo (§3.3).</li>
+      <li><b>requirements.txt</b> (da <code>pip freeze</code>) congela le versioni: si ricrea l'ambiente con
+          <code>pip install -r</code>. Va sotto git; la cartella <code>.venv</code> no (§3.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Il banco di lavoro è pronto e pulito: un ambiente isolato con FastAPI installato. Non resta che accendere il
+    motore. Nel <strong>Capitolo 4</strong> scriviamo il <b>primo server con FastAPI</b> — poche righe di Python,
+    l'avvio con uvicorn, e la meraviglia della <b>documentazione interattiva</b> che FastAPI genera da sola. Dal
+    prossimo capitolo, il backend che finora abbiamo solo descritto inizia davvero a <em>rispondere</em>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Spiega con un esempio concreto perché installare i pacchetti globalmente può rompere un altro progetto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <b>creare</b> un venv e <b>attivarlo</b>? Quante volte fai ciascuna cosa?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>requirements.txt</code> va messo sotto git, mentre la cartella <code>.venv</code> no?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      Un collega ti manda un progetto con dentro un <code>requirements.txt</code> ma senza la cartella
+      <code>.venv</code>. Quali comandi esegui, in ordine, per farlo partire sul tuo computer?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      Esempio: il progetto A funziona con <code>libreria 1.0</code>, il progetto B richiede <code>libreria 2.0</code>
+      (che ha cambiato il modo di chiamare una funzione). Con l'installazione globale c'è <b>una sola copia</b> della
+      libreria per tutto il sistema: installando la 2.0 per B, il progetto A — che si aspetta la 1.0 — smette di
+      funzionare. Gli ambienti virtuali risolvono dando a ciascun progetto la <b>sua</b> versione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      <b>Creare</b> (<code>python -m venv .venv</code>) genera la cartella dell'ambiente: si fa <b>una volta sola</b>
+      per progetto. <b>Attivare</b> (<code>Activate.ps1</code> / <code>source .../activate</code>) rende quell'ambiente
+      quello «in uso» nel terminale corrente: si fa <b>ogni volta</b> che apri un nuovo terminale per lavorare al
+      progetto (l'attivazione vale solo per quella sessione).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      Perché <code>requirements.txt</code> è la <b>ricetta</b> (piccolo file di testo, condivisibile, che dice
+      <em>cosa</em> installare): serve a tutti e va versionato. La cartella <code>.venv</code>, invece, sono gli
+      <b>ingredienti già cucinati</b>: è grande, specifica del tuo sistema operativo, e <b>ricreabile</b> in qualsiasi
+      momento da <code>requirements.txt</code>. Metterla sotto git sarebbe inutile e problematico — per questo va nel
+      <code>.gitignore</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">cd</span> <span class="ar">progetto-del-collega</span>
+<span class="p">$</span> <span class="cmd">python</span> <span class="fl">-m</span> <span class="ar">venv .venv</span>          <span class="c"># crea l'ambiente</span>
+<span class="p">$</span> <span class="cmd">.venv\Scripts\Activate.ps1</span>       <span class="c"># attivalo</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">install</span> <span class="fl">-r</span> <span class="ar">requirements.txt</span>   <span class="c"># installa tutto</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">In tre passi hai ricreato l'ambiente esatto del collega. È esattamente ciò che farà
+      anche il server in produzione.</p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.2 — simulatore venv: i passi aggiornano un terminale finto e un pannello di stato
+   ========================================================================= */
+(function () {
+  const term = document.getElementById('vv-term');
+  if (!term) return;
+  const out = document.getElementById('vv-out');
+  const S = { creato: false, attivo: false, pkg: false, req: false };
+
+  const el = {
+    creato: document.getElementById('vv-creato'),
+    attivo: document.getElementById('vv-attivo'),
+    pkg:    document.getElementById('vv-pkg'),
+    req:    document.getElementById('vv-req')
+  };
+
+  function refresh() {
+    for (const k of ['creato', 'attivo', 'pkg', 'req']) {
+      const v = (k === 'creato') ? S.creato : (k === 'attivo') ? S.attivo : (k === 'pkg') ? S.pkg : S.req;
+      el[k].textContent = v ? 'sì' : 'no';
+      el[k].style.color = v ? 'var(--green)' : 'var(--warm)';
+    }
+  }
+  function prompt() { return S.attivo ? '<span class="out">(.venv)</span> <span class="p">$</span> ' : '<span class="p">$</span> '; }
+  function line(cmd, res) { return prompt() + '<span class="cmd">' + cmd + '</span>\n' + (res ? '<span class="out">' + res + '</span>\n' : ''); }
+
+  const steps = {
+    crea: function () {
+      if (S.creato) return { msg: 'L\'ambiente esiste già.', warn: true };
+      S.creato = true;
+      return { html: line('python -m venv .venv', 'Creata la cartella .venv nel progetto.'),
+               msg: 'Ambiente <b>creato</b>: ora c\'è la cartella .venv. Ma non è ancora attivo — nota che il prompt non mostra (.venv).' };
+    },
+    attiva: function () {
+      if (!S.creato) return { msg: '⚠ Devi prima <b>creare</b> l\'ambiente (passo 1).', warn: true };
+      if (S.attivo) return { msg: 'È già attivo.', warn: true };
+      S.attivo = true;
+      return { html: '<span class="p">$</span> <span class="cmd">.venv\\Scripts\\Activate.ps1</span>\n',
+               msg: 'Ambiente <b>attivato</b>: il prompt ora mostra <code>(.venv)</code>. Da qui python e pip lavorano nella bolla.' };
+    },
+    install: function () {
+      if (!S.attivo) return { msg: '⚠ Senza venv attivo, questo installerebbe FastAPI nel Python <b>globale</b>! Attiva prima (passo 2).', warn: true };
+      if (S.pkg) return { msg: 'FastAPI è già installato.', warn: true };
+      S.pkg = true;
+      return { html: line('pip install fastapi uvicorn', 'Successfully installed fastapi uvicorn pydantic starlette'),
+               msg: 'FastAPI <b>installato</b> nella bolla, con le sue dipendenze (pydantic, starlette…).' };
+    },
+    freeze: function () {
+      if (!S.pkg) return { msg: '⚠ Non c\'è ancora nulla da congelare: installa prima FastAPI (passo 3).', warn: true };
+      S.req = true;
+      return { html: line('pip freeze &gt; requirements.txt', 'Creato requirements.txt con le versioni esatte.'),
+               msg: 'Dipendenze <b>congelate</b> in requirements.txt: ora l\'ambiente è <b>riproducibile</b> ovunque. 🎉' };
+    }
+  };
+
+  let buffer = '';
+  function esegui(k) {
+    if (k === 'reset') { S.creato = S.attivo = S.pkg = S.req = false; buffer = '';
+      term.innerHTML = '<span class="out">Cartella progetto pronta. Comincia dal passo 1.</span>';
+      out.innerHTML = ''; refresh(); return; }
+    const r = steps[k]();
+    if (r.html) { buffer += r.html; term.innerHTML = buffer; }
+    refresh();
+    out.innerHTML = '<div style="color:' + (r.warn ? 'var(--warm)' : 'var(--ink-soft)') + '; font-size:.9rem; text-align:left">' + r.msg + '</div>';
+  }
+
+  document.querySelectorAll('#w-venv .btn[data-step]').forEach(function (b) {
+    b.addEventListener('click', function () { esegui(b.getAttribute('data-step')); });
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
