@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · pandas: pulire i dati — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>pandas: pulire i dati</h1>
+    <p class="standfirst">
+      C'è un segreto poco raccontato del mestiere: <mark>il data scientist passa più tempo a <b>pulire</b> i dati che a
+      costruire modelli.</mark> I dati del mondo reale arrivano sempre «sporchi»: valori mancanti, numeri letti come
+      testo, date in formati diversi, nomi scritti in dieci modi, righe duplicate, valori impossibili. Prima di potersi
+      fidare di qualsiasi analisi, bisogna metterli in ordine — ed è un lavoro poco glamour ma <b>decisivo</b>: un
+      modello nutrito con dati sporchi produce risultati sbagliati, spesso senza dare alcun segnale d'allarme. In questo
+      capitolo impariamo i gesti del <b>data cleaning</b>: capire perché è il cuore del lavoro (§6.1), gestire i
+      <b>valori mancanti</b> — i famigerati NaN (§6.2), sistemare i <b>tipi</b> e le categorie (§6.3), ripulire il
+      <b>testo</b> con gli strumenti <code>.str</code> (§6.4) ed eliminare <b>duplicati e outlier</b> (§6.5). Alla fine
+      saprai trasformare una tabella grezza in dati affidabili — la vera base di ogni progetto serio.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>data cleaning</b> come cuore del lavoro (§6.1), i <b>valori mancanti</b> (§6.2), <b>tipi e categorie</b>
+      (§6.3), <b>stringhe e testo</b> con <code>.str</code> (§6.4), <b>duplicati e outlier</b> (§6.5). Nel laboratorio
+      (§6.6) ripulisci una tabella sporca da capo a fondo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: garbage in, garbage out</div>
+    <p style="margin-bottom:0">
+      <mark>Nessun modello, per quanto sofisticato, può dare risultati affidabili da dati sbagliati.</mark> La pulizia
+      non è un preliminare noioso: è dove si vince o si perde la partita. Saperla fare bene — riconoscere i buchi,
+      sistemare i tipi, normalizzare il testo — è ciò che distingue un'analisi solida da una che crolla al primo
+      controllo. È anche la parte in cui la conoscenza dei dati e il buon senso contano più di ogni algoritmo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Il lavoro sporco (data cleaning)</h2>
+
+  <p class="lead">
+    Prima dei comandi, il quadro mentale. Cosa vuol dire «dati sporchi» e cosa cerchiamo di ottenere. Farsi questa mappa
+    rende ogni operazione successiva più chiara.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> I problemi tipici, e cosa vogliamo</div>
+    <p style="margin-bottom:.5rem">
+      Un dataset «sporco» soffre in genere di alcuni mali ricorrenti:
+    </p>
+    <div class="simboli">
+      <dl>
+        <dt><b>valori mancanti</b></dt>
+        <dd>celle vuote (in pandas: <code>NaN</code>), perché un dato non è stato registrato. Molti calcoli e modelli
+            non li tollerano (§6.2).</dd>
+        <dt><b>tipi sbagliati</b></dt>
+        <dd>un numero salvato come testo («<code>"1.200"</code>»), una data come stringa: impediscono i calcoli finché
+            non li converti (§6.3).</dd>
+        <dt><b>testo incoerente</b></dt>
+        <dd>«Roma», «roma », «ROMA» sono la stessa città scritta in tre modi: vanno normalizzati o pandas li conterà come
+            diversi (§6.4).</dd>
+        <dt><b>duplicati e valori impossibili</b></dt>
+        <dd>righe ripetute, un'età di 999, un prezzo negativo: da individuare e correggere (§6.5).</dd>
+      </dl>
+    </div>
+    <p style="margin-bottom:0">
+      L'obiettivo è arrivare a dati <b>«tidy»</b> (ordinati): ogni <b>variabile</b> in una colonna, ogni
+      <b>osservazione</b> in una riga, tipi corretti, niente buchi imprevisti. <mark>È il formato che tutte le librerie
+      (grafici, modelli) si aspettano.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Valori mancanti (NaN)</h2>
+
+  <p class="lead">
+    I valori mancanti sono il problema numero uno. pandas li rappresenta con <code>NaN</code> («Not a Number»). La
+    domanda non è «come li elimino?» ma «come li <b>tratto</b>?» — e la risposta dipende dai dati.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Trovare e trattare i NaN <span class="tag">isna · dropna · fillna</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">mancanti.py</div>
+      <pre><span class="cm"># 1. TROVARLI: quanti buchi per colonna?</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">isna</span>()<span class="op">.</span><span class="fn">sum</span>()          <span class="cm"># conta i NaN in ogni colonna</span>
+
+<span class="cm"># 2a. ELIMINARLI: butta le righe (o colonne) con buchi</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">dropna</span>()               <span class="cm"># righe SENZA alcun NaN</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">dropna</span>(<span class="nm">subset</span><span class="op">=</span>[<span class="st">"eta"</span>])  <span class="cm"># solo se manca "eta"</span>
+
+<span class="cm"># 2b. RIEMPIRLI (imputazione): metti un valore ragionevole</span>
+<span class="nm">df</span>[<span class="st">"eta"</span>]<span class="op">.</span><span class="fn">fillna</span>(<span class="nm">df</span>[<span class="st">"eta"</span>]<span class="op">.</span><span class="fn">median</span>())   <span class="cm"># la mediana (robusta agli outlier)</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">fillna</span>(<span class="st">"sconosciuta"</span>)      <span class="cm"># un'etichetta per il testo</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">isna()</span> + <span class="mono">sum()</span> — la diagnosi</dt>
+        <dd><code>isna()</code> dà <code>True</code>/<code>False</code> per ogni cella; sommato per colonna, conta i
+            buchi. <mark>Il primo passo è sempre <b>quantificare</b>: quanti mancano, e dove?</mark></dd>
+        <dt><span class="mono">dropna()</span> — eliminare</dt>
+        <dd>butta le righe con NaN. Semplice, ma <b>spreca dati</b>: va bene se i buchi sono pochi. <code>subset</code>
+            limita il controllo ad alcune colonne.</dd>
+        <dt><span class="mono">fillna(valore)</span> — imputare</dt>
+        <dd>riempie i buchi con una stima ragionevole: la <b>media</b> o la <b>mediana</b> per i numeri (la mediana è più
+            robusta ai valori estremi), il valore <b>più frequente</b> o un'etichetta per il testo. <mark>Conserva i
+            dati ma introduce un'ipotesi</mark>: scegli con criterio.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non esiste una regola unica: <mark>pochi buchi → spesso <code>dropna</code>; molti buchi in una colonna
+      importante → <code>fillna</code></mark> (o creare una colonna «era mancante?», perché a volte l'assenza stessa è
+      informativa). Nel widget vedi le tre strategie a confronto sulla stessa tabella. Nel Cap. 12 vedremo come farlo in
+      modo «sicuro» dentro una pipeline di scikit-learn.
+    </div>
+  </div>
+
+  <div class="widget" id="w-nan">
+    <div class="w-head">
+      <span>Trattare i valori mancanti</span>
+      <span class="hint">confronta le strategie sulla stessa tabella</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem; overflow-x:auto">
+      <div id="nan-table" style="display:flex; justify-content:center"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.4rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn on" data-s="0">originale (con NaN)</button>
+      <button class="w-btn" data-s="1">dropna()</button>
+      <button class="w-btn" data-s="2">fillna(mediana)</button>
+      <button class="w-btn" data-s="3">fillna(0)</button>
+    </div>
+    <div class="w-readout" id="nan-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Tipi, conversioni, categorie</h2>
+
+  <p class="lead">
+    Un problema subdolo: un numero letto come <b>testo</b>. Sembra a posto, ma non puoi farci i conti. Sistemare i tipi
+    (<code>dtype</code>) è un passo di pulizia essenziale, spesso da fare subito dopo il caricamento.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Convertire i tipi <span class="tag">astype · to_numeric · astype("category")</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">tipi.py</div>
+      <pre><span class="nm">df</span><span class="op">.</span><span class="fn">dtypes</span>                 <span class="cm"># che tipo ha ogni colonna?</span>
+
+<span class="cm"># testo → numero (errors="coerce": ciò che non è numero diventa NaN)</span>
+<span class="nm">df</span>[<span class="st">"prezzo"</span>] <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">to_numeric</span>(<span class="nm">df</span>[<span class="st">"prezzo"</span>], <span class="nm">errors</span><span class="op">=</span><span class="st">"coerce"</span>)
+
+<span class="nm">df</span>[<span class="st">"eta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"eta"</span>]<span class="op">.</span><span class="fn">astype</span>(<span class="nm">int</span>)      <span class="cm"># float → intero</span>
+
+<span class="cm"># testo ripetitivo → "category": meno memoria, più veloce</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">astype</span>(<span class="st">"category"</span>)</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.dtypes</span> — la diagnosi</dt>
+        <dd>elenca il tipo di ogni colonna. <mark>Se una colonna che dovrebbe essere numerica risulta <code>object</code>
+            (testo), c'è un problema da sistemare.</mark></dd>
+        <dt><span class="mono">pd.to_numeric(..., errors="coerce")</span></dt>
+        <dd>converte il testo in numeri; <code>errors="coerce"</code> trasforma in <code>NaN</code> ciò che non è
+            convertibile (una cella «n.d.», un simbolo €) invece di dare errore — <mark>così isoli i problemi come
+            mancanti da trattare</mark>.</dd>
+        <dt><span class="mono">astype("category")</span></dt>
+        <dd>per colonne di testo con <b>pochi valori ripetuti</b> (città, categorie, sesso): il tipo <code>category</code>
+            usa molta meno memoria ed è più veloce nei raggruppamenti. Utile su dataset grandi.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Stringhe e testo (.str)</h2>
+
+  <p class="lead">
+    Il testo è quasi sempre disordinato: spazi di troppo, maiuscole incoerenti, prefissi da togliere. pandas dà accesso
+    a tutti i metodi delle stringhe su una colonna intera tramite l'accessorio <code>.str</code>, in modo vettorizzato.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Ripulire il testo in blocco <span class="tag">Series.str.qualcosa()</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">testo.py</div>
+      <pre><span class="cm"># "  Roma ", "ROMA", "roma" → tutti uguali?</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">strip</span>()      <span class="cm"># toglie spazi ai bordi</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">title</span>()      <span class="cm"># "roma" → "Roma"</span>
+
+<span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">contains</span>(<span class="st">"ano"</span>)         <span class="cm"># maschera: contiene "ano"? (Milano...)</span>
+<span class="nm">df</span>[<span class="st">"email"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">split</span>(<span class="st">"@"</span>)<span class="op">.</span><span class="fn">str</span>[<span class="nm">1</span>]    <span class="cm"># il dominio dopo la @</span>
+<span class="nm">df</span>[<span class="st">"prezzo"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">replace</span>(<span class="st">"€"</span>, <span class="st">""</span>)        <span class="cm"># toglie il simbolo €</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>l'accessorio <span class="mono">.str</span></dt>
+        <dd>«apre» i metodi delle stringhe su tutta la colonna: <code>df["col"].str.qualcosa()</code> applica l'operazione
+            a <b>ogni</b> valore. <mark>È la vettorizzazione, ma per il testo.</mark></dd>
+        <dt>i più usati per pulire</dt>
+        <dd><code>strip()</code> (spazi ai bordi), <code>lower()</code>/<code>upper()</code>/<code>title()</code>
+            (maiuscole/minuscole), <code>replace(a, b)</code> (sostituire). <mark>Normalizzare le maiuscole e gli spazi
+            risolve la maggior parte delle incoerenze di testo.</mark></dd>
+        <dt>estrarre e cercare</dt>
+        <dd><code>contains("x")</code> dà una maschera (righe che contengono «x»), <code>split(sep)</code> spezza,
+            <code>str[i]</code> prende un pezzo. Per far emergere informazione nascosta nel testo (un dominio email, un
+            prefisso).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esempio classico e frequentissimo: normalizzare una colonna categorica con
+      <code>df["citta"].str.strip().str.title()</code> <mark>fa collassare «roma », «ROMA», « Roma» in un unico
+      «Roma»</mark> — indispensabile prima di contare o raggruppare (Cap. 7), altrimenti pandas li vedrebbe come città
+      diverse.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Duplicati e outlier</h2>
+
+  <p class="lead">
+    Due ultimi nemici della qualità: le righe <b>duplicate</b> (che gonfiano i conteggi) e gli <b>outlier</b> (valori
+    anomali che sballano le medie o segnalano errori). Entrambi vanno individuati e decisi caso per caso.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Duplicati e valori anomali <span class="tag">duplicated · drop_duplicates · maschere</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">duplicati.py</div>
+      <pre><span class="cm"># DUPLICATI</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">duplicated</span>()<span class="op">.</span><span class="fn">sum</span>()          <span class="cm"># quante righe sono ripetute?</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span><span class="op">.</span><span class="fn">drop_duplicates</span>()       <span class="cm"># tiene solo la prima di ogni riga uguale</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">drop_duplicates</span>(<span class="nm">subset</span><span class="op">=</span>[<span class="st">"email"</span>])  <span class="cm"># duplicati per una colonna chiave</span>
+
+<span class="cm"># OUTLIER: individuarli con una condizione, poi decidere</span>
+<span class="nm">df</span>[<span class="nm">df</span>[<span class="st">"eta"</span>] <span class="op">&gt;</span> <span class="nm">120</span>]              <span class="cm"># età impossibili: errori?</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span>[<span class="nm">df</span>[<span class="st">"eta"</span>] <span class="op">&lt;=</span> <span class="nm">120</span>]         <span class="cm"># li rimuovo</span>
+<span class="cm"># oppure li "taglio" a un massimo ragionevole (clip):</span>
+<span class="nm">df</span>[<span class="st">"eta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"eta"</span>]<span class="op">.</span><span class="fn">clip</span>(<span class="nm">0</span>, <span class="nm">120</span>)   <span class="cm"># forza tutto tra 0 e 120</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">duplicated()</span> / <span class="mono">drop_duplicates()</span></dt>
+        <dd>la prima segnala le righe ripetute, la seconda le rimuove (tenendo la prima). <code>subset</code> considera
+            «duplicato» chi ripete solo certe colonne (es. stessa email). <mark>Attento: righe uguali possono essere
+            legittime</mark> — controlla prima di cancellare.</dd>
+        <dt><b>outlier</b>: individuare con una condizione</dt>
+        <dd>un'età &gt; 120, un prezzo negativo: li trovi con una maschera. <mark>Poi decidi: è un <b>errore</b> (da
+            correggere/rimuovere) o un valore <b>vero ma estremo</b>?</mark> Non tutti gli outlier sono errori — a volte
+            sono i casi più interessanti.</dd>
+        <dt><span class="mono">clip(min, max)</span></dt>
+        <dd>«taglia» i valori fuori da un intervallo, portandoli agli estremi: un modo dolce di limitare gli outlier
+            senza buttare le righe.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Prendiamo una tabella volutamente «sporca» — buchi, testo incoerente, un tipo sbagliato, un duplicato — e la
+    ripuliamo passo per passo, come faresti su dati veri appena arrivati.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">pulizia.py</div>
+    <pre><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>
+<span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">DataFrame</span>({
+    <span class="st">"nome"</span>:  [<span class="st">"Anna"</span>, <span class="st">"Bruno"</span>, <span class="st">"Bruno"</span>, <span class="st">"Carla"</span>, <span class="st">"Dino"</span>],
+    <span class="st">"citta"</span>: [<span class="st">"roma "</span>, <span class="st">"MILANO"</span>, <span class="st">"MILANO"</span>, <span class="nm">None</span>, <span class="st">" Torino"</span>],
+    <span class="st">"eta"</span>:   [<span class="nm">25</span>, <span class="nm">31</span>, <span class="nm">31</span>, <span class="nm">28</span>, <span class="nm">200</span>],   <span class="cm"># 200 = errore</span>
+})
+
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span><span class="op">.</span><span class="fn">drop_duplicates</span>()                      <span class="cm"># 1. via il duplicato (Bruno)</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">strip</span>()<span class="op">.</span><span class="fn">str</span><span class="op">.</span><span class="fn">title</span>()  <span class="cm"># 2. normalizza il testo</span>
+<span class="nm">df</span>[<span class="st">"citta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"citta"</span>]<span class="op">.</span><span class="fn">fillna</span>(<span class="st">"Sconosciuta"</span>)   <span class="cm"># 3. tappa il buco</span>
+<span class="nm">df</span>[<span class="st">"eta"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"eta"</span>]<span class="op">.</span><span class="fn">clip</span>(<span class="nm">0</span>, <span class="nm">120</span>)             <span class="cm"># 4. limita l'outlier</span>
+
+<span class="bi">print</span>(<span class="nm">df</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">    nome        citta  eta
+0   Anna         Roma   25
+1  Bruno       Milano   31
+3  Carla  Sconosciuta   28
+4   Dino       Torino  120</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Quattro mosse, quattro problemi risolti: <b>(1)</b> il duplicato «Bruno» sparisce (resta una riga sola, e l'indice
+      salta il 2); <b>(2)</b> «roma », «MILANO», « Torino» diventano «Roma», «Milano», «Torino» — <mark>ora sono
+      confrontabili e raggruppabili</mark>; <b>(3)</b> il buco nella città diventa «Sconosciuta» (esplicito, non un
+      NaN nascosto); <b>(4)</b> l'età impossibile 200 viene tagliata a 120. <mark>La tabella è passata da inaffidabile a
+      pronta per l'analisi.</mark> Questo è il pane quotidiano prima di ogni grafico o modello — e nota che l'ordine
+      conta (prima togli i duplicati, poi normalizzi).
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>data cleaning</b> è dove il data scientist passa più tempo: dati sporchi = risultati sbagliati. Obiettivo:
+          dati «tidy», tipi giusti, niente buchi imprevisti (§6.1).</li>
+      <li><b>Valori mancanti</b>: diagnosi con <code>isna().sum()</code>; poi <code>dropna()</code> (elimina, se pochi) o
+          <code>fillna(mediana/etichetta)</code> (imputa, conserva i dati) (§6.2).</li>
+      <li><b>Tipi</b>: <code>dtypes</code> per la diagnosi; <code>to_numeric(errors="coerce")</code> per testo→numero,
+          <code>astype</code> per convertire, <code>"category"</code> per il testo ripetitivo (§6.3).</li>
+      <li><b>Testo</b>: <code>.str.strip()/.title()/.replace()</code> per normalizzare (§6.4). <b>Duplicati</b>:
+          <code>drop_duplicates</code>; <b>outlier</b>: individua con maschere, poi rimuovi o <code>clip</code> (§6.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora hai dati puliti e affidabili. È il momento di farli <b>parlare</b>: raggruppare, riassumere, combinare tabelle
+    diverse. «Qual è la spesa media per città? Quanti clienti per fascia d'età? Come unisco la tabella ordini con quella
+    dei clienti?» Nel <strong>Capitolo 7</strong> impariamo le operazioni che trasformano una tabella in
+    <b>informazione</b>: il potentissimo <code>groupby</code> (raggruppa e riassumi), le tabelle pivot, e
+    <code>merge</code>/<code>join</code> per unire dataset diversi. È qui che i dati cominciano a rispondere alle
+    domande di business.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Perché si dice che il data cleaning è «garbage in, garbage out»? Qual è il rischio di ignorarlo prima di
+      addestrare un modello?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Come conti quanti valori mancanti ha ogni colonna? Quando preferiresti <code>dropna()</code> e quando
+      <code>fillna()</code>? Perché per i numeri spesso si usa la mediana invece della media?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Una colonna <code>prezzo</code> risulta di tipo <code>object</code> (testo) perché contiene valori come
+      <code>"12.50"</code> e qualche <code>"n.d."</code>. Come la converti in numerica gestendo i «n.d.»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      La colonna <code>citta</code> contiene «Roma», «roma », «ROMA». Scrivi il codice per uniformarli tutti a «Roma».
+      Perché è importante farlo prima di raggruppare per città?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.5</div>
+    <p style="margin-bottom:0">
+      Trovi in <code>eta</code> un valore di 200. È necessariamente un errore? Elenca due modi di trattarlo e quando
+      sceglieresti l'uno o l'altro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-8"><span class="secnum">Sezione 6.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      «Garbage in, garbage out» significa che se in ingresso dai dati sbagliati, in uscita ottieni risultati sbagliati:
+      nessun modello può estrarre uno schema affidabile da dati sporchi, incoerenti o pieni di errori. Il rischio di
+      ignorare la pulizia è ottenere analisi e modelli apparentemente funzionanti ma <b>silenziosamente errati</b>
+      (medie falsate da outlier, categorie contate doppie per incoerenze di testo, righe perse per tipi sbagliati) —
+      errori che non danno messaggi d'allarme ma portano a decisioni sbagliate.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      Con <code>df.isna().sum()</code> (conta i NaN per colonna). Si preferisce <code>dropna()</code> quando i buchi sono
+      <b>pochi</b> (perderli non impoverisce troppo i dati); <code>fillna()</code> quando i buchi sono <b>tanti</b> o in
+      una colonna importante (buttarli sprecherebbe troppe righe). Per i numeri si usa spesso la <b>mediana</b> invece
+      della media perché è <b>robusta agli outlier</b>: un valore estremo sballa la media ma quasi non tocca la mediana,
+      così l'imputazione resta ragionevole.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      <code>df["prezzo"] = pd.to_numeric(df["prezzo"], errors="coerce")</code>: converte le stringhe numeriche in numeri
+      e trasforma in <code>NaN</code> ciò che non è convertibile (i «n.d.»), invece di dare errore. Dopo, i «n.d.»
+      diventati NaN si trattano come valori mancanti (dropna o fillna, §6.2).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      <code>df["citta"] = df["citta"].str.strip().str.title()</code>: <code>strip()</code> toglie gli spazi ai bordi,
+      <code>title()</code> uniforma le maiuscole (iniziale maiuscola, resto minuscolo). È importante prima di raggruppare
+      perché pandas considera «Roma», «roma » e «ROMA» come <b>valori diversi</b>: senza normalizzarli, un raggruppamento
+      per città li conterebbe come tre città separate, falsando i conteggi e le medie.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.5</div>
+    <p style="margin-bottom:0">
+      No, non è <b>necessariamente</b> un errore in generale, ma per un'età umana 200 è impossibile, quindi qui è quasi
+      certamente un errore (o un valore-sentinella tipo «non disponibile»). Due modi: <b>(1) rimuoverlo</b> filtrando
+      (<code>df[df["eta"] &lt;= 120]</code>) — quando la riga è chiaramente inaffidabile; <b>(2) limitarlo</b> con
+      <code>clip(0, 120)</code> o sostituirlo con un NaN da imputare — quando vuoi conservare la riga (magari le altre
+      colonne sono valide) attenuando solo il valore anomalo. In dati non anagrafici, invece, un valore estremo va prima
+      indagato: potrebbe essere reale e importante.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.2 — strategie sui valori mancanti: originale / dropna / fillna.
+   Mostra la stessa tabella (con NaN) trattata nei diversi modi. Solo HTML/JS.
+   ========================================================================= */
+(function () {
+  const tableEl = document.getElementById('nan-table');
+  if (!tableEl) return;
+  const out = document.getElementById('nan-out');
+  const btns = document.querySelectorAll('#w-nan .w-btn');
+
+  const COLS = ['nome', 'eta', 'spesa'];
+  // null = NaN
+  const BASE = [
+    ['Anna', 25, 120],
+    ['Bruno', null, 89],
+    ['Carla', 28, null],
+    ['Dino', 42, 45],
+    ['Ester', null, 175]
+  ];
+  const MED_ETA = 28, MED_SPESA = 104.5; // mediane delle colonne (ignorando NaN)
+
+  function render(rows, transform) {
+    let h = '<table style="border-collapse:collapse; font-size:.82rem"><tr><th style="padding:.2rem .5rem"></th>';
+    COLS.forEach(function (c) { h += '<th style="padding:.2rem .7rem; text-align:right; color:var(--accent)">' + c + '</th>'; });
+    h += '</tr>';
+    rows.forEach(function (r, i) {
+      h += '<tr><td style="padding:.15rem .5rem; color:var(--ink-faint)">' + r.idx + '</td>';
+      r.cells.forEach(function (v) {
+        const isNaN0 = (v === null);
+        h += '<td style="padding:.15rem .7rem; text-align:right; color:' +
+          (isNaN0 ? 'var(--warm)' : (v.filled ? 'var(--accent)' : 'var(--ink)')) +
+          '; font-weight:' + (v && v.filled ? '700' : '400') + '">' +
+          (isNaN0 ? 'NaN' : (v.filled ? v.val : v)) + '</td>';
+      });
+      h += '</tr>';
+    });
+    return h + '</table>';
+  }
+
+  function show(mode) {
+    let rows, note;
+    if (mode === 0) {
+      rows = BASE.map(function (r, i) { return { idx: i, cells: r }; });
+      note = '<b>Originale</b>: 3 valori mancanti (in <span style="color:var(--warm)">arancione</span>). Bruno ed Ester senza età, Carla senza spesa.';
+    } else if (mode === 1) {
+      rows = BASE.map(function (r, i) { return { idx: i, cells: r }; })
+        .filter(function (r) { return r.cells.indexOf(null) === -1; });
+      note = '<b>dropna()</b>: restano solo le 2 righe complete (Anna, Dino). Semplice, ma <b>spreca</b> 3 righe su 5.';
+    } else if (mode === 2) {
+      rows = BASE.map(function (r, i) {
+        return { idx: i, cells: [r[0],
+          r[1] === null ? { filled: true, val: MED_ETA } : r[1],
+          r[2] === null ? { filled: true, val: MED_SPESA } : r[2]] };
+      });
+      note = '<b>fillna(mediana)</b>: i buchi diventano la mediana della colonna (età ' + MED_ETA + ', spesa ' + MED_SPESA + '). Conserva tutte le righe, in <span style="color:var(--accent)">verde</span> i valori imputati.';
+    } else {
+      rows = BASE.map(function (r, i) {
+        return { idx: i, cells: [r[0],
+          r[1] === null ? { filled: true, val: 0 } : r[1],
+          r[2] === null ? { filled: true, val: 0 } : r[2]] };
+      });
+      note = '<b>fillna(0)</b>: comodo ma <b>pericoloso</b> qui — mettere 0 come età o spesa <b>falsa le medie</b>. Riempi con 0 solo quando 0 ha senso!';
+    }
+    tableEl.innerHTML = render(rows);
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">' + note + '</div>';
+    btns.forEach(function (b, k) { b.classList.toggle('on', k === mode); });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-s')); });
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

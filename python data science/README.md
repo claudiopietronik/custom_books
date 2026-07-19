@@ -15,7 +15,7 @@ Motore condiviso in `assets/` (toc.js, book.js, plot.js, style.css). Tema smeral
 - [x] 3 — NumPy: vettorizzazione e broadcasting
 - [x] 4 — pandas: Series e DataFrame
 - [x] 5 — pandas: selezionare e filtrare
-- [ ] 6 — pandas: pulire i dati
+- [x] 6 — pandas: pulire i dati
 - [ ] 7 — pandas: raggruppare e combinare
 - [ ] 8 — pandas: date e serie temporali
 - [ ] 9 — Visualizzare: Matplotlib
