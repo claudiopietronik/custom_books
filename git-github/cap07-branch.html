@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · I branch — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="7">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 7</div>
+    <h1>I branch</h1>
+    <p class="standfirst">
+      Siamo al concetto che rende Git davvero potente: i <b>branch</b> (rami). Finora abbiamo lavorato su un'unica
+      linea di sviluppo, aggiungendo commit una dopo l'altra. Ma immagina di voler provare una nuova funzionalità
+      rischiosa, senza toccare la versione che funziona; o di lavorare in tre su cose diverse dello stesso progetto,
+      senza pestarvi i piedi. La soluzione è creare <b>linee di sviluppo parallele</b>: branch, appunto. Ognuno è una
+      «diramazione» indipendente dove puoi fare commit in totale isolamento; quando l'idea è pronta, la <b>unisci</b>
+      al ramo principale (Cap. 8), altrimenti la butti via senza conseguenze. È il meccanismo su cui si regge tutto lo
+      sviluppo moderno e la collaborazione. In questo capitolo: cos'è un branch (§7.1), come crearli e spostarsi
+      (§7.2), cos'è <code>HEAD</code> (§7.3), e la potenza dell'isolamento (§7.4). <mark>I branch sono la porta della
+      seconda metà di Git: sperimentare senza paura, collaborare senza caos.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>branch</b> (§7.1), creare e spostarsi con <code>git branch</code>/<code>git switch</code> (§7.2),
+      <b>HEAD</b> — dove sei adesso (§7.3), lavorare in <b>isolamento</b> (§7.4). Nel laboratorio (§7.5) crei il tuo
+      primo branch.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è come si lavora davvero</div>
+    <p style="margin-bottom:0">
+      Nessun team serio lavora tutto su una sola linea: ogni funzionalità, ogni correzione nasce e cresce su un
+      <b>branch</b> dedicato, e viene unita solo quando è pronta e verificata. <mark>Capire i branch è il passaggio da
+      «uso Git per me» a «uso Git per collaborare»</mark>, ed è la base delle pull request (Cap. 12). È forse il
+      concetto più importante dell'intero libro dopo le tre aree.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-1"><span class="secnum">Sezione 7.1</span>Cos'è un branch e a cosa serve</h2>
+
+  <p class="lead">
+    Un <b>branch</b> è una <b>linea di sviluppo indipendente</b>: una sequenza di commit che può divergere da
+    un'altra. Il branch principale, creato in automatico, si chiama di solito <code>main</code>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Un branch è un'etichetta mobile</div>
+    <p style="margin-bottom:0">
+      Ecco il modello mentale corretto (e sorprendentemente semplice): <mark>un branch è solo un'<b>etichetta</b> (un
+      puntatore) che indica una certa commit</mark>, e che <b>avanza</b> automaticamente ogni volta che fai una nuova
+      commit. Quando crei un nuovo branch, crei una seconda etichetta sulla stessa commit; da lì, le due etichette
+      possono avanzare <b>indipendentemente</b> — ognuna sulla propria sequenza di commit. Non si «copia» il progetto:
+      si crea solo un nuovo puntatore, quindi i branch sono <b>leggerissimi</b> e istantanei da creare. È questa
+      leggerezza che rende naturale crearne uno per ogni piccola cosa.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">A cosa servono i branch <span class="tag">isolamento · sperimentazione · collaborazione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>sperimentare senza rischi</b></dt>
+        <dd>provi un'idea su un branch; se funziona, la unisci; se no, la butti — <mark><code>main</code> resta sempre
+            pulito e funzionante.</mark></dd>
+        <dt><b>lavorare in parallelo</b></dt>
+        <dd>tu su un branch, un collega su un altro: nessuno disturba il lavoro dell'altro finché non decidete di
+            unire.</dd>
+        <dt><b>organizzare per funzionalità</b></dt>
+        <dd>la pratica standard: un branch per ogni <b>feature</b> o correzione (es. <code>login-google</code>,
+            <code>fix-bug-carrello</code>). <mark>La storia resta ordinata e comprensibile.</mark></dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-2"><span class="secnum">Sezione 7.2</span>Creare e spostarsi tra branch</h2>
+
+  <p class="lead">
+    Due operazioni: <b>creare</b> un branch e <b>spostarti</b> su di esso. Git moderno le fa con
+    <code>git branch</code> e <code>git switch</code> (comandi chiari e recenti).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — creare e spostarsi</div>
+    <pre><span class="c"># elenca i branch (l'asterisco indica quello attuale)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span>
+<span class="out">* main</span>
+
+<span class="c"># crea un nuovo branch chiamato "nuova-funzione"</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">branch</span> <span class="ar">nuova-funzione</span>
+
+<span class="c"># spostati su di esso</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">nuova-funzione</span>
+<span class="out">Switched to branch 'nuova-funzione'</span>
+
+<span class="c"># scorciatoia: crea E spostati in un colpo solo</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">altra-funzione</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I comandi dei branch <span class="tag">branch · switch · switch -c</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git branch</span></dt>
+        <dd>senza argomenti, <b>elenca</b> i branch; l'<b>asterisco</b> <code>*</code> segna quello su cui sei ora. Con
+            un nome (<code>git branch nome</code>), <b>crea</b> un nuovo branch (ma non ci si sposta).</dd>
+        <dt><span class="mono">git switch nome</span></dt>
+        <dd><b>ti sposta</b> sul branch indicato: da quel momento le tue commit vanno su quel branch. <mark>La working
+            directory cambia per riflettere quel branch.</mark></dd>
+        <dt><span class="mono">git switch -c nome</span></dt>
+        <dd>«create and switch»: <b>crea</b> il branch <b>e</b> ci si <b>sposta</b> subito. La scorciatoia più usata
+            quando inizi una nuova funzionalità.</dd>
+        <dt>nota storica: <span class="mono">git checkout</span></dt>
+        <dd>prima esisteva <code>git checkout</code> per spostarsi tra branch (<code>git checkout -b nome</code>). Lo
+            vedrai ancora spesso; <mark><code>switch</code> è la versione moderna e più chiara</mark>, ma i due
+            convivono.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La convenzione per i nomi dei branch: minuscolo, parole separate da trattini, descrittivo — <code>login-utente</code>,
+      <code>fix-crash-avvio</code>. <mark>Un buon nome dice a cosa serve il branch</mark>, esattamente come un buon
+      messaggio di commit. Prova il widget qui sotto per <b>vedere</b> un branch nascere e divergere.
+    </div>
+  </div>
+
+  <div class="widget" id="w-branch">
+    <div class="w-head">
+      <span>Branch dal vivo: crea, spostati, committa</span>
+      <span class="hint">guarda le linee divergere</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div id="br-graph" style="min-height:130px; position:relative; font-family:var(--mono)"></div>
+      <div id="br-where" style="text-align:center; margin-top:.6rem; font-family:var(--mono); font-size:.85rem; color:var(--accent)"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="br-commit">commit (sul branch attuale)</button>
+      <button class="btn" id="br-create">git switch -c feature</button>
+      <button class="btn" id="br-toggle">switch main ⇄ feature</button>
+      <button class="btn ghost" id="br-reset">reset</button>
+    </div>
+    <div class="w-readout" id="br-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-3"><span class="secnum">Sezione 7.3</span>HEAD: dove sei adesso</h2>
+
+  <p class="lead">
+    C'è una parola che compare spesso e vale la pena chiarire: <code>HEAD</code>. È il puntatore che indica <b>dove ti
+    trovi</b> nella storia — di solito, la commit più recente del branch su cui sei.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">HEAD, il «tu sei qui» <span class="tag">il puntatore alla tua posizione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">HEAD</span></dt>
+        <dd>indica la commit <b>corrente</b>, quella su cui «poggi». Normalmente punta al branch attivo, che a sua
+            volta punta alla sua ultima commit. <mark>«Dove sei adesso» nella storia.</mark></dd>
+        <dt>lo vedi in <span class="mono">git log</span></dt>
+        <dd>l'annotazione <code>(HEAD -&gt; main)</code> del Cap. 5 significa: «HEAD punta al branch <code>main</code>,
+            che è su questa commit». Cambiando branch con <code>switch</code>, HEAD si sposta con te.</dd>
+        <dt>a cosa serve saperlo</dt>
+        <dd>molti comandi si riferiscono a HEAD: <code>HEAD</code> = commit attuale, <code>HEAD~1</code> = quella
+            precedente, e così via. <mark>È il punto di riferimento «da qui»</mark> per navigare la storia.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non serve pensarci troppo all'inizio: <mark>ricorda solo che <code>HEAD</code> = «dove sono ora»</mark>. Quando
+      fai una commit, la nuova commit viene aggiunta «dopo» HEAD, e sia HEAD sia il branch avanzano su di essa. Quando
+      cambi branch, HEAD ti segue. È il filo che tiene insieme «tu», «il branch attivo» e «la commit corrente».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Lavorare in isolamento</h2>
+
+  <p class="lead">
+    Ecco il beneficio concreto dei branch: quando lavori su un branch, le tue modifiche e commit <b>non toccano</b>
+    gli altri branch. Ogni linea vive per conto suo, fino al momento dell'unione.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔒</span> Ogni branch, un mondo a sé</div>
+    <p style="margin-bottom:0">
+      Immagina di essere su un branch <code>nuova-grafica</code> e di fare tre commit sperimentali. Su
+      <code>main</code>, nel frattempo, <b>non è cambiato nulla</b>: le tue commit vivono solo sul tuo branch.
+      <mark>Se torni su <code>main</code> (con <code>git switch main</code>), i file tornano com'erano lì</mark> — la
+      tua grafica sperimentale «sparisce» dalla vista (è al sicuro sull'altro branch, non persa). Puoi passare avanti
+      e indietro tra branch, e ognuno mostra il suo stato. Questo isolamento è ciò che ti permette di: provare idee
+      folli senza rischi; tenere <code>main</code> sempre stabile; lavorare in parallelo. <b>Se l'idea è buona, la
+      unisci (Cap. 8); se no, cancelli il branch e non è successo nulla.</b>
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Committa prima di cambiare branch</div>
+    <p style="margin-bottom:0">
+      Una cautela pratica: prima di spostarti tra branch con <code>switch</code>, è buona norma aver <b>committato</b>
+      (o messo da parte) le modifiche in corso. <mark>Se hai modifiche non salvate, Git potrebbe impedirti lo
+      spostamento</mark> per non perderle (o le porterebbe con sé, creando confusione). Regola semplice: <b>una commit
+      pulita prima di cambiare branch</b>. Se controlli <code>git status</code> (dovrebbe dire «working tree clean»)
+      prima di ogni <code>switch</code>, sei sempre al sicuro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-5"><span class="secnum">Sezione 7.5</span>Laboratorio: il tuo primo branch</h2>
+
+  <p class="lead">
+    Crea un branch, fai una commit «di lato», e osserva come <code>main</code> resta intatto. È l'esperimento che fa
+    «scattare» il concetto di branch.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un branch in isolamento</div>
+    <pre><span class="c"># parti da main, crea e spostati su un nuovo branch</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">esperimento</span>
+<span class="out">Switched to a new branch 'esperimento'</span>
+
+<span class="c"># fai una modifica e committala: vive SOLO su questo branch</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"idea sperimentale"</span> &gt; <span class="ar">bozza.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">add</span> <span class="ar">.</span> && <span class="cmd">git</span> <span class="ar">commit</span> <span class="fl">-m</span> <span class="ar">"Prova un'idea"</span>
+
+<span class="c"># torna su main: bozza.txt NON c'è! (è al sicuro su esperimento)</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">main</span>
+<span class="p">$</span> <span class="cmd">ls</span>
+<span class="out">giorno1.txt  giorno2.txt</span>          <span class="c"># bozza.txt non è qui</span>
+
+<span class="c"># ricontrolla: torna su esperimento e bozza.txt riappare</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="ar">esperimento</span>
+<span class="p">$</span> <span class="cmd">ls</span>
+<span class="out">bozza.txt  giorno1.txt  giorno2.txt</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il momento «aha»</div>
+    <p style="margin-bottom:0">
+      Hai appena visto la magia dei branch: <code>bozza.txt</code> esiste su <code>esperimento</code> ma <b>non</b> su
+      <code>main</code>. Spostandoti tra i due, la working directory cambia per riflettere il branch attivo.
+      <mark>Le due linee di sviluppo sono davvero indipendenti</mark>: puoi accumulare commit su <code>esperimento</code>
+      senza toccare minimamente <code>main</code>. Se l'esperimento non ti convince, torni su <code>main</code> e
+      cancelli il branch (<code>git branch -d esperimento</code>, Cap. 8): come se non fosse mai successo. Se invece è
+      buono, lo <b>unisci</b> — ed è proprio ciò che impariamo nel prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 7</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>branch</b> è una linea di sviluppo indipendente — tecnicamente un'<b>etichetta mobile</b> che punta a
+          una commit e avanza. Leggerissimo da creare (§7.1).</li>
+      <li><code>git branch</code> elenca/crea; <code>git switch nome</code> ti sposta; <code>git switch -c nome</code>
+          crea e sposta. (Vecchio: <code>git checkout</code>) (§7.2).</li>
+      <li><code>HEAD</code> = «dove sei ora» (la commit/branch corrente); ti segue quando cambi branch (§7.3).</li>
+      <li>I branch danno <b>isolamento</b>: le commit di un branch non toccano gli altri; cambiando branch la working
+          directory riflette quello attivo. Committa prima di fare <code>switch</code> (§7.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai creare linee di sviluppo parallele e lavorarci in isolamento. Ma un branch «di lato» ha senso solo se, a
+    lavoro finito, puoi <b>riportarne il risultato</b> nel ramo principale. Come si <b>uniscono</b> due branch? Cosa
+    succede alle commit dell'uno e dell'altro? Nel <strong>Capitolo 8</strong> impariamo il <b>merge</b>: l'operazione
+    che fonde una linea di sviluppo in un'altra, completando il ciclo «ramifica → lavora → unisci» che è il cuore del
+    lavoro con Git.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-6"><span class="secnum">Sezione 7.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.1</div>
+    <p style="margin-bottom:0">
+      Con parole tue, cos'è un branch? Perché si dice che è «leggero» da creare (cosa NON viene copiato)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.2</div>
+    <p style="margin-bottom:0">
+      Scrivi il comando per creare un nuovo branch chiamato <code>pagina-contatti</code> e spostarti su di esso in un
+      colpo solo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.3</div>
+    <p style="margin-bottom:0">
+      Sei sul branch <code>esperimento</code>, ci fai una commit, poi torni su <code>main</code> con
+      <code>git switch main</code>. La commit fatta su <code>esperimento</code> appare anche su <code>main</code>?
+      Perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 7.4</div>
+    <p style="margin-bottom:0">
+      Cos'è <code>HEAD</code>? Cosa gli succede quando esegui <code>git switch un-altro-branch</code>?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s7-7"><span class="secnum">Sezione 7.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.1</div>
+    <p style="margin-bottom:0">
+      Un <b>branch</b> è una linea di sviluppo indipendente: una sequenza di commit che può divergere dalle altre.
+      Tecnicamente è solo un'<b>etichetta</b> (un puntatore) che indica una commit e avanza automaticamente a ogni
+      nuova commit. È «leggero» perché creando un branch <b>non si copia</b> il progetto né i file: si crea solo un
+      nuovo puntatore su una commit esistente. Per questo è istantaneo e non occupa spazio.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">switch</span> <span class="fl">-c</span> <span class="ar">pagina-contatti</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Il <code>-c</code> («create») crea il branch e ci si sposta subito. (Equivalente
+      vecchio: <code>git checkout -b pagina-contatti</code>.)</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.3</div>
+    <p style="margin-bottom:0">
+      <b>No</b>: la commit fatta su <code>esperimento</code> <b>non</b> appare su <code>main</code>. I branch sono
+      linee di sviluppo <b>indipendenti</b>: le commit di un branch restano su quel branch finché non lo si
+      <b>unisce</b> esplicitamente (merge, Cap. 8). Tornando su <code>main</code>, vedi solo le commit di
+      <code>main</code>; la commit dell'esperimento è al sicuro sul suo branch, ma invisibile da <code>main</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 7.4</div>
+    <p style="margin-bottom:0">
+      <code>HEAD</code> è il puntatore che indica <b>dove ti trovi ora</b> nella storia: normalmente la commit più
+      recente del branch attivo («tu sei qui»). Quando esegui <code>git switch un-altro-branch</code>, <code>HEAD</code>
+      <b>si sposta</b> a puntare a quel branch (e alla sua ultima commit): ti «segue» sul nuovo branch, e la working
+      directory si aggiorna per rifletterlo.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §7.2 — branch dal vivo: grafico di commit su main/feature, HEAD che si sposta
+   ========================================================================= */
+(function () {
+  const graph = document.getElementById('br-graph');
+  if (!graph) return;
+  const whereEl = document.getElementById('br-where');
+  const out = document.getElementById('br-out');
+
+  // modello: lista di commit {id, branch, parent}; branch pointers; HEAD
+  let commits = [{ id: 'c1', branch: 'main' }, { id: 'c2', branch: 'main' }];
+  let hasFeature = false;
+  let head = 'main';           // branch attivo
+  let seed = 3;
+  function nid() { seed++; return 'c' + seed; }
+
+  const COL = { main: '#2f5d8c', feature: '#a8452c' };
+
+  function tipOf(branch) {
+    // ultima commit del branch
+    for (let i = commits.length - 1; i >= 0; i--) if (commits[i].branch === branch) return commits[i];
+    // se feature non ha ancora commit proprie, la sua tip è la commit di biforcazione (ultima main al momento della creazione)
+    return null;
+  }
+
+  function draw() {
+    // disegna due righe: main (sopra), feature (sotto se esiste)
+    const mainCommits = commits.filter(function (c) { return c.branch === 'main'; });
+    const featCommits = commits.filter(function (c) { return c.branch === 'feature'; });
+    function row(label, list, color, active, show) {
+      if (!show) return '';
+      const dots = list.map(function (c) {
+        return '<span style="display:inline-flex; align-items:center"><span style="width:26px; height:26px; border-radius:50%; background:' + color + '; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:.72rem">' + c.id + '</span></span>';
+      }).join('<span style="color:var(--ink-faint)"> ── </span>');
+      const tag = '<span style="background:' + color + '; color:#fff; border-radius:5px; padding:.1rem .5rem; font-size:.72rem; font-weight:700">' + label + (active ? ' ← HEAD' : '') + '</span>';
+      return '<div style="display:flex; align-items:center; gap:.6rem; margin:.5rem 0">' + tag + '<span style="color:var(--ink-faint)">:</span> ' + (dots || '<span style="color:var(--ink-soft); font-size:.8rem">(parte da c2)</span>') + '</div>';
+    }
+    graph.innerHTML =
+      row('main', mainCommits, COL.main, head === 'main', true) +
+      (hasFeature ? '<div style="border-left:2px dashed var(--ink-soft); height:14px; margin-left:34px"></div>' : '') +
+      row('feature', featCommits.length ? featCommits : [], COL.feature, head === 'feature', hasFeature);
+    whereEl.innerHTML = 'sei su: <b>' + head + '</b>';
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('br-commit').addEventListener('click', function () {
+    commits.push({ id: nid(), branch: head });
+    draw();
+    out.innerHTML = note('green', 'Nuova commit su <b>' + head + '</b>. Il branch attivo (e HEAD) avanza sulla nuova commit. Le altre linee non cambiano.');
+  });
+  document.getElementById('br-create').addEventListener('click', function () {
+    if (hasFeature) { out.innerHTML = note('warm', 'Il branch feature esiste già. Usa «switch» per spostarti.'); return; }
+    hasFeature = true; head = 'feature'; draw();
+    out.innerHTML = note('green', 'Creato <b>feature</b> (parte dalla commit attuale di main) e ci ti sei spostato (HEAD → feature). Ora le commit vanno su feature, in <b>isolamento</b> da main.');
+  });
+  document.getElementById('br-toggle').addEventListener('click', function () {
+    if (!hasFeature) { out.innerHTML = note('warm', '⚠ Prima crea il branch feature con «switch -c feature».'); return; }
+    head = (head === 'main') ? 'feature' : 'main';
+    draw();
+    out.innerHTML = note('', 'Ti sei spostato su <b>' + head + '</b> (HEAD segue). La working directory rifletterebbe le commit di questo branch. Prova a committare qui e vedi le linee divergere.');
+  });
+  document.getElementById('br-reset').addEventListener('click', function () {
+    commits = [{ id: 'c1', branch: 'main' }, { id: 'c2', branch: 'main' }]; hasFeature = false; head = 'main'; seed = 3;
+    draw(); out.innerHTML = note('', 'Reset: solo main con due commit.');
+  });
+
+  draw();
+  out.innerHTML = note('', 'Parti con <b>main</b> (2 commit). Crea <b>feature</b>, spostati e committa: guarda le due linee <b>divergere</b>. «HEAD» segna sempre il branch su cui sei.');
+})();
+</script>
+</body>
+</html>

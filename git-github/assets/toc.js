@@ -103,7 +103,7 @@ const TOC = [
     n: 7,
     titolo: "I branch",
     file: "cap07-branch.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "Cos'è un branch e a cosa serve" },
       { id: "s7-2", n: "7.2", t: "Creare e spostarsi tra branch" },
