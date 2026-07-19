@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Template e la STL — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Template e la STL</h1>
+    <p class="standfirst">
+      Hai già usato <code>std::vector&lt;int&gt;</code> e <code>vector&lt;string&gt;</code>: lo stesso vector,
+      diversi tipi di contenuto. Come? Grazie ai <b>template</b> — il meccanismo con cui si scrive codice
+      <b>generico</b>, che funziona per <em>qualsiasi</em> tipo, scritto una volta sola. E i template sono la base
+      della <b>STL</b> (Standard Template Library): la straordinaria collezione di <b>contenitori</b> (vector, map,
+      set) e <b>algoritmi</b> (sort, find, count…) già pronti del C++. <mark>La STL è la parte più produttiva del
+      linguaggio</mark>: ti fa fare in una riga ciò che a mano richiederebbe pagine, con codice testato ed
+      efficiente. In questo capitolo scopri come scrivere template tuoi e, soprattutto, come sfruttare l'immenso
+      arsenale che il C++ ti regala.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il codice <b>generico coi template</b> (§13.1), i <b>contenitori</b> della STL (§13.2), <b>map e set</b>
+      (§13.3), gli <b>algoritmi</b> (§13.4), <b>iteratori e lambda</b> (§13.5). Nel laboratorio (§13.6) risolvi un
+      problema con la STL.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: non reinventare la ruota</div>
+    <p style="margin-bottom:0">
+      La STL è il motivo per cui il C++ moderno è <b>produttivo</b>: <mark>quasi ogni struttura dati e algoritmo che
+      ti serve è già lì, testato e velocissimo</mark>. Ordinare, cercare, contare, associare chiavi a valori — tutto
+      pronto. Saper usare la STL ti fa scrivere meno codice, più corretto e più efficiente. E i template, che la
+      rendono possibile, sono un'idea potente che incontrerai ovunque nel codice C++ serio. È il capitolo che ti fa
+      passare da «so la sintassi» a «so essere produttivo».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Codice generico coi template</h2>
+
+  <p class="lead">
+    Immagina di voler scrivere una funzione «massimo tra due valori». La scriveresti per <code>int</code>, poi di
+    nuovo per <code>double</code>, poi per <code>string</code>… I <b>template</b> ti fanno scriverla <b>una volta</b>,
+    per qualsiasi tipo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Una funzione template <span class="tag">template &lt;typename T&gt;</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">typename</span> <span class="ty">T</span><span class="op">&gt;</span>          <span class="cm">// T è un tipo "generico", deciso all'uso</span>
+<span class="ty">T</span> <span class="fn">massimo</span>(<span class="ty">T</span> <span class="nm">a</span>, <span class="ty">T</span> <span class="nm">b</span>) {
+    <span class="kw">return</span> (<span class="nm">a</span> <span class="op">&gt;</span> <span class="nm">b</span>) <span class="op">?</span> <span class="nm">a</span> <span class="op">:</span> <span class="nm">b</span>;   <span class="cm">// funziona per ogni tipo confrontabile con &gt;</span>
+}
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="fn">massimo</span>(<span class="nm">3</span>, <span class="nm">7</span>);          <span class="cm">// 7   (T = int)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="fn">massimo</span>(<span class="nm">2.5</span>, <span class="nm">1.8</span>);      <span class="cm">// 2.5 (T = double)</span>
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="fn">massimo</span>(<span class="ns">std</span>::<span class="ns">string</span>(<span class="st">"a"</span>), <span class="ns">std</span>::<span class="ns">string</span>(<span class="st">"z"</span>));  <span class="cm">// z   (T = string!)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">template &lt;typename T&gt;</span></dt>
+        <dd>dichiara un <b>parametro di tipo</b> <code>T</code>: un «tipo segnaposto» che verrà deciso quando usi la
+            funzione. Nel corpo, usi <code>T</code> come se fosse un tipo qualsiasi.</dd>
+        <dt>il compilatore «genera» il codice</dt>
+        <dd>quando chiami <code>massimo(3, 7)</code>, il compilatore <b>crea al volo</b> la versione con
+            <code>T = int</code>; con <code>massimo(2.5, 1.8)</code>, quella con <code>T = double</code>. <mark>Scrivi
+            una funzione, ne ottieni infinite</mark>, una per ogni tipo che usi. Ed è tutto risolto in
+            <b>compilazione</b>: nessun costo a runtime.</dd>
+        <dt>ecco com'è fatto vector</dt>
+        <dd><code>std::vector&lt;T&gt;</code> è una <b>classe template</b>: lo stesso codice funziona per
+            <code>vector&lt;int&gt;</code>, <code>vector&lt;string&gt;</code>, ecc. Ora sai il meccanismo dietro le
+            strutture che usi.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="widget" id="w-tmpl">
+    <div class="w-head">
+      <span>Un template, tanti tipi</span>
+      <span class="hint">chiama massimo con tipi diversi</span>
+    </div>
+    <div class="w-stage" style="min-height:150px">
+      <div id="wtm-view" style="text-align:center; padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" data-t="int">massimo(3, 7)</button>
+      <button class="w-btn" data-t="double">massimo(2.5, 1.8)</button>
+      <button class="w-btn" data-t="string">massimo("apple", "zebra")</button>
+    </div>
+    <div class="w-readout" id="wtm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>I contenitori della STL</h2>
+
+  <p class="lead">
+    La STL offre molte <b>strutture dati</b> pronte, ognuna adatta a un uso. Conosci già <code>vector</code>; ecco
+    le altre che userai di più.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I contenitori principali <span class="tag">ognuno per il suo scopo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::vector&lt;T&gt;</span> — sequenza dinamica</dt>
+        <dd>l'array che cresce (Cap. 8): il tuttofare. Accesso rapido per indice, aggiunta in fondo. La scelta di
+            default per una lista di elementi.</dd>
+        <dt><span class="mono">std::map&lt;K, V&gt;</span> — chiave → valore</dt>
+        <dd>associa <b>chiavi</b> a <b>valori</b> (come un dizionario): <code>map&lt;string, int&gt;</code> per
+            nome→età. Ricerca per chiave velocissima (§13.3).</dd>
+        <dt><span class="mono">std::set&lt;T&gt;</span> — insieme senza duplicati</dt>
+        <dd>una collezione di elementi <b>unici</b>, ordinati automaticamente. Per «quali elementi ci sono», test di
+            appartenenza rapidi (§13.3).</dd>
+        <dt>altri utili</dt>
+        <dd><code>std::array</code> (array a dimensione fissa ma sicuro), <code>std::pair</code> (una coppia di
+            valori), <code>std::unordered_map</code> (come map ma ancora più veloce, senza ordine). Ce n'è per ogni
+            esigenza.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>La bellezza: tutti condividono un'interfaccia coerente</mark> (<code>.size()</code>, <code>.empty()</code>,
+      il for range-based, gli iteratori) — impari uno, sai muoverti in tutti. E tutti gestiscono la memoria per te
+      (RAII, Cap. 12): nessun <code>new</code>/<code>delete</code>. Scegliere il contenitore giusto per il problema è
+      metà del lavoro di un buon programmatore C++.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>map e set</h2>
+
+  <p class="lead">
+    Due contenitori così utili da meritare un focus. La <code>map</code> associa chiavi a valori (il «dizionario»
+    del C++); il <code>set</code> tiene elementi unici.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">std::map <span class="tag">chiave → valore</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;map&gt;</span>
+
+<span class="ns">std</span>::map<span class="op">&lt;</span><span class="ns">std</span>::<span class="ns">string</span>, <span class="ty">int</span><span class="op">&gt;</span> <span class="nm">eta</span>;   <span class="cm">// mappa nome → età</span>
+<span class="nm">eta</span>[<span class="st">"Anna"</span>] <span class="op">=</span> <span class="nm">25</span>;               <span class="cm">// inserisci/aggiorna con la chiave</span>
+<span class="nm">eta</span>[<span class="st">"Marco"</span>] <span class="op">=</span> <span class="nm">30</span>;
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">eta</span>[<span class="st">"Anna"</span>];        <span class="cm">// 25   (accesso per chiave)</span>
+
+<span class="kw">for</span> (<span class="ty">auto</span><span class="op">&amp;</span> <span class="nm">coppia</span> : <span class="nm">eta</span>) {        <span class="cm">// scorri le coppie</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">coppia</span><span class="op">.</span><span class="nm">first</span> <span class="op">&lt;&lt;</span> <span class="st">": "</span> <span class="op">&lt;&lt;</span> <span class="nm">coppia</span><span class="op">.</span><span class="nm">second</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+}</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">map&lt;string, int&gt;</span></dt>
+        <dd>due tipi tra angolari: il tipo della <b>chiave</b> e quello del <b>valore</b>. Accesso con
+            <code>eta["Anna"]</code>, come un dizionario Python. Le chiavi sono uniche e ordinate.</dd>
+        <dt><span class="mono">.first</span> e <span class="mono">.second</span></dt>
+        <dd>scorrendo una map ottieni <b>coppie</b> (<code>std::pair</code>): <code>.first</code> è la chiave,
+            <code>.second</code> il valore. (Con C++ moderno puoi anche fare
+            <code>for (auto&amp; [nome, anni] : eta)</code> — lo «structured binding», più leggibile.)</dd>
+        <dt>il <b>set</b></dt>
+        <dd><code>std::set&lt;int&gt; s = {3, 1, 3, 2};</code> tiene solo <code>{1, 2, 3}</code> (niente duplicati,
+            ordinati). <code>s.count(2)</code> dice se c'è. Per raccolte di elementi unici.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>Gli algoritmi (sort, find…)</h2>
+
+  <p class="lead">
+    Il vero superpotere della STL: decine di <b>algoritmi</b> pronti che operano sui contenitori. Ordinare, cercare,
+    contare, sommare — tutto in una riga, testato ed efficiente.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Algoritmi comuni <span class="tag">#include &lt;algorithm&gt;</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;algorithm&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">v</span> <span class="op">=</span> {<span class="nm">7</span>, <span class="nm">2</span>, <span class="nm">9</span>, <span class="nm">4</span>};
+
+<span class="ns">std</span>::sort(<span class="nm">v</span><span class="op">.</span><span class="fn">begin</span>(), <span class="nm">v</span><span class="op">.</span><span class="fn">end</span>());         <span class="cm">// ordina: {2, 4, 7, 9}</span>
+<span class="ty">int</span> <span class="nm">m</span> <span class="op">=</span> <span class="op">*</span><span class="ns">std</span>::max_element(<span class="nm">v</span><span class="op">.</span><span class="fn">begin</span>(), <span class="nm">v</span><span class="op">.</span><span class="fn">end</span>());   <span class="cm">// 9</span>
+<span class="ty">bool</span> <span class="nm">c</span> <span class="op">=</span> <span class="ns">std</span>::count(<span class="nm">v</span><span class="op">.</span><span class="fn">begin</span>(), <span class="nm">v</span><span class="op">.</span><span class="fn">end</span>(), <span class="nm">4</span>);       <span class="cm">// quante volte c'è il 4</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::sort(v.begin(), v.end())</span></dt>
+        <dd>ordina il contenitore (in <b>ordine crescente</b> di default). <code>v.begin()</code> e
+            <code>v.end()</code> indicano «dall'inizio alla fine» (sono <b>iteratori</b>, §13.5). Un solo comando al
+            posto di un intero algoritmo di ordinamento scritto a mano!</dd>
+        <dt>altri utilissimi</dt>
+        <dd><code>std::find</code> (cerca un valore), <code>std::count</code> (conta occorrenze),
+            <code>std::max_element</code>/<code>min_element</code>, <code>std::accumulate</code> (somma, da
+            <code>&lt;numeric&gt;</code>), <code>std::reverse</code>, <code>std::unique</code>… decine di algoritmi.</dd>
+        <dt>ordinare a modo tuo</dt>
+        <dd><code>std::sort(v.begin(), v.end(), criterio)</code> accetta un <b>criterio</b> (spesso una lambda,
+            §13.5) per ordinare come vuoi — es. decrescente, o per un campo di una struct.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>La filosofia della STL: contenitori + iteratori + algoritmi</mark>. Gli algoritmi non sono legati a un
+      contenitore specifico: lavorano su «un intervallo» (da begin a end), quindi lo stesso <code>std::sort</code>
+      ordina un vector, un array e molto altro. È un design elegante e potente. La regola del bravo programmatore
+      C++: <b>prima di scrivere un ciclo, chiediti «esiste un algoritmo STL?»</b> — quasi sempre sì.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Iteratori e lambda</h2>
+
+  <p class="lead">
+    Due concetti che rendono la STL flessibile: gli <b>iteratori</b> (il modo uniforme di «puntare» agli elementi) e
+    le <b>lambda</b> (funzioni «al volo» da passare agli algoritmi).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Iteratori: puntatori «generalizzati»</div>
+    <p style="margin-bottom:0">
+      Un <b>iteratore</b> è un oggetto che «indica» un elemento di un contenitore e sa avanzare al successivo — come
+      un puntatore generalizzato. <code>v.begin()</code> indica il primo elemento, <code>v.end()</code> la posizione
+      <em>dopo</em> l'ultimo. Gli algoritmi lavorano su <b>intervalli</b> di iteratori (<code>begin, end</code>), ed
+      è questo che li rende universali: lo stesso codice funziona su qualunque contenitore che fornisca iteratori.
+      <mark>Il for range-based (Cap. 5) è, sotto, zucchero sintattico sugli iteratori</mark>: non devi maneggiarli a
+      mano spesso, ma capirli spiega come funziona la STL.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Lambda: funzioni senza nome, al volo</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ns">std</span>::vector<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">v</span> <span class="op">=</span> {<span class="nm">5</span>, <span class="nm">2</span>, <span class="nm">8</span>, <span class="nm">1</span>};
+
+<span class="cm">// ordina in modo DECRESCENTE usando una lambda come criterio:</span>
+<span class="ns">std</span>::sort(<span class="nm">v</span><span class="op">.</span><span class="fn">begin</span>(), <span class="nm">v</span><span class="op">.</span><span class="fn">end</span>(), [](<span class="ty">int</span> <span class="nm">a</span>, <span class="ty">int</span> <span class="nm">b</span>) {
+    <span class="kw">return</span> <span class="nm">a</span> <span class="op">&gt;</span> <span class="nm">b</span>;   <span class="cm">// "a viene prima di b se è maggiore" → decrescente</span>
+});   <span class="cm">// v ora è {8, 5, 2, 1}</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Una <b>lambda</b> è una <b>funzione anonima</b> definita sul posto: <code>[](int a, int b) { return a &gt; b; }</code>.
+      Le <b>quadre</b> <code>[]</code> (la «capture list») aprono la lambda, poi ci sono parametri e corpo come una
+      normale funzione. <mark>Sono comodissime per passare un «pezzo di logica» a un algoritmo</mark> senza scrivere
+      una funzione separata: ordina così, filtra cosà. È l'equivalente C++ delle lambda di Python. Non serve
+      padroneggiarle subito; sappi riconoscerle, perché la STL le usa tantissimo.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Laboratorio: usare la STL</h2>
+
+  <p class="lead">
+    Risolviamo un problema reale — <b>contare le parole in un testo</b> — sfruttando la STL: una <code>map</code>
+    per i conteggi. Vedrai quanto codice ti risparmia.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>conta_parole.cpp</code> <span class="tag">map al lavoro</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">conta_parole.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;map&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::map<span class="op">&lt;</span><span class="ns">std</span>::<span class="ns">string</span>, <span class="ty">int</span><span class="op">&gt;</span> <span class="nm">conteggio</span>;
+    <span class="ns">std</span>::<span class="ns">string</span> <span class="nm">parola</span>;
+
+    <span class="cm">// legge parole finché ci sono (Ctrl+D / Ctrl+Z per finire)</span>
+    <span class="kw">while</span> (<span class="ns">std</span>::<span class="ns">cin</span> <span class="op">&gt;&gt;</span> <span class="nm">parola</span>) {
+        <span class="nm">conteggio</span>[<span class="nm">parola</span>]<span class="op">++</span>;   <span class="cm">// map: se la chiave non c'è, la crea a 0, poi incrementa</span>
+    }
+
+    <span class="kw">for</span> (<span class="ty">auto</span><span class="op">&amp;</span> [<span class="nm">p</span>, <span class="nm">n</span>] : <span class="nm">conteggio</span>) {   <span class="cm">// structured binding (C++ moderno)</span>
+        <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="nm">p</span> <span class="op">&lt;&lt;</span> <span class="st">": "</span> <span class="op">&lt;&lt;</span> <span class="nm">n</span> <span class="op">&lt;&lt;</span> <span class="st">"\n"</span>;
+    }
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      La riga magica è <code>conteggio[parola]++</code>: se la parola non è ancora nella map, <code>[]</code> la
+      <b>crea automaticamente con valore 0</b>, poi <code>++</code> la porta a 1; se c'è già, la incrementa.
+      <mark>Contare occorrenze — che a mano richiederebbe un ciclo di ricerca — diventa una riga</mark>, grazie alla
+      map. E le chiavi escono già <b>ordinate alfabeticamente</b> (proprietà della map). Compila con
+      <code>g++ -std=c++17 conta_parole.cpp -o conta</code> (il <code>-std=c++17</code> abilita lo structured
+      binding), poi digita del testo e finisci con Ctrl+Z (Windows) o Ctrl+D (Mac/Linux). Questa è la STL: risolvi
+      problemi veri con pochissimo codice.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li>I <b>template</b> (<code>template &lt;typename T&gt;</code>) scrivono codice <b>generico</b>, valido per
+          ogni tipo, risolto in compilazione. È così che nasce <code>vector&lt;T&gt;</code> (§13.1).</li>
+      <li>Contenitori STL: <b>vector</b> (sequenza), <b>map</b> (chiave→valore), <b>set</b> (unici); interfaccia
+          coerente e memoria gestita (RAII) (§13.2-13.3).</li>
+      <li>Gli <b>algoritmi</b> (<code>sort</code>, <code>find</code>, <code>count</code>, <code>max_element</code>…)
+          operano su <b>intervalli</b> (begin, end): <mark>una riga al posto di un ciclo scritto a mano</mark> (§13.4).</li>
+      <li><b>Iteratori</b> = puntatori generalizzati agli elementi; <b>lambda</b> = funzioni al volo per dare un
+          criterio agli algoritmi (§13.5). Regola: prima di scrivere un ciclo, cerca l'algoritmo STL (§13.6).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sei ormai un programmatore C++ capace: sintassi, OOP, memoria, e la potenza della STL. Restano due tasselli
+    pratici prima del gran finale. I programmi vanno <b>a male</b>: input sbagliati, file mancanti, situazioni
+    impreviste. Nel <strong>Capitolo 14</strong> vediamo la <b>gestione degli errori</b> in C++ — le <b>eccezioni</b>
+    (<code>try</code>/<code>catch</code>/<code>throw</code>) — e quando conviene usarle. È il meccanismo che, insieme
+    a RAII (Cap. 12!), permette al C++ di gestire gli imprevisti in modo pulito e sicuro. Poi, file e I/O, e infine
+    un progetto completo che riunisce tutto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      A cosa serve un <b>template</b>? Cosa fa il compilatore quando chiami <code>massimo(3, 7)</code> e poi
+      <code>massimo(2.5, 1.8)</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Quale contenitore STL useresti per: (a) una lista ordinabile di voti; (b) associare nomi a numeri di telefono;
+      (c) tenere i tag unici di un articolo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Hai un <code>std::vector&lt;int&gt; v</code>. Come lo ordini in ordine crescente con la STL? E come trovi il
+      valore massimo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      (Concettuale) Perché la riga <code>conteggio[parola]++</code> conta le occorrenze di una parola? Cosa fa
+      <code>[]</code> di una map con una chiave non ancora presente?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-8"><span class="secnum">Sezione 13.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      Un <b>template</b> permette di scrivere codice <b>generico</b>, valido per qualsiasi tipo, una volta sola. Il
+      compilatore, alle due chiamate, <b>genera due versioni</b> della funzione: una con <code>T = int</code> (per
+      <code>massimo(3, 7)</code>) e una con <code>T = double</code> (per <code>massimo(2.5, 1.8)</code>). Tutto in
+      compilazione, senza costi a runtime.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>std::vector&lt;int&gt;</code> (sequenza, ordinabile con <code>sort</code>); (b)
+      <code>std::map&lt;std::string, std::string&gt;</code> (chiave→valore); (c) <code>std::set&lt;std::string&gt;</code>
+      (elementi unici).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      Ordinare: <code>std::sort(v.begin(), v.end());</code>. Massimo:
+      <code>*std::max_element(v.begin(), v.end());</code> (l'asterisco perché <code>max_element</code> restituisce
+      un <b>iteratore</b> all'elemento, da dereferenziare). Entrambi richiedono <code>#include &lt;algorithm&gt;</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>conteggio[parola]</code> su una map, con una chiave <b>non presente</b>, la <b>crea
+      automaticamente con valore 0</b>; quindi <code>++</code> la porta a 1 (prima occorrenza). Se la chiave c'è
+      già, <code>++</code> incrementa il conteggio. Così, parola dopo parola, la map accumula quante volte compare
+      ciascuna — in una sola riga.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.1 — un template, tanti tipi (massimo<T>)
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wtm-view');
+  if (!view) return;
+  const out = document.getElementById('wtm-out');
+  const btns = document.querySelectorAll('#w-tmpl .w-btn');
+  const cases = {
+    int: { T: 'int', a: '3', b: '7', res: '7', col: 'var(--accent)', note: 'Il compilatore genera <code>massimo</code> con <b>T = int</b>: confronta due interi.' },
+    double: { T: 'double', a: '2.5', b: '1.8', res: '2.5', col: 'var(--green)', note: 'Stessa funzione, ora con <b>T = double</b>: il compilatore ne genera una versione per i decimali.' },
+    string: { T: 'std::string', a: '"apple"', b: '"zebra"', res: '"zebra"', col: 'var(--warm)', note: 'E con <b>T = string</b>! Confronta le stringhe in ordine alfabetico ("zebra" &gt; "apple"). <mark>Un solo codice, tre tipi diversi.</mark>' }
+  };
+  function show(t) {
+    const c = cases[t];
+    view.innerHTML = `
+      <div style="font-family:var(--mono); color:var(--ink-soft); font-size:.85rem">template &lt;typename T&gt; &nbsp; T massimo(T a, T b)</div>
+      <div style="font-family:var(--mono); font-size:1.3rem; margin-top:.7rem">massimo(${c.a}, ${c.b})
+        <span style="color:var(--ink-faint); font-size:.9rem"> &nbsp;// T = <span style="color:${c.col}; font-weight:700">${c.T}</span></span></div>
+      <div style="font-family:var(--mono); font-size:1.5rem; margin-top:.4rem">= <b style="color:${c.col}">${c.res}</b></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + c.note + '</div>';
+    btns.forEach(b => b.style.outline = b.dataset.t === t ? '2px solid ' + c.col : 'none');
+  }
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.t)));
+  show('int');
+})();
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@ Contenuto originale scritto ex novo.
 - [x] 10 — Struct e classi
 - [x] 11 — Ereditarietà e polimorfismo
 - [x] 12 — La memoria: stack, heap, RAII
-- [ ] 13 — Template e la STL
+- [x] 13 — Template e la STL
 - [ ] 14 — Gestione degli errori
 - [ ] 15 — File e I/O
 - [ ] 16 — Un progetto completo

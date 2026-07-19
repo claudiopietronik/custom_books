@@ -203,7 +203,7 @@ const TOC = [
     n: 13,
     titolo: "Template e la STL",
     file: "cap13-template-stl.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Codice generico coi template" },
       { id: "s13-2", n: "13.2", t: "I contenitori della STL" },
