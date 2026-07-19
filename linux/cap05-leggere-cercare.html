@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Leggere e cercare nei file — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="5">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 5</div>
+    <h1>Leggere e cercare nei file</h1>
+    <p class="standfirst">
+      Organizzare i file è metà del lavoro; l'altra metà è <b>ritrovarci dentro le informazioni</b>. In questo
+      capitolo impari a guardare il contenuto di un file senza aprirlo in un editor, e — soprattutto — a <b>cercare</b>:
+      trovare una riga in un file di migliaia, o trovare un file tra migliaia. Sono tra i comandi più potenti e usati di
+      Linux. Per leggere: <code>cat</code> (mostra tutto), <code>less</code> (sfoglia file lunghi),
+      <code>head</code>/<code>tail</code> (inizio e fine). Per cercare, due strumenti da imparare bene: <code>grep</code>,
+      che trova <b>testo dentro i file</b> («in quale riga compare la parola errore?»), e <code>find</code>, che trova
+      i <b>file stessi</b> nell'albero («dov'è finito quel file .pdf?»). Sono strumenti che userai per il debug, per
+      esplorare log, per orientarti in progetti sconosciuti. <mark>Padroneggiare <code>grep</code> e <code>find</code>
+      è uno dei salti di qualità più grandi nell'uso del terminale.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Vedere il contenuto: <b>cat, less</b> (§5.1), inizio e fine: <b>head, tail</b> (§5.2), cercare testo:
+      <b>grep</b> (§5.3), trovare file: <b>find</b> (§5.4). Nel laboratorio (§5.5) cerchi in file reali.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: trovare l'ago nel pagliaio</div>
+    <p style="margin-bottom:0">
+      I sistemi reali sono pieni di file e di log enormi. <mark>Saper cercare — l'errore in un log di 100.000 righe,
+      il file perso in mille cartelle — è ciò che distingue chi «si arrangia» da chi lavora con efficienza</mark>.
+      <code>grep</code> in particolare è talmente utile che il suo nome è diventato un verbo tra gli informatici
+      («greppare» un file). Vale ogni minuto imparato.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-1"><span class="secnum">Sezione 5.1</span>Vedere il contenuto: cat, less</h2>
+
+  <p class="lead">
+    Per guardare cosa c'è dentro un file di testo, senza aprire un editor: <code>cat</code> per i file corti,
+    <code>less</code> per quelli lunghi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — vedere il contenuto</div>
+    <pre><span class="c"># cat: stampa TUTTO il file (ottimo per file corti)</span>
+<span class="p">$</span> <span class="cmd">cat</span> <span class="ar">note.txt</span>
+<span class="out">Comprare il latte
+Chiamare Luca
+Finire il progetto</span>
+
+<span class="c"># less: sfoglia file lunghi una schermata alla volta</span>
+<span class="p">$</span> <span class="cmd">less</span> <span class="ar">/var/log/syslog</span>
+<span class="c"># dentro less: frecce per scorrere, / per cercare, q per uscire</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">cat e less <span class="tag">tutto in una volta vs sfogliabile</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">cat file</span></dt>
+        <dd>«concatenate»: stampa l'intero contenuto del file sullo schermo, tutto in una volta. <mark>Perfetto per
+            file corti</mark>; per file lunghi «scorre via» troppo in fretta.</dd>
+        <dt><span class="mono">less file</span></dt>
+        <dd>mostra il file <b>una schermata alla volta</b>, sfogliabile: frecce/PagGiù per scorrere, <code>/parola</code>
+            per cercare dentro, <code>q</code> per uscire. <mark>Il modo giusto per file grandi</mark> (log,
+            configurazioni). Non carica tutto in memoria: veloce anche su file enormi.</dd>
+        <dt>bonus: <span class="mono">cat</span> per unire</dt>
+        <dd>il nome «concatenate» rivela l'uso originale: <code>cat a.txt b.txt</code> stampa i due file uno dopo
+            l'altro (li «concatena»). Con la redirezione (Cap. 9) puoi unirli in un file solo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Regola pratica: <mark><code>cat</code> per un'occhiata veloce a un file piccolo, <code>less</code> per esplorare
+      con calma un file grande</mark>. Attenzione a non fare <code>cat</code> su un file enorme (o su un file binario):
+      riempirebbe lo schermo di roba illeggibile. Se non sai quanto è grande, parti con <code>less</code> — è sempre
+      sicuro.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-2"><span class="secnum">Sezione 5.2</span>Inizio e fine: head, tail</h2>
+
+  <p class="lead">
+    Spesso non serve tutto il file: bastano le <b>prime</b> righe (per capire com'è fatto) o le <b>ultime</b> (per
+    vedere le cose più recenti, es. in un log). <code>head</code> e <code>tail</code> fanno esattamente questo.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — inizio e fine</div>
+    <pre><span class="c"># head: le prime 10 righe (di default)</span>
+<span class="p">$</span> <span class="cmd">head</span> <span class="ar">dati.csv</span>
+
+<span class="c"># head -n 3: solo le prime 3 righe</span>
+<span class="p">$</span> <span class="cmd">head</span> <span class="fl">-n</span> <span class="ar">3</span> <span class="ar">dati.csv</span>
+
+<span class="c"># tail: le ultime righe (utile per i log: le cose più recenti stanno in fondo)</span>
+<span class="p">$</span> <span class="cmd">tail</span> <span class="ar">/var/log/syslog</span>
+
+<span class="c"># tail -f: "segui" un file mentre cresce (log in tempo reale!)</span>
+<span class="p">$</span> <span class="cmd">tail</span> <span class="fl">-f</span> <span class="ar">/var/log/syslog</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">head, tail e il potente -f <span class="tag">prime · ultime · in diretta</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">head file</span></dt>
+        <dd>mostra le <b>prime</b> 10 righe (con <code>-n N</code>, le prime N). <mark>Utile per «sbirciare»</mark>
+            com'è fatto un file senza aprirlo tutto.</dd>
+        <dt><span class="mono">tail file</span></dt>
+        <dd>mostra le <b>ultime</b> 10 righe (con <code>-n N</code>, le ultime N). <mark>Perfetto per i log</mark>: le
+            righe più recenti sono in fondo, quindi <code>tail</code> te le mostra subito.</dd>
+        <dt><span class="mono">tail -f file</span> — «follow»</dt>
+        <dd>il gioiello: <b>segue il file in tempo reale</b>, mostrando le nuove righe man mano che vengono aggiunte.
+            <mark>Indispensabile per guardare un log «dal vivo»</mark> mentre un programma gira (es. il server FastAPI
+            del libro «Backend»). Si ferma con <code>Ctrl+C</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>tail -f</code> è uno di quei comandi che, una volta scoperti, usi in continuazione: apri un terminale,
+      lanci <code>tail -f</code> sul log della tua app, e guardi cosa succede in diretta mentre la usi. <mark>È il modo
+      standard di «osservare» un sistema in funzione</mark> — l'hai visto nominare nei libri «Reti» e «Backend». Un
+      classico strumento di debug.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-3"><span class="secnum">Sezione 5.3</span>Cercare testo: grep</h2>
+
+  <p class="lead">
+    Ecco lo strumento re: <code>grep</code> cerca un <b>testo</b> dentro uno o più file e stampa <b>le righe che lo
+    contengono</b>. È il modo per trovare un ago in un pagliaio di righe.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — grep in azione</div>
+    <pre><span class="c"># trova le righe che contengono "errore" nel file log.txt</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="ar">errore</span> <span class="ar">log.txt</span>
+<span class="out">[10:32] errore: connessione fallita
+[10:45] errore: timeout del database</span>
+
+<span class="c"># -i: ignora maiuscole/minuscole (trova anche ERRORE, Errore)</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="fl">-i</span> <span class="ar">errore</span> <span class="ar">log.txt</span>
+
+<span class="c"># -r: cerca in TUTTI i file di una cartella (ricorsivo)</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="fl">-r</span> <span class="ar">"password"</span> <span class="ar">progetto/</span>
+
+<span class="c"># -n: mostra anche il NUMERO di riga</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="fl">-n</span> <span class="ar">TODO</span> <span class="ar">app.py</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">grep smontato <span class="tag">grep [opzioni] cosa dove</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">grep parola file</span></dt>
+        <dd>stampa <b>solo le righe</b> del file che contengono «parola». <mark>Il resto viene ignorato</mark>: filtra
+            migliaia di righe alle poche che ti interessano.</dd>
+        <dt><span class="mono">-i</span> — ignora maiuscole/minuscole</dt>
+        <dd>trova «errore», «Errore», «ERRORE» indifferentemente. Utile quando non sei sicuro di come è scritto.</dd>
+        <dt><span class="mono">-r</span> — ricorsivo</dt>
+        <dd>cerca in <b>tutti i file</b> di una cartella (e sottocartelle). <mark>Potentissimo</mark>: «in quale file
+            del progetto compare questa funzione?» → <code>grep -r nomeFunzione .</code></dd>
+        <dt><span class="mono">-n</span> — numero di riga</dt>
+        <dd>mostra <b>a quale riga</b> si trova ogni risultato. Comodo per aprire poi il file esattamente lì.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>grep</code> è ancora più potente combinato con la <b>pipe</b> (Cap. 9): puoi filtrare l'output di
+      <em>qualsiasi</em> comando, non solo i file. <mark>Le opzioni si combinano</mark>: <code>grep -rin "errore"
+      logs/</code> = «cerca errore, ignorando le maiuscole (<code>-i</code>), in tutti i file di logs/ (<code>-r</code>),
+      mostrando i numeri di riga (<code>-n</code>)». Prova <code>grep</code> nel widget qui sotto: cerca una parola e
+      guarda comparire solo le righe che la contengono.
+    </div>
+  </div>
+
+  <div class="widget" id="w-grep">
+    <div class="w-head">
+      <span>grep dal vivo: cerca in un file di log</span>
+      <span class="hint">solo le righe che combaciano</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:520px; margin:0 auto">
+        <div style="display:flex; gap:.5rem; align-items:center; margin-bottom:.6rem; flex-wrap:wrap">
+          <span style="font-family:var(--mono); font-size:.85rem; color:var(--green)">$ grep</span>
+          <label style="font-size:.82rem; color:var(--ink-soft)"><input type="checkbox" id="gr-i"> -i</label>
+          <input type="text" id="gr-q" value="errore" placeholder="parola da cercare" style="flex:1; min-width:120px; padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono); font-size:.85rem">
+          <span style="font-family:var(--mono); font-size:.85rem; color:var(--ink-soft)">log.txt</span>
+        </div>
+        <div class="term" style="margin:0; max-width:100%"><div class="t-head file">risultato di grep</div><pre id="gr-out-term" style="margin:0; min-height:130px; font-size:12px"></pre></div>
+      </div>
+    </div>
+    <div class="w-readout" id="gr-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-4"><span class="secnum">Sezione 5.4</span>Trovare file: find</h2>
+
+  <p class="lead">
+    <code>grep</code> cerca <em>dentro</em> i file; <code>find</code> cerca <b>i file stessi</b> nell'albero delle
+    directory. «Dov'è finito quel file? Quali file .pdf ci sono in questa cartella e nelle sottocartelle?» —
+    <code>find</code> risponde.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — find in azione</div>
+    <pre><span class="c"># trova tutti i file .txt a partire dalla cartella corrente (.)</span>
+<span class="p">$</span> <span class="cmd">find</span> <span class="ar">.</span> <span class="fl">-name</span> <span class="ar">"*.txt"</span>
+<span class="out">./note.txt
+./documenti/lettera.txt
+./backup/vecchie/appunti.txt</span>
+
+<span class="c"># trova solo le cartelle di nome "backup"</span>
+<span class="p">$</span> <span class="cmd">find</span> <span class="ar">.</span> <span class="fl">-type</span> <span class="ar">d</span> <span class="fl">-name</span> <span class="ar">backup</span>
+
+<span class="c"># trova i file modificati negli ultimi 7 giorni</span>
+<span class="p">$</span> <span class="cmd">find</span> <span class="ar">.</span> <span class="fl">-mtime</span> <span class="ar">-7</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">find smontato <span class="tag">find dove criteri</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">find dove</span></dt>
+        <dd>il primo argomento è <b>da dove partire</b> a cercare (e in tutte le sottocartelle): <code>.</code> = qui,
+            <code>/home</code> = da lì, ecc. <mark>find scende in profondità</mark> in tutto l'albero indicato.</dd>
+        <dt><span class="mono">-name "schema"</span></dt>
+        <dd>cerca per <b>nome</b>, con i jolly (tra virgolette): <code>-name "*.pdf"</code> = tutti i PDF. Il criterio
+            più comune.</dd>
+        <dt><span class="mono">-type</span></dt>
+        <dd>filtra per tipo: <code>-type f</code> (solo file), <code>-type d</code> (solo directory/cartelle). Utile
+            per cercare specificamente file <em>o</em> cartelle.</dd>
+        <dt>altri criteri</dt>
+        <dd><code>-mtime -7</code> (modificati negli ultimi 7 giorni), <code>-size +100M</code> (più grandi di
+            100 MB)… <mark>find combina criteri</mark> per ricerche precise. Utile, ad esempio, per trovare i file
+            grandi che riempiono il disco.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <b>grep vs find</b>, per non confonderli: <mark><code>grep</code> cerca <b>testo dentro</b> i file;
+      <code>find</code> cerca <b>i file</b> per nome/tipo/caratteristiche</mark>. «Cerca la parola errore» →
+      <code>grep</code>. «Cerca il file errore.log» → <code>find</code>. Spesso si usano insieme: <code>find</code>
+      per individuare i file, poi <code>grep</code> per cercarci dentro (o viceversa, con la pipe). Sono i due pilastri
+      della ricerca in Linux.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-5"><span class="secnum">Sezione 5.5</span>Laboratorio: cercare nei file</h2>
+
+  <p class="lead">
+    Mettiamo alla prova cat, grep e find su file reali del sistema — un buon modo per vedere quanto sono utili.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro di ricerca</div>
+    <pre><span class="c"># crea un piccolo file di prova e guardalo</span>
+<span class="p">$</span> <span class="cmd">printf</span> <span class="ar">"riga uno\nerrore qui\nriga tre\nErrore grave\n"</span> &gt; <span class="ar">prova.log</span>
+<span class="p">$</span> <span class="cmd">cat</span> <span class="ar">prova.log</span>
+
+<span class="c"># cerca "errore" (solo minuscolo) e poi ignorando le maiuscole</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="ar">errore</span> <span class="ar">prova.log</span>
+<span class="out">errore qui</span>
+<span class="p">$</span> <span class="cmd">grep</span> <span class="fl">-i</span> <span class="ar">errore</span> <span class="ar">prova.log</span>
+<span class="out">errore qui
+Errore grave</span>          <span class="c"># -i trova anche "Errore"</span>
+
+<span class="c"># trova tutti i file .log a partire dalla cartella corrente</span>
+<span class="p">$</span> <span class="cmd">find</span> <span class="ar">.</span> <span class="fl">-name</span> <span class="ar">"*.log"</span>
+
+<span class="c"># solo le ultime righe di un log di sistema</span>
+<span class="p">$</span> <span class="cmd">tail</span> <span class="fl">-n</span> <span class="ar">5</span> <span class="ar">/var/log/syslog</span>   <span class="c"># (se disponibile sul tuo sistema)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai <b>letto</b> file (<code>cat</code>, <code>tail</code>), <b>cercato testo</b> dentro di essi
+      (<code>grep</code>, con e senza <code>-i</code>) e <b>trovato file</b> nell'albero (<code>find</code>).
+      <mark>Nota la differenza fondamentale</mark>: <code>grep -i</code> ha trovato sia «errore» sia «Errore»,
+      mostrando il valore dell'opzione <code>-i</code>; e <code>find</code> ha cercato i file, non il loro contenuto.
+      Questi comandi sono i tuoi occhi nel sistema: per capire cosa contiene un file, per trovare un errore in un log,
+      per orientarti in un progetto che non conosci. Nel prossimo capitolo affrontiamo un tema diverso ma
+      fondamentale: i <b>permessi</b> — chi può leggere, scrivere ed eseguire ogni file, e come si controllano.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 5</div>
+    <ol style="margin-bottom:0">
+      <li><b>Leggere</b>: <code>cat</code> (tutto, per file corti), <code>less</code> (sfogliabile, per file lunghi;
+          <code>q</code> per uscire) (§5.1).</li>
+      <li><code>head</code> (prime righe), <code>tail</code> (ultime; <code>-n N</code> per quante). <code>tail -f</code>
+          segue un log <b>in tempo reale</b> (§5.2).</li>
+      <li><b>grep</b> cerca <b>testo dentro</b> i file: <code>grep parola file</code>; <code>-i</code> (ignora
+          maiuscole), <code>-r</code> (ricorsivo), <code>-n</code> (numeri di riga) (§5.3).</li>
+      <li><b>find</b> cerca <b>i file</b> nell'albero: <code>find dove -name "*.txt"</code>, <code>-type f/d</code>,
+          per data/dimensione. grep=dentro, find=i file (§5.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai leggere, cercare e trovare. Finora, però, abbiamo dato per scontato di poter accedere a ogni file — ma non è
+    sempre così. In Linux ogni file ha dei <b>permessi</b> che stabiliscono chi può leggerlo, modificarlo o eseguirlo.
+    È un pilastro della sicurezza (e del funzionamento) del sistema. Nel <strong>Capitolo 6</strong> impariamo a
+    leggere e cambiare i permessi con <code>chmod</code> e <code>chown</code>: chi può fare cosa, e come deciderlo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-6"><span class="secnum">Sezione 5.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.1</div>
+    <p style="margin-bottom:0">
+      Quando useresti <code>cat</code> e quando <code>less</code> per guardare un file? Cosa rischi facendo
+      <code>cat</code> su un file enorme?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve <code>tail -f</code>? Fai un esempio di situazione in cui è particolarmente utile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.3</div>
+    <p style="margin-bottom:0">
+      Scrivi il comando <code>grep</code> per trovare, ignorando maiuscole/minuscole, tutte le righe che contengono
+      «warning» nel file <code>server.log</code>, mostrando anche il numero di riga.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 5.4</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>grep</code> e <code>find</code>? Per ciascuna richiesta, di' quale useresti:
+      (a) «trova tutte le righe con la parola bug»; (b) «trova tutti i file che si chiamano config.txt».
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s5-7"><span class="secnum">Sezione 5.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.1</div>
+    <p style="margin-bottom:0">
+      <code>cat</code> per file <b>corti</b> (li stampa tutti in una volta, occhiata veloce); <code>less</code> per
+      file <b>lunghi</b> (li sfoglia una schermata alla volta, con ricerca interna). Facendo <code>cat</code> su un
+      file enorme, riempi lo schermo di migliaia di righe che «scorrono via» illeggibili (e se è un file binario,
+      caratteri incomprensibili): meglio <code>less</code>, che è sempre sicuro e gestibile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.2</div>
+    <p style="margin-bottom:0">
+      <code>tail -f</code> «segue» un file in <b>tempo reale</b>: mostra le nuove righe man mano che vengono aggiunte.
+      È particolarmente utile per <b>osservare un log dal vivo</b>: ad esempio, lanci <code>tail -f</code> sul log del
+      tuo server web e vedi comparire le richieste (o gli errori) mentre usi l'applicazione — uno strumento di debug
+      fondamentale. Si interrompe con <code>Ctrl+C</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head">terminale</div>
+      <pre><span class="p">$</span> <span class="cmd">grep</span> <span class="fl">-in</span> <span class="ar">warning</span> <span class="ar">server.log</span></pre>
+    </div>
+    <p style="margin:.5rem 0 0">Le opzioni si combinano: <code>-i</code> (ignora maiuscole) + <code>-n</code> (numero
+      di riga) → <code>-in</code>. Trova «warning», «Warning», «WARNING» e mostra a quale riga.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 5.4</div>
+    <p style="margin-bottom:0">
+      <code>grep</code> cerca <b>testo dentro</b> i file (le righe che contengono qualcosa); <code>find</code> cerca
+      <b>i file stessi</b> per nome/tipo/caratteristiche nell'albero. Quindi: (a) «trova le righe con la parola bug» →
+      <b><code>grep</code></b> (<code>grep bug file</code>); (b) «trova i file chiamati config.txt» →
+      <b><code>find</code></b> (<code>find . -name config.txt</code>).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §5.3 — grep dal vivo: cerca una parola in un log, mostra solo le righe che combaciano
+   ========================================================================= */
+(function () {
+  const qEl = document.getElementById('gr-q');
+  if (!qEl) return;
+  const iEl = document.getElementById('gr-i');
+  const term = document.getElementById('gr-out-term');
+  const out = document.getElementById('gr-out');
+
+  const LOG = [
+    '[10:30] avvio del server sulla porta 8000',
+    '[10:32] errore: connessione al database fallita',
+    '[10:33] nuovo tentativo di connessione',
+    '[10:33] connessione riuscita',
+    '[10:45] richiesta GET /utenti  200 OK',
+    '[10:46] richiesta POST /login  200 OK',
+    '[10:52] ERRORE grave: memoria esaurita',
+    '[10:53] Warning: risposta lenta (2.3s)',
+    '[11:01] richiesta GET /prodotti  404 Not Found',
+    '[11:05] arresto del server'
+  ];
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const q = qEl.value;
+    const ci = iEl.checked;
+    if (!q) {
+      term.innerHTML = '<span class="out">' + LOG.map(esc).join('\n') + '</span>\n<span style="color:#6b7385">(nessuna ricerca: mostro tutto il file — come cat)</span>';
+      out.innerHTML = note('Scrivi una parola: grep mostrerà <b>solo le righe che la contengono</b>. Attiva <code>-i</code> per ignorare maiuscole/minuscole.');
+      return;
+    }
+    const needle = ci ? q.toLowerCase() : q;
+    const matched = [];
+    LOG.forEach(function (line) {
+      const hay = ci ? line.toLowerCase() : line;
+      if (hay.indexOf(needle) >= 0) {
+        // evidenzia la parola
+        let shown = esc(line);
+        try {
+          const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', ci ? 'gi' : 'g');
+          shown = esc(line).replace(re, '<span style="background:#ffd479; color:#12141d; border-radius:3px">$1</span>');
+        } catch (e) {}
+        matched.push('<span class="out">' + shown + '</span>');
+      }
+    });
+    term.innerHTML = matched.length ? matched.join('\n') : '<span style="color:#6b7385">(nessuna riga corrisponde)</span>';
+    out.innerHTML = note('<code>grep ' + (ci ? '-i ' : '') + esc(q) + ' log.txt</code> → <b>' + matched.length + '</b> righe su ' + LOG.length + ' contengono «' + esc(q) + '»' + (ci ? ' (ignorando le maiuscole)' : '') + '. Il resto è filtrato via. Prova «ERRORE» con e senza <code>-i</code>.');
+  }
+  function note(html) { return '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + html + '</div>'; }
+
+  qEl.addEventListener('input', render);
+  iEl.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>

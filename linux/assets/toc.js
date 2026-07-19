@@ -74,7 +74,7 @@ const TOC = [
     n: 5,
     titolo: "Leggere e cercare nei file",
     file: "cap05-leggere-cercare.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s5-1", n: "5.1", t: "Vedere il contenuto: cat, less" },
       { id: "s5-2", n: "5.2", t: "Inizio e fine: head, tail" },

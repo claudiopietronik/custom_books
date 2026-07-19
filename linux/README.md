@@ -16,7 +16,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 - [x] 2 — Il terminale e la shell
 - [x] 3 — Il filesystem
 - [x] 4 — File e cartelle
-- [ ] 5 — Leggere e cercare nei file
+- [x] 5 — Leggere e cercare nei file
 - [ ] 6 — Permessi e proprietà
 - [ ] 7 — Utenti e sudo
 - [ ] 8 — I processi
