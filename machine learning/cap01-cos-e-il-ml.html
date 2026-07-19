@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Cos'è il machine learning — Machine Learning</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>ŷ</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="1">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 1</div>
+    <h1>Cos'è il machine learning</h1>
+    <p class="standfirst">
+      Immagina di voler insegnare a un computer a riconoscere se una email è spam. Un modo sarebbe scrivere tu, a
+      mano, tutte le regole: «se contiene la parola <em>vincita</em>, è spam; se arriva da un indirizzo strano, è
+      spam…». Ma le regole sono migliaia, cambiano di continuo, e non le prevedi tutte. Il <b>machine learning</b>
+      («apprendimento automatico») ribalta il problema: invece di scrivere le regole, <b>mostri al computer tanti
+      esempi</b> — email già etichettate come spam o non-spam — e lui <b>impara da solo</b> le regole che le
+      distinguono. È questa l'idea centrale, semplice e potente: <mark>non programmiamo il comportamento, lo facciamo
+      <em>imparare</em> dai dati.</mark> In questo primo capitolo capiamo con calma cosa significa «imparare dai dati»
+      (§1.1), i grandi tipi di apprendimento (§1.2), e la notazione matematica di base — le lettere $X$, $y$, $f$ che
+      ci accompagneranno per tutto il libro, spiegate una per una senza dare nulla per scontato (§1.3). Poi vediamo il
+      flusso di un progetto ML (§1.4) e costruiamo il primo modello (§1.5). <mark>È la mappa mentale su cui poseremo,
+      con delicatezza, tutta la matematica che verrà.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Imparare dai dati (§1.1), i tre tipi di apprendimento — supervisionato, non supervisionato, per rinforzo (§1.2),
+      la <b>notazione</b> $X$, $y$, $f$ spiegata con cura (§1.3), il flusso di un progetto (§1.4). Nel laboratorio
+      (§1.5) alleni il tuo primo modello.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire prima di calcolare</div>
+    <p style="margin-bottom:0">
+      Questo libro è pieno di matematica, ma non c'è nulla da temere: <mark>ogni formula la costruiremo insieme, pezzo
+      per pezzo, partendo sempre da un'intuizione concreta.</mark> Ma prima ancora delle formule serve una cosa: capire
+      <em>cosa</em> stiamo cercando di fare. Se hai chiaro «il computer cerca una regola che spiega gli esempi», ogni
+      modello che incontrerai — dal più semplice al più sofisticato — sarà solo un modo diverso di cercare quella
+      regola. Questo capitolo ti dà quella bussola.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-1"><span class="secnum">Sezione 1.1</span>Imparare dai dati</h2>
+
+  <p class="lead">
+    Partiamo dall'idea, con un esempio quotidiano. Poi, piano piano, la rendiamo precisa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Due modi di far fare le cose a un computer</div>
+    <p>
+      <b>Modo tradizionale (programmazione classica):</b> tu, umano, scrivi le <b>regole</b>, e il computer le esegue.
+      Per calcolare l'area di un rettangolo scrivi <code>area = base × altezza</code>: la regola è chiara e la sai
+      scrivere. <mark>Funziona quando conosci la regola.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      <b>Machine learning:</b> ci sono problemi per cui <b>la regola non la sai scrivere</b> — riconoscere un gatto in
+      una foto, capire se un cliente comprerà, stimare il prezzo di una casa. Qui cambi strategia: dai al computer
+      tanti <b>esempi</b> già risolti (foto etichettate «gatto» / «non gatto», case con il loro prezzo…), e lui
+      <b>trova da solo la regola</b> che li spiega. <mark>Non gli dici <em>come</em> fare: gli mostri <em>cosa</em>
+      deve venire fuori, e lui scopre il come.</mark>
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Come impara un bambino</div>
+    <p style="margin-bottom:0">
+      Un bambino impara a riconoscere i cani non perché gli spieghi «un cane ha quattro zampe, una coda, abbaia…»: gli
+      <b>mostri</b> tanti cani dicendo «guarda, un cane», e dopo un po' lui riconosce anche cani mai visti prima.
+      <mark>Il machine learning fa esattamente questo</mark>: impara da <b>esempi</b>, e poi sa cavarsela con casi
+      <b>nuovi</b>. Questa capacità di funzionare bene su dati mai visti si chiama <b>generalizzazione</b>, ed è il
+      vero obiettivo di tutto: non «ricordare» gli esempi, ma coglierne lo schema profondo per applicarlo al futuro.
+    </p>
+  </div>
+
+  <p>
+    Quindi, in una frase da tenere stretta: <mark><b>il machine learning è cercare, tra tanti esempi, una regola (una
+    «funzione») che li spieghi e che funzioni anche su esempi nuovi.</b></mark> Tutto il libro sarà, in fondo, un
+    catalogo di modi diversi e sempre più raffinati di cercare quella regola. Ora rendiamo un po' più preciso questo
+    quadro.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-2"><span class="secnum">Sezione 1.2</span>Supervisionato, non supervisionato, rinforzo</h2>
+
+  <p class="lead">
+    Non tutti i problemi di apprendimento sono uguali. Si dividono in tre grandi famiglie, a seconda di <b>che tipo di
+    esempi</b> hai a disposizione. Vediamole con calma, una alla volta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I tre tipi di apprendimento <span class="tag">cosa cambia: gli esempi che hai</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Supervisionato</b> — hai le risposte giuste</dt>
+        <dd>ogni esempio viene con la sua <b>risposta corretta</b> (la «etichetta»): la casa <em>e</em> il suo prezzo,
+            la email <em>e</em> l'etichetta spam/non-spam. <mark>Impari a prevedere la risposta</mark> per casi nuovi.
+            È il tipo più comune, e quello di gran parte di questo libro (capitoli 2-14).</dd>
+        <dt><b>Non supervisionato</b> — solo dati, senza risposte</dt>
+        <dd>hai gli esempi <b>ma non le risposte</b>: tanti clienti, senza sapere «a quale gruppo» appartengono. Qui
+            l'obiettivo è <b>scoprire una struttura nascosta</b> nei dati — raggrupparli per somiglianza (clustering),
+            o semplificarli (capitoli 15-17). <mark>Cerchi ordine dove nessuno l'ha ancora messo.</mark></dd>
+        <dt><b>Per rinforzo</b> — impari provando</dt>
+        <dd>un «agente» impara per <b>tentativi ed errori</b>, ricevendo <b>premi o penalità</b> dalle sue azioni
+            (come un cane addestrato coi bocconcini, o un programma che impara a giocare). <mark>Non lo tratteremo in
+            questo libro</mark> (è un mondo a sé), ma è giusto sapere che esiste.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La distinzione più importante, per ora, è la prima: <mark><b>supervisionato = hai le risposte giuste per
+      imparare; non supervisionato = non le hai, e cerchi tu una struttura.</b></mark> Dentro il supervisionato c'è
+      un'ulteriore, semplice distinzione, che useremo di continuo: se la risposta è un <b>numero</b> (il prezzo di una
+      casa) parliamo di <b>regressione</b>; se è una <b>categoria</b> (spam / non-spam) parliamo di
+      <b>classificazione</b>. Le vedremo entrambe in dettaglio.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-3"><span class="secnum">Sezione 1.3</span>La notazione: X, y, f</h2>
+
+  <p class="lead">
+    Adesso il primo passo verso la matematica — ma con la massima delicatezza. In tutto il libro incontrerai tre
+    lettere: $X$, $y$, $f$. Non sono simboli misteriosi: sono solo <b>nomi brevi</b> per tre cose che già conosci a
+    parole. Le presentiamo una per una, con un esempio concreto sempre davanti agli occhi.
+  </p>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> L'esempio guida: prevedere il prezzo di una casa</div>
+    <p style="margin-bottom:0">
+      Teniamo un solo esempio per tutta la sezione, così le lettere restano ancorate a qualcosa di reale. Vogliamo
+      <b>prevedere il prezzo di una casa</b> a partire dalle sue caratteristiche (quanti metri quadri, quante stanze).
+      Abbiamo un elenco di case già vendute, di cui conosciamo caratteristiche <em>e</em> prezzo. Da queste vogliamo
+      imparare a stimare il prezzo di una casa nuova. Vediamo come chiamiamo, in matematica, ciascun pezzo di questo
+      problema.
+    </p>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Le tre lettere, spiegate una per una <span class="tag">solo nomi brevi per idee semplici</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>$X$ — le <b>caratteristiche</b> in ingresso (le «feature»)</dt>
+        <dd>è ciò che <b>sappiamo</b> di ogni esempio, i dati «in entrata». Per una casa: i metri quadri, il numero di
+            stanze, l'anno di costruzione… <mark>La lettera $X$ (maiuscola) sta per l'insieme di tutte queste
+            informazioni</mark>. Se c'è una sola caratteristica (solo i metri quadri) è un semplice numero; se ce ne
+            sono tante, $X$ le raccoglie tutte insieme. Ogni caratteristica si chiama <b>feature</b> (in italiano
+            «attributo» o «variabile»). Pensa a $X$ come alla «scheda» della casa.</dd>
+        <dt>$y$ — la <b>risposta</b> che vogliamo (il «target»)</dt>
+        <dd>è ciò che vogliamo <b>prevedere</b>: qui, il <b>prezzo</b>. <mark>La lettera $y$ (minuscola) è la risposta
+            giusta</mark>, quella che negli esempi già conosciamo (perché la casa è stata venduta) e che per una casa
+            nuova vorremmo indovinare. Si chiama <b>target</b> («bersaglio»): è il bersaglio a cui miriamo.</dd>
+        <dt>$f$ — la <b>regola</b> che lega ingresso e risposta (la «funzione»)</dt>
+        <dd>è la <b>regola nascosta</b> che, data la scheda $X$ di una casa, ne produce il prezzo $y$. In matematica
+            una regola che «prende un ingresso e restituisce un'uscita» si chiama <b>funzione</b>, e si indica con
+            $f$. <mark>L'intero machine learning consiste nel <b>trovare</b> questa $f$</mark> — perché nessuno ce l'ha
+            data: dobbiamo scoprirla dagli esempi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Fermati un attimo su queste tre idee, perché sono <em>tutto</em>: $X$ = quello che sai (l'ingresso), $y$ = quello
+      che vuoi sapere (l'uscita), $f$ = la regola che porta dall'uno all'altro. <mark>Le lettere servono solo a non
+      dover riscrivere «le caratteristiche della casa» ogni volta.</mark> Sono una comodità, non un ostacolo.
+    </div>
+  </div>
+
+  <p>
+    Ora mettiamo insieme le tre lettere in una piccola frase matematica. Vogliamo dire, in simboli, «la regola $f$
+    applicata all'ingresso $X$ dà la risposta $y$». Si scrive così:
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La frase che riassume tutto <span class="tag">letta a parole, pezzo per pezzo</span></div>
+    <p style="text-align:center; font-size:1.3rem; margin:.6rem 0 1rem">$$ y = f(X) $$</p>
+    <div class="simboli">
+      <dl>
+        <dt>si legge: «$y$ <b>è uguale a</b> $f$ <b>di</b> $X$»</dt>
+        <dd>e significa, in italiano semplice: <mark>«la risposta $y$ si ottiene applicando la regola $f$ alle
+            caratteristiche $X$».</mark> La scrittura $f(X)$ — con $X$ tra parentesi — vuol dire proprio «dai $X$ in
+            pasto alla regola $f$, e guarda cosa esce».</dd>
+        <dt>l'esempio della casa</dt>
+        <dd>$X$ = «120 m², 3 stanze»; $f$ = la regola dei prezzi; $y = f(X)$ = il prezzo che quella regola assegna a
+            quella casa. <mark>Se conoscessimo $f$, prevedere il prezzo sarebbe banale</mark>: basterebbe metterci
+            dentro le caratteristiche. Il punto è che <b>$f$ non la conosciamo</b>.</dd>
+        <dt>e allora cosa fa il machine learning?</dt>
+        <dd><mark>Cerca una regola <b>approssimata</b>, che chiamiamo $\hat{f}$</mark> (si legge «f col cappello»), il
+            più possibile vicina alla vera $f$, imparandola dagli esempi. Il «cappello» ^ significa sempre «la nostra
+            <b>stima</b> di», «la nostra versione approssimata». La useremo spesso: $\hat{y}$ sarà il prezzo
+            <em>previsto</em> (la nostra stima), da non confondere con $y$, il prezzo <em>vero</em>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Ecco perché il libro si chiama con il simbolo <b>ŷ</b>: è la <b>predizione</b>, il cuore di tutto. <mark>Da un
+      lato c'è $y$, la verità; dall'altro $\hat{y} = \hat{f}(X)$, ciò che il nostro modello prevede.</mark> Il lavoro
+      del machine learning è rendere $\hat{y}$ il più vicino possibile a $y$. Non serve altro, per ora: hai già in mano
+      il vocabolario di base. Nei prossimi capitoli lo riempiremo di significato, sempre con la stessa cura.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-4"><span class="secnum">Sezione 1.4</span>Il flusso di un progetto ML</h2>
+
+  <p class="lead">
+    Come si svolge, in pratica, un progetto di machine learning dall'inizio alla fine? Segue quasi sempre gli stessi
+    passi. Averli chiari ti aiuta a non perderti quando entreremo nei dettagli.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I passi di un progetto <span class="tag">dati → modello → verifica</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>raccogliere e preparare i dati</b></dt>
+        <dd>procurarsi tanti esempi (le case con i loro prezzi) e sistemarli: pulirli, gestire i valori mancanti,
+            trasformarli in numeri (capitolo 19). <mark>Senza dati buoni, nessun modello funziona</mark> — «spazzatura
+            dentro, spazzatura fuori».</dd>
+        <dt>2 · <b>scegliere un modello</b></dt>
+        <dd>decidere <em>che forma</em> dare alla regola $\hat{f}$ che cerchiamo: una retta? un albero? Ogni modello di
+            questo libro è una scelta diversa. <mark>Modelli diversi cercano regole di forma diversa.</mark></dd>
+        <dt>3 · <b>allenare (addestrare) il modello</b></dt>
+        <dd>far «imparare» il modello dagli esempi: è il momento in cui, dai dati, si ricava la regola $\hat{f}$
+            migliore di quella forma. <mark>In inglese si dice <b>train</b></mark> («allenare»); il set di esempi usato
+            si chiama <b>training set</b>.</dd>
+        <dt>4 · <b>valutare</b> quanto è buono</dt>
+        <dd>misurare se il modello prevede bene <b>su esempi nuovi</b>, mai visti in fase di allenamento (capitolo 18).
+            <mark>È il test decisivo</mark>: un modello che «ricorda» gli esempi ma sbaglia sui casi nuovi non serve a
+            nulla (è il tema del capitolo 3).</dd>
+        <dt>5 · <b>usare il modello</b></dt>
+        <dd>se è buono, lo si usa per fare previsioni sul mondo reale: il prezzo di una casa in vendita adesso, un
+            nuovo cliente da classificare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota il passo 4, che è il più sottovalutato dai principianti: <mark>non basta che il modello vada bene sugli
+      esempi con cui ha imparato</mark> — quello è facile, come studiare a memoria le risposte di un compito già visto.
+      Serve che vada bene su esempi <b>nuovi</b>. Questa differenza tra «imparare a memoria» e «capire davvero» è così
+      centrale che le dedicheremo tutto il capitolo 3. Per ora, tienila a mente come la domanda-guida: «il modello
+      generalizza, o ha solo memorizzato?».
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-5"><span class="secnum">Sezione 1.5</span>Laboratorio: il primo modello</h2>
+
+  <p class="lead">
+    Rendiamo concreto tutto questo con un esempio visivo e un pizzico di codice. Prima <em>guardiamo</em> cosa
+    significa «imparare una regola dai dati» con il widget qui sotto; poi vediamo com'è, in scikit-learn, il primo
+    modello.
+  </p>
+
+  <div class="widget" id="w-fit">
+    <div class="w-head">
+      <span>Imparare una regola dagli esempi</span>
+      <span class="hint">i punti sono gli esempi; la retta è la regola imparata</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="fit-svg" viewBox="0 0 460 300" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="max-width:420px; margin:.6rem auto 0; display:flex; align-items:center; gap:.6rem">
+        <label style="font-size:.85rem; color:var(--ink-soft); white-space:nowrap">casa nuova: <b id="fit-mqv">120</b> m²</label>
+        <input type="range" id="fit-mq" min="40" max="220" value="120" style="flex:1">
+      </div>
+    </div>
+    <div class="w-readout" id="fit-out"></div>
+  </div>
+
+  <p>
+    Il modello del widget è una <b>retta</b>: la regola più semplice possibile («il prezzo cresce in modo costante coi
+    metri quadri»). L'ha «imparata» trovando la retta che passa <em>più vicino possibile</em> a tutti i punti-esempio
+    — un'idea, i <b>minimi quadrati</b>, che smonteremo con cura nei capitoli 2 e 4. In scikit-learn, la libreria
+    Python per il machine learning, allenare questo modello è sorprendentemente breve:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">primo_modello.py</div>
+    <pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+
+<span class="cm"># X = le caratteristiche (qui: i metri quadri di ogni casa)</span>
+<span class="cm"># y = le risposte giuste (il prezzo di ogni casa)</span>
+X <span class="op">=</span> [[<span class="nm">50</span>], [<span class="nm">80</span>], [<span class="nm">120</span>], [<span class="nm">150</span>], [<span class="nm">200</span>]]   <span class="cm"># 5 case (m²)</span>
+y <span class="op">=</span> [<span class="nm">120</span>, <span class="nm">180</span>, <span class="nm">250</span>, <span class="nm">310</span>, <span class="nm">400</span>]           <span class="cm"># i loro prezzi (migliaia di €)</span>
+
+modello <span class="op">=</span> <span class="fn">LinearRegression</span>()      <span class="cm"># 1. scegli il modello (una retta)</span>
+modello.<span class="fn">fit</span>(X, y)                    <span class="cm"># 2. allenalo: impara la regola dagli esempi</span>
+
+<span class="cm"># 3. usa il modello: prevedi il prezzo di una casa di 120 m²</span>
+<span class="bi">print</span>(modello.<span class="fn">predict</span>([[<span class="nm">120</span>]]))
+<span class="rs"># [252.9...]  -> circa 253 mila euro</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa è appena successo</div>
+    <p style="margin-bottom:0">
+      In tre righe hai vissuto l'intero flusso del §1.4: hai preparato i dati (<code>X</code> e <code>y</code>), scelto
+      un modello (<code>LinearRegression</code>, una retta), lo hai <b>allenato</b> con <code>fit</code> (è il momento
+      in cui impara la regola $\hat{f}$ dagli esempi), e lo hai <b>usato</b> con <code>predict</code> per avere una
+      previsione $\hat{y}$ su una casa nuova. <mark>Nota i due metodi chiave di ogni modello scikit-learn:
+      <code>fit</code> (impara) e <code>predict</code> (prevede)</mark> — li ritroverai identici per <em>ogni</em>
+      modello del libro, dal più semplice al più complesso. È la bellezza di scikit-learn: la stessa interfaccia per
+      tutto. Ora hai visto, toccato e fatto girare il machine learning. Nei prossimi capitoli capiremo, con la solita
+      calma, <b>come</b> quel <code>fit</code> trova davvero la regola migliore.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 1</div>
+    <ol style="margin-bottom:0">
+      <li>Il <b>machine learning</b> non programma le regole: le fa <b>imparare dagli esempi</b>. L'obiettivo vero è
+          <b>generalizzare</b> (funzionare su dati nuovi) (§1.1).</li>
+      <li>Tre tipi: <b>supervisionato</b> (hai le risposte → prevedi), <b>non supervisionato</b> (nessuna risposta →
+          scopri struttura), <b>per rinforzo</b> (impari per premi). Nel supervisionato: <b>regressione</b> (risposta
+          numerica) o <b>classificazione</b> (categoria) (§1.2).</li>
+      <li>Notazione: <b>$X$</b> = caratteristiche in ingresso (feature), <b>$y$</b> = risposta da prevedere (target),
+          <b>$f$</b> = la regola. Cerchiamo $\hat{f}$ (stima di $f$) per ottenere $\hat{y}$ (previsione) vicino a $y$
+          (§1.3).</li>
+      <li>Il <b>flusso</b>: dati → scegli modello → <b>allena</b> (fit) → <b>valuta</b> su dati nuovi → usa. In
+          scikit-learn: <code>fit</code> e <code>predict</code> (§1.4-1.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai la mappa: sai cosa vuol dire «imparare dai dati» e conosci il vocabolario di base. Nel <strong>Capitolo
+    2</strong> entriamo con delicatezza nel cuore dell'apprendimento supervisionato: cosa significa, in termini
+    precisi, «trovare la regola migliore»? Introdurremo l'idea di <b>errore</b> (quanto sbagliamo) e di come misurarlo,
+    e costruiremo passo passo i nostri primi due veri modelli — i minimi quadrati e il k-NN — capendo non solo
+    <em>come</em> funzionano, ma <em>perché</em>. Ogni formula, come promesso, la smonteremo insieme.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-6"><span class="secnum">Sezione 1.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.1</div>
+    <p style="margin-bottom:0">
+      Con parole tue, qual è la differenza fondamentale tra la programmazione «classica» e il machine learning, dal
+      punto di vista di <em>chi</em> scrive le regole?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.2</div>
+    <p style="margin-bottom:0">
+      Per ciascun problema, di' se è <b>supervisionato</b> o <b>non supervisionato</b>, e (se supervisionato) se è
+      <b>regressione</b> o <b>classificazione</b>: (a) prevedere quante visite avrà un sito domani; (b) dividere i
+      clienti in gruppi simili, senza sapere in anticipo quali gruppi; (c) capire se una transazione è una frode o no.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.3</div>
+    <p style="margin-bottom:0">
+      Nel problema «prevedere il voto di un esame a partire dalle ore di studio», cosa sono $X$, $y$ e $f$? E cosa
+      rappresenterebbe $\hat{y}$?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 1.4</div>
+    <p style="margin-bottom:0">
+      Perché non basta che un modello preveda bene sugli esempi con cui è stato allenato? Cosa serve verificare, e come
+      si chiama la capacità che vogliamo davvero?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s1-7"><span class="secnum">Sezione 1.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.1</div>
+    <p style="margin-bottom:0">
+      Nella programmazione <b>classica</b> è l'<b>umano</b> a scrivere le regole (l'algoritmo), che il computer poi
+      esegue: funziona quando la regola la conosci. Nel <b>machine learning</b> è il <b>computer</b> a <b>ricavare le
+      regole dagli esempi</b>: l'umano fornisce tanti dati già risolti, e il modello scopre da solo la regola che li
+      spiega. In breve: prima programmiamo le regole, con il ML le facciamo imparare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.2</div>
+    <p style="margin-bottom:0">
+      (a) prevedere le visite di domani: <b>supervisionato</b>, <b>regressione</b> (la risposta è un numero — quante
+      visite). (b) dividere i clienti in gruppi non noti in anticipo: <b>non supervisionato</b> (non ci sono risposte
+      giuste da imparare, si cerca una struttura — è clustering). (c) frode sì/no: <b>supervisionato</b>,
+      <b>classificazione</b> (la risposta è una categoria: frode oppure no).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.3</div>
+    <p style="margin-bottom:0">
+      $X$ = le <b>ore di studio</b> (la caratteristica in ingresso, la feature); $y$ = il <b>voto</b> vero
+      dell'esame (la risposta da prevedere, il target); $f$ = la <b>regola</b> nascosta che, date le ore di studio,
+      determina il voto (e che vogliamo scoprire). $\hat{y}$ sarebbe il voto <b>previsto</b> dal nostro modello (la
+      stima), da confrontare con il voto reale $y$: quanto più $\hat{y}$ è vicino a $y$, tanto migliore è il modello.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 1.4</div>
+    <p style="margin-bottom:0">
+      Perché prevedere bene sugli esempi già visti è facile — un modello potrebbe averli semplicemente «memorizzati»,
+      senza aver capito lo schema vero (come chi impara a memoria le risposte di un compito già svolto, ma è perso
+      davanti a domande nuove). Serve verificare che il modello preveda bene su <b>esempi nuovi, mai visti</b> durante
+      l'allenamento. La capacità che vogliamo davvero si chiama <b>generalizzazione</b>: cogliere lo schema profondo dei
+      dati per applicarlo a casi futuri.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719e"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §1.5 — imparare una regola: retta (minimi quadrati) sugli esempi casa→prezzo,
+   e previsione per una casa nuova (slider). Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('fit-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('fit-out');
+  const mqEl = document.getElementById('fit-mq');
+  const mqvEl = document.getElementById('fit-mqv');
+
+  // esempi: [m², prezzo in migliaia €]
+  const DATA = [[50,120],[80,180],[120,250],[150,310],[200,400]];
+
+  // retta ai minimi quadrati: prezzo = a*mq + b (calcolata dai dati)
+  const n = DATA.length;
+  let sx=0, sy=0, sxx=0, sxy=0;
+  DATA.forEach(function(d){ sx+=d[0]; sy+=d[1]; sxx+=d[0]*d[0]; sxy+=d[0]*d[1]; });
+  const a = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+  const b = (sy - a*sx) / n;
+  function predici(mq){ return a*mq + b; }
+
+  const p = new Plot(svg, { xmin: 20, xmax: 240, ymin: 60, ymax: 460 });
+
+  function draw() {
+    const mq = +mqEl.value;
+    mqvEl.textContent = mq;
+    const yhat = predici(mq);
+
+    p.clear();
+    p.grid(40, 100);
+    p.axes({ numbers: false });
+    p.text(130, 66, 'metri quadri →', { size: 12, color: 'var(--ink-soft)' });
+    p.text(28, 440, 'prezzo (mila €)', { size: 12, color: 'var(--ink-soft)', anchor: 'start' });
+
+    // la retta imparata
+    p.line(20, predici(20), 240, predici(240), { color: 'var(--accent)', width: 2.4 });
+
+    // gli esempi (punti)
+    DATA.forEach(function (d) { p.dot(d[0], d[1], { color: 'var(--ink)', r: 5 }); });
+
+    // la casa nuova: linea verticale + punto previsto sulla retta
+    p.line(mq, 60, mq, yhat, { color: 'var(--warm)', width: 1.4, dash: '4 3' });
+    p.dot(mq, yhat, { color: 'var(--warm)', r: 6 });
+    p.text(mq, yhat + 22, '≈ ' + Math.round(yhat) + 'k', { size: 12, color: 'var(--warm)', bold: true });
+
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' +
+      'I <b style="color:var(--ink)">punti neri</b> sono gli esempi (case già vendute: m² → prezzo). La <b style="color:var(--accent)">retta blu</b> è la <b>regola imparata</b> ($\\hat{f}$), quella che passa più vicino possibile a tutti gli esempi. ' +
+      'Sposta lo slider: per una casa <b>nuova</b> di ' + mq + ' m², il modello <b>prevede</b> un prezzo di <b style="color:var(--warm)">≈ ' + Math.round(yhat) + ' mila €</b> ($\\hat{y}$) — leggendolo sulla retta. Questo è generalizzare: rispondere su un caso mai visto.</div>';
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([out]);
+  }
+
+  mqEl.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
