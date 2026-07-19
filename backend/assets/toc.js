@@ -136,7 +136,7 @@ const TOC = [
     n: 9,
     titolo: "PostgreSQL e MySQL",
     file: "cap09-postgres-mysql.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "I database di produzione" },
       { id: "s9-2", n: "9.2", t: "PostgreSQL: installazione e uso" },

@@ -20,7 +20,7 @@ Internet** e **Il Web**.
 - [x] 6 — Ricevere dati: Pydantic
 - [x] 7 — Un'API CRUD completa
 - [x] 8 — I database relazionali
-- [ ] 9 — PostgreSQL e MySQL
+- [x] 9 — PostgreSQL e MySQL
 - [ ] 10 — SQLAlchemy: l'ORM
 - [ ] 11 — FastAPI + database
 - [ ] 12 — Relazioni tra tabelle

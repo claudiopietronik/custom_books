@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9 · PostgreSQL e MySQL — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="9">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 9</div>
+    <h1>PostgreSQL e MySQL</h1>
+    <p class="standfirst">
+      SQLite, che hai usato nel capitolo scorso, è perfetto per imparare e per piccoli progetti: un database completo
+      in un solo file, zero configurazione. Ma i backend che servono migliaia di utenti hanno bisogno di database più
+      robusti, che girano come <b>servizi</b> a sé, ottimizzati per reggere tanti accessi contemporanei, grandi
+      volumi di dati e alta affidabilità. I due protagonisti indiscussi di questo mondo sono <b>PostgreSQL</b> e
+      <b>MySQL</b>: due database relazionali open source, maturi, usati da aziende di ogni dimensione. In questo
+      capitolo capisci cosa distingue un database «da produzione» da SQLite (§9.1), conosci PostgreSQL (§9.2) e MySQL
+      (§9.3), impari come ci si <b>connette</b> (§9.4) e crei il tuo primo database Postgres (§9.5). <mark>La buona
+      notizia: grazie a SQLAlchemy (prossimo capitolo), il tuo codice Python resterà quasi identico qualunque
+      database scegli — cambia solo una riga di configurazione.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I database di produzione vs SQLite (§9.1), <b>PostgreSQL</b> (§9.2), <b>MySQL/MariaDB</b> e le differenze (§9.3),
+      come <b>connettersi</b> — host, porta, utente, stringa di connessione (§9.4). Nel laboratorio (§9.5) crei un
+      database Postgres, comodamente con Docker.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: scegliere e configurare il motore dei dati</div>
+    <p style="margin-bottom:0">
+      Il database è la componente più «preziosa» del backend: contiene i dati, che sono spesso ciò che conta davvero.
+      <mark>Saper scegliere un database, installarlo e connettercisi in sicurezza è una competenza operativa
+      essenziale.</mark> E capire il modello «database come servizio in rete» (con host, porta, credenziali) prepara
+      il terreno per Docker e il deploy, dove ogni pezzo del sistema diventa un servizio che dialoga con gli altri.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-1"><span class="secnum">Sezione 9.1</span>I database di produzione</h2>
+
+  <p class="lead">
+    La differenza chiave tra SQLite e i database «grandi» non è cosa sanno fare (parlano tutti SQL), ma <b>come</b>
+    girano: SQLite è una <b>libreria</b> dentro la tua app; Postgres e MySQL sono <b>servizi</b> separati, a cui ti
+    connetti in rete.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">SQLite vs database-servizio <span class="tag">libreria vs servizio in rete</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>SQLite</b>: un file, dentro l'app</dt>
+        <dd>vive in un singolo file sul disco; la tua app lo apre direttamente. Zero installazione, zero
+            configurazione. <mark>Perfetto per imparare, per test, per piccole app</mark> a utente singolo. Ma non è
+            pensato per molti scrittori simultanei.</dd>
+        <dt><b>PostgreSQL / MySQL</b>: un servizio a parte</dt>
+        <dd>girano come un <b>programma sempre attivo</b> (un «server di database»), che può stare sulla tua macchina
+            o su un'altra. La tua app vi si <b>connette in rete</b> (host + porta), come un client a un server.
+            <mark>Pensati per tanti accessi simultanei, grandi dati, alta affidabilità</mark> — cioè la produzione.</dd>
+        <dt>cosa cambia per te</dt>
+        <dd>con un database-servizio devi <b>avviarlo</b>, creare un <b>utente</b> e una <b>password</b>, e dire alla
+            tua app <b>dove trovarlo</b> (§9.4). In cambio ottieni prestazioni, robustezza e funzionalità avanzate.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La strategia pratica di questo libro (e di molti sviluppatori): <mark>usa <b>SQLite</b> mentre sviluppi
+      (semplice, immediato) e <b>PostgreSQL</b> in produzione</mark> (robusto). Con SQLAlchemy (Cap. 10) il passaggio
+      dall'uno all'altro è quasi indolore: cambi la stringa di connessione, non il codice. Questa portabilità è uno
+      dei motivi per cui useremo un ORM.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-2"><span class="secnum">Sezione 9.2</span>PostgreSQL: installazione e uso</h2>
+
+  <p class="lead">
+    <b>PostgreSQL</b> (spesso «Postgres») è, per molti, il database relazionale open source di riferimento: potente,
+    rispettoso degli standard, ricco di funzionalità avanzate. È la nostra scelta consigliata per la produzione.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🐘</span> Perché Postgres</div>
+    <p style="margin-bottom:0">
+      Postgres è famoso per <b>solidità</b> e <b>correttezza</b>: rispetta rigorosamente lo standard SQL, gestisce
+      benissimo le transazioni e i dati complessi (JSON, geodati, ricerche full-text). È gratuito e open source, con
+      una community enorme. <mark>Quando non hai vincoli particolari, Postgres è una scelta difficile da sbagliare.</mark>
+      Il suo simbolo è un elefante (di qui il 🐘).
+    </p>
+  </div>
+
+  <p>Il modo più semplice e pulito per avviare Postgres — che useremo nel laboratorio — è con <b>Docker</b> (lo
+     studieremo a fondo al Cap. 15; qui lo anticipiamo come «scatola pronta»):</p>
+
+  <div class="term">
+    <div class="t-head">terminale — Postgres in un container (anteprima Docker)</div>
+    <pre><span class="p">$</span> <span class="cmd">docker</span> <span class="ar">run</span> <span class="fl">--name</span> <span class="ar">mio-postgres</span> \
+       <span class="fl">-e</span> <span class="ar">POSTGRES_PASSWORD=segreta</span> \
+       <span class="fl">-e</span> <span class="ar">POSTGRES_DB=rubrica</span> \
+       <span class="fl">-p</span> <span class="ar">5432:5432</span> <span class="fl">-d</span> <span class="ar">postgres</span>
+<span class="out">... Postgres è ora in ascolto sulla porta 5432</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔌</span> La porta 5432</div>
+    <p style="margin-bottom:0">
+      <mark>Postgres ascolta, per convenzione, sulla porta <b>5432</b></mark> (come i server web sulla 80/443, Cap.
+      «Reti»). Il <code>-p 5432:5432</code> la «espone» sul tuo computer, così la tua app può connettersi a
+      <code>localhost:5432</code>. Le variabili <code>-e POSTGRES_PASSWORD</code> e <code>POSTGRES_DB</code>
+      impostano la password dell'utente amministratore (<code>postgres</code>) e creano un database iniziale. In
+      alternativa a Docker puoi installare Postgres nativamente da <code>postgresql.org</code>, ma il container è più
+      pulito e usa e getta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-3"><span class="secnum">Sezione 9.3</span>MySQL/MariaDB: differenze</h2>
+
+  <p class="lead">
+    <b>MySQL</b> è l'altro grande database relazionale open source, storicamente il più diffuso nel web (dietro a
+    innumerevoli siti). <b>MariaDB</b> è un suo «gemello» nato da una biforcazione del progetto, molto compatibile.
+    Le differenze con Postgres, per chi inizia, sono modeste.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Postgres vs MySQL: cosa sapere <span class="tag">senza entrare nella «guerra santa»</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>entrambi <b>relazionali e SQL</b></dt>
+        <dd>parlano lo stesso linguaggio di base (SELECT/INSERT/UPDATE/DELETE). <mark>Ciò che hai imparato nel Cap. 8
+            vale per tutti e due</mark>, con differenze minime di sintassi nei casi avanzati.</dd>
+        <dt><b>MySQL</b>: diffusissimo nel web</dt>
+        <dd>velocissimo nelle letture semplici, storicamente legato allo stack «LAMP» (Linux, Apache, MySQL, PHP).
+            Porta di default: <b>3306</b>. Ottima scelta, enorme diffusione e hosting economici.</dd>
+        <dt><b>Postgres</b>: più ricco e rigoroso</dt>
+        <dd>più funzionalità avanzate e maggiore aderenza agli standard; preferito quando servono dati complessi o
+            garanzie forti. Porta: <b>5432</b>.</dd>
+        <dt>quale scegliere?</dt>
+        <dd><mark>Per un progetto nuovo, senza vincoli, questo libro consiglia <b>PostgreSQL</b></mark> — ma con MySQL
+            non sbagli. La cosa importante: <b>con SQLAlchemy il tuo codice non cambia</b>, quindi la scelta non ti
+            «incatena».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non lasciarti coinvolgere dalle discussioni infinite su «quale è meglio»: per la stragrande maggioranza dei
+      progetti, entrambi vanno benissimo, e la differenza la fanno il tuo schema e le tue query, non il motore.
+      <mark>Impara i concetti (che sono comuni), e saprai usare qualsiasi database relazionale.</mark>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-4"><span class="secnum">Sezione 9.4</span>Connettersi e creare un database</h2>
+
+  <p class="lead">
+    Poiché il database è ora un <b>servizio in rete</b>, per usarlo la tua app deve sapere <b>dove</b> trovarlo e
+    <b>con quali credenziali</b>. Tutto questo si condensa in una <b>stringa di connessione</b> (connection string):
+    l'«indirizzo completo» del database.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La stringa di connessione smontata <span class="tag">postgresql://utente:password@host:porta/database</span></div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head file">esempio</div>
+      <pre>postgresql://<span class="hl">anna</span>:<span class="hl">segreta</span>@<span class="hl">localhost</span>:<span class="hl">5432</span>/<span class="hl">rubrica</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">postgresql://</span> — lo schema</dt>
+        <dd>quale tipo di database (e driver). Per MySQL sarebbe <code>mysql://</code>, per SQLite
+            <code>sqlite:///</code>. <mark>È qui che «cambi database» cambiando poco.</mark></dd>
+        <dt><span class="mono">anna:segreta</span> — credenziali</dt>
+        <dd>l'<b>utente</b> e la sua <b>password</b> per accedere. Il database controlla che siano corretti.</dd>
+        <dt><span class="mono">@localhost:5432</span> — dove</dt>
+        <dd>l'<b>host</b> (la macchina: <code>localhost</code> = questo computer, o un indirizzo remoto) e la
+            <b>porta</b> (5432 per Postgres). Esattamente come connettersi a un server (Cap. «Reti»).</dd>
+        <dt><span class="mono">/rubrica</span> — quale database</dt>
+        <dd>un server Postgres può ospitare <b>più database</b> distinti; qui scegli quello di nome
+            <code>rubrica</code>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa stringa è ciò che darai a SQLAlchemy nel prossimo capitolo per collegarti. <mark>Attenzione: contiene la
+      <b>password</b>, quindi non va mai scritta nel codice né messa su git!</mark> Si tiene in una <b>variabile
+      d'ambiente</b> o in un file <code>.env</code> (che si esclude da git) — un tema di sicurezza che riprenderemo
+      con auth (Cap. 13) e deploy (Cap. 18). Per ora, tieni a mente la forma della stringa.
+    </div>
+  </div>
+
+  <div class="widget" id="w-conn">
+    <div class="w-head">
+      <span>Costruttore di stringa di connessione</span>
+      <span class="hint">scegli il database, componi l'indirizzo</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:460px; margin:0 auto; text-align:left; display:grid; grid-template-columns:auto 1fr; gap:.5rem .6rem; align-items:center; font-size:.9rem">
+        <label style="color:var(--ink-soft)">database</label>
+        <select id="cn-tipo" style="padding:.35rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink)">
+          <option value="postgresql">PostgreSQL (porta 5432)</option>
+          <option value="mysql">MySQL (porta 3306)</option>
+          <option value="sqlite">SQLite (file locale)</option>
+        </select>
+        <label style="color:var(--ink-soft)">utente</label>
+        <input type="text" id="cn-user" value="anna" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        <label style="color:var(--ink-soft)">host</label>
+        <input type="text" id="cn-host" value="localhost" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        <label style="color:var(--ink-soft)">database</label>
+        <input type="text" id="cn-db" value="rubrica" style="padding:.35rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+      </div>
+    </div>
+    <div class="w-readout" id="cn-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-5"><span class="secnum">Sezione 9.5</span>Laboratorio: un database Postgres</h2>
+
+  <p class="lead">
+    Avviamo un vero PostgreSQL con Docker e connettiamoci per creare una tabella. Se non hai Docker, va benissimo
+    continuare con SQLite (Cap. 8): dal prossimo capitolo SQLAlchemy renderà il codice identico.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — 1) avvia Postgres</div>
+    <pre><span class="p">$</span> <span class="cmd">docker</span> <span class="ar">run</span> <span class="fl">--name</span> <span class="ar">pg-rubrica</span> <span class="fl">-e</span> <span class="ar">POSTGRES_PASSWORD=segreta</span> \
+       <span class="fl">-e</span> <span class="ar">POSTGRES_DB=rubrica</span> <span class="fl">-p</span> <span class="ar">5432:5432</span> <span class="fl">-d</span> <span class="ar">postgres</span>
+<span class="out">a1b2c3...   (il container è avviato, in background)</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale — 2) entra nella console psql del database</div>
+    <pre><span class="p">$</span> <span class="cmd">docker</span> <span class="ar">exec</span> <span class="fl">-it</span> <span class="ar">pg-rubrica</span> <span class="cmd">psql</span> <span class="fl">-U</span> <span class="ar">postgres</span> <span class="fl">-d</span> <span class="ar">rubrica</span>
+<span class="out">psql (16...)   Type "help" for help.</span>
+<span class="out">rubrica=#</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">alla console rubrica=# — crea e interroga</div>
+    <pre><span class="out">rubrica=#</span> <span class="kw">CREATE TABLE</span> contatti (
+   id <span class="ty">SERIAL</span> <span class="kw">PRIMARY KEY</span>,          <span class="c">-- SERIAL = auto-increment in Postgres</span>
+   nome <span class="ty">VARCHAR</span>(<span class="nm">100</span>) <span class="kw">NOT NULL</span>,
+   telefono <span class="ty">VARCHAR</span>(<span class="nm">30</span>)
+);
+<span class="out">CREATE TABLE</span>
+<span class="out">rubrica=#</span> <span class="kw">INSERT INTO</span> contatti (nome, telefono) <span class="kw">VALUES</span> (<span class="st">'Anna'</span>, <span class="st">'333-111'</span>);
+<span class="out">INSERT 0 1</span>
+<span class="out">rubrica=#</span> <span class="kw">SELECT</span> * <span class="kw">FROM</span> contatti;
+<span class="out"> id | nome |  telefono
+----+------+-----------
+  1 | Anna | 333-111</span>
+<span class="out">rubrica=#</span> \q                          <span class="c">-- esci da psql</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai fatto (e la differenza con SQLite)</div>
+    <p style="margin-bottom:0">
+      Hai avviato un <b>servizio</b> Postgres, ti sei <b>connesso</b> come utente <code>postgres</code>, e hai creato
+      una tabella e una riga — stesso SQL del Cap. 8, con piccole differenze: <code>SERIAL</code> al posto di
+      <code>INTEGER … AUTOINCREMENT</code> per l'id auto-incrementale, <code>VARCHAR(n)</code> per il testo con
+      lunghezza massima. <mark>Il concetto è identico; cambia qualche dettaglio di «dialetto» SQL</mark> — ed è
+      proprio ciò che un ORM come SQLAlchemy nasconderà per te. I dati vivono ora nel container Postgres, non in un
+      file locale: un vero database di rete, pronto a essere usato dal nostro backend.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 9</div>
+    <ol style="margin-bottom:0">
+      <li>SQLite è una <b>libreria</b> (un file); Postgres e MySQL sono <b>servizi</b> in rete, per la produzione:
+          tanti accessi, grandi dati, affidabilità (§9.1).</li>
+      <li><b>PostgreSQL</b> (porta 5432): robusto, standard, ricco — la scelta consigliata di default (§9.2).</li>
+      <li><b>MySQL/MariaDB</b> (porta 3306): diffusissimo nel web; per chi inizia le differenze con Postgres sono
+          modeste. Coi concetti comuni usi entrambi (§9.3).</li>
+      <li>Ci si connette con una <b>stringa di connessione</b>
+          <code>schema://utente:password@host:porta/database</code> — che contiene la password, quindi <b>fuori da
+          git</b> (§9.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai un database di produzione in piedi e sai come raggiungerlo. Ma finora abbiamo scritto <b>SQL a mano</b>, e —
+    peggio — dovremmo scrivere codice noioso e rischioso per «cucire» i risultati SQL agli oggetti Python. C'è un modo
+    molto più elegante: far corrispondere <b>classi Python ↔ tabelle</b> e <b>oggetti ↔ righe</b>, lasciando che una
+    libreria generi l'SQL per noi. Si chiama <b>ORM</b>, e la useremo con <b>SQLAlchemy</b>: è il cuore del
+    <strong>Capitolo 10</strong>, il ponte che unirà finalmente il nostro backend FastAPI a un database vero.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-6"><span class="secnum">Sezione 9.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza fondamentale nel <b>modo di girare</b> tra SQLite e PostgreSQL? Quando useresti l'uno e
+      quando l'altro?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.2</div>
+    <p style="margin-bottom:0">
+      Componi la stringa di connessione per un database <b>MySQL</b> chiamato <code>shop</code>, utente
+      <code>root</code>, password <code>pass123</code>, sull'host <code>localhost</code> (porta 3306).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.3</div>
+    <p style="margin-bottom:0">
+      Perché la stringa di connessione non deve mai finire scritta nel codice o su git? Dove andrebbe messa invece?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 9.4</div>
+    <p style="margin-bottom:0">
+      Nel <code>CREATE TABLE</code> di Postgres del laboratorio, a cosa serve <code>SERIAL PRIMARY KEY</code>? Qual è
+      l'equivalente che avevi usato in SQLite (Cap. 8)?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s9-7"><span class="secnum">Sezione 9.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.1</div>
+    <p style="margin-bottom:0">
+      <b>SQLite</b> è una libreria che gira <b>dentro</b> la tua applicazione e usa un singolo file: nessun servizio
+      da avviare. <b>PostgreSQL</b> è un <b>servizio separato</b>, sempre attivo, a cui ci si connette in rete (host +
+      porta). Usa SQLite per <b>sviluppo, test e piccole app</b> (semplicità); usa Postgres in <b>produzione</b> o
+      quando servono molti accessi simultanei, grandi volumi e robustezza.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.2</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">connection string</div>
+      <pre>mysql://root:pass123@localhost:3306/shop</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Schema <code>mysql://</code>, credenziali <code>root:pass123</code>, host+porta
+      <code>localhost:3306</code>, database <code>shop</code>. (Nella pratica, con SQLAlchemy, lo schema include anche
+      il driver, es. <code>mysql+pymysql://…</code>.)</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.3</div>
+    <p style="margin-bottom:0">
+      Perché contiene la <b>password</b> del database: se finisce nel codice sorgente versionato su git (magari
+      pubblico), chiunque potrebbe leggerla e accedere ai dati. Va tenuta in una <b>variabile d'ambiente</b> o in un
+      file <code>.env</code> <b>escluso da git</b> (via <code>.gitignore</code>), e letta dal codice a runtime. È una
+      regola di sicurezza fondamentale, valida per tutti i segreti (password, chiavi API, token).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 9.4</div>
+    <p style="margin-bottom:0">
+      <code>SERIAL PRIMARY KEY</code> crea la colonna <code>id</code> come <b>chiave primaria auto-incrementale</b>:
+      Postgres assegna automaticamente un id crescente (1, 2, 3…) a ogni nuova riga. L'equivalente in SQLite era
+      <code>INTEGER PRIMARY KEY AUTOINCREMENT</code>. Stesso concetto (id univoco automatico), sintassi leggermente
+      diversa — la differenza di «dialetto» che SQLAlchemy gestirà per te dal prossimo capitolo.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §9.4 — costruttore di stringa di connessione: componi schema/credenziali/host/db
+   ========================================================================= */
+(function () {
+  const out = document.getElementById('cn-out');
+  if (!out) return;
+  const tipo = document.getElementById('cn-tipo');
+  const user = document.getElementById('cn-user');
+  const host = document.getElementById('cn-host');
+  const db   = document.getElementById('cn-db');
+
+  const PORTE = { postgresql: '5432', mysql: '3306', sqlite: '' };
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    const t = tipo.value;
+    let stringa, nota;
+    if (t === 'sqlite') {
+      stringa = 'sqlite:///./' + (db.value.trim() || 'app') + '.db';
+      nota = 'SQLite non ha host, porta né credenziali: è solo un <b>file</b> locale. Ideale in sviluppo.';
+    } else {
+      const porta = PORTE[t];
+      stringa = t + '://' + (user.value.trim() || 'utente') + ':<span style="color:#e0654f">••••••</span>@' +
+                (host.value.trim() || 'localhost') + ':' + porta + '/' + (db.value.trim() || 'app');
+      nota = 'Un database-<b>servizio</b>: nota host, porta <b>' + porta + '</b> e credenziali. La password (in rosso) va tenuta <b>fuori da git</b>.';
+    }
+    out.innerHTML =
+      '<div class="term" style="margin:.2rem auto 0; max-width:100%"><div class="t-head file">connection string</div>' +
+      '<pre>' + stringa + '</pre></div>' +
+      '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left; margin-top:.4rem">' + nota +
+      ' Cambiando il tipo di database cambia solo lo <b>schema</b> iniziale: con SQLAlchemy, il resto del codice resta uguale.</div>';
+  }
+
+  [tipo, user, host, db].forEach(function (e) { e.addEventListener('input', render); });
+  tipo.addEventListener('change', render);
+  render();
+})();
+</script>
+</body>
+</html>
