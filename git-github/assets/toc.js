@@ -43,7 +43,7 @@ const TOC = [
     n: 3,
     titolo: "Il primo repository",
     file: "cap03-primo-repository.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s3-1", n: "3.1", t: "Cos'è un repository" },
       { id: "s3-2", n: "3.2", t: "git init" },

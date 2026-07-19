@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Il primo repository — Git &amp; GitHub</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔀</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="3">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 3</div>
+    <h1>Il primo repository</h1>
+    <p class="standfirst">
+      È il momento di trasformare una cartella qualsiasi in un <b>repository</b> Git — il contenitore dove Git registra
+      il tuo progetto e tutta la sua storia. Basta un comando, <code>git init</code>, e da quel momento Git «osserva»
+      quella cartella. Ma il vero cuore di questo capitolo è un concetto che, una volta capito, rende tutto il resto di
+      Git limpido: le <b>tre aree</b>. In Git, un file attraversa tre «zone» — la <b>working directory</b> (dove
+      lavori), la <b>staging area</b> (dove prepari cosa salvare) e il <b>repository</b> (dove lo snapshot viene
+      registrato per sempre). Capire questo viaggio spiega <em>perché</em> servono due comandi (<code>git add</code> e
+      <code>git commit</code>) per salvare, e cosa significano i messaggi che Git ti mostra. In questo capitolo:
+      cos'è un repository (§3.1), <code>git init</code> (§3.2), le tre aree (§3.3) e <code>git status</code>, la tua
+      bussola (§3.4). <mark>Il modello delle tre aree è la chiave che apre tutto Git: dedicagli attenzione.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>repository</b> (§3.1), crearlo con <code>git init</code> (§3.2), le <b>tre aree</b> — working,
+      staging, repository (§3.3), <code>git status</code> per orientarti (§3.4). Nel laboratorio (§3.5) crei il tuo
+      primo repo.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire le tre aree = capire Git</div>
+    <p style="margin-bottom:0">
+      La maggior parte della confusione dei principianti con Git nasce dal <b>non aver capito le tre aree</b>: si
+      chiedono perché serva <code>add</code> <em>e</em> <code>commit</code>, cosa vuol dire «staged», perché
+      <code>git status</code> dice certe cose. <mark>Chiarito questo modello, i comandi smettono di sembrare magia e
+      diventano ovvi.</mark> È l'investimento più redditizio di tutto il libro.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-1"><span class="secnum">Sezione 3.1</span>Cos'è un repository</h2>
+
+  <p class="lead">
+    Un <b>repository</b> (o «repo») è una cartella di progetto che Git sta <b>tracciando</b>: contiene i tuoi file
+    attuali <b>più</b> tutta la loro storia (ogni commit passata). Tutta la «magia» sta in una sottocartella nascosta
+    che Git crea al suo interno.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> La cartella <code>.git</code>: il cervello del repository</div>
+    <p style="margin-bottom:0">
+      Quando trasformi una cartella in repository, Git crea al suo interno una cartella nascosta chiamata
+      <code>.git</code>. <mark>Lì dentro c'è <b>tutto</b>: ogni commit, ogni branch, la configurazione, l'intera
+      storia.</mark> I tuoi file di progetto restano dove sono, normali; <code>.git</code> è il «registro» invisibile
+      accanto a loro. <b>Non</b> devi mai toccarla a mano (rischieresti di rompere il repository): ci parli sempre
+      attraverso i comandi <code>git</code>. Cancellare la cartella <code>.git</code> significa smettere di tracciare
+      il progetto (i file restano, ma la storia sparisce). In pratica: <b>cartella normale + <code>.git</code> =
+      repository</b>.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>git init</h2>
+
+  <p class="lead">
+    Creare un repository è un solo comando: <code>git init</code>, eseguito dentro la cartella che vuoi tracciare.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — inizializzare un repository</div>
+    <pre><span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">mio-progetto</span>       <span class="c"># crea la cartella del progetto</span>
+<span class="p">$</span> <span class="cmd">cd</span> <span class="ar">mio-progetto</span>          <span class="c"># entraci</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">init</span>                  <span class="c"># trasformala in un repository Git</span>
+<span class="out">Initialized empty Git repository in /Users/anna/mio-progetto/.git/</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">git init smontato <span class="tag">un comando, una volta per progetto</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">git init</span></dt>
+        <dd>crea la cartella nascosta <code>.git</code> nella posizione corrente, trasformandola in un repository.
+            <mark>Da questo momento Git «osserva» questa cartella</mark> e i suoi file.</dd>
+        <dt>«<span class="mono">empty Git repository</span>»</dt>
+        <dd>il messaggio conferma: repository creato, ma <b>vuoto</b> (nessuna commit ancora). Contiene la struttura,
+            non ancora la storia.</dd>
+        <dt>una volta sola</dt>
+        <dd><code>git init</code> si esegue <b>una sola volta</b> per progetto, all'inizio. Rifarlo su un repo
+            esistente non serve (e non fa danni, ma è inutile).</dd>
+        <dt>l'alternativa: <span class="mono">git clone</span></dt>
+        <dd>quando un progetto esiste già online (su GitHub), invece di <code>init</code> lo <b>scarichi</b> con
+            <code>git clone</code> (Cap. 10) — che crea il repository già pieno di storia.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Attenzione a <b>dove</b> lanci <code>git init</code>: crea il repository nella cartella corrente (controlla con
+      <code>pwd</code>, Cap. 2). <mark>Un errore comune è lanciarlo per sbaglio nella home</mark> o in una cartella
+      sbagliata, iniziando a tracciare troppa roba. Assicurati di essere <b>dentro la cartella del progetto</b> prima
+      di eseguirlo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-3"><span class="secnum">Sezione 3.3</span>Le tre aree: working, staging, repository</h2>
+
+  <p class="lead">
+    Ecco il concetto centrale. In Git, quando salvi il lavoro, un file compie un <b>viaggio in tre tappe</b>. Capirlo
+    spiega tutto il resto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il viaggio di una modifica <span class="tag">working → staging → repository</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · la <b>working directory</b> (cartella di lavoro)</dt>
+        <dd>dove <b>modifichi</b> davvero i file: è la cartella del progetto come la vedi. <mark>Qui le modifiche sono
+            «libere», non ancora registrate da Git.</mark></dd>
+        <dt>2 · la <b>staging area</b> (area di sosta / «index»)</dt>
+        <dd>una zona di <b>preparazione</b>: ci metti (con <code>git add</code>) le modifiche che vuoi includere nel
+            prossimo snapshot. <mark>È come una «scatola» dove selezioni cosa salvare</mark>, prima di salvare davvero.</dd>
+        <dt>3 · il <b>repository</b> (la storia)</dt>
+        <dd>quando fai <code>git commit</code>, ciò che è nella staging area diventa uno <b>snapshot permanente</b>
+            nella storia. <mark>Da qui non si perde più.</mark></dd>
+        <dt>i due comandi che spostano</dt>
+        <dd><code>git add</code> sposta le modifiche da <b>working → staging</b>; <code>git commit</code> le sposta da
+            <b>staging → repository</b>. Due passi, due comandi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché <b>due</b> passi e non uno? Perché la staging area ti dà <b>controllo</b>: puoi scegliere <em>quali</em>
+      modifiche includere in una commit e quali lasciar fuori, componendo snapshot puliti e sensati.
+      <mark>Immagina di aver cambiato tre file ma di voler salvare solo due modifiche insieme</mark> (perché
+      riguardano la stessa cosa): metti quei due in staging e fai commit; il terzo resta in attesa. È una comodità
+      che apprezzerai col tempo. Prova il widget qui sotto: sposta un file lungo le tre aree e osserva
+      <code>git status</code>.
+    </div>
+  </div>
+
+  <div class="widget" id="w-areas">
+    <div class="w-head">
+      <span>Il viaggio di un file tra le tre aree</span>
+      <span class="hint">git add e git commit lo fanno avanzare</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="display:flex; gap:.5rem; justify-content:space-between; max-width:520px; margin:0 auto 1rem">
+        <div class="ar-zone" id="az-work" style="flex:1; border:2px solid var(--ink-soft); border-radius:10px; padding:.6rem .4rem; text-align:center; min-height:96px; transition:all .25s">
+          <div style="font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft)">working</div>
+          <div id="az-work-f" style="margin-top:.5rem"></div>
+        </div>
+        <div class="ar-zone" id="az-stage" style="flex:1; border:2px solid var(--ink-soft); border-radius:10px; padding:.6rem .4rem; text-align:center; min-height:96px; transition:all .25s">
+          <div style="font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft)">staging</div>
+          <div id="az-stage-f" style="margin-top:.5rem"></div>
+        </div>
+        <div class="ar-zone" id="az-repo" style="flex:1; border:2px solid var(--ink-soft); border-radius:10px; padding:.6rem .4rem; text-align:center; min-height:96px; transition:all .25s">
+          <div style="font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft)">repository</div>
+          <div id="az-repo-f" style="margin-top:.5rem; font-size:.78rem; text-align:left"></div>
+        </div>
+      </div>
+      <div class="term" style="margin:0 auto; max-width:100%"><div class="t-head">git status</div><pre id="az-status" style="margin:0; min-height:56px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="az-edit">✏ modifica note.txt</button>
+      <button class="btn" id="az-add">git add note.txt</button>
+      <button class="btn" id="az-commit">git commit</button>
+      <button class="btn ghost" id="az-reset">reset</button>
+    </div>
+    <div class="w-readout" id="az-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>git status: la tua bussola</h2>
+
+  <p class="lead">
+    Il comando che userai <b>più di ogni altro</b> è <code>git status</code>: ti dice, in ogni momento, in che stato
+    sono i tuoi file rispetto alle tre aree. È la tua bussola: quando sei incerto, <code>git status</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — git status racconta la situazione</div>
+    <pre><span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">On branch main
+
+No commits yet
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+        </span><span class="hl">note.txt</span><span class="out">
+
+nothing added to commit but untracked files present</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Leggere git status <span class="tag">gli stati di un file</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>untracked</b> (non tracciato)</dt>
+        <dd>un file nuovo che Git <b>non</b> sta ancora seguendo (mai stato aggiunto). <mark>Git lo vede ma non lo
+            registra</mark> finché non fai <code>git add</code>.</dd>
+        <dt><b>modified</b> (modificato)</dt>
+        <dd>un file già tracciato che hai cambiato nella working directory, ma la modifica non è ancora in staging.</dd>
+        <dt><b>staged</b> (in staging, «to be committed»)</dt>
+        <dd>una modifica che hai messo in staging con <code>git add</code>: <mark>pronta per la prossima commit.</mark>
+            <code>git status</code> la elenca sotto «Changes to be committed».</dd>
+        <dt>i <b>suggerimenti</b> di Git</dt>
+        <dd>nota come <code>git status</code> ti dica anche <b>cosa fare</b> («use git add…»): <mark>Git è un
+            assistente, non solo un esecutore</mark>. Leggere questi suggerimenti è il modo più veloce per imparare.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Abitudine d'oro: <mark>esegui <code>git status</code> spessissimo</mark> — prima e dopo ogni comando, quando sei
+      in dubbio, quando riprendi il lavoro. Ti dice sempre «dove sei» nel viaggio delle tre aree, e ti suggerisce il
+      passo successivo. È impossibile «perdersi» in Git se controlli lo status di frequente. Nessun comando fa danni:
+      <code>git status</code> è solo lettura.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-5"><span class="secnum">Sezione 3.5</span>Laboratorio: crea un repository</h2>
+
+  <p class="lead">
+    Crea il tuo primo repository e osserva <code>git status</code> in azione. Non facciamo ancora la commit (è il
+    Capitolo 4): qui il focus è <b>vedere</b> il repository nascere e imparare a leggere lo stato.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — passo per passo</div>
+    <pre><span class="c"># 1) crea la cartella del progetto ed entra</span>
+<span class="p">$</span> <span class="cmd">mkdir</span> <span class="ar">diario</span> && <span class="cmd">cd</span> <span class="ar">diario</span>
+
+<span class="c"># 2) trasformala in repository</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">init</span>
+<span class="out">Initialized empty Git repository in .../diario/.git/</span>
+
+<span class="c"># 3) controlla lo stato: repository vuoto, nessun file</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">On branch main
+No commits yet
+nothing to commit</span>
+
+<span class="c"># 4) crea un file e ricontrolla</span>
+<span class="p">$</span> <span class="cmd">echo</span> <span class="ar">"Oggi ho imparato Git."</span> &gt; <span class="ar">giorno1.txt</span>
+<span class="p">$</span> <span class="cmd">git</span> <span class="ar">status</span>
+<span class="out">Untracked files:
+        </span><span class="hl">giorno1.txt</span><span class="out">
+nothing added to commit but untracked files present</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa osservare</div>
+    <p style="margin-bottom:0">
+      Dopo <code>git init</code>, il repository esiste ma è <b>vuoto</b> («No commits yet»). Creando
+      <code>giorno1.txt</code>, <code>git status</code> lo segnala come <b>untracked</b>: Git lo <b>vede</b>, ma non lo
+      sta ancora tracciando — aspetta un tuo <code>git add</code>. <mark>Questo è il file nella working directory, non
+      ancora nelle altre due aree.</mark> Nota che Git ti suggerisce già il comando da usare. Nel prossimo capitolo
+      faremo proprio quello: <code>git add</code> e poi <code>git commit</code>, completando il viaggio del file fino
+      alla storia. (Curiosità: prova <code>ls -a</code> per vedere la cartella nascosta <code>.git</code> creata da
+      <code>git init</code>.)
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 3</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>repository</b> = cartella di progetto + la cartella nascosta <code>.git</code> (che contiene tutta la
+          storia). Non toccare mai <code>.git</code> a mano (§3.1).</li>
+      <li><code>git init</code> crea il repository nella cartella corrente, una volta per progetto (§3.2).</li>
+      <li>Le <b>tre aree</b>: <b>working</b> (dove modifichi) → <b>staging</b> (dove prepari, con <code>git add</code>)
+          → <b>repository</b> (dove salvi lo snapshot, con <code>git commit</code>) (§3.3).</li>
+      <li><code>git status</code> è la <b>bussola</b>: dice lo stato dei file (untracked/modified/staged) e suggerisce
+          il passo successivo. Usalo spessissimo (§3.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai un repository e sai leggere lo stato dei tuoi file lungo le tre aree. Manca il gesto centrale di Git: salvare
+    davvero uno <b>snapshot</b>. Nel <strong>Capitolo 4</strong> completiamo il viaggio del file: con <code>git
+    add</code> lo portiamo in staging, con <code>git commit</code> lo registriamo per sempre nella storia — e
+    impariamo a scrivere un buon messaggio di commit. È il ciclo che ripeterai migliaia di volte: il battito cardiaco
+    del lavoro con Git.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-6"><span class="secnum">Sezione 3.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.1</div>
+    <p style="margin-bottom:0">
+      Cosa contiene la cartella nascosta <code>.git</code>? Cosa succederebbe se la cancellassi?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.2</div>
+    <p style="margin-bottom:0">
+      Nomina le tre aree di Git nell'ordine in cui una modifica le attraversa, e indica quale comando sposta il file
+      da un'area alla successiva.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.3</div>
+    <p style="margin-bottom:0">
+      Hai appena creato un file nuovo in un repository. In quale stato lo segnala <code>git status</code>? Cosa
+      significa quello stato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 3.4</div>
+    <p style="margin-bottom:0">
+      Perché Git usa una staging area separata, invece di salvare direttamente tutte le modifiche in una commit? Quale
+      vantaggio dà?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.1</div>
+    <p style="margin-bottom:0">
+      La cartella <code>.git</code> contiene <b>tutto</b> ciò che rende la cartella un repository: ogni commit
+      (l'intera storia), i branch, la configurazione locale, i riferimenti. Se la cancellassi, la cartella tornerebbe
+      a essere una cartella <b>normale</b>: i file di progetto attuali resterebbero, ma <b>tutta la storia
+      versionata andrebbe persa</b> (commit, branch, ecc.), e Git smetterebbe di tracciare il progetto.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.2</div>
+    <p style="margin-bottom:0">
+      Le tre aree, nell'ordine: <b>1) working directory</b> (dove modifichi i file) → <b>2) staging area</b> (dove
+      prepari cosa salvare) → <b>3) repository</b> (dove lo snapshot è registrato). <code>git add</code> sposta le
+      modifiche da <b>working a staging</b>; <code>git commit</code> le sposta da <b>staging a repository</b>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.3</div>
+    <p style="margin-bottom:0">
+      Lo segnala come <b>untracked</b> (non tracciato). Significa che Git <b>vede</b> il file nella cartella ma non lo
+      sta ancora seguendo: non fa parte di nessuna commit e le sue modifiche non vengono registrate. Diventerà
+      tracciato solo dopo un <code>git add</code>, che lo porta nella staging area.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 3.4</div>
+    <p style="margin-bottom:0">
+      La staging area dà <b>controllo</b> su cosa finisce in ciascuna commit: puoi <b>scegliere</b> quali modifiche
+      includere e quali lasciar fuori, invece di salvare tutto in blocco. Questo permette di comporre commit
+      <b>pulite e coerenti</b> — per esempio raggruppando solo le modifiche che riguardano la stessa correzione, e
+      rimandando le altre a una commit successiva. È un passo in più, ma ripaga in ordine e chiarezza della storia.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719c"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §3.3 — le tre aree: un file viaggia da working -> staging -> repository
+   ========================================================================= */
+(function () {
+  const workF = document.getElementById('az-work-f');
+  if (!workF) return;
+  const stageF = document.getElementById('az-stage-f');
+  const repoF = document.getElementById('az-repo-f');
+  const statusEl = document.getElementById('az-status');
+  const out = document.getElementById('az-out');
+  const zones = { work: document.getElementById('az-work'), stage: document.getElementById('az-stage'), repo: document.getElementById('az-repo') };
+
+  // stato: 0 = pulito (nessuna modifica), 1 = modified in working, 2 = staged, 3 = committed
+  let state = 0;
+  let commits = 0;
+
+  function chip(color) {
+    return '<span style="display:inline-block; background:' + color + '; color:#fff; border-radius:6px; padding:.2rem .5rem; font-family:var(--mono); font-size:.75rem">📄 note.txt</span>';
+  }
+  function glow(zone, on) {
+    zones[zone].style.borderColor = on ? 'var(--accent)' : 'var(--ink-soft)';
+    zones[zone].style.background = on ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent';
+  }
+
+  function render() {
+    workF.innerHTML = ''; stageF.innerHTML = '';
+    glow('work', false); glow('stage', false); glow('repo', false);
+    repoF.innerHTML = commits ? ('<span style="color:var(--green)">✔ ' + commits + ' commit</span>') : '<span style="color:var(--ink-soft); font-size:.72rem">vuoto</span>';
+
+    let st = '';
+    if (state === 0) {
+      st = '<span class="out">nothing to commit, working tree clean</span>';
+      out.innerHTML = note('', 'Tutto pulito. Premi <b>✏ modifica note.txt</b> per cambiare il file nella <b>working directory</b>.');
+    } else if (state === 1) {
+      workF.innerHTML = chip('#a8674f'); glow('work', true);
+      st = '<span class="out">Changes not staged for commit:\n  </span><span class="hl">modified: note.txt</span>';
+      out.innerHTML = note('', '<b>note.txt</b> è <b>modified</b> nella working directory: cambiato, ma non ancora preparato. Ora <b>git add</b> per portarlo in <b>staging</b>.');
+    } else if (state === 2) {
+      stageF.innerHTML = chip('#5fa38a'); glow('stage', true);
+      st = '<span class="out">Changes to be committed:\n  </span><span style="color:#5fd18a">staged: note.txt</span>';
+      out.innerHTML = note('', '<b>note.txt</b> è ora <b>staged</b>: pronto per la prossima commit. Manca un passo: <b>git commit</b> per registrarlo nel <b>repository</b>.');
+    } else if (state === 3) {
+      glow('repo', true);
+      st = '<span class="out">nothing to commit, working tree clean</span>';
+      out.innerHTML = note('green', '✔ <b>Commit fatta!</b> La modifica è ora uno <b>snapshot permanente</b> nel repository (la storia). La working directory è di nuovo pulita. Hai completato il viaggio delle tre aree!');
+    }
+    statusEl.innerHTML = st;
+  }
+  function note(c, html) {
+    const col = c === 'green' ? 'var(--green)' : 'var(--ink-soft)';
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('az-edit').addEventListener('click', function () {
+    if (state === 3 || state === 0) { state = 1; render(); }
+    else out.innerHTML = note('', 'note.txt è già modificato/in coda. Prosegui col comando successivo.');
+  });
+  document.getElementById('az-add').addEventListener('click', function () {
+    if (state === 1) { state = 2; render(); }
+    else out.innerHTML = note('', state === 0 ? '⚠ Non c\'è nulla da aggiungere: prima <b>modifica</b> il file.' : (state === 2 ? 'È già in staging.' : 'Niente da aggiungere ora.'));
+  });
+  document.getElementById('az-commit').addEventListener('click', function () {
+    if (state === 2) { commits++; state = 3; render(); }
+    else out.innerHTML = note('', '⚠ <b>git commit</b> salva ciò che è in <b>staging</b>. Ora la staging è vuota: prima <b>modifica</b> e fai <b>git add</b>.');
+  });
+  document.getElementById('az-reset').addEventListener('click', function () {
+    state = 0; commits = 0; render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
