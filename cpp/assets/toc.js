@@ -187,7 +187,7 @@ const TOC = [
     n: 12,
     titolo: "La memoria: stack, heap, RAII",
     file: "cap12-memoria.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "Stack e heap" },
       { id: "s12-2", n: "12.2", t: "new e delete" },

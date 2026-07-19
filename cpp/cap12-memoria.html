@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · La memoria: stack, heap, RAII — C++</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⊕</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>La memoria: stack, heap, RAII</h1>
+    <p class="standfirst">
+      Ecco ciò che distingue un vero programmatore C++: la <b>gestione della memoria</b>. In molti linguaggi non ci
+      pensi mai — un «garbage collector» pulisce per te. In C++ hai il <b>controllo totale</b>, e con esso la
+      responsabilità. Capirai la differenza tra <b>stack</b> (memoria automatica, pulita da sola) e <b>heap</b>
+      (memoria manuale, che <em>tu</em> devi liberare), incontrerai il temuto binomio <code>new</code>/
+      <code>delete</code> e le <b>fughe di memoria</b> che causa. Ma soprattutto scoprirai l'idea più elegante del
+      C++ — <b>RAII</b> — e gli <b>smart pointer</b>, che ti ridanno la sicurezza <em>senza</em> perdere il
+      controllo: <mark>oggetti che gestiscono la memoria da soli, automaticamente e con certezza</mark>. È il
+      capitolo che unisce puntatori, costruttori e distruttori in un'unica idea potentissima.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Stack e heap</b>, le due memorie (§12.1), <code>new</code> e <code>delete</code> per l'heap (§12.2), le
+      <b>fughe di memoria</b> (§12.3), <b>RAII</b> — l'idea chiave (§12.4) e gli <b>smart pointer</b> (§12.5). Nel
+      laboratorio (§12.6) costruisci un puntatore intelligente.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il cuore della responsabilità</div>
+    <p style="margin-bottom:0">
+      La gestione della memoria è <b>ciò che rende il C++ potente e temuto</b>. <mark>La maggior parte dei bug e
+      delle falle di sicurezza gravi (fughe di memoria, crash, corruzioni) nasce da una gestione sbagliata</mark>. Ma
+      il C++ moderno ha una risposta bellissima: RAII e gli smart pointer trasformano un problema difficile in
+      qualcosa di automatico e sicuro. Capire questo capitolo è ciò che ti fa scrivere C++ <b>moderno</b> — robusto
+      come un linguaggio con garbage collector, ma veloce come solo il C++ sa essere.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>Stack e heap</h2>
+
+  <p class="lead">
+    Un programma usa la memoria in due modi molto diversi: lo <b>stack</b> (veloce, automatico, per i dati «locali»)
+    e l'<b>heap</b> (flessibile, manuale, per i dati che devono «sopravvivere»). Capire la differenza è il punto di
+    partenza.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Le due memorie</div>
+    <ul style="margin-bottom:0">
+      <li>Lo <b>stack</b>: dove vivono le variabili <b>locali</b>. Quando dichiari <code>int x = 5;</code> dentro una
+          funzione, <code>x</code> sta nello stack. <mark>Viene <b>pulito automaticamente</b></mark> quando la
+          variabile esce dal suo ambito (la funzione finisce, il blocco <code>{ }</code> si chiude). Velocissimo,
+          ordinato (come una pila di piatti: l'ultimo messo è il primo tolto), ma <b>dimensione limitata</b> e vita
+          legata all'ambito.</li>
+      <li>L'<b>heap</b> (o «memoria dinamica»): un grande deposito libero da cui <b>tu</b> chiedi memoria
+          (<code>new</code>) e <b>tu</b> la restituisci (<code>delete</code>). I dati sull'heap <b>sopravvivono</b>
+          finché non li liberi esplicitamente. Flessibile e capiente, ma <mark>gestito a mano</mark> — ed è qui che
+          nascono i guai.</li>
+    </ul>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Quando serve l'heap</div>
+    <p style="margin-bottom:0">
+      La regola: <b>usa lo stack quando puoi</b> (variabili locali normali — automatico e sicuro), <b>usa l'heap
+      quando devi</b>. Serve l'heap quando: un dato deve <b>vivere oltre</b> la funzione che lo crea; non conosci la
+      <b>dimensione in anticipo</b> (ma per questo c'è già <code>std::vector</code>, che usa l'heap <em>per</em>
+      te!); o gestisci il polimorfismo con puntatori base (Cap. 11). <mark>Nel C++ moderno, però, raramente usi
+      <code>new</code> a mano</mark>: strutture come <code>vector</code> e gli <b>smart pointer</b> gestiscono l'heap
+      per te, in sicurezza. Ma capire cosa c'è sotto è essenziale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>new e delete</h2>
+
+  <p class="lead">
+    Gli strumenti «grezzi» per l'heap. <code>new</code> chiede memoria e ne restituisce l'<b>indirizzo</b> (un
+    puntatore, Cap. 7); <code>delete</code> la restituisce. Ogni <code>new</code> vuole il suo <code>delete</code>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">new e delete <span class="tag">alloca · usa · libera</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="ty">int</span><span class="op">*</span> <span class="nm">p</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">int</span>(<span class="nm">42</span>);   <span class="cm">// alloca un int sull'heap, p ne è l'indirizzo</span>
+
+<span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="op">*</span><span class="nm">p</span>;         <span class="cm">// 42  (dereferenzia, Cap. 7)</span>
+
+<span class="kw">delete</span> <span class="nm">p</span>;               <span class="cm">// LIBERA la memoria: senza, resta occupata (fuga!)</span>
+<span class="nm">p</span> <span class="op">=</span> <span class="kw">nullptr</span>;             <span class="cm">// buona pratica: azzera dopo delete</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">new int(42)</span></dt>
+        <dd>chiede all'heap spazio per un <code>int</code>, ci mette 42, e restituisce il suo <b>indirizzo</b>. Lo
+            salvi in un <b>puntatore</b> (<code>int* p</code>). Da qui usi <code>*p</code> per accedere al dato.</dd>
+        <dt><span class="mono">delete p</span></dt>
+        <dd>restituisce all'heap la memoria puntata da <code>p</code>. <mark>Ogni <code>new</code> DEVE avere
+            esattamente un <code>delete</code></mark>: né zero (fuga di memoria), né due (doppia liberazione, crash).</dd>
+        <dt>le regole di ferro</dt>
+        <dd>dopo <code>delete</code>, il puntatore è «penzolante» (Cap. 7): azzeralo (<code>p = nullptr</code>) per
+            non usarlo per sbaglio. E <b>non usare mai</b> memoria dopo averla liberata. Sono regole facili da
+            enunciare e <b>difficili da rispettare</b> in programmi complessi — ecco il problema che RAII risolve.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Le fughe di memoria</h2>
+
+  <p class="lead">
+    Il bug più famoso del C++: dimenticare un <code>delete</code>. La memoria allocata resta occupata per sempre,
+    inutilizzabile. In un programma che gira a lungo, le fughe si accumulano finché non lo esauriscono.
+  </p>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> La fuga di memoria (memory leak)</div>
+    <div class="term" style="margin:.3rem auto .8rem">
+      <div class="t-head file">bug!</div>
+      <pre><span class="ty">void</span> <span class="fn">funzione</span>() {
+    <span class="ty">int</span><span class="op">*</span> <span class="nm">p</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">int</span>(<span class="nm">42</span>);
+    <span class="cm">// ... uso p ...</span>
+    <span class="cm">// manca il delete p!  →  la memoria resta allocata per sempre</span>
+}   <span class="cm">// p (il puntatore) sparisce, ma la memoria sull'heap NO: è persa</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Alla fine della funzione, il puntatore <code>p</code> (che stava sullo stack) sparisce — ma la memoria che
+      puntava, sull'heap, <b>resta allocata e ora è irraggiungibile</b>: nessuno ha più il suo indirizzo per
+      liberarla. È persa. <mark>Una fuga per volta sembra innocua, ma in un ciclo o in un server che gira per
+      giorni, le fughe divorano la RAM</mark> finché il programma (o il sistema) crolla. E il peggio: spesso non dà
+      errori evidenti, cresce silenziosamente. È difficilissimo da tracciare a mano — motivo per cui il C++ moderno
+      ha inventato un modo per <b>non doverci pensare</b>.
+    </p>
+  </div>
+
+  <div class="widget" id="w-mem">
+    <div class="w-head">
+      <span>Heap: liberare, dimenticare (fuga), o smart pointer</span>
+      <span class="hint">alloca e vedi cosa succede</span>
+    </div>
+    <div class="w-stage" style="min-height:180px">
+      <div id="wmm-view" style="padding:1rem"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.5rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn" id="wmm-del">new + delete (corretto)</button>
+      <button class="w-btn" id="wmm-leak">new senza delete (fuga)</button>
+      <button class="w-btn" id="wmm-smart">unique_ptr (auto)</button>
+      <button class="w-btn" id="wmm-reset">↺</button>
+    </div>
+    <div class="w-readout" id="wmm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>RAII: l'idea chiave del C++</h2>
+
+  <p class="lead">
+    Ecco l'idea che, da sola, giustifica lo studio del C++. <b>RAII</b> («Resource Acquisition Is Initialization»)
+    lega la vita di una <b>risorsa</b> (memoria, file, connessione) alla vita di un <b>oggetto</b> sullo stack. Così
+    la pulizia diventa <b>automatica e garantita</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📐</span> Il costruttore prende, il distruttore restituisce</div>
+    <p style="margin-bottom:0">
+      Ricorda costruttore e distruttore (Cap. 10): il costruttore parte alla creazione dell'oggetto, il distruttore
+      alla sua distruzione — e sullo stack, la distruzione è <b>automatica e certa</b> (quando l'oggetto esce
+      dall'ambito). L'idea di <b>RAII</b>: <mark>un oggetto <b>acquisisce</b> una risorsa nel costruttore e la
+      <b>rilascia</b> nel distruttore</mark>. Metti l'oggetto sullo stack, e la risorsa viene liberata
+      <b>automaticamente</b> quando l'oggetto muore — anche se il programma esce per un errore (un'eccezione,
+      Cap. 14)! Non c'è più bisogno di ricordarsi il <code>delete</code>: <b>lo fa il distruttore</b>, sempre, con
+      certezza. È il ponte tra il controllo del C++ e la sicurezza. Tutta la libreria standard è costruita su RAII:
+      <code>std::vector</code>, <code>std::string</code>, i file — tutti liberano le loro risorse da soli nel
+      distruttore. <mark>RAII è il motivo per cui il C++ moderno può essere sicuro <em>senza</em> un garbage
+      collector.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Smart pointer</h2>
+
+  <p class="lead">
+    RAII applicato ai puntatori: gli <b>smart pointer</b> sono oggetti che «avvolgono» un puntatore all'heap e ne
+    fanno il <code>delete</code> <b>automaticamente</b> nel loro distruttore. La memoria dinamica, senza i rischi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">std::unique_ptr <span class="tag">un puntatore che si pulisce da solo</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">esempio.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;memory&gt;</span>          <span class="cm">// per gli smart pointer</span>
+
+<span class="ty">void</span> <span class="fn">funzione</span>() {
+    <span class="ns">std</span>::unique_ptr<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="nm">p</span> <span class="op">=</span> <span class="ns">std</span>::make_unique<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(<span class="nm">42</span>);
+
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="op">*</span><span class="nm">p</span>;   <span class="cm">// 42  (si usa come un puntatore normale)</span>
+
+}   <span class="cm">// niente delete! Alla fine, p (sullo stack) si distrugge e libera l'heap DA SOLO</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">std::unique_ptr&lt;int&gt;</span></dt>
+        <dd>uno «smart pointer»: possiede <b>in esclusiva</b> un dato sull'heap, e quando <em>lui</em> viene
+            distrutto (esce dall'ambito), <b>libera automaticamente</b> la memoria. <mark>Zero fughe: il
+            <code>delete</code> è garantito dal distruttore (RAII!)</mark>. Richiede <code>#include &lt;memory&gt;</code>.</dd>
+        <dt><span class="mono">std::make_unique&lt;int&gt;(42)</span></dt>
+        <dd>il modo moderno e sicuro di creare uno <code>unique_ptr</code>: alloca sull'heap e lo affida allo smart
+            pointer, in un colpo. (Si evita di scrivere <code>new</code> a mano.)</dd>
+        <dt>e <span class="mono">std::shared_ptr</span></dt>
+        <dd>l'altro smart pointer principale: permette a <b>più</b> puntatori di condividere lo stesso dato,
+            liberandolo quando <b>l'ultimo</b> sparisce (conta i riferimenti). Utile per la condivisione;
+            <code>unique_ptr</code> per il possesso esclusivo (più leggero, da preferire quando basta).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>La regola d'oro del C++ moderno: <b>non usare quasi mai <code>new</code>/<code>delete</code> a
+      mano</b></mark>. Usa <code>std::vector</code> per le collezioni, <code>std::unique_ptr</code>/
+      <code>make_unique</code> per il possesso singolo, <code>std::shared_ptr</code> per la condivisione. Così hai
+      la memoria dinamica <b>senza</b> le fughe e i crash — la sicurezza di un linguaggio con garbage collector, con
+      la velocità del C++. I puntatori grezzi restano importanti da <em>capire</em> (e da leggere nel codice
+      esistente), ma nel tuo codice nuovo: smart pointer.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Laboratorio: un puntatore intelligente</h2>
+
+  <p class="lead">
+    Vediamo RAII con i nostri occhi: una classe che stampa quando nasce e quando muore, gestita da uno smart
+    pointer. Osserverai la pulizia automatica avvenire da sola, al momento giusto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il programma <code>raii.cpp</code> <span class="tag">la pulizia automatica in azione</span></div>
+    <div class="term" style="margin:1rem auto .6rem">
+      <div class="t-head file">raii.cpp</div>
+      <pre><span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;memory&gt;</span>
+
+<span class="kw">class</span> <span class="fn">Risorsa</span> {
+<span class="kw">public</span>:
+    <span class="fn">Risorsa</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Risorsa acquisita\n"</span>; }
+    <span class="op">~</span><span class="fn">Risorsa</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Risorsa rilasciata\n"</span>; }   <span class="cm">// distruttore</span>
+    <span class="ty">void</span> <span class="fn">usa</span>() { <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Uso la risorsa\n"</span>; }
+};
+
+<span class="ty">int</span> <span class="fn">main</span>() {
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Inizio\n"</span>;
+    {
+        <span class="ns">std</span>::unique_ptr<span class="op">&lt;</span><span class="fn">Risorsa</span><span class="op">&gt;</span> <span class="nm">r</span> <span class="op">=</span> <span class="ns">std</span>::make_unique<span class="op">&lt;</span><span class="fn">Risorsa</span><span class="op">&gt;</span>();
+        <span class="nm">r</span><span class="op">-&gt;</span><span class="fn">usa</span>();
+    }   <span class="cm">// r esce dall'ambito qui: il distruttore parte DA SOLO</span>
+    <span class="ns">std</span>::<span class="ns">cout</span> <span class="op">&lt;&lt;</span> <span class="st">"Fine\n"</span>;
+    <span class="kw">return</span> <span class="nm">0</span>;
+}</pre>
+    </div>
+    <div class="f-note">
+      Output:
+      <div class="term" style="margin:.8rem auto 0">
+        <div class="t-head">Output</div>
+        <pre><span class="out">Inizio
+Risorsa acquisita
+Uso la risorsa
+<span class="hl">Risorsa rilasciata</span>     ← automatico, alla chiusura del blocco { }
+Fine</span></pre>
+      </div>
+      Osserva: «Risorsa rilasciata» compare <b>da sola</b>, appena il blocco <code>{ }</code> si chiude — senza che
+      abbiamo scritto un solo <code>delete</code>. <mark>Lo smart pointer <code>r</code>, distruggendosi, ha
+      liberato la Risorsa: RAII in azione</mark>. E funzionerebbe anche se dentro il blocco fosse scoppiato un
+      errore (Cap. 14): il distruttore parte comunque. Questa è la garanzia che rende il C++ moderno sicuro.
+      Confronta mentalmente con <code>new</code>/<code>delete</code> a mano: qui <b>non puoi dimenticare</b> di
+      liberare, perché non devi farlo tu. Compila con <code>g++ raii.cpp -o raii</code>.
+    </div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>Stack</b>: variabili locali, pulizia <b>automatica</b> (fine ambito), veloce ma limitato. <b>Heap</b>:
+          memoria dinamica, che <b>tu</b> allochi e liberi, sopravvive finché vuoi (§12.1).</li>
+      <li><code>new</code> alloca sull'heap (dà un puntatore), <code>delete</code> libera. <mark>Ogni new un solo
+          delete</mark> (§12.2). Dimenticarlo = <b>fuga di memoria</b> (§12.3).</li>
+      <li><b>RAII</b>: un oggetto acquisisce una risorsa nel costruttore e la rilascia nel distruttore →
+          <mark>pulizia automatica e garantita</mark>, anche con errori (§12.4).</li>
+      <li>Gli <b>smart pointer</b> (<code>unique_ptr</code> + <code>make_unique</code>, <code>shared_ptr</code>)
+          applicano RAII ai puntatori: heap sicuro, zero fughe. <b>Regola: niente new/delete a mano</b> nel C++
+          moderno (§12.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai domato la memoria — l'ostacolo più temuto del C++ — e visto come il linguaggio moderno lo trasforma in
+    qualcosa di sicuro con RAII. Ora torniamo a due pilastri della potenza del C++ che abbiamo sfiorato: il codice
+    <b>generico</b> e la sua ricchissima libreria. Nel <strong>Capitolo 13</strong> vediamo i <b>template</b> — come
+    scrivere codice che funziona per <em>qualsiasi</em> tipo (è così che <code>std::vector&lt;int&gt;</code> e
+    <code>vector&lt;string&gt;</code> nascono da un solo codice) — e la <b>STL</b>, la Standard Template Library:
+    contenitori (<code>map</code>, <code>set</code>) e algoritmi pronti (<code>sort</code>, <code>find</code>) che
+    ti fanno fare in una riga ciò che a mano richiederebbe pagine. È dove il C++ moderno mostra tutta la sua
+    produttività.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <b>stack</b> e <b>heap</b>? Chi si occupa di liberare la memoria in ciascun caso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Cos'è una <b>fuga di memoria</b>? Nel codice <code>int* p = new int(5);</code> senza <code>delete</code>, cosa
+      resta «perso» alla fine della funzione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Spiega con parole tue l'idea di <b>RAII</b>. Perché garantisce la pulizia anche se il programma esce per un
+      errore?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Perché nel C++ moderno si preferisce <code>std::unique_ptr</code> (con <code>make_unique</code>) a
+      <code>new</code>/<code>delete</code> a mano? Qual è il vantaggio pratico?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      Lo <b>stack</b> ospita le variabili locali ed è gestito <b>automaticamente</b>: la memoria è liberata quando
+      la variabile esce dal suo ambito (nessuno sforzo da parte tua). L'<b>heap</b> è memoria dinamica che <b>tu</b>
+      allochi (<code>new</code>) e <b>tu</b> devi liberare (<code>delete</code>): sopravvive finché non la rilasci
+      esplicitamente. Stack = automatico; heap = manuale (o gestito da smart pointer/vector).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      Una <b>fuga di memoria</b> è memoria allocata sull'heap che non viene mai liberata. Nel codice dato, alla fine
+      della funzione il <b>puntatore <code>p</code></b> (sullo stack) sparisce, ma la memoria che puntava, sull'heap,
+      <b>resta allocata e ora è irraggiungibile</b> (nessuno ha più il suo indirizzo per liberarla): è persa fino
+      alla chiusura del programma. In un ciclo/server, tante fughe esauriscono la RAM.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      <b>RAII</b>: legare una risorsa (memoria, file…) alla vita di un oggetto — acquisirla nel <b>costruttore</b>,
+      rilasciarla nel <b>distruttore</b>. Mettendo l'oggetto sullo stack, il distruttore viene chiamato
+      <b>automaticamente</b> alla fine dell'ambito. Garantisce la pulizia anche con un errore perché, quando
+      un'eccezione «sbroglia» lo stack, i distruttori degli oggetti locali <b>vengono comunque eseguiti</b> — quindi
+      la risorsa viene rilasciata in ogni caso.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      Perché <code>std::unique_ptr</code> applica RAII: <b>libera automaticamente</b> la memoria quando esce
+      dall'ambito, quindi <b>non puoi dimenticare il <code>delete</code></b> (niente fughe) né liberare due volte
+      (niente crash). Il vantaggio pratico: la sicurezza di un linguaggio con garbage collector, senza rinunciare
+      alla velocità e al controllo del C++. Il compilatore e RAII fanno il lavoro noioso e rischioso per te.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.3 — heap: delete corretto / fuga / smart pointer
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('wmm-view');
+  if (!view) return;
+  const out = document.getElementById('wmm-out');
+  let blocks = [];   // {freed:bool, leaked:bool}
+  let msg = 'Premi un pulsante per allocare memoria sull\'heap in tre modi diversi e vedere cosa succede a fine funzione.';
+
+  const set = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+  set('wmm-del', () => { blocks.push({ state: 'freed' }); msg = '<code>new</code> alloca un blocco, poi <code>delete</code> lo <b style="color:var(--green)">libera</b>. Corretto: la memoria torna disponibile.'; draw(); });
+  set('wmm-leak', () => { blocks.push({ state: 'leaked' }); msg = '<code>new</code> senza <code>delete</code>: a fine funzione il blocco resta <b style="color:var(--warm)">occupato e irraggiungibile</b> — <mark>fuga di memoria!</mark> Ripeti e guarda le fughe accumularsi.'; draw(); });
+  set('wmm-smart', () => { blocks.push({ state: 'smart' }); msg = '<code>make_unique</code>: lo smart pointer <b style="color:var(--accent)">libera da solo</b> a fine ambito (RAII). Sicuro come il delete manuale, ma <mark>impossibile dimenticarlo</mark>.'; draw(); });
+  set('wmm-reset', () => { blocks = []; msg = 'Heap ripulito.'; draw(); });
+
+  function draw() {
+    const leaks = blocks.filter(b => b.state === 'leaked').length;
+    let cells = blocks.map(b => {
+      const c = b.state === 'leaked' ? 'var(--warm)' : (b.state === 'smart' ? 'var(--accent)' : 'var(--green)');
+      const lbl = b.state === 'leaked' ? '🕳 persa' : (b.state === 'smart' ? '✓ auto' : '✓ liberata');
+      const filled = b.state === 'leaked';
+      return `<div style="display:inline-block; width:70px; margin:3px; text-align:center">
+        <div style="height:42px; border:2px solid ${c}; border-radius:7px; background:${filled ? 'color-mix(in srgb,' + c + ' 30%,transparent)' : 'transparent'}; display:grid; place-items:center; font-size:1.1rem">${filled ? '▓' : '░'}</div>
+        <div style="font-size:.68rem; color:${c}; margin-top:.15rem">${lbl}</div>
+      </div>`;
+    }).join('') || '<span style="color:var(--ink-faint)">heap vuoto</span>';
+    view.innerHTML = `<div style="color:var(--ink-soft); font-size:.8rem; margin-bottom:.4rem">HEAP (memoria dinamica)</div>
+      <div>${cells}</div>
+      <div style="margin-top:.7rem; font-family:var(--mono); font-size:.9rem">fughe attive: <b style="color:${leaks ? 'var(--warm)' : 'var(--green)'}">${leaks}</b></div>`;
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' + msg + '</div>';
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
