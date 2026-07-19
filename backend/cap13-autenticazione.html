@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Autenticazione e sicurezza — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Autenticazione e sicurezza</h1>
+    <p class="standfirst">
+      Finora la nostra API è stata «aperta»: chiunque può creare, leggere e cancellare qualsiasi dato. Va bene per
+      imparare, ma nessuna applicazione reale funziona così. Serve sapere <b>chi</b> sta facendo una richiesta
+      (autenticazione) e <b>cosa gli è permesso</b> (autorizzazione). È il tema più delicato del backend, perché qui
+      si custodiscono le identità e i segreti degli utenti: sbagliare significa mettere a rischio persone reali. In
+      questo capitolo affrontiamo i pilastri, in modo difensivo e corretto: perché l'identità è un problema (§13.1),
+      come conservare le password <b>senza mai salvarle in chiaro</b> — l'hashing (§13.2); come riconoscere un utente
+      tra una richiesta e l'altra con i <b>token</b> (§13.3); come FastAPI struttura tutto questo con <b>OAuth2</b>
+      (§13.4); e come <b>proteggere le rotte</b> perché solo gli utenti autenticati vi accedano (§13.5). <mark>Sono le
+      pratiche che distinguono un giocattolo da un'applicazione di cui ci si può fidare.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il problema dell'identità (§13.1), l'<b>hashing</b> delle password (§13.2), i <b>token</b> e JWT (§13.3),
+      <b>OAuth2</b> in FastAPI (§13.4), <b>proteggere le rotte</b> (§13.5). Nel laboratorio (§13.6) costruisci un flusso
+      di login con token.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: qui si proteggono persone reali</div>
+    <p style="margin-bottom:0">
+      La sicurezza non è una funzionalità «in più»: è una <b>responsabilità</b>. I dati che custodisci — password,
+      messaggi, informazioni personali — appartengono a persone che si fidano di te. <mark>Un errore qui non è un bug
+      qualsiasi: può esporre gli account e la privacy degli utenti.</mark> Per questo esistono pratiche consolidate,
+      da seguire sempre — mai improvvisare la sicurezza. Impararle è un dovere, oltre che una competenza molto
+      richiesta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Il problema dell'identità</h2>
+
+  <p class="lead">
+    Ricordi che HTTP è <b>stateless</b> (Cap. 2): ogni richiesta è indipendente, il server non «ricorda» le
+    precedenti. Ma allora, se un utente fa il login e poi chiede la sua pagina, come fa il server a sapere che è
+    ancora lui? Questo è il problema dell'identità.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Autenticazione vs autorizzazione</div>
+    <p style="margin-bottom:0">
+      Due parole simili, due concetti distinti: <b>autenticazione</b> = «<mark>chi sei?</mark>» (verificare
+      l'identità, es. con email + password); <b>autorizzazione</b> = «<mark>cosa puoi fare?</mark>» (verificare i
+      permessi, es. «solo l'autore può cancellare il proprio post»). Prima ti autentichi (dimostri chi sei), poi il
+      server autorizza (o nega) le tue azioni. Il flusso tipico: l'utente fa <b>login</b> una volta; il server gli dà
+      una «prova d'identità» (un <b>token</b>, §13.3); l'utente allega quella prova a <b>ogni</b> richiesta successiva,
+      così il server lo riconosce senza richiedere la password ogni volta.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Password: mai in chiaro</h2>
+
+  <p class="lead">
+    La regola d'oro assoluta, non negoziabile: <b>non salvare mai le password in chiaro</b> nel database. Se lo
+    facessi, chiunque riesca a leggere il database (un attacco, un errore, un dipendente disonesto) avrebbe subito
+    <b>tutte</b> le password dei tuoi utenti — che spesso le riutilizzano altrove.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔒</span> L'hashing: una direzione sola</div>
+    <p>
+      La soluzione è l'<b>hashing</b>: si applica alla password una funzione matematica speciale che la trasforma in
+      una stringa apparentemente casuale (l'<b>hash</b>), con una proprietà cruciale: <mark>è <b>a senso unico</b> —
+      dalla password ottieni l'hash, ma dall'hash <b>non</b> puoi risalire alla password.</mark> Nel database salvi
+      solo l'<b>hash</b>, mai la password.
+    </p>
+    <p style="margin-bottom:0">
+      Come si verifica il login, allora? Quando l'utente inserisce la password, la <b>si hasha di nuovo</b> e si
+      confronta il risultato con l'hash salvato: se combaciano, la password è giusta. <mark>Il server verifica la
+      password senza mai conservarla.</mark> Anche se qualcuno rubasse il database, troverebbe solo hash inutili.
+    </p>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Non tutti gli hash sono adatti — usa quelli giusti</div>
+    <p style="margin-bottom:0">
+      Per le password si usano algoritmi <b>lenti e con «sale»</b>, pensati apposta, come <b>bcrypt</b> o
+      <b>Argon2</b> — <mark>non</mark> algoritmi veloci come MD5 o SHA-1 (inadatti alle password). Il «sale» (salt) è
+      un valore casuale aggiunto a ogni password prima dell'hash, così due utenti con la stessa password ottengono
+      hash diversi, e si vanificano gli attacchi con tabelle precalcolate. <mark>Non implementare l'hashing a mano</mark>:
+      usa una libreria collaudata. In Python, <code>passlib</code> con bcrypt: <code>pip install "passlib[bcrypt]"</code>.
+    </p>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">hashing e verifica con passlib</div>
+    <pre><span class="kw">from</span> passlib.context <span class="kw">import</span> CryptContext
+
+pwd <span class="op">=</span> <span class="fn">CryptContext</span>(schemes<span class="op">=</span>[<span class="st">"bcrypt"</span>], deprecated<span class="op">=</span><span class="st">"auto"</span>)
+
+<span class="cm"># al momento della registrazione: salva SOLO l'hash</span>
+hash_salvato <span class="op">=</span> pwd.<span class="fn">hash</span>(<span class="st">"password_segreta"</span>)
+<span class="cm"># -> "$2b$12$Kx9...."  (una stringa che NON rivela la password)</span>
+
+<span class="cm"># al login: verifica senza mai conservare la password</span>
+pwd.<span class="fn">verify</span>(<span class="st">"password_segreta"</span>, hash_salvato)   <span class="cm"># -> True</span>
+pwd.<span class="fn">verify</span>(<span class="st">"sbagliata"</span>, hash_salvato)          <span class="cm"># -> False</span></pre>
+  </div>
+
+  <div class="widget" id="w-hash">
+    <div class="w-head">
+      <span>Hashing di una password (dimostrativo)</span>
+      <span class="hint">una direzione sola: password → hash</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:440px; margin:0 auto; text-align:left">
+        <div style="display:flex; gap:.4rem; align-items:center; margin-bottom:.6rem">
+          <label style="color:var(--ink-soft); font-size:.9rem; min-width:70px">password</label>
+          <input type="text" id="ha-pw" value="tigre2024" style="flex:1; padding:.45rem .6rem; border:1px solid var(--ink-soft); border-radius:7px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+        <div style="display:flex; gap:.4rem; align-items:flex-start">
+          <label style="color:var(--ink-soft); font-size:.9rem; min-width:70px; padding-top:.4rem">hash salvato</label>
+          <div id="ha-hash" style="flex:1; padding:.45rem .6rem; border:1px dashed var(--green); border-radius:7px; background:color-mix(in srgb, var(--green) 8%, transparent); color:var(--ink); font-family:var(--mono); font-size:.82rem; word-break:break-all; min-height:1.4em"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="ha-go">calcola hash</button>
+      <button class="btn ghost" id="ha-rev">prova a «tornare indietro»</button>
+    </div>
+    <div class="w-readout" id="ha-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>Token e JWT</h2>
+
+  <p class="lead">
+    Dopo il login, il server deve riconoscere l'utente nelle richieste successive senza richiedere ogni volta la
+    password. Lo fa consegnandogli un <b>token</b>: una «tessera» temporanea che l'utente allega a ogni richiesta.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il flusso a token <span class="tag">login → token → richieste autenticate</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>1 · <b>login</b></dt>
+        <dd>l'utente invia email + password una volta. Il server verifica (con l'hash, §13.2) e, se è corretto,
+            <b>genera un token</b> e glielo restituisce.</dd>
+        <dt>2 · <b>il token</b></dt>
+        <dd>una stringa firmata che «certifica» l'identità e ha una <b>scadenza</b>. Il formato standard è il <b>JWT</b>
+            (JSON Web Token): contiene dati (es. l'id utente) e una <b>firma</b> del server. <mark>La firma impedisce
+            di falsificarlo</mark>: solo il server, con la sua chiave segreta, può crearne di validi.</dd>
+        <dt>3 · <b>richieste autenticate</b></dt>
+        <dd>a ogni richiesta successiva, l'utente allega il token nell'header
+            <code>Authorization: Bearer &lt;token&gt;</code>. <mark>Il server verifica la firma</mark> e sa chi è,
+            senza rivedere la password. Alla scadenza, si rifà il login.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Perché un token e non «ricordare» il login lato server? Perché così il server resta <b>stateless</b> (Cap. 2):
+      non deve tenere in memoria chi è loggato — <mark>tutta l'informazione è nel token firmato</mark>, che il client
+      porta con sé. Questo rende il backend più semplice da scalare. <b>Attenzione</b>: il contenuto di un JWT è
+      <em>leggibile</em> (è solo firmato, non cifrato), quindi <mark>non metterci mai dati sensibili</mark>; e va
+      trasmesso solo su HTTPS (Cap. 17), per non farlo intercettare.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>OAuth2 in FastAPI</h2>
+
+  <p class="lead">
+    FastAPI offre strumenti già pronti per l'autenticazione a token, seguendo lo standard <b>OAuth2</b> (uno schema
+    diffuso per gestire login e permessi). Non devi inventare nulla: usi i suoi mattoni.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">auth.py — l'endpoint di login (semplificato)</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> Depends, HTTPException
+<span class="kw">from</span> fastapi.security <span class="kw">import</span> OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+oauth2 <span class="op">=</span> <span class="fn">OAuth2PasswordBearer</span>(tokenUrl<span class="op">=</span><span class="st">"login"</span>)   <span class="cm"># dove si ottiene il token</span>
+
+<span class="op">@</span>app.<span class="fn">post</span>(<span class="st">"/login"</span>)
+<span class="kw">def</span> <span class="fn">login</span>(form: OAuth2PasswordRequestForm <span class="op">=</span> <span class="fn">Depends</span>()):
+    utente <span class="op">=</span> <span class="fn">trova_utente</span>(form.username)
+    <span class="kw">if</span> <span class="kw">not</span> utente <span class="kw">or</span> <span class="kw">not</span> pwd.<span class="fn">verify</span>(form.password, utente.hash):
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">401</span>, detail<span class="op">=</span><span class="st">"Credenziali errate"</span>)
+    token <span class="op">=</span> <span class="fn">crea_token</span>({<span class="st">"sub"</span>: utente.email})       <span class="cm"># genera il JWT firmato</span>
+    <span class="kw">return</span> {<span class="st">"access_token"</span>: token, <span class="st">"token_type"</span>: <span class="st">"bearer"</span>}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">I mattoni OAuth2 di FastAPI <span class="tag">OAuth2PasswordBearer · RequestForm</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">OAuth2PasswordBearer(tokenUrl="login")</span></dt>
+        <dd>configura lo schema: dice a FastAPI (e a <code>/docs</code>) che i token si ottengono da
+            <code>/login</code> e viaggiano nell'header <code>Authorization: Bearer</code>. Lo useremo come dipendenza
+            per proteggere le rotte (§13.5).</dd>
+        <dt><span class="mono">OAuth2PasswordRequestForm = Depends()</span></dt>
+        <dd>riceve <b>username</b> e <b>password</b> dal form di login, in modo standard. FastAPI ti consegna un
+            oggetto <code>form</code> con quei campi.</dd>
+        <dt>la verifica</dt>
+        <dd>trovi l'utente, controlli la password con <code>pwd.verify</code> (§13.2); se fallisce, <b>401
+            Unauthorized</b> (Cap. 2). Se va bene, generi e restituisci il <b>token</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Il token JWT si crea e si verifica con una libreria dedicata (es. <code>python-jose</code> o
+      <code>pyjwt</code>): funzioni come <code>crea_token</code> firmano un dizionario con una <b>chiave segreta</b>
+      del server e una scadenza. <mark>Quella chiave segreta è il cuore della sicurezza</mark>: va tenuta fuori dal
+      codice (variabile d'ambiente, come le password del database, Cap. 9). Non serve memorizzare ogni dettaglio: la
+      cosa importante è capire il <b>flusso</b> e sapere che FastAPI fornisce i pezzi standard.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Proteggere le rotte</h2>
+
+  <p class="lead">
+    Ecco dove tutto si unisce: rendere un endpoint accessibile <b>solo</b> agli utenti autenticati. Si fa con una
+    dipendenza (come <code>get_db</code>, Cap. 11) che estrae l'utente dal token — e blocca chi non ce l'ha.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">proteggere un endpoint</div>
+    <pre><span class="kw">def</span> <span class="fn">utente_corrente</span>(token: <span class="ty">str</span> <span class="op">=</span> <span class="fn">Depends</span>(oauth2)):
+    dati <span class="op">=</span> <span class="fn">verifica_token</span>(token)         <span class="cm"># controlla la firma e la scadenza</span>
+    <span class="kw">if</span> dati <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code<span class="op">=</span><span class="nm">401</span>, detail<span class="op">=</span><span class="st">"Non autenticato"</span>)
+    <span class="kw">return</span> <span class="fn">trova_utente</span>(dati[<span class="st">"sub"</span>])
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/profilo"</span>)
+<span class="kw">def</span> <span class="fn">profilo</span>(utente <span class="op">=</span> <span class="fn">Depends</span>(utente_corrente)):   <span class="cm"># protetto!</span>
+    <span class="kw">return</span> {<span class="st">"email"</span>: utente.email, <span class="st">"nome"</span>: utente.nome}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La dipendenza che protegge <span class="tag">Depends(utente_corrente)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">utente_corrente(token = Depends(oauth2))</span></dt>
+        <dd>una dipendenza che <b>estrae il token</b> dall'header, ne <b>verifica firma e scadenza</b>, e restituisce
+            l'utente. <mark>Se il token manca o è invalido, solleva <b>401</b></mark> e la richiesta è respinta.</dd>
+        <dt><span class="mono">def profilo(utente = Depends(utente_corrente))</span></dt>
+        <dd>basta aggiungere questa dipendenza a un endpoint per <b>proteggerlo</b>: FastAPI eseguirà prima
+            <code>utente_corrente</code>. <mark>Se l'utente non è autenticato, la funzione <code>profilo</code> non
+            viene nemmeno eseguita</mark> — esattamente come la validazione dei tipi (Cap. 5).</dd>
+        <dt>bonus: hai l'utente pronto</dt>
+        <dd>dentro l'endpoint, <code>utente</code> è già l'utente loggato: lo usi per l'<b>autorizzazione</b>
+            («questo utente può modificare <em>questo</em> dato?») e per personalizzare la risposta.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Riconosci il pattern? È la stessa <b>dependency injection</b> di <code>get_db</code>: una funzione che
+      «prepara» qualcosa e lo inietta nell'endpoint. <mark>Qui prepara l'<b>identità</b> dell'utente.</mark> Aggiungere
+      <code>Depends(utente_corrente)</code> a un endpoint è tutto ciò che serve per proteggerlo — pulito, riusabile,
+      difficile da dimenticare. È l'eleganza di FastAPI applicata alla sicurezza.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Laboratorio: login con token</h2>
+
+  <p class="lead">
+    Simuliamo il flusso completo: un utente registrato (con la sua password già «hashata»), il login che rilascia un
+    token, e un endpoint protetto <code>/profilo</code> raggiungibile <b>solo</b> con quel token. Prova ad accedere
+    <b>senza</b> token per vedere il 401.
+  </p>
+
+  <div class="widget" id="w-auth">
+    <div class="w-head">
+      <span>Flusso di login con token</span>
+      <span class="hint">login → token → rotta protetta</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:460px; margin:0 auto; text-align:left">
+        <div style="font-size:.82rem; color:var(--ink-soft); margin-bottom:.5rem">Utente registrato: <b>anna@x.com</b> · password corretta: <b>tigre2024</b></div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:.45rem .6rem; align-items:center; font-size:.9rem; margin-bottom:.6rem">
+          <label style="color:var(--ink-soft)">email</label>
+          <input type="text" id="au-email" value="anna@x.com" style="padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          <label style="color:var(--ink-soft)">password</label>
+          <input type="text" id="au-pw" value="tigre2024" style="padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+        </div>
+        <div style="display:flex; gap:.4rem; align-items:center; margin-bottom:.5rem">
+          <span style="font-size:.82rem; color:var(--ink-soft); min-width:70px">token</span>
+          <div id="au-token" style="flex:1; font-family:var(--mono); font-size:.78rem; color:var(--ink-soft); word-break:break-all">— (fai il login)</div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn" id="au-login">POST /login</button>
+      <button class="btn" id="au-prof">GET /profilo (col token)</button>
+      <button class="btn ghost" id="au-noauth">GET /profilo (senza token)</button>
+      <button class="btn ghost" id="au-logout">logout</button>
+    </div>
+    <div class="w-readout" id="au-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li><b>Autenticazione</b> = «chi sei»; <b>autorizzazione</b> = «cosa puoi fare». HTTP è stateless: serve una
+          «prova d'identità» a ogni richiesta (§13.1).</li>
+      <li>Le password si salvano <b>solo come hash</b> (a senso unico), con algoritmi appositi (bcrypt/Argon2) e
+          «sale». Mai in chiaro. Usa una libreria (§13.2).</li>
+      <li>Dopo il login, il server dà un <b>token</b> (JWT firmato, con scadenza); il client lo allega come
+          <code>Authorization: Bearer</code>. Non contiene segreti; solo su HTTPS (§13.3).</li>
+      <li>FastAPI offre i mattoni <b>OAuth2</b> per login e token (§13.4); si <b>protegge una rotta</b> con una
+          dipendenza <code>Depends(utente_corrente)</code> che dà 401 se il token manca/è invalido (§13.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    La nostra applicazione ora sa <b>chi</b> sono gli utenti e li protegge. Le manca ancora una capacità pratica molto
+    richiesta: gestire i <b>file</b>. Un'immagine del profilo, un allegato, un documento — dove si mettono? Non nel
+    database (vedremo perché). Nel <strong>Capitolo 14</strong> conosciamo lo <b>storage di oggetti</b> e <b>MinIO</b>,
+    il modo giusto di caricare, conservare e servire file in un backend — l'ultimo pezzo applicativo prima di
+    impacchettare e mettere online tutto ciò che abbiamo costruito.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      Distingui con un esempio <b>autenticazione</b> e <b>autorizzazione</b>. Quale delle due risponde alla domanda
+      «questo utente può cancellare <em>questo</em> post?».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Perché non si devono salvare le password in chiaro? Come fa il server a verificare il login se conserva solo
+      l'<b>hash</b> e non la password?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Nel flusso a token: dopo il login, dove viaggia il token nelle richieste successive? Perché il server non ha
+      bisogno di «ricordare» chi è loggato?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Perché non si devono mettere dati sensibili (es. una password) dentro un JWT? E perché la chiave segreta con cui
+      si firmano i token non va scritta nel codice?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-8"><span class="secnum">Sezione 13.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      <b>Autenticazione</b>: verificare l'identità — es. accedere con email e password dimostra «sono Anna».
+      <b>Autorizzazione</b>: verificare i permessi — es. «Anna può cancellare solo i <em>propri</em> post, non quelli
+      altrui». La domanda «questo utente può cancellare <em>questo</em> post?» riguarda l'<b>autorizzazione</b> (i
+      permessi su una risorsa specifica), e presuppone che l'autenticazione sia già avvenuta.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      Perché se il database venisse letto da un malintenzionato, avrebbe subito tutte le password degli utenti (che
+      spesso le riusano su altri siti): un danno enorme. Salvando solo l'<b>hash</b> (a senso unico), un eventuale
+      furto del database non rivela le password. Al login, il server <b>ri-hasha</b> la password inserita e la
+      confronta con l'hash salvato: se combaciano, la password è corretta — il tutto <b>senza mai conservare</b> la
+      password in chiaro.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      Il token viaggia nell'header <code>Authorization: Bearer &lt;token&gt;</code> di ogni richiesta successiva. Il
+      server non deve ricordare chi è loggato perché <b>tutta l'informazione è nel token firmato</b> che il client
+      porta con sé: il server verifica la firma (con la sua chiave segreta) e sa chi è. Questo mantiene il backend
+      <b>stateless</b> — più semplice e scalabile.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Perché il contenuto di un JWT è <b>firmato ma non cifrato</b>: chiunque abbia il token può <b>leggerne</b> i
+      dati (sono codificati, non segreti). Quindi non vi si mettono password o informazioni riservate — solo dati non
+      sensibili come l'id o l'email. La <b>chiave segreta</b> di firma non va nel codice/git perché è ciò che permette
+      di <b>creare token validi</b>: se trapelasse, un attaccante potrebbe forgiare token e impersonare qualsiasi
+      utente. Va in una variabile d'ambiente, come tutti i segreti (Cap. 9).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.2 + §13.6 — hashing (a senso unico) e flusso login/token
+   NB: hash "finto" deterministico solo a scopo didattico, NON è bcrypt reale.
+   ========================================================================= */
+(function () {
+  // ---- pseudo-hash deterministico (didattico, non crittografico) ----
+  function pseudoHash(s) {
+    let h1 = 0x811c9dc5, h2 = 0x1234567;
+    for (let i = 0; i < s.length; i++) {
+      h1 = (h1 ^ s.charCodeAt(i)) >>> 0; h1 = (h1 * 0x01000193) >>> 0;
+      h2 = ((h2 << 5) - h2 + s.charCodeAt(i)) >>> 0;
+    }
+    let out = '';
+    let x = (h1 ^ h2) >>> 0;
+    const chars = 'abcdef0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    for (let i = 0; i < 22; i++) { x = (x * 1103515245 + 12345 + i) >>> 0; out += chars[x % chars.length]; }
+    return '$2b$12$' + out;
+  }
+
+  // ---------- WIDGET HASH ----------
+  const hashEl = document.getElementById('ha-hash');
+  if (hashEl) {
+    const pwEl = document.getElementById('ha-pw');
+    const out = document.getElementById('ha-out');
+    function calc() {
+      hashEl.textContent = pseudoHash(pwEl.value);
+      out.innerHTML = '<div style="color:var(--green); font-size:.9rem; text-align:left">✅ La password è diventata un <b>hash</b>: è questo che si salva nel database, mai la password. Cambia anche una lettera della password e l\'hash cambia completamente.</div>';
+    }
+    document.getElementById('ha-go').addEventListener('click', calc);
+    pwEl.addEventListener('input', calc);
+    document.getElementById('ha-rev').addEventListener('click', function () {
+      out.innerHTML = '<div style="color:var(--warm); font-size:.9rem; text-align:left">🚫 Impossibile: l\'hashing è <b>a senso unico</b>. Dall\'hash <b>non si può</b> ricostruire la password — è proprio questo che protegge gli utenti. Al login si ri-hasha la password inserita e si confrontano gli hash.</div>';
+    });
+    calc();
+  }
+
+  // ---------- WIDGET AUTH ----------
+  const outA = document.getElementById('au-out');
+  if (outA) {
+    const emailEl = document.getElementById('au-email');
+    const pwEl2 = document.getElementById('au-pw');
+    const tokEl = document.getElementById('au-token');
+    const UTENTE = { email: 'anna@x.com', nome: 'Anna', hash: pseudoHash('tigre2024') };
+    let token = null;
+
+    function note(c, html) {
+      const col = c === 'warm' ? 'var(--warm)' : (c === 'blue' ? 'var(--accent)' : 'var(--green)');
+      return '<div style="color:' + col + '; font-size:.92rem; text-align:left">' + html + '</div>';
+    }
+
+    document.getElementById('au-login').addEventListener('click', function () {
+      const email = emailEl.value.trim();
+      const pw = pwEl2.value;
+      if (email !== UTENTE.email || pseudoHash(pw) !== UTENTE.hash) {
+        token = null; tokEl.textContent = '— (login fallito)';
+        outA.innerHTML = note('warm', '<b>POST /login → 401</b> Credenziali errate. Il server ha ri-hashato la password e non combacia con l\'hash salvato (o l\'email non esiste). Prova con <b>tigre2024</b>.');
+        return;
+      }
+      token = 'eyJhbGciOiJIUzI1NiJ9.' + pseudoHash(email + Date_stub()).slice(7) + '.firma';
+      tokEl.textContent = token;
+      outA.innerHTML = note('green', '<b>POST /login → 200</b> Password verificata! Il server ha emesso un <b>token JWT</b> firmato (qui sopra). Ora usalo per accedere a <code>/profilo</code>.');
+    });
+    document.getElementById('au-prof').addEventListener('click', function () {
+      if (!token) { outA.innerHTML = note('warm', '<b>GET /profilo → 401</b> Nessun token: fai prima il login.'); return; }
+      outA.innerHTML = note('green', '<b>GET /profilo → 200</b> (header <code>Authorization: Bearer …</code>). Token valido → il server riconosce l\'utente e risponde:<br><span style="font-family:var(--mono); font-size:.85rem">{ "email": "anna@x.com", "nome": "Anna" }</span>');
+    });
+    document.getElementById('au-noauth').addEventListener('click', function () {
+      outA.innerHTML = note('warm', '<b>GET /profilo → 401 Unauthorized</b> Senza token, la dipendenza <code>utente_corrente</code> respinge la richiesta: la funzione dell\'endpoint <b>non viene nemmeno eseguita</b>. È la rotta protetta al lavoro.');
+    });
+    document.getElementById('au-logout').addEventListener('click', function () {
+      token = null; tokEl.textContent = '— (fai il login)';
+      outA.innerHTML = note('blue', 'Logout: il client dimentica il token. Per riaccedere alle rotte protette dovrà rifare il login.');
+    });
+
+    // sostituto di Date (non usiamo Date reale): varia il token in modo deterministico
+    let _ctr = 7919;
+    function Date_stub() { _ctr = (_ctr * 31 + 17) % 1000000; return String(_ctr); }
+
+    outA.innerHTML = note('', 'Fai <b>POST /login</b> con la password giusta (<b>tigre2024</b>) per ottenere un token, poi <b>GET /profilo</b>. Prova anche la password sbagliata (→401) e l\'accesso <b>senza token</b> (→401).');
+  }
+})();
+</script>
+</body>
+</html>

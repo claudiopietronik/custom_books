@@ -24,7 +24,7 @@ Internet** e **Il Web**.
 - [x] 10 — SQLAlchemy: l'ORM
 - [x] 11 — FastAPI + database
 - [x] 12 — Relazioni tra tabelle
-- [ ] 13 — Autenticazione e sicurezza
+- [x] 13 — Autenticazione e sicurezza
 - [ ] 14 — File e storage con MinIO
 - [ ] 15 — Docker: impacchettare l'app
 - [ ] 16 — Docker Compose
