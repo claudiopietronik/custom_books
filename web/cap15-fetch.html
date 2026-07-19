@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · Fetch: dati dal web — Il Web</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>Fetch: dati dal web</h1>
+    <p class="standfirst">
+      Le tue pagine ora reagiscono all'utente, ma vivono chiuse in se stesse: tutto ciò che mostrano è scritto dentro
+      di loro. Le vere applicazioni, invece, <b>chiedono dati al mondo</b>: il meteo di oggi, l'elenco dei tuoi
+      messaggi, i prezzi aggiornati, i risultati di una ricerca. Questi dati vivono su un <b>server</b>, e
+      JavaScript li va a prendere — mentre la pagina è aperta, senza ricaricarla — con una funzione chiamata
+      <code>fetch</code>. C'è però una novità concettuale: chiedere dati a un server <b>richiede tempo</b> (viaggiano
+      per la rete), e JavaScript non si ferma ad aspettare. Devi imparare a lavorare con operazioni che
+      <b>finiranno più tardi</b>: le <b>promise</b>, e la sintassi <b>async/await</b> che le rende leggibili.
+      <mark>È l'ultimo tassello: con fetch, le tue pagine si collegano a tutto l'ecosistema del web.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Parlare con un server da JS e cos'è un'<b>API</b> (§15.1), <code>fetch</code> e le <b>promise</b> (§15.2), la
+      sintassi <b>async/await</b> (§15.3), <b>mostrare</b> i dati nel DOM (§15.4). Nel laboratorio (§15.5) «chiami»
+      un'API e mostri i risultati.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: qui la pagina si apre al mondo</div>
+    <p style="margin-bottom:0">
+      Ogni app che conosci — social, meteo, mappe, e-commerce, chat — è per lo più una pagina che <b>chiede dati</b> a
+      dei server e li mostra bene. <mark>Imparare <code>fetch</code> è imparare a costruire applicazioni «vere», non
+      solo pagine isolate.</mark> E le promise / async-await che incontri qui non servono solo per la rete: sono il
+      modo in cui JavaScript gestisce <b>qualsiasi</b> operazione che richiede tempo. È un concetto che ti seguirà
+      per tutta la programmazione web, front-end e (col libro di Backend) anche lato server.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Parlare con un server da JS</h2>
+
+  <p class="lead">
+    Nel libro «Reti» hai visto che il browser chiede pagine a un server via HTTP. Qui succede lo stesso, ma è
+    <b>JavaScript</b> a fare la richiesta, in background, per ottenere <b>dati</b> (non un'intera pagina) e usarli
+    subito. Il punto di contatto con il server si chiama <b>API</b>.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> API e JSON: chiedere dati, non pagine</div>
+    <p>
+      Un'<b>API</b> (Application Programming Interface) è un indirizzo, esposto da un server, pensato per essere
+      chiamato <b>da un programma</b> invece che da un umano. Tu chiami un URL tipo
+      <code>https://api.esempio.com/meteo?citta=Roma</code> e il server, invece di una pagina HTML, ti risponde con
+      <b>dati puri</b>, di solito in formato <b>JSON</b>.
+    </p>
+    <p style="margin-bottom:0">
+      Il <b>JSON</b> è un modo testuale di rappresentare dati, praticamente identico agli oggetti e agli array di
+      JavaScript: <code>{ "citta": "Roma", "gradi": 28, "cielo": "sereno" }</code>. <mark>È la lingua franca degli
+      scambi di dati sul web</mark>: leggibile da umani, facilissimo da usare in JS. Quando <code>fetch</code> ti
+      riporta la risposta, la converti da JSON a un normale oggetto JavaScript e la usi come già sai.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>fetch e le promise</h2>
+
+  <p class="lead">
+    <code>fetch(url)</code> lancia una richiesta a un server. Ma la risposta non arriva all'istante: viaggia per la
+    rete. Quindi <code>fetch</code> non ti restituisce i dati — ti restituisce una <b>promise</b>: una «promessa»
+    che i dati arriveranno (o che qualcosa andrà storto).
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">⏳</span> Cos'è una promise</div>
+    <p style="margin-bottom:0">
+      Una <b>promise</b> è un oggetto che rappresenta un risultato <b>non ancora pronto</b>. È come lo scontrino del
+      guardaroba: non è il cappotto, ma è la garanzia che potrai ritirarlo. <mark>JavaScript non si blocca ad
+      aspettare</mark>: va avanti col resto, e quando la risposta arriva, esegue il codice che hai «prenotato». Una
+      promise finisce in due modi: <b>mantenuta</b> (i dati sono arrivati) o <b>respinta</b> (c'è stato un errore, es.
+      niente rete). Questo modo di lavorare — «parti ora, finisci dopo» — si chiama <b>asincrono</b>.
+    </p>
+  </div>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">fetch con le promise (stile .then)</div>
+    <pre><span class="fn">fetch</span>(<span class="st">"https://api.esempio.com/dati"</span>)
+    .<span class="fn">then</span>(<span class="nm">risposta</span> <span class="op">=&gt;</span> <span class="nm">risposta</span>.<span class="fn">json</span>())   <span class="cm">// converti la risposta da JSON</span>
+    .<span class="fn">then</span>(<span class="nm">dati</span> <span class="op">=&gt;</span> {
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="nm">dati</span>);              <span class="cm">// qui i dati sono pronti!</span>
+    })
+    .<span class="fn">catch</span>(<span class="nm">errore</span> <span class="op">=&gt;</span> {
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="st">"Qualcosa è andato storto:"</span>, <span class="nm">errore</span>);
+    });</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il vocabolario delle promise <span class="tag">.then · .json() · .catch</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.then(funzione)</span></dt>
+        <dd>«<b>quando</b> la promise è pronta, esegui questa funzione col risultato». È l'equivalente asincrono di
+            «poi fai questo». Puoi concatenarne più d'uno.</dd>
+        <dt><span class="mono">.json()</span></dt>
+        <dd>la prima cosa che fai con la risposta: <b>convertire</b> il testo JSON in un oggetto JavaScript usabile.
+            <mark>Anche questa restituisce una promise</mark> (la lettura richiede un attimo), per questo c'è un
+            secondo <code>.then</code>.</dd>
+        <dt><span class="mono">.catch(funzione)</span></dt>
+        <dd>«<b>se</b> qualcosa va storto (rete assente, server in errore), esegui questo». La gestione degli errori:
+            fondamentale, perché la rete <b>può sempre fallire</b>.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questo stile «<code>.then</code> concatenati» funziona, ma con più passaggi diventa difficile da leggere. Per
+      questo JavaScript offre una sintassi più pulita per la stessa cosa: <b>async/await</b>. È quella che userai
+      d'ora in poi — vediamola.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>async / await</h2>
+
+  <p class="lead">
+    <b>async/await</b> è «zucchero sintattico»: fa esattamente ciò che fanno le promise, ma ti fa scrivere codice
+    asincrono come se fosse <b>lineare</b>, dall'alto in basso — molto più facile da leggere.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">lo stesso fetch, con async/await</div>
+    <pre><span class="kw">async</span> <span class="kw">function</span> <span class="fn">caricaDati</span>() {
+    <span class="kw">try</span> {
+        <span class="kw">const</span> <span class="nm">risposta</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">"https://api.esempio.com/dati"</span>);
+        <span class="kw">const</span> <span class="nm">dati</span> <span class="op">=</span> <span class="kw">await</span> <span class="nm">risposta</span>.<span class="fn">json</span>();
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="nm">dati</span>);          <span class="cm">// i dati, pronti, su una riga pulita</span>
+    } <span class="kw">catch</span> (<span class="nm">errore</span>) {
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="st">"Errore:"</span>, <span class="nm">errore</span>);
+    }
+}
+<span class="fn">caricaDati</span>();</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">async / await / try-catch <span class="tag">codice asincrono che si legge dall'alto in basso</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">async function …</span></dt>
+        <dd>marchia una funzione come <b>asincrona</b>: dentro di essa potrai usare <code>await</code>. Praticamente,
+            ogni funzione che fa <code>fetch</code> sarà <code>async</code>.</dd>
+        <dt><span class="mono">await</span></dt>
+        <dd>«<b>aspetta</b> che questa promise sia pronta, poi dammi il risultato». <mark>Fa sembrare l'asincrono
+            sincrono</mark>: la riga dopo un <code>await</code> parte solo quando il dato è arrivato — ma senza
+            bloccare il resto della pagina. Niente più <code>.then</code> annidati: scrivi
+            <code>const dati = await …</code> e prosegui.</dd>
+        <dt><span class="mono">try { … } catch (errore) { … }</span></dt>
+        <dd>il modo di gestire gli errori in stile async/await (rimpiazza <code>.catch</code>): prova il blocco
+            <code>try</code>; se qualcosa fallisce, salta al <code>catch</code>. <mark>Avvolgi sempre i tuoi
+            <code>fetch</code> in un try/catch</mark>: la rete è inaffidabile per natura.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Confronta i due esempi (§15.2 e §15.3): fanno la <b>stessa identica cosa</b>. Ma la versione async/await si
+      legge come una lista di passi ordinati, ed è quella che vedrai in quasi tutto il codice moderno. Le promise
+      restano «sotto il cofano»; <code>await</code> è solo il modo comodo di aspettarle.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Mostrare i dati nella pagina</h2>
+
+  <p class="lead">
+    Ottenere i dati è metà dell'opera; l'altra metà è <b>mostrarli</b> — e qui torna tutto il Cap. 13. Ricevi un
+    array di oggetti JSON, lo <b>scorri</b>, e per ciascuno <b>crei</b> un elemento nel DOM.
+  </p>
+
+  <div class="term" style="margin:1.2rem auto">
+    <div class="t-head file">dai dati alla pagina</div>
+    <pre><span class="kw">async</span> <span class="kw">function</span> <span class="fn">mostraUtenti</span>() {
+    <span class="kw">const</span> <span class="nm">risposta</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">"https://api.esempio.com/utenti"</span>);
+    <span class="kw">const</span> <span class="nm">utenti</span> <span class="op">=</span> <span class="kw">await</span> <span class="nm">risposta</span>.<span class="fn">json</span>();   <span class="cm">// es. [{nome:"Anna"}, {nome:"Luca"}]</span>
+
+    <span class="kw">const</span> <span class="nm">lista</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">querySelector</span>(<span class="st">"#lista"</span>);
+    <span class="kw">for</span> (<span class="kw">const</span> <span class="nm">u</span> <span class="kw">of</span> <span class="nm">utenti</span>) {        <span class="cm">// scorri i dati (Cap. 13)</span>
+        <span class="kw">const</span> <span class="nm">li</span> <span class="op">=</span> <span class="bi">document</span>.<span class="fn">createElement</span>(<span class="st">"li"</span>);
+        <span class="nm">li</span>.<span class="nm">textContent</span> <span class="op">=</span> <span class="nm">u</span>.<span class="nm">nome</span>;      <span class="cm">// usa i campi dell'oggetto</span>
+        <span class="nm">lista</span>.<span class="fn">appendChild</span>(<span class="nm">li</span>);        <span class="cm">// attaccalo alla pagina</span>
+    }
+}</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔗</span> Tutto il libro converge qui</div>
+    <p style="margin-bottom:0">
+      Guarda quanti pezzi si uniscono in questa funzioncina: <b>fetch + await</b> (questo capitolo) per prendere i
+      dati, <b>for…of</b> (Cap. 13) per scorrerli, <b>createElement + appendChild</b> (Cap. 13) per costruire la
+      pagina, l'accesso ai <b>campi dell'oggetto</b> (<code>u.nome</code>, Cap. 11). <mark>Chiedere dati e
+      trasformarli in interfaccia: è, in sostanza, ciò che fa il 90% delle applicazioni web.</mark> Il resto sono
+      dettagli e raffinatezze.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio: dati da un'API</h2>
+
+  <p class="lead">
+    Simuliamo una chiamata a un'API: premi «carica», e — dopo una breve attesa (come un vero viaggio di rete) —
+    compaiono i dati, trasformati in card. Nota lo stato «<b>caricamento…</b>»: è ciò che fai vedere all'utente
+    <em>mentre</em> la promise non è ancora pronta.
+  </p>
+
+  <div class="widget" id="w-fetch">
+    <div class="w-head">
+      <span>Chiamata a un'API (simulata)</span>
+      <span class="hint">fetch → attesa → mostra i dati</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem; min-height:170px">
+      <div id="wf-stato" style="text-align:center; color:var(--ink-soft); padding:1.4rem 0">Premi «carica dati» per chiedere all'API.</div>
+      <div id="wf-lista" style="display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center"></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem">
+      <button class="btn" id="wf-load">carica dati</button>
+      <button class="btn ghost" id="wf-fail">simula errore di rete</button>
+      <button class="btn ghost" id="wf-reset">reset</button>
+    </div>
+    <div class="w-readout" id="wf-out"></div>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>Un'<b>API</b> è un indirizzo che restituisce <b>dati</b> (non pagine), di solito in <b>JSON</b> — quasi
+          identico agli oggetti JS (§15.1).</li>
+      <li><code>fetch(url)</code> avvia una richiesta e restituisce una <b>promise</b>: un risultato che arriverà
+          <b>più tardi</b> (lavoro <b>asincrono</b>) (§15.2).</li>
+      <li><b>async/await</b>: <code>const r = await fetch(…)</code>, <code>const dati = await r.json()</code> —
+          codice asincrono che si legge dall'alto in basso. Avvolgilo in <b>try/catch</b> (§15.3).</li>
+      <li><b>Mostrare</b>: scorri i dati con <code>for…of</code> e costruisci il DOM con
+          <code>createElement</code>/<code>appendChild</code> (§15.4).</li>
+      <li>Mostra sempre uno stato di <b>caricamento</b> e gestisci gli <b>errori</b>: la rete può fallire (§15.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    E con questo hai in mano <b>tutti e tre i linguaggi</b> e le loro tecniche fondamentali: struttura (HTML),
+    aspetto (CSS), comportamento e dati (JavaScript, DOM, eventi, fetch). Sai fare una pagina, renderla bella e
+    responsive, farla reagire all'utente e collegarla a dei dati. È il momento di <b>metterlo tutto insieme</b> in
+    qualcosa di completo e tuo. Nel <strong>Capitolo 16</strong>, il progetto finale: costruiamo da zero una piccola
+    <b>applicazione web</b> vera — una lista di cose da fare che <b>ricorda i dati</b> anche quando chiudi la pagina.
+    Tutto ciò che hai imparato, in un unico progetto.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Cos'è un'API e in che formato restituisce solitamente i dati? Perché quel formato è comodo per JavaScript?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Perché <code>fetch</code> restituisce una <b>promise</b> invece dei dati veri e propri? Cosa significa
+      «asincrono»?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Scrivi una funzione <code>async</code> chiamata <code>prendi</code> che fa <code>fetch</code> di
+      <code>"https://api.x.com/cose"</code>, ne legge il JSON e lo stampa in console, con gestione dell'errore in
+      try/catch.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Perché è importante avvolgere un <code>fetch</code> in un <code>try/catch</code> (o usare
+      <code>.catch</code>)?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      Un'API è un indirizzo (URL) esposto da un server e pensato per essere chiamato da un <b>programma</b>, che
+      restituisce <b>dati</b> anziché una pagina. Il formato usuale è <b>JSON</b>. È comodo per JavaScript perché la
+      sua sintassi è quasi identica a quella di oggetti e array JS: dopo <code>.json()</code> i dati diventano un
+      normale oggetto/array che usi con <code>.campo</code> e <code>for…of</code>, senza conversioni faticose.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      Perché i dati devono <b>viaggiare per la rete</b>, e questo richiede tempo. JavaScript non si ferma ad
+      aspettare (bloccherebbe tutta la pagina): <code>fetch</code> ritorna subito una <b>promise</b>, cioè la
+      «promessa» che il risultato arriverà. «<b>Asincrono</b>» significa proprio questo: l'operazione parte ora ma
+      finisce <b>più tardi</b>, e nel frattempo il resto del programma continua. Col risultato reagisci quando è
+      pronto (via <code>.then</code> o <code>await</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">JS</div>
+      <pre><span class="kw">async</span> <span class="kw">function</span> <span class="fn">prendi</span>() {
+    <span class="kw">try</span> {
+        <span class="kw">const</span> <span class="nm">r</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">"https://api.x.com/cose"</span>);
+        <span class="kw">const</span> <span class="nm">dati</span> <span class="op">=</span> <span class="kw">await</span> <span class="nm">r</span>.<span class="fn">json</span>();
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="nm">dati</span>);
+    } <span class="kw">catch</span> (<span class="nm">err</span>) {
+        <span class="bi">console</span>.<span class="fn">log</span>(<span class="st">"Errore:"</span>, <span class="nm">err</span>);
+    }
+}</pre>
+    </div>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      Perché la <b>rete può sempre fallire</b>: connessione assente, server giù, risposta malformata. Senza
+      gestione, l'errore «rompe» il codice e l'utente resta magari su un eterno «caricamento…» senza spiegazioni. Con
+      <code>try/catch</code> (o <code>.catch</code>) <b>intercetti</b> il problema e puoi reagire con eleganza — per
+      esempio mostrando un messaggio «Impossibile caricare i dati, riprova». È la differenza tra un'app robusta e una
+      fragile.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719a"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.5 — chiamata API simulata: mostra lo stato caricamento, poi i dati
+   (una "promise" locale con ritardo: nessuna rete reale, ma lo stesso flusso async)
+   ========================================================================= */
+(function () {
+  const stato = document.getElementById('wf-stato');
+  if (!stato) return;
+  const lista = document.getElementById('wf-lista');
+  const out   = document.getElementById('wf-out');
+
+  const DATI = [
+    { nome: 'Anna',  citta: 'Roma',    emoji: '🎨' },
+    { nome: 'Luca',  citta: 'Milano',  emoji: '⚽' },
+    { nome: 'Sara',  citta: 'Napoli',  emoji: '📚' },
+    { nome: 'Marco', citta: 'Torino',  emoji: '🎸' }
+  ];
+
+  // una "finta fetch": restituisce una promise che si risolve dopo un ritardo,
+  // esattamente come una richiesta di rete vera (ma i dati sono locali).
+  function fintaFetch(deveFallire) {
+    return new Promise(function (resolve, reject) {
+      let t = 0;
+      // conteggio del ritardo senza Date/random: ~900ms via requestAnimationFrame
+      function tick() {
+        t += 16;
+        if (t >= 900) { deveFallire ? reject(new Error('Failed to fetch')) : resolve(DATI); }
+        else { requestAnimationFrame(tick); }
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  async function carica(deveFallire) {
+    lista.innerHTML = '';
+    stato.style.display = 'block';
+    stato.style.color = 'var(--ink-soft)';
+    stato.innerHTML = '⏳ caricamento… <span style="font-size:.85rem">(la promise non è ancora pronta)</span>';
+    setNote('<b>await fetch(...)</b> in corso: la promise è «in attesa». Intanto la pagina resta reattiva.');
+    try {
+      const dati = await fintaFetch(deveFallire);   // aspetta la promise
+      stato.style.display = 'none';
+      for (const u of dati) {                        // scorri i dati (Cap. 13)
+        const card = document.createElement('div');  // creali nel DOM
+        card.style.cssText = 'background:var(--paper); border:1px solid var(--ink-soft); border-radius:10px; ' +
+          'padding:.7rem 1rem; min-width:120px; text-align:center';
+        card.innerHTML = '<div style="font-size:1.6rem">' + u.emoji + '</div>' +
+          '<div style="font-weight:700; color:var(--ink)">' + u.nome + '</div>' +
+          '<div style="font-size:.82rem; color:var(--ink-soft)">' + u.citta + '</div>';
+        lista.appendChild(card);
+      }
+      setNote('Promise <b>mantenuta</b>: i dati JSON sono arrivati e li ho trasformati in card con <code>createElement</code>/<code>appendChild</code>. Questo è il flusso completo di ogni app che carica dati.');
+    } catch (err) {
+      stato.style.display = 'block';
+      stato.style.color = '#c0392b';
+      stato.innerHTML = '⚠ ' + err.message + ' — impossibile caricare i dati. Riprova.';
+      setNote('Promise <b>respinta</b>: il <code>catch</code> ha intercettato l\'errore e ho mostrato un messaggio, invece di lasciare l\'utente bloccato. La rete può sempre fallire.');
+    }
+  }
+  function setNote(html) {
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('wf-load').addEventListener('click', function () { carica(false); });
+  document.getElementById('wf-fail').addEventListener('click', function () { carica(true); });
+  document.getElementById('wf-reset').addEventListener('click', function () {
+    lista.innerHTML = ''; stato.style.display = 'block'; stato.style.color = 'var(--ink-soft)';
+    stato.textContent = 'Premi «carica dati» per chiedere all\'API.'; out.innerHTML = '';
+  });
+})();
+</script>
+</body>
+</html>

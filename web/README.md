@@ -25,7 +25,7 @@ Contenuto originale scritto ex novo.
 - [x] 12 — Il DOM: la pagina come oggetti
 - [x] 13 — Manipolare il DOM
 - [x] 14 — Eventi: reagire all'utente
-- [ ] 15 — Fetch: dati dal web
+- [x] 15 — Fetch: dati dal web
 - [ ] 16 — Un progetto completo
 
 ## La collana

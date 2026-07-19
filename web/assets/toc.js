@@ -226,7 +226,7 @@ const TOC = [
     n: 15,
     titolo: "Fetch: dati dal web",
     file: "cap15-fetch.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Parlare con un server da JS" },
       { id: "s15-2", n: "15.2", t: "fetch e le promise" },
