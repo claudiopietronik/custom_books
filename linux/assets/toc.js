@@ -119,7 +119,7 @@ const TOC = [
     n: 8,
     titolo: "I processi",
     file: "cap08-processi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Cos'è un processo" },
       { id: "s8-2", n: "8.2", t: "Vederli: ps, top" },

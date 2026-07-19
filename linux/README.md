@@ -19,7 +19,7 @@ terminale di macOS, molto simile); spiegato al Cap. 1.
 - [x] 5 — Leggere e cercare nei file
 - [x] 6 — Permessi e proprietà
 - [x] 7 — Utenti e sudo
-- [ ] 8 — I processi
+- [x] 8 — I processi
 - [ ] 9 — Pipe e redirezione
 - [ ] 10 — Editor di testo
 - [ ] 11 — Installare software

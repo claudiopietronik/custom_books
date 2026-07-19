@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · I processi — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>I processi</h1>
+    <p class="standfirst">
+      Ogni volta che lanci un programma — un editor, un server, il browser, persino un comando — nasce un
+      <b>processo</b>: un'istanza del programma in esecuzione, con un suo identificatore, la sua fetta di memoria e di
+      processore. In un sistema Linux, in ogni istante, girano decine o centinaia di processi insieme. Saperli
+      <b>osservare</b> (chi sta girando? cosa consuma?) e <b>controllare</b> (fermare un programma bloccato, mandarne
+      uno in background) è una competenza pratica preziosa: è ciò che fai quando il computer «rallenta» e vuoi capire
+      perché, o quando un programma si pianta e devi chiuderlo. In questo capitolo: cos'è un processo (§8.1), come
+      vederli con <code>ps</code> e <code>top</code> (§8.2), come terminarli con <code>kill</code> (§8.3), e come
+      gestire l'esecuzione in <b>primo piano</b> o in <b>background</b> (§8.4). <mark>È la finestra su ciò che il tuo
+      sistema sta davvero facendo, momento per momento.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>processo</b> (§8.1), vederli con <b>ps</b> e <b>top</b> (§8.2), terminarli con <b>kill</b> (§8.3),
+      <b>primo piano e background</b> (§8.4). Nel laboratorio (§8.5) gestisci i processi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: prendere il controllo del sistema</div>
+    <p style="margin-bottom:0">
+      «Il computer è lento», «il programma non risponde», «cosa sta consumando tutta la CPU?»: sono situazioni
+      quotidiane, e la risposta è nei processi. <mark>Saperli ispezionare e gestire ti dà il controllo</mark> invece di
+      subire. Su un server, poi, è indispensabile: monitorare i processi è parte della gestione (l'hai sfiorato col
+      deploy nel libro «Backend»).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Cos'è un processo</h2>
+
+  <p class="lead">
+    Distinzione utile: un <b>programma</b> è un file sul disco (il software «a riposo»); un <b>processo</b> è quel
+    programma <b>in esecuzione</b> (il software «vivo», che sta girando). Lanciare un programma crea un processo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cos'è un processo <span class="tag">un programma vivo, con un PID</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>programma vs <b>processo</b></dt>
+        <dd>il <b>programma</b> è il file (es. <code>/usr/bin/firefox</code>); il <b>processo</b> è la sua esecuzione.
+            <mark>Dallo stesso programma puoi avere <b>più processi</b></mark> (più finestre del browser = più
+            processi).</dd>
+        <dt>il <b>PID</b> (Process ID)</dt>
+        <dd>ogni processo ha un <b>numero identificativo</b> univoco, il PID. <mark>È il modo per riferirsi a un
+            processo</mark> (per fermarlo, ispezionarlo). Come un «codice cliente» per ogni programma in esecuzione.</dd>
+        <dt>le <b>risorse</b></dt>
+        <dd>ogni processo usa <b>CPU</b> (quanto processore) e <b>memoria (RAM)</b>. <mark>Osservare questi consumi</mark>
+            ti dice cosa sta «pesando» sul sistema (§8.2).</dd>
+        <dt>processi «figli»</dt>
+        <dd>un processo può avviarne altri (i «figli»), formando una gerarchia. <mark>Tutto parte da un processo
+            iniziale</mark> del sistema. Non serve approfondire ora: ti basti sapere che i processi possono generarne
+            altri.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Un'immagine: il programma è la <b>ricetta</b> (sul foglio), il processo è il <b>piatto che stai cucinando</b>
+      (usa fornelli e ingredienti = CPU e memoria). <mark>Puoi cucinare la stessa ricetta più volte contemporaneamente</mark>
+      = più processi dallo stesso programma. Il PID è l'«etichetta» su ogni pentola per non confonderle.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>Vederli: ps, top</h2>
+
+  <p class="lead">
+    Due strumenti per vedere i processi: <code>ps</code> per una «fotografia» istantanea, <code>top</code> per un
+    monitor <b>dal vivo</b> che si aggiorna in continuazione.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — vedere i processi</div>
+    <pre><span class="c"># ps aux: elenca TUTTI i processi (una fotografia)</span>
+<span class="p">$</span> <span class="cmd">ps</span> <span class="ar">aux</span>
+<span class="out">USER   PID  %CPU %MEM  COMMAND
+anna   1234  2.1  1.5  firefox
+anna   5678  0.0  0.3  bash
+root    890  0.5  0.8  nginx</span>
+
+<span class="c"># top: monitor DAL VIVO, aggiornato in tempo reale (ordina per consumo)</span>
+<span class="p">$</span> <span class="cmd">top</span>
+<span class="c"># dentro top: q per uscire. Utile per vedere "chi sta consumando".</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">ps e top <span class="tag">fotografia vs monitor dal vivo</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">ps aux</span></dt>
+        <dd>elenca <b>tutti</b> i processi con utente, PID, consumo di CPU e memoria, e il comando. <mark>Una
+            «fotografia» del momento</mark>. Le lettere <code>aux</code> significano «tutti i processi, con dettagli»
+            (una delle poche opzioni «storiche» senza trattino).</dd>
+        <dt><span class="mono">top</span> (o <span class="mono">htop</span>)</dt>
+        <dd>un monitor <b>interattivo e dal vivo</b>: mostra i processi ordinati per consumo, aggiornandosi ogni pochi
+            secondi. <mark>Perfetto per vedere «chi sta rallentando il sistema» in tempo reale</mark>. Si esce con
+            <code>q</code>. <code>htop</code> è una versione più colorata e comoda (da installare, Cap. 11).</dd>
+        <dt>trovare un processo specifico</dt>
+        <dd>combinando con <code>grep</code> (Cap. 5): <code>ps aux | grep firefox</code> mostra solo i processi di
+            firefox. <mark>La pipe <code>|</code> (Cap. 9) è utilissima qui.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Le colonne più importanti da leggere: <b>PID</b> (per riferirti al processo), <b>%CPU</b> e <b>%MEM</b> (quanto
+      consuma), <b>COMMAND</b> (quale programma è). <mark>Se il sistema è lento, apri <code>top</code></mark> e guarda
+      in cima: il processo con %CPU alta è il «colpevole». Poi, se serve, lo puoi terminare (§8.3). È il primo gesto
+      diagnostico di ogni utente Linux.
+    </div>
+  </div>
+
+  <div class="widget" id="w-top">
+    <div class="w-head">
+      <span>Monitor dei processi (come top)</span>
+      <span class="hint">trova il processo impazzito e terminalo</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div class="term" style="margin:0 auto; max-width:100%"><div class="t-head">top</div><pre id="tp-table" style="margin:0; font-size:12px"></pre></div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap; align-items:center">
+      <span style="font-size:.85rem; color:var(--ink-soft)">kill</span>
+      <input type="text" id="tp-pid" placeholder="PID" style="width:70px; padding:.35rem .5rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono); text-align:center">
+      <button class="btn" id="tp-kill">kill &lt;PID&gt;</button>
+      <button class="btn ghost" id="tp-reset">reset</button>
+    </div>
+    <div class="w-readout" id="tp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Terminarli: kill</h2>
+
+  <p class="lead">
+    Quando un processo si blocca, «impazzisce» consumando tutto, o semplicemente vuoi fermarlo, usi <code>kill</code>:
+    invia al processo un <b>segnale</b> di terminazione, identificandolo col suo PID.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — terminare un processo</div>
+    <pre><span class="c"># trova il PID del processo (es. con ps o top)</span>
+<span class="p">$</span> <span class="cmd">ps</span> <span class="ar">aux</span> | <span class="cmd">grep</span> <span class="ar">firefox</span>
+<span class="out">anna  1234  ...  firefox</span>
+
+<span class="c"># chiedi al processo di chiudersi con garbo (segnale di default)</span>
+<span class="p">$</span> <span class="cmd">kill</span> <span class="ar">1234</span>
+
+<span class="c"># se non risponde, forzalo (segnale KILL, "-9"): l'ultima spiaggia</span>
+<span class="p">$</span> <span class="cmd">kill</span> <span class="fl">-9</span> <span class="ar">1234</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">kill e i segnali <span class="tag">kill (gentile) · kill -9 (forzato)</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">kill PID</span></dt>
+        <dd>invia il segnale di terminazione «gentile» (TERM): <mark>chiede al processo di chiudersi ordinatamente</mark>,
+            dandogli modo di salvare e ripulire. È il modo giusto di provare per primo.</dd>
+        <dt><span class="mono">kill -9 PID</span></dt>
+        <dd>il segnale KILL, <b>brutale</b>: <mark>termina il processo <b>all'istante</b>, senza dargli modo di
+            chiudersi bene</mark>. Usalo <b>solo</b> se il processo è davvero bloccato e non risponde al kill normale —
+            perché può lasciare dati a metà.</dd>
+        <dt>trovare il PID</dt>
+        <dd>prima di <code>kill</code> ti serve il PID: lo trovi con <code>ps aux | grep nome</code> o guardando in
+            <code>top</code>. <mark>C'è anche <code>killall nome</code></mark> che termina tutti i processi con un certo
+            nome (comodo ma da usare con attenzione).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      La sequenza corretta: <mark>prova prima <code>kill</code> (gentile); solo se non funziona, <code>kill -9</code>
+      (forzato)</mark>. Il nome «kill» suona drastico, ma in realtà invia un <b>segnale</b> — un messaggio — al
+      processo; il segnale di default è più un «per favore chiuditi» che un'esecuzione. Il <code>-9</code> invece è il
+      «chiudi e basta, subito». Riservalo ai casi disperati.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Primo piano e background</h2>
+
+  <p class="lead">
+    Quando lanci un comando che «occupa» il terminale (finché non finisce, non puoi digitare altro), sta girando in
+    <b>primo piano</b>. Ma puoi anche mandarlo in <b>background</b>, per liberare il terminale mentre lui continua a
+    lavorare.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Foreground e background <span class="tag">&amp; · Ctrl+C · Ctrl+Z · jobs</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>primo piano</b> (foreground)</dt>
+        <dd>il default: il comando «tiene» il terminale finché non finisce. <mark>Puoi interromperlo con
+            <code>Ctrl+C</code></mark> (invia il segnale di stop).</dd>
+        <dt><span class="mono">comando &amp;</span> — in background</dt>
+        <dd>aggiungendo <code>&amp;</code> alla fine, il comando parte in <b>background</b>: gira «dietro le quinte» e
+            <mark>il terminale resta libero</mark> per altri comandi. Utile per programmi lunghi.</dd>
+        <dt><span class="mono">Ctrl+Z</span> e <span class="mono">bg</span> / <span class="mono">fg</span></dt>
+        <dd><code>Ctrl+Z</code> <b>sospende</b> il comando in primo piano; poi <code>bg</code> lo fa ripartire in
+            background, <code>fg</code> lo riporta in primo piano. <mark>Un modo per «parcheggiare» un comando</mark>
+            senza chiuderlo.</dd>
+        <dt><span class="mono">jobs</span></dt>
+        <dd>elenca i comandi che hai in background/sospesi in quel terminale. <mark>Per non perderne traccia.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      A cosa serve il background? A far girare qualcosa di lungo (una copia enorme, un server di sviluppo) <b>senza
+      bloccare</b> il terminale. <mark>Nota però: i comandi in background muoiono se chiudi il terminale</mark>; per
+      farli sopravvivere (es. sui server) si usano strumenti come <code>nohup</code> o <code>tmux</code> (avanzati).
+      Per l'uso quotidiano, ti basta ricordare: <code>&amp;</code> per mandare in background, <code>Ctrl+C</code> per
+      fermare, <code>Ctrl+Z</code> per sospendere.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Laboratorio: gestire i processi</h2>
+
+  <p class="lead">
+    Proviamo a vedere, trovare e terminare processi — in sicurezza, avviando noi stessi un processo «finto» da
+    fermare.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro sui processi</div>
+    <pre><span class="c"># avvia un processo che dorme 300 secondi, in background (&amp;)</span>
+<span class="p">$</span> <span class="cmd">sleep</span> <span class="ar">300</span> &amp;
+<span class="out">[1] 4321</span>          <span class="c"># [numero job] PID: annota il PID (4321)</span>
+
+<span class="c"># vedi i tuoi processi in background</span>
+<span class="p">$</span> <span class="cmd">jobs</span>
+<span class="out">[1]+ Running  sleep 300 &amp;</span>
+
+<span class="c"># trovalo anche con ps</span>
+<span class="p">$</span> <span class="cmd">ps</span> <span class="ar">aux</span> | <span class="cmd">grep</span> <span class="ar">sleep</span>
+<span class="out">anna  4321  ...  sleep 300</span>
+
+<span class="c"># terminalo col suo PID (non serve aspettare 300 secondi!)</span>
+<span class="p">$</span> <span class="cmd">kill</span> <span class="ar">4321</span>
+<span class="out">[1]+ Terminated  sleep 300</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai avviato un processo (in <b>background</b> con <code>&amp;</code>), lo hai <b>trovato</b> (<code>jobs</code>,
+      <code>ps | grep</code>) e <b>terminato</b> col suo PID (<code>kill</code>). <mark>È esattamente il flusso che
+      userai quando un programma si blocca</mark>: individualo (con <code>ps</code>/<code>top</code>, guardando chi
+      consuma o non risponde), prendi il suo PID, e fermalo con <code>kill</code> (e <code>kill -9</code> solo se
+      necessario). Il comando <code>sleep</code>, che «non fa nulla per N secondi», è perfetto per esercitarsi senza
+      rischi. Nel prossimo capitolo affrontiamo uno dei concetti più eleganti e potenti di Linux, che hai già
+      intravisto con <code>ps aux | grep</code>: le <b>pipe</b> e la <b>redirezione</b> — come collegare i comandi tra
+      loro.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>processo</b> è un programma in esecuzione, con un <b>PID</b> univoco e un consumo di CPU/memoria. Dallo
+          stesso programma, più processi (§8.1).</li>
+      <li><b>Vederli</b>: <code>ps aux</code> (fotografia), <code>top</code> (monitor dal vivo, <code>q</code> per
+          uscire). Leggi PID, %CPU, %MEM, COMMAND (§8.2).</li>
+      <li><b>Terminarli</b>: <code>kill PID</code> (gentile), <code>kill -9 PID</code> (forzato, solo se bloccato).
+          Trova il PID con <code>ps</code>/<code>top</code> (§8.3).</li>
+      <li><b>Background</b>: <code>comando &amp;</code>; <code>Ctrl+C</code> ferma, <code>Ctrl+Z</code> sospende,
+          <code>jobs</code> elenca (§8.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Nell'esercizio hai scritto <code>ps aux | grep sleep</code>: quella barra verticale <code>|</code> ha «passato»
+    l'output di un comando a un altro. È la <b>pipe</b>, uno degli strumenti più geniali di Linux — e il tema del
+    <strong>Capitolo 9</strong>. Impareremo a <b>collegare i comandi</b> in catene (l'output di uno diventa l'input del
+    successivo) e a <b>redirigere</b> l'output su file. È la filosofia «tanti piccoli strumenti che si combinano» che
+    rende il terminale così potente.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra un <b>programma</b> e un <b>processo</b>? Cosa identifica in modo univoco un processo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Il computer è lento e vuoi capire quale programma sta consumando la CPU in tempo reale. Quale comando apri? Come
+      esci da esso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Un programma con PID 5555 si è bloccato. Quale comando provi <b>prima</b>, e quale usi solo se il primo non
+      funziona? Perché quest'ordine?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      Cosa fa aggiungere <code>&amp;</code> alla fine di un comando? E cosa fa <code>Ctrl+C</code> su un comando in
+      primo piano?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      Un <b>programma</b> è un file sul disco (il software «a riposo»); un <b>processo</b> è quel programma <b>in
+      esecuzione</b> (il software «vivo», che sta girando e usa CPU e memoria). Dallo stesso programma si possono avere
+      più processi. Un processo è identificato in modo univoco dal suo <b>PID</b> (Process ID), un numero assegnato dal
+      sistema.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      Apri <code>top</code> (o <code>htop</code> se installato): è un monitor <b>dal vivo</b> che mostra i processi
+      ordinati per consumo, aggiornandosi in tempo reale — quello in cima con %CPU alta è il «colpevole». Si esce
+      premendo <code>q</code> (quit).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      Provi <b>prima</b> <code>kill 5555</code> (segnale gentile, TERM): chiede al processo di chiudersi
+      ordinatamente. Solo <b>se non funziona</b> usi <code>kill -9 5555</code> (segnale KILL, forzato), che lo termina
+      brutalmente all'istante. Quest'ordine perché il <code>kill</code> gentile dà al processo la possibilità di
+      salvare e ripulire, mentre il <code>-9</code> lo interrompe senza preavviso (rischiando dati a metà): meglio
+      tenerlo come ultima spiaggia.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      Aggiungere <code>&amp;</code> alla fine di un comando lo fa partire in <b>background</b>: gira «dietro le quinte»
+      e il terminale resta <b>libero</b> per altri comandi (invece di restare «occupato» finché il comando non
+      finisce). <code>Ctrl+C</code> su un comando in primo piano lo <b>interrompe</b> (invia un segnale di stop),
+      terminandolo immediatamente.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.2 — monitor tipo top: elenco processi, kill per PID (trova l'impazzito)
+   ========================================================================= */
+(function () {
+  const tableEl = document.getElementById('tp-table');
+  if (!tableEl) return;
+  const pidEl = document.getElementById('tp-pid');
+  const out = document.getElementById('tp-out');
+
+  const BASE = [
+    { pid: 1234, cpu: 2.1, mem: 1.5, cmd: 'firefox' },
+    { pid: 5678, cpu: 0.0, mem: 0.3, cmd: 'bash' },
+    { pid: 890, cpu: 0.5, mem: 0.8, cmd: 'nginx' },
+    { pid: 4321, cpu: 98.7, mem: 4.2, cmd: 'calcolo-impazzito' },
+    { pid: 2020, cpu: 1.2, mem: 2.1, cmd: 'code' }
+  ];
+  let procs = BASE.map(function (p) { return Object.assign({}, p); });
+
+  function pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
+
+  function draw() {
+    let s = '<span class="hl">' + pad('PID', 7) + pad('%CPU', 7) + pad('%MEM', 7) + 'COMMAND</span>\n';
+    // ordina per CPU decrescente (come top)
+    const sorted = procs.slice().sort(function (a, b) { return b.cpu - a.cpu; });
+    s += sorted.map(function (p) {
+      const hot = p.cpu > 50;
+      const line = pad(p.pid, 7) + pad(p.cpu.toFixed(1), 7) + pad(p.mem.toFixed(1), 7) + p.cmd;
+      return hot ? '<span style="color:#ff8a8a">' + line + '  ← consuma tutto!</span>' : '<span class="out">' + line + '</span>';
+    }).join('\n');
+    tableEl.innerHTML = s;
+  }
+  function note(c, html) {
+    const col = c === 'warm' ? 'var(--warm)' : (c === 'green' ? 'var(--green)' : 'var(--ink-soft)');
+    return '<div style="color:' + col + '; font-size:.9rem; text-align:left">' + html + '</div>';
+  }
+
+  document.getElementById('tp-kill').addEventListener('click', function () {
+    const pid = parseInt((pidEl.value || '').trim(), 10);
+    const i = procs.findIndex(function (p) { return p.pid === pid; });
+    if (isNaN(pid)) { out.innerHTML = note('warm', 'Inserisci un PID (il numero della colonna PID).'); return; }
+    if (i < 0) { out.innerHTML = note('warm', '⚠ Nessun processo con PID ' + pid + '. Guarda la colonna PID nella tabella.'); return; }
+    const killed = procs[i];
+    procs.splice(i, 1); draw(); pidEl.value = '';
+    out.innerHTML = killed.cpu > 50
+      ? note('green', '✅ <b>kill ' + pid + '</b>: terminato <code>' + killed.cmd + '</code>, il processo impazzito che consumava il 98.7% di CPU! Il sistema respira di nuovo. Questo è il gesto diagnostico tipico: top → trova il colpevole → kill.')
+      : note('green', '✅ <b>kill ' + pid + '</b>: terminato <code>' + killed.cmd + '</code>. (Suggerimento: il vero «colpevole» qui è il processo con %CPU altissima — cercalo!)');
+  });
+  document.getElementById('tp-reset').addEventListener('click', function () {
+    procs = BASE.map(function (p) { return Object.assign({}, p); }); draw();
+    out.innerHTML = note('', 'Ripristinato. Il processo con %CPU altissima è quello «impazzito».');
+  });
+
+  draw();
+  out.innerHTML = note('', 'Questo è un monitor come <code>top</code>: processi ordinati per <b>%CPU</b>. Uno consuma il <b>98.7%</b> (in rosso): trovane il <b>PID</b> e scrivilo nel campo <code>kill</code> per terminarlo. È come fare pulizia quando il sistema è lento.');
+})();
+</script>
+</body>
+</html>
