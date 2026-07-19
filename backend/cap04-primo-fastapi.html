@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Il primo server con FastAPI — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="4">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 4</div>
+    <h1>Il primo server con FastAPI</h1>
+    <p class="standfirst">
+      È il momento che aspettavi: scriviamo un vero server. In poche righe di Python — grazie a <b>FastAPI</b>, il
+      framework che useremo per tutto il libro — creeremo un'applicazione che riceve richieste HTTP e risponde con
+      JSON. E la sorpresa più bella: FastAPI, a partire dal tuo codice, genera <b>da sola</b> una pagina di
+      documentazione interattiva dove puoi provare le tue API dal browser, senza scrivere una riga di front-end. In
+      questo capitolo capisci <b>cos'è</b> FastAPI e perché lo abbiamo scelto (§4.1), lo installi (§4.2), scrivi il
+      tuo <b>primo endpoint</b> smontandolo pezzo per pezzo (§4.3), avvii il server con <b>uvicorn</b> (§4.4) e
+      scopri la <b>documentazione automatica</b> (§4.5). <mark>Alla fine avrai un backend che gira sul tuo computer e
+      risponde davvero — il cuore attorno a cui, da qui in poi, aggiungeremo tutto il resto.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è FastAPI (§4.1), installazione (§4.2), il primo <b>endpoint</b> smontato (§4.3), avvio con <b>uvicorn</b>
+      (§4.4), la <b>documentazione automatica</b> a <code>/docs</code> (§4.5). Nel laboratorio (§4.6) scrivi ed
+      esegui il tuo «hello API».
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: è la spina dorsale del libro</div>
+    <p style="margin-bottom:0">
+      Da questo capitolo, ogni cosa che costruiremo — parametri, validazione, CRUD, database, autenticazione, upload
+      — sarà un'aggiunta a <b>questa</b> app FastAPI. <mark>Capire bene queste poche righe iniziali significa avere le
+      fondamenta di tutto.</mark> E FastAPI è tra le tecnologie backend più usate e amate del momento: impararlo è
+      una competenza spendibile davvero.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-1"><span class="secnum">Sezione 4.1</span>Cos'è FastAPI</h2>
+
+  <p class="lead">
+    Potremmo scrivere un server «a mano», gestendo noi ogni dettaglio di HTTP. Sarebbe un lavoro enorme e pieno di
+    errori. Un <b>framework</b> come FastAPI fa quel lavoro pesante al posto nostro, lasciandoci scrivere solo la
+    <b>logica</b> che ci interessa.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Un framework per costruire API in Python</div>
+    <p>
+      <b>FastAPI</b> è una libreria Python per costruire <b>API web</b>. Il suo compito: ricevere le richieste HTTP,
+      capire quale tua funzione deve rispondere, consegnarle i dati già pronti (convertiti da JSON), e reimpacchettare
+      la risposta. <mark>Tu scrivi funzioni Python normali; FastAPI le trasforma in endpoint HTTP.</mark>
+    </p>
+    <p style="margin-bottom:0">
+      Perché proprio FastAPI, tra i tanti? Tre motivi che toccherai con mano: <b>(1)</b> è <b>veloce da scrivere</b> —
+      un endpoint sono 3 righe; <b>(2)</b> usa i <b>tipi</b> di Python per <b>validare</b> automaticamente i dati in
+      arrivo (grazie a Pydantic, Cap. 6), risparmiandoti montagne di controlli manuali; <b>(3)</b> genera <b>da
+      solo</b> una documentazione interattiva. È moderno, molto usato in produzione, e ha una community enorme.
+    </p>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🔤</span> Un po' di vocabolario: ASGI, uvicorn</div>
+    <p style="margin-bottom:0">
+      FastAPI definisce <em>cosa</em> fa la tua app, ma non parla direttamente con la rete: per farlo serve un
+      <b>server ASGI</b>, cioè un programma che riceve le connessioni e le passa a FastAPI. Il più comune è
+      <b>uvicorn</b> (§4.4). Pensa a FastAPI come al <b>cuoco</b> (prepara le risposte) e a uvicorn come al
+      <b>cameriere</b> (riceve gli ordini dalla sala e serve i piatti). Li abbiamo installati entrambi nel Cap. 3.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-2"><span class="secnum">Sezione 4.2</span>Installare FastAPI e uvicorn</h2>
+
+  <p class="lead">
+    Se hai seguito il laboratorio del Cap. 3, hai già tutto. In caso contrario, ecco il riepilogo: nell'ambiente
+    virtuale <b>attivo</b>, un solo comando.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale (con (.venv) attivo)</div>
+    <pre><span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">pip</span> <span class="ar">install</span> <span class="ar">fastapi uvicorn</span>
+<span class="out">Successfully installed fastapi-... uvicorn-... pydantic-... starlette-...</span></pre>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title"><span class="ico">⚠</span> Controlla il <code>(.venv)</code></div>
+    <p style="margin-bottom:0">
+      Come detto nel Cap. 3: assicurati che il prompt mostri <code>(.venv)</code> prima di installare, altrimenti i
+      pacchetti finiscono nel Python globale. <mark>Questo è il punto in cui l'ordine del capitolo precedente
+      paga.</mark>
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-3"><span class="secnum">Sezione 4.3</span>Il primo endpoint</h2>
+
+  <p class="lead">
+    Crea un file <code>main.py</code> nella cartella del progetto e scrivi queste poche righe. È un server completo e
+    funzionante: leggiamolo, poi lo smontiamo parola per parola.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+
+app <span class="op">=</span> <span class="fn">FastAPI</span>()          <span class="cm"># crea l'applicazione</span>
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/"</span>)             <span class="cm"># quando arriva GET su "/" ...</span>
+<span class="kw">def</span> <span class="fn">radice</span>():             <span class="cm"># ... esegui questa funzione</span>
+    <span class="kw">return</span> {<span class="st">"messaggio"</span>: <span class="st">"Ciao, mondo!"</span>}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il primo endpoint smontato <span class="tag">import · app · decoratore · funzione</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">from fastapi import FastAPI</span></dt>
+        <dd>importa la classe principale della libreria. È il punto di partenza di ogni app.</dd>
+        <dt><span class="mono">app = FastAPI()</span></dt>
+        <dd>crea l'<b>oggetto applicazione</b>. Questa variabile <code>app</code> rappresenta il tuo intero server:
+            ci «appenderai» tutti gli endpoint. <mark>Il nome <code>app</code> è una convenzione</mark> che uvicorn
+            si aspetta.</dd>
+        <dt><span class="mono">@app.get("/")</span> — il decoratore</dt>
+        <dd>la riga magica. <code>@</code> è un <b>decoratore</b> Python: «collega la funzione qui sotto a un
+            evento». Qui dice: «<mark>quando arriva una richiesta <b>GET</b> al percorso <code>/</code>, esegui la
+            funzione seguente</mark>». Cambiando <code>get</code> in <code>post</code> gestiresti le POST (Cap. 7).</dd>
+        <dt><span class="mono">def radice():</span> — la path operation function</dt>
+        <dd>la funzione che <b>gestisce</b> quella richiesta. Il nome è libero (<code>radice</code>, <code>home</code>…):
+            conta il decoratore sopra, non il nome. Ciò che <code>return</code> restituisce diventa la risposta.</dd>
+        <dt><span class="mono">return {"messaggio": "Ciao, mondo!"}</span></dt>
+        <dd>restituisce un <b>dizionario</b> Python. <mark>FastAPI lo converte automaticamente in JSON</mark> e lo
+            invia al client con codice <code>200</code>. Non scrivi tu il JSON né gli header: te ne occupi solo dei
+            dati.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Rileggi il tutto ad alta voce: «<em>crea un'app; quando arriva GET su slash, rispondi con questo dizionario</em>».
+      <mark>Tre righe, e hai un endpoint HTTP.</mark> Tutto il resto del libro consiste nell'aggiungere altri
+      decoratori (<code>@app.post</code>, <code>@app.delete</code>…) e altre funzioni, via via più ricche. La forma
+      base, però, è sempre questa.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-4"><span class="secnum">Sezione 4.4</span>uvicorn: avviare il server</h2>
+
+  <p class="lead">
+    Il file <code>main.py</code> definisce l'app, ma da solo non «gira». Serve <b>uvicorn</b> per accenderlo e
+    metterlo in ascolto sulla rete.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale (con (.venv) attivo)</div>
+    <pre><span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">uvicorn</span> <span class="ar">main:app</span> <span class="fl">--reload</span>
+<span class="out">INFO:     Uvicorn running on </span><span class="hl">http://127.0.0.1:8000</span><span class="out"> (Press CTRL+C to quit)
+INFO:     Started reloader process ...
+INFO:     Application startup complete.</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Il comando uvicorn smontato <span class="tag">uvicorn main:app --reload</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">uvicorn</span></dt>
+        <dd>il server ASGI che esegue la tua app e la espone sulla rete.</dd>
+        <dt><span class="mono">main:app</span></dt>
+        <dd>dove trovare l'applicazione: «<b>nel file <code>main</code></b>.py, <b>l'oggetto <code>app</code></b>». La
+            sintassi è <code>nomefile:nomevariabile</code>. <mark>Ecco perché la variabile si chiama <code>app</code></mark>:
+            è la seconda parte di questo indirizzo.</dd>
+        <dt><span class="mono">--reload</span></dt>
+        <dd>«riavvia automaticamente a ogni modifica del codice». <mark>Comodissimo in sviluppo</mark>: salvi il file
+            e il server si aggiorna da solo, senza riavviarlo a mano. <b>Solo per lo sviluppo</b>, però: in produzione
+            (Cap. 18) si usano configurazioni diverse.</dd>
+        <dt>l'indirizzo <span class="mono">http://127.0.0.1:8000</span></dt>
+        <dd>dove il server è in ascolto. <code>127.0.0.1</code> (alias <code>localhost</code>) = «questo stesso
+            computer»; <code>8000</code> = la porta. Apri quell'indirizzo nel browser e parli col tuo server.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Con il server acceso, apri <code>http://127.0.0.1:8000</code> nel browser: vedrai
+      <code>{"messaggio":"Ciao, mondo!"}</code>. Il tuo <b>primo endpoint</b> risponde! Per fermare il server:
+      <code>Ctrl + C</code>. E se qualcosa non va, guarda il terminale: uvicorn stampa lì ogni richiesta ricevuta e
+      ogni eventuale errore — proprio come il log del Cap. 1.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-5"><span class="secnum">Sezione 4.5</span>La documentazione automatica</h2>
+
+  <p class="lead">
+    Ora il regalo di FastAPI. Con il server acceso, apri nel browser <code>http://127.0.0.1:8000<b>/docs</b></code>.
+    Troverai una pagina interattiva — che <b>non hai scritto tu</b> — con l'elenco dei tuoi endpoint e un pulsante
+    per <b>provarli</b> dal vivo.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> /docs: la tua API, documentata e provabile</div>
+    <p>
+      FastAPI <b>ispeziona il tuo codice</b> (i decoratori, i nomi, i tipi) e genera automaticamente una
+      documentazione conforme allo standard <b>OpenAPI</b>, mostrata con un'interfaccia chiamata Swagger UI. Per ogni
+      endpoint vedi metodo, percorso, parametri attesi e forma della risposta. <mark>Il pulsante «Try it out» ti
+      lascia <b>chiamare l'endpoint</b> direttamente dalla pagina</mark> e vedere la risposta reale — senza curl,
+      senza scrivere un front-end.
+    </p>
+    <p style="margin-bottom:0">
+      Perché è importante? Perché la documentazione è di solito la parte più noiosa e trascurata di un backend. Qui è
+      <b>gratis e sempre aggiornata</b> (nasce dal codice, quindi non può «scordarsi» di un endpoint). È uno
+      strumento di sviluppo formidabile per te, e un regalo per chiunque userà la tua API. (Esiste anche
+      <code>/redoc</code>, una seconda documentazione dallo stile diverso.)
+    </p>
+  </div>
+
+  <div class="widget" id="w-api">
+    <div class="w-head">
+      <span>La tua prima API, dal vivo</span>
+      <span class="hint">come il «Try it out» di /docs</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="max-width:460px; margin:0 auto">
+        <div style="margin-bottom:.7rem; text-align:left">
+          <div style="font-family:var(--mono); font-size:.82rem; color:var(--ink-soft); margin-bottom:.3rem">Endpoint disponibili (dal tuo main.py):</div>
+          <button class="btn" data-call="root" style="width:100%; text-align:left; margin-bottom:.4rem"><b style="color:var(--green)">GET</b> &nbsp;/</button>
+          <div style="display:flex; gap:.4rem; align-items:stretch">
+            <button class="btn" data-call="saluta" style="flex:1; text-align:left"><b style="color:var(--green)">GET</b> &nbsp;/saluta/<span style="opacity:.7">{nome}</span></button>
+            <input type="text" id="ap-nome" value="Anna" placeholder="nome" style="width:110px; padding:.4rem .6rem; border:1px solid var(--ink-soft); border-radius:6px; background:var(--paper); color:var(--ink); font-family:var(--mono)">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="w-readout" id="ap-out"></div>
+  </div>
+
+  <p>Il secondo endpoint del widget — <code>/saluta/{nome}</code> — anticipa i <b>parametri di percorso</b> del
+     prossimo capitolo. Ecco com'è scritto:</p>
+
+  <div class="term">
+    <div class="t-head file">main.py — l'endpoint con parametro</div>
+    <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/saluta/{nome}"</span>)      <span class="cm"># {nome} è un "buco" nel percorso</span>
+<span class="kw">def</span> <span class="fn">saluta</span>(nome: <span class="ty">str</span>):        <span class="cm"># FastAPI ci passa quel valore</span>
+    <span class="kw">return</span> {<span class="st">"saluto"</span>: <span class="st">f"Ciao, {nome}!"</span>}</pre>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-6"><span class="secnum">Sezione 4.6</span>Laboratorio: hello API</h2>
+
+  <p class="lead">
+    Mettiamo insieme tutto in un esercizio completo, da fare <b>ora</b> sul tuo computer. In cinque minuti avrai il
+    tuo primo server FastAPI attivo, con documentazione interattiva.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale + file — la ricetta completa</div>
+    <pre><span class="c"># nella cartella "mia-api" del Cap. 3, con (.venv) attivo:</span>
+<span class="c"># 1) crea main.py con questo contenuto:</span></pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">main.py</div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+
+app <span class="op">=</span> <span class="fn">FastAPI</span>()
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/"</span>)
+<span class="kw">def</span> <span class="fn">radice</span>():
+    <span class="kw">return</span> {<span class="st">"messaggio"</span>: <span class="st">"Ciao, mondo!"</span>}
+
+<span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/saluta/{nome}"</span>)
+<span class="kw">def</span> <span class="fn">saluta</span>(nome: <span class="ty">str</span>):
+    <span class="kw">return</span> {<span class="st">"saluto"</span>: <span class="st">f"Ciao, {nome}!"</span>}</pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head">terminale</div>
+    <pre><span class="c"># 2) avvia il server</span>
+<span class="out">(.venv)</span> <span class="p">$</span> <span class="cmd">uvicorn</span> <span class="ar">main:app</span> <span class="fl">--reload</span>
+
+<span class="c"># 3) nel browser, prova questi indirizzi:</span>
+<span class="c">#    http://127.0.0.1:8000/            -> {"messaggio":"Ciao, mondo!"}</span>
+<span class="c">#    http://127.0.0.1:8000/saluta/Luca -> {"saluto":"Ciao, Luca!"}</span>
+<span class="c">#    http://127.0.0.1:8000/docs        -> la documentazione interattiva!</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa dovresti vedere</div>
+    <p style="margin-bottom:0">
+      Aprendo <code>/</code>: il messaggio JSON. Aprendo <code>/saluta/Luca</code>: il saluto personalizzato — cambia
+      «Luca» con il tuo nome e guarda la risposta cambiare. Aprendo <code>/docs</code>: due endpoint elencati, con
+      «Try it out» funzionante. <mark>Se vedi tutto questo, hai un backend che funziona.</mark> Congratulazioni: da
+      qui in poi non partiamo più da zero, ma <b>arricchiamo</b> questa app.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 4</div>
+    <ol style="margin-bottom:0">
+      <li><b>FastAPI</b> è un framework che trasforma funzioni Python in endpoint HTTP, con validazione e docs
+          automatiche (§4.1).</li>
+      <li>Un endpoint = <code>app = FastAPI()</code> + un <b>decoratore</b> <code>@app.get("/percorso")</code> sopra
+          una <b>funzione</b> che <code>return</code> un dizionario (→ JSON) (§4.3).</li>
+      <li>Si avvia con <code>uvicorn main:app --reload</code>: <code>file:variabile</code>, <code>--reload</code> per
+          lo sviluppo. In ascolto su <code>127.0.0.1:8000</code> (§4.4).</li>
+      <li><code>/docs</code>: documentazione <b>interattiva</b> generata da sola, dove provi le API dal browser
+          (§4.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai un server che risponde — ma per ora dice sempre più o meno la stessa cosa. Un backend utile deve
+    <b>reagire ai dettagli</b> della richiesta: «dammi il prodotto <em>numero 42</em>», «cerca i risultati che
+    contengono <em>questa</em> parola». Nel <strong>Capitolo 5</strong> impari a ricevere <b>parametri</b> nelle tue
+    rotte — quelli nel percorso (come il <code>{nome}</code> che hai già intravisto) e quelli nella query — con la
+    validazione automatica dei tipi che è il vero superpotere di FastAPI.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-7"><span class="secnum">Sezione 4.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.1</div>
+    <p style="margin-bottom:0">
+      Nel comando <code>uvicorn main:app --reload</code>, cosa indicano <code>main</code> e <code>app</code>? Cosa
+      succederebbe se rinominassi il file in <code>server.py</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.2</div>
+    <p style="margin-bottom:0">
+      A cosa serve il decoratore <code>@app.get("/")</code>? Cosa cambieresti per gestire invece le richieste
+      <b>POST</b> allo stesso percorso?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.3</div>
+    <p style="margin-bottom:0">
+      Aggiungi al tuo <code>main.py</code> un nuovo endpoint <code>GET /ping</code> che restituisce
+      <code>{"stato": "ok"}</code>. Scrivi il codice.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 4.4</div>
+    <p style="margin-bottom:0">
+      Perché la documentazione automatica di FastAPI è «sempre aggiornata», al contrario di una documentazione
+      scritta a mano?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s4-8"><span class="secnum">Sezione 4.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.1</div>
+    <p style="margin-bottom:0">
+      <code>main</code> è il <b>file</b> (<code>main.py</code>), <code>app</code> è la <b>variabile</b>
+      dell'applicazione dentro quel file (<code>app = FastAPI()</code>). Se rinominassi il file in
+      <code>server.py</code>, dovresti lanciare <code>uvicorn <b>server</b>:app --reload</code>: la prima parte segue
+      sempre il nome del file (senza <code>.py</code>).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.2</div>
+    <p style="margin-bottom:0">
+      <code>@app.get("/")</code> collega la funzione sottostante alle richieste <b>GET</b> sul percorso <code>/</code>:
+      quando ne arriva una, FastAPI esegue quella funzione e ne invia il risultato come risposta. Per gestire le
+      <b>POST</b> allo stesso percorso useresti <code>@app.<b>post</b>("/")</code> sopra un'altra funzione. (Stesso
+      percorso, metodo diverso, funzione diversa: è lo schema REST del Cap. 2.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.3</div>
+    <div class="term" style="margin:.5rem auto 0">
+      <div class="t-head file">main.py (aggiunta)</div>
+      <pre><span class="op">@</span>app.<span class="fn">get</span>(<span class="st">"/ping"</span>)
+<span class="kw">def</span> <span class="fn">ping</span>():
+    <span class="kw">return</span> {<span class="st">"stato"</span>: <span class="st">"ok"</span>}</pre>
+    </div>
+    <p style="margin:.5rem 0 0">Con <code>--reload</code> attivo, salvando il file il server si aggiorna da solo:
+      visita <code>/ping</code> (o guardalo comparire in <code>/docs</code>) per verificarlo.</p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 4.4</div>
+    <p style="margin-bottom:0">
+      Perché è <b>generata dal codice stesso</b>: FastAPI ispeziona i tuoi decoratori, i nomi delle funzioni e i tipi
+      dei parametri per costruirla. Se aggiungi, togli o modifichi un endpoint, la documentazione <b>cambia
+      automaticamente</b> di conseguenza. Una documentazione scritta a mano, invece, va aggiornata manualmente a ogni
+      modifica del codice — e quasi sempre finisce per «restare indietro» e diventare inesatta.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §4.5 — chiama la tua prima API: simula GET / e GET /saluta/{nome}
+   ========================================================================= */
+(function () {
+  const out = document.getElementById('ap-out');
+  if (!out) return;
+  const nome = document.getElementById('ap-nome');
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function mostra(metodo, path, code, body) {
+    out.innerHTML =
+      '<div class="term" style="margin:.2rem auto; max-width:100%">' +
+        '<div class="t-head">richiesta</div>' +
+        '<pre><span class="hl">' + metodo + '</span> ' + esc(path) + '</pre></div>' +
+      '<div class="term" style="margin:.2rem auto 0; max-width:100%">' +
+        '<div class="t-head">risposta</div>' +
+        '<pre><span class="out">HTTP/1.1</span> <span style="color:#5fb96d; font-weight:700">' + code + '</span>\n' +
+        '<span class="ar">content-type:</span> application/json\n\n<span class="st">' + esc(body) + '</span></pre></div>';
+  }
+
+  document.querySelectorAll('#w-api .btn[data-call]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const k = b.getAttribute('data-call');
+      if (k === 'root') {
+        mostra('GET', '/', '200 OK', '{ "messaggio": "Ciao, mondo!" }');
+      } else {
+        const n = (nome.value || '').trim() || 'mondo';
+        mostra('GET', '/saluta/' + n, '200 OK', '{ "saluto": "Ciao, ' + n + '!" }');
+      }
+    });
+  });
+
+  out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Clicca un endpoint per «chiamarlo», come faresti col pulsante «Try it out» in <code>/docs</code>. Cambia il nome e richiama <code>/saluta/{nome}</code>: la risposta JSON si adatta — è FastAPI che riceve il parametro dal percorso (Cap. 5).</div>';
+})();
+</script>
+</body>
+</html>

@@ -60,7 +60,7 @@ const TOC = [
     n: 4,
     titolo: "Il primo server con FastAPI",
     file: "cap04-primo-fastapi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s4-1", n: "4.1", t: "Cos'è FastAPI" },
       { id: "s4-2", n: "4.2", t: "Installare FastAPI e uvicorn" },
