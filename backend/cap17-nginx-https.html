@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>17 · nginx: reverse proxy e HTTPS — Backend Development</title>
+<title>17 · Reverse proxy e HTTPS: nginx e Caddy — Backend Development</title>
 <link rel="stylesheet" href="assets/style.css?v=20260719b">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
 <script src="assets/toc.js"></script>
@@ -16,15 +16,17 @@
 
   <header class="chapter-head">
     <div class="kicker">Capitolo 17</div>
-    <h1>nginx: reverse proxy e HTTPS</h1>
+    <h1>Reverse proxy e HTTPS: nginx e Caddy</h1>
     <p class="standfirst">
       Il nostro backend, avviato con Compose, funziona — ma esporlo <b>direttamente</b> a Internet sarebbe un errore.
       Serve un «portiere» davanti all'applicazione: un programma robusto che riceve tutte le connessioni dal mondo,
       le smista all'app, gestisce l'<b>HTTPS</b> (il lucchetto verde), serve i file statici e protegge ciò che sta
-      dietro. Questo portiere è, quasi sempre, <b>nginx</b>: un web server velocissimo, usato come <b>reverse
+      dietro. Questo portiere è, tradizionalmente, <b>nginx</b>: un web server velocissimo, usato come <b>reverse
       proxy</b>. Lo hai già incontrato nel libro «Reti» come server web; qui lo vedi nel suo ruolo più prezioso per il
-      backend. In questo capitolo capisci cos'è un reverse proxy (§17.1), come mettere nginx davanti a FastAPI (§17.2),
-      come servire i file statici (§17.3) e come attivare l'<b>HTTPS gratuito</b> con Let's Encrypt (§17.4).
+      backend. Ma c'è un'alternativa moderna che vale assolutamente la pena conoscere, <b>Caddy</b>, che fa la stessa
+      cosa con l'<b>HTTPS automatico</b> e una configurazione di poche righe. In questo capitolo capisci cos'è un
+      reverse proxy (§17.1), come mettere nginx davanti a FastAPI (§17.2), come servire i file statici (§17.3), come
+      attivare l'<b>HTTPS gratuito</b> con Let's Encrypt (§17.4) e come Caddy semplifica tutto (§17.5).
       <mark>È il penultimo pezzo: dopo questo, il nostro backend sarà pronto per affacciarsi su Internet in modo
       sicuro.</mark>
     </p>
@@ -34,7 +36,8 @@
     <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
     <p style="margin-bottom:0">
       Cos'è un <b>reverse proxy</b> (§17.1), <b>nginx davanti a FastAPI</b> (§17.2), servire i <b>file statici</b>
-      (§17.3), l'<b>HTTPS</b> con Let's Encrypt (§17.4). Nel laboratorio (§17.5) configuri nginx con un certificato.
+      (§17.3), l'<b>HTTPS</b> con Let's Encrypt (§17.4), <b>Caddy</b> e l'HTTPS automatico (§17.5). Nel laboratorio
+      (§17.6) configuri nginx con un certificato.
     </p>
   </div>
 
@@ -236,7 +239,7 @@
     Il tuo sito è ora raggiungibile in HTTPS! Rinnovo automatico attivo.</span></pre>
     </div>
     <div class="f-note">
-      Serve un <b>dominio</b> reale che punti al tuo server (§17.5, e Cap. 18). Ma il processo è sorprendentemente
+      Serve un <b>dominio</b> reale che punti al tuo server (§17.6, e Cap. 18). Ma il processo è sorprendentemente
       semplice: <code>certbot --nginx</code> parla con Let's Encrypt, ottiene il certificato, modifica la config di
       nginx per usarlo, e imposta il rinnovo automatico. <mark>HTTPS professionale, gratis, in un comando</mark> — una
       delle grandi conquiste del web moderno. Ricorda dal Cap. 13: i token e le password viaggiano al sicuro <b>solo</b>
@@ -246,7 +249,103 @@
 
 
   <!-- ==================================================================== -->
-  <h2 id="s17-5"><span class="secnum">Sezione 17.5</span>Laboratorio: nginx + certificato</h2>
+  <h2 id="s17-5"><span class="secnum">Sezione 17.5</span>Caddy: HTTPS automatico</h2>
+
+  <p class="lead">
+    Tutto quello che hai visto con nginx è lo standard collaudato, ma richiede qualche passaggio: scrivere la config,
+    installare certbot, lanciarlo, gestire il rinnovo. Esiste un'alternativa più recente che fa le stesse cose con
+    molta meno fatica: <b>Caddy</b>. Merita di stare accanto a nginx nella tua cassetta degli attrezzi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Cos'è Caddy e perché piace</div>
+    <p style="margin-bottom:0">
+      <b>Caddy</b> è un web server e reverse proxy moderno (scritto in Go), pensato per essere <b>semplice e sicuro
+      «di default»</b>. Fa le stesse cose di nginx — punto d'ingresso, reverse proxy, file statici, HTTPS — ma con una
+      differenza che cambia la vita: <mark>ottiene e rinnova i certificati HTTPS <b>da solo, in automatico</b>, senza
+      certbot e senza che tu debba fare nulla.</mark> La prima volta che avvii Caddy con un dominio, lui contatta Let's
+      Encrypt, ottiene il certificato, configura l'HTTPS e imposta il rinnovo — <b>tutto senza un comando in più</b>. E
+      la sua configurazione (il <b>Caddyfile</b>) è così essenziale che spesso bastano <b>due righe</b>.
+    </p>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">Caddyfile — reverse proxy verso FastAPI, con HTTPS automatico</div>
+    <pre><span class="ar">mio-sito.com</span> {                     <span class="cm"># il tuo dominio</span>
+    <span class="kw">reverse_proxy</span> <span class="ar">api:80</span>            <span class="cm"># inoltra tutto all'app FastAPI</span>
+}</pre>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">✨</span> Sì, è davvero tutto qui</div>
+    <p style="margin-bottom:0">
+      Confronta queste due righe con la config di nginx del §17.2 <b>più</b> il comando certbot del §17.4:
+      <mark>Caddy ottiene lo stesso risultato — reverse proxy <b>e</b> HTTPS con rinnovo automatico — senza nessun
+      passaggio aggiuntivo.</mark> Basta indicare il dominio (quella prima riga) e Caddy capisce che vuoi l'HTTPS e se
+      ne occupa. Reindirizza pure da solo l'HTTP (porta 80) all'HTTPS (443), così nessuno naviga in chiaro. Meno codice
+      = meno errori, meno cose da ricordare, meno certificati scaduti per dimenticanza.
+    </p>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">Caddyfile — con file statici (equivalente al §17.3)</div>
+    <pre><span class="ar">mio-sito.com</span> {
+    <span class="kw">handle_path</span> <span class="ar">/static/*</span> {         <span class="cm"># i file statici...</span>
+        <span class="kw">root</span> <span class="ar">*</span> <span class="ar">/var/www</span>            <span class="cm"># ...servili da questa cartella</span>
+        <span class="kw">file_server</span>
+    }
+    <span class="kw">reverse_proxy</span> <span class="ar">api:80</span>            <span class="cm"># tutto il resto → l'app</span>
+}</pre>
+  </div>
+
+  <div class="term">
+    <div class="t-head file">docker-compose.yml — Caddy al posto di nginx (nota: niente certbot)</div>
+    <pre><span class="kw">services</span>:
+  <span class="ar">caddy</span>:
+    <span class="kw">image</span>: <span class="ar">caddy</span>
+    <span class="kw">ports</span>:
+      - <span class="st">"80:80"</span>
+      - <span class="st">"443:443"</span>
+    <span class="kw">volumes</span>:
+      - <span class="ar">./Caddyfile</span>:<span class="ar">/etc/caddy/Caddyfile</span>       <span class="cm"># la tua config</span>
+      - <span class="ar">caddy_data</span>:<span class="ar">/data</span>                     <span class="cm"># qui salva i certificati (persistono)</span>
+    <span class="kw">depends_on</span>: [<span class="ar">api</span>]
+  <span class="c"># ... api, db, minio come prima ...</span>
+
+<span class="kw">volumes</span>:
+  <span class="ar">caddy_data</span>:</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">nginx o Caddy? <span class="tag">quando scegliere l'uno o l'altro</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>Caddy</b> — la semplicità</dt>
+        <dd><mark>HTTPS automatico, config brevissima, ottime scelte di sicurezza «di serie».</mark> Perfetto per
+            partire in fretta, per progetti piccoli e medi, per chi non vuole gestire certbot a mano. Meno cose da
+            sapere per ottenere un sito sicuro e online.</dd>
+        <dt><b>nginx</b> — la maturità</dt>
+        <dd>è lo standard da vent'anni: <mark>enorme diffusione, tantissima documentazione ed esempi, controllo
+            finissimo</mark> su ogni dettaglio, prestazioni altissime su carichi estremi. Se erediti un sistema
+            esistente, molto probabilmente c'è nginx; e per configurazioni molto complesse offre più leve.</dd>
+        <dt>quale imparare?</dt>
+        <dd><mark>Entrambi, ed è ciò che stai facendo.</mark> Conoscere nginx è quasi obbligatorio (lo incontrerai
+            ovunque); conoscere Caddy ti dà una scorciatoia preziosa quando vuoi andare online in fretta e senza
+            grattacapi. Fanno lo stesso mestiere: cambia la filosofia — nginx «configuri tutto tu», Caddy «i buoni
+            default ci sono già».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esistono anche altri reverse proxy moderni molto usati, come <b>Traefik</b> (amatissimo con Docker e Kubernetes
+      perché si configura «da solo» leggendo le etichette dei container). Ma per un backend FastAPI, <mark>nginx e Caddy
+      coprono benissimo la stragrande maggioranza dei casi</mark>: il primo come standard consolidato, il secondo come
+      via rapida e serena all'HTTPS.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-6"><span class="secnum">Sezione 17.6</span>Laboratorio: nginx + certificato</h2>
 
   <p class="lead">
     Aggiungiamo nginx al nostro stack e, a grandi linee, il percorso per l'HTTPS. Il laboratorio completo si realizza
@@ -293,6 +392,9 @@
           (§17.3).</li>
       <li><b>HTTPS gratuito</b> con Let's Encrypt + <code>certbot --nginx</code>: certificato e rinnovo automatici. I
           token/password viaggiano sicuri solo su HTTPS (§17.4).</li>
+      <li><b>Caddy</b> è l'alternativa moderna: stesso lavoro di nginx ma con <b>HTTPS automatico</b> (niente certbot) e
+          un Caddyfile di poche righe. nginx = standard maturo e controllo fine; Caddy = semplicità e default sicuri
+          (§17.5).</li>
     </ol>
   </div>
 
@@ -306,7 +408,7 @@
 
 
   <!-- ==================================================================== -->
-  <h2 id="s17-6"><span class="secnum">Sezione 17.6</span>Esercizi</h2>
+  <h2 id="s17-7"><span class="secnum">Sezione 17.7</span>Esercizi</h2>
 
   <div class="esercizio">
     <div class="e-num">Esercizio 17.1</div>
@@ -340,9 +442,18 @@
     </p>
   </div>
 
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.5</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza principale tra Caddy e nginx nella gestione dell'HTTPS? Scrivi il Caddyfile minimo per fare da
+      reverse proxy verso l'app <code>api</code> sulla porta 80 con HTTPS automatico, e indica un caso in cui
+      preferiresti Caddy e uno in cui preferiresti nginx.
+    </p>
+  </div>
+
 
   <!-- ==================================================================== -->
-  <h2 id="s17-7"><span class="secnum">Sezione 17.7</span>Soluzioni</h2>
+  <h2 id="s17-8"><span class="secnum">Sezione 17.8</span>Soluzioni</h2>
 
   <div class="esercizio">
     <div class="e-num">Soluzione 17.1</div>
@@ -383,6 +494,28 @@
       cruciale per un'app con token perché, senza cifratura, il token di autenticazione (e le password al login)
       viaggerebbero <b>in chiaro</b> sulla rete: chiunque intercetti il traffico potrebbe rubarli e impersonare
       l'utente. L'HTTPS cifra tutto, rendendo sicuro il trasporto delle credenziali.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.5</div>
+    <p style="margin-bottom:.6rem">
+      La differenza principale è che <b>Caddy gestisce l'HTTPS in automatico</b>: ottiene e rinnova i certificati Let's
+      Encrypt da solo, senza certbot e senza comandi aggiuntivi, mentre con nginx bisogna installare e lanciare certbot
+      (e affidarsi al suo rinnovo). Il Caddyfile minimo:
+    </p>
+    <div class="term" style="margin:0 auto .6rem">
+      <div class="t-head file">Caddyfile</div>
+      <pre><span class="ar">mio-sito.com</span> {
+    <span class="kw">reverse_proxy</span> <span class="ar">api:80</span>
+}</pre>
+    </div>
+    <p style="margin-bottom:0">
+      Basta indicare il dominio e Caddy attiva l'HTTPS da sé. Preferirei <b>Caddy</b> quando voglio andare online in
+      fretta, per un progetto piccolo/medio, o quando non voglio gestire i certificati a mano (default sicuri già
+      pronti). Preferirei <b>nginx</b> quando lavoro su un sistema esistente che già lo usa, quando serve un controllo
+      molto fine della configurazione o massime prestazioni su carichi estremi, o quando devo appoggiarmi alla sua
+      vastissima documentazione ed ecosistema.
     </p>
   </div>
 

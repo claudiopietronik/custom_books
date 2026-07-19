@@ -255,7 +255,7 @@ const TOC = [
   },
   {
     n: 17,
-    titolo: "nginx: reverse proxy e HTTPS",
+    titolo: "Reverse proxy e HTTPS: nginx e Caddy",
     file: "cap17-nginx-https.html",
     stato: "pronto",
     sezioni: [
@@ -263,9 +263,10 @@ const TOC = [
       { id: "s17-2", n: "17.2", t: "nginx davanti a FastAPI" },
       { id: "s17-3", n: "17.3", t: "Servire file statici" },
       { id: "s17-4", n: "17.4", t: "HTTPS con Let's Encrypt" },
-      { id: "s17-5", n: "17.5", t: "Laboratorio: nginx + certificato" },
-      { id: "s17-6", n: "17.6", t: "Esercizi" },
-      { id: "s17-7", n: "17.7", t: "Soluzioni" }
+      { id: "s17-5", n: "17.5", t: "Caddy: HTTPS automatico" },
+      { id: "s17-6", n: "17.6", t: "Laboratorio: nginx + certificato" },
+      { id: "s17-7", n: "17.7", t: "Esercizi" },
+      { id: "s17-8", n: "17.8", t: "Soluzioni" }
     ]
   },
   {
