@@ -89,7 +89,7 @@ const TOC = [
     n: 6,
     titolo: "Permessi e proprietà",
     file: "cap06-permessi.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s6-1", n: "6.1", t: "Utente, gruppo, altri" },
       { id: "s6-2", n: "6.2", t: "Leggere, scrivere, eseguire" },

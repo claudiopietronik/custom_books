@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Permessi e proprietà — Linux</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐧</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="6">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 6</div>
+    <h1>Permessi e proprietà</h1>
+    <p class="standfirst">
+      Linux è nato come sistema <b>multiutente</b>: tanti utenti sullo stesso computer, ognuno con i suoi file. Perché
+      questo funzioni in sicurezza, ogni file e cartella ha dei <b>permessi</b>: regole che stabiliscono <b>chi</b> può
+      <b>fare cosa</b> — chi può leggerlo, chi modificarlo, chi eseguirlo. È un pilastro della sicurezza (i tuoi file
+      sono protetti dagli altri utenti) e del funzionamento del sistema (un programma gira solo se ha il permesso di
+      «eseguire»). All'inizio la notazione dei permessi (quelle stringhe tipo <code>rwxr-xr--</code> e quei numeri come
+      <code>754</code>) sembra criptica, ma dietro c'è uno schema semplice e regolare che, una volta capito, si legge
+      a colpo d'occhio. In questo capitolo: i tre «chi» — utente, gruppo, altri (§6.1), i tre «cosa» — leggere,
+      scrivere, eseguire (§6.2), come <b>cambiarli</b> con <code>chmod</code> (§6.3) e come cambiare il <b>proprietario</b>
+      con <code>chown</code> (§6.4). <mark>È la competenza che serve ogni volta che «un file non si apre» o «uno script
+      non parte»: quasi sempre è una questione di permessi.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      I tre «chi»: <b>utente, gruppo, altri</b> (§6.1), i tre «cosa»: <b>leggere, scrivere, eseguire</b> (§6.2),
+      cambiare i permessi con <b>chmod</b> (§6.3), cambiare il proprietario con <b>chown</b> (§6.4). Nel laboratorio
+      (§6.5) gestisci i permessi.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la causa nascosta di mille problemi</div>
+    <p style="margin-bottom:0">
+      «Permission denied» è uno degli errori più frequenti su Linux. <mark>Saper leggere e sistemare i permessi risolve
+      una quantità enorme di problemi</mark>: script che non partono, file che non si scrivono, server che non
+      accedono a una cartella. È anche la base della sicurezza del sistema. Un concetto che ripaga ogni volta che
+      qualcosa «non ha il permesso» di funzionare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-1"><span class="secnum">Sezione 6.1</span>Utente, gruppo, altri</h2>
+
+  <p class="lead">
+    I permessi rispondono alla domanda «chi può fare cosa?». Il «chi» è diviso in <b>tre categorie</b>: il
+    <b>proprietario</b> del file, il suo <b>gruppo</b>, e tutti gli <b>altri</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Le tre categorie di «chi» <span class="tag">user · group · others</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>user</b> (u) — il proprietario</dt>
+        <dd>l'utente che <b>possiede</b> il file (di solito chi l'ha creato). <mark>Ha i suoi permessi specifici</mark>,
+            di solito i più ampi.</dd>
+        <dt><b>group</b> (g) — il gruppo</dt>
+        <dd>ogni file appartiene anche a un <b>gruppo</b> di utenti. <mark>Serve per condividere</mark>: i membri del
+            gruppo hanno i loro permessi (es. un gruppo «sviluppatori» che può modificare i file di un progetto).</dd>
+        <dt><b>others</b> (o) — tutti gli altri</dt>
+        <dd>chiunque non sia il proprietario né nel gruppo. <mark>Di solito i permessi più ristretti</mark> (o nessuno):
+            è la protezione verso «il resto del mondo».</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      L'idea: <mark>ogni file ha un proprietario e un gruppo, e per ciascuna delle tre categorie (u/g/o) si definiscono
+      i permessi separatamente</mark>. Così puoi dire «io posso modificarlo, il mio gruppo può leggerlo, gli altri
+      niente». È un sistema semplice ma flessibile, che copre la maggior parte delle esigenze di condivisione e
+      protezione. I gruppi li approfondiamo al Cap. 7; qui basta sapere che esistono queste tre categorie.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Leggere, scrivere, eseguire</h2>
+
+  <p class="lead">
+    Il «cosa» sono <b>tre permessi</b>: <b>leggere</b> (r), <b>scrivere</b> (w), <b>eseguire</b> (x). Combinati con le
+    tre categorie del §6.1, danno la notazione che vedi con <code>ls -l</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — ls -l mostra i permessi</div>
+    <pre><span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-l</span>
+<span class="out">-</span><span class="hl">rwx</span><span style="color:#f6b45f">r-x</span><span style="color:#8ab8ff">r--</span> <span class="out"> 1 anna sviluppo  2048 Jul 19 10:00 script.sh</span>
+ ↑  ↑   ↑   ↑
+tipo user group others</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">Leggere la stringa dei permessi <span class="tag">r=read w=write x=execute</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>i tre permessi</dt>
+        <dd><b>r</b> (read) = <b>leggere</b> il contenuto; <b>w</b> (write) = <b>modificare</b> o cancellare; <b>x</b>
+            (execute) = <b>eseguire</b> (per i programmi/script) o <b>entrare</b> (per le cartelle). <mark>Un
+            <code>-</code> al posto della lettera = permesso assente.</mark></dd>
+        <dt>la stringa <span class="mono">rwxr-xr--</span></dt>
+        <dd>si legge a gruppi di tre: <b>rwx</b> (user: legge, scrive, esegue) <b>r-x</b> (group: legge ed esegue, non
+            scrive) <b>r--</b> (others: solo legge). <mark>Nove caratteri = 3 categorie × 3 permessi.</mark></dd>
+        <dt>il primo carattere (il «tipo»)</dt>
+        <dd>prima dei 9 permessi c'è un carattere per il <b>tipo</b>: <code>-</code> = file normale, <code>d</code> =
+            directory (cartella), <code>l</code> = collegamento. <mark>Non è un permesso</mark>, è il tipo di
+            elemento.</dd>
+        <dt>x sulle cartelle: «entrare»</dt>
+        <dd>per una cartella, <b>x</b> significa poter <b>entrarci</b> (fare <code>cd</code>) e attraversarla. <mark>Un
+            dettaglio che confonde all'inizio</mark>: senza x su una cartella, non puoi accedere al suo contenuto anche
+            se hai r.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Esiste anche una notazione <b>numerica</b> (ottale) molto usata: ogni permesso vale un numero — <b>r=4, w=2,
+      x=1</b> — e si sommano per categoria. Così <code>rwx</code> = 4+2+1 = <b>7</b>, <code>r-x</code> = 4+1 = <b>5</b>,
+      <code>r--</code> = 4 = <b>4</b>: la stringa <code>rwxr-xr--</code> diventa <b>754</b>. <mark>Tre cifre, una per
+      categoria</mark>. Sembra strano ma è comodissimo per impostare i permessi in fretta (§6.3). Prova il widget qui
+      sotto per vedere le due notazioni collegate.
+    </div>
+  </div>
+
+  <div class="widget" id="w-perm">
+    <div class="w-head">
+      <span>Calcolatrice dei permessi</span>
+      <span class="hint">spunta rwx, leggi stringa e numero</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.2rem">
+      <div style="max-width:420px; margin:0 auto">
+        <table style="width:100%; border-collapse:collapse; font-family:var(--mono); text-align:center">
+          <thead><tr style="color:var(--ink-soft); font-size:.78rem"><th style="text-align:left; padding:.3rem">categoria</th><th>r (4)</th><th>w (2)</th><th>x (1)</th><th>= cifra</th></tr></thead>
+          <tbody id="pm-rows"></tbody>
+        </table>
+        <div style="text-align:center; margin-top:1rem">
+          <div style="font-size:.75rem; color:var(--ink-soft)">stringa (ls -l)</div>
+          <div id="pm-str" style="font-family:var(--mono); font-size:1.5rem; letter-spacing:.1em; color:var(--accent)"></div>
+          <div style="font-size:.75rem; color:var(--ink-soft); margin-top:.5rem">comando chmod</div>
+          <div id="pm-num" style="font-family:var(--mono); font-size:1.1rem"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w-controls" style="justify-content:center; gap:.4rem; flex-wrap:wrap">
+      <button class="btn ghost" data-preset="755">755 (rwxr-xr-x)</button>
+      <button class="btn ghost" data-preset="644">644 (rw-r--r--)</button>
+      <button class="btn ghost" data-preset="700">700 (rwx------)</button>
+    </div>
+    <div class="w-readout" id="pm-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-3"><span class="secnum">Sezione 6.3</span>Cambiare i permessi: chmod</h2>
+
+  <p class="lead">
+    Il comando per cambiare i permessi è <code>chmod</code> («change mode»). Ci sono due modi di indicarli: quello
+    <b>simbolico</b> (con lettere, più intuitivo) e quello <b>numerico</b> (con le cifre, più veloce).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — chmod nei due modi</div>
+    <pre><span class="c"># MODO NUMERICO: imposta i permessi con le tre cifre (§6.2)</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">755</span> <span class="ar">script.sh</span>      <span class="c"># rwxr-xr-x</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">644</span> <span class="ar">documento.txt</span>  <span class="c"># rw-r--r--</span>
+
+<span class="c"># MODO SIMBOLICO: aggiungi (+) o togli (-) un permesso</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">script.sh</span>       <span class="c"># aggiungi "esegui" (a tutti)</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">u+x</span> <span class="ar">script.sh</span>      <span class="c"># aggiungi "esegui" solo al proprietario</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">o-r</span> <span class="ar">segreto.txt</span>    <span class="c"># togli "leggi" agli altri</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">chmod: numerico vs simbolico <span class="tag">quando usare quale</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>numerico</b>: <span class="mono">chmod 755 file</span></dt>
+        <dd>imposti <b>tutti</b> i permessi in un colpo con le tre cifre (u,g,o). <mark>Veloce e definitivo</mark>: quel
+            file avrà esattamente quei permessi. Il modo più usato quando sai cosa vuoi.</dd>
+        <dt><b>simbolico</b>: <span class="mono">chmod u+x file</span></dt>
+        <dd>modifichi <b>relativamente</b>: <code>+</code> aggiunge, <code>-</code> toglie un permesso, per una
+            categoria (<code>u</code>/<code>g</code>/<code>o</code>, o <code>a</code>=tutti). <mark>Comodo per una
+            piccola modifica</mark> senza toccare il resto.</dd>
+        <dt>il caso più comune: rendere eseguibile</dt>
+        <dd><code>chmod +x script.sh</code> è il comando che darai più spesso: <mark>rende uno script <b>eseguibile</b></mark>
+            (aggiunge il permesso x). Senza, provando a lanciarlo otterresti «Permission denied» — lo vedrai scrivendo
+            script al Cap. 12.</dd>
+        <dt>ricorsivo: <span class="mono">-R</span></dt>
+        <dd><code>chmod -R 755 cartella/</code> applica i permessi a una cartella <b>e tutto il suo contenuto</b>. Utile,
+            ma da usare con attenzione (cambia tutto).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quale scegliere? <mark>Numerico quando imposti permessi «da zero» (li conosci: 755, 644…); simbolico quando fai
+      una modifica mirata</mark> (aggiungi x, togli lettura agli altri). I due valori più comuni da ricordare:
+      <b>755</b> per programmi/script e cartelle (tutti possono leggere/eseguire, solo il proprietario scrivere) e
+      <b>644</b> per i documenti (il proprietario legge/scrive, gli altri solo leggono). Con questi due e
+      <code>chmod +x</code> copri il 90% dei casi.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-4"><span class="secnum">Sezione 6.4</span>Cambiare il proprietario: chown</h2>
+
+  <p class="lead">
+    Oltre ai permessi, ogni file ha un <b>proprietario</b> e un <b>gruppo</b> (§6.1). Per cambiarli si usa
+    <code>chown</code> («change owner»). È un'operazione da amministratore, quindi di solito serve <code>sudo</code>
+    (Cap. 7).
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — chown</div>
+    <pre><span class="c"># cambia il proprietario del file a "luca" (serve sudo: è un'azione da admin)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">chown</span> <span class="ar">luca</span> <span class="ar">file.txt</span>
+
+<span class="c"># cambia proprietario E gruppo (proprietario:gruppo)</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">chown</span> <span class="ar">luca:sviluppo</span> <span class="ar">file.txt</span>
+
+<span class="c"># ricorsivo: un'intera cartella</span>
+<span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">chown</span> <span class="fl">-R</span> <span class="ar">anna:anna</span> <span class="ar">progetto/</span></pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">chown smontato <span class="tag">proprietario[:gruppo] file</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">chown utente file</span></dt>
+        <dd>cambia il <b>proprietario</b> del file a quell'utente. <mark>Chi possiede un file ne controlla i
+            permessi</mark>, quindi cambiare proprietario è un'operazione «potente».</dd>
+        <dt><span class="mono">chown utente:gruppo file</span></dt>
+        <dd>cambia <b>sia</b> il proprietario <b>sia</b> il gruppo. Il gruppo determina quali utenti hanno i permessi
+            «group» (§6.1).</dd>
+        <dt>serve <span class="mono">sudo</span></dt>
+        <dd><mark>cambiare il proprietario di un file richiede privilegi di amministratore</mark> (altrimenti chiunque
+            potrebbe «regalare» file agli altri, o appropriarsene). Per questo <code>chown</code> si usa quasi sempre
+            con <code>sudo</code> — che vedremo nel prossimo capitolo.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Quando serve <code>chown</code> nella pratica? <mark>Spesso quando gestisci un server</mark>: ad esempio, i file
+      di un sito web devono appartenere all'utente giusto perché il web server (nginx) possa leggerli, o i dati di
+      un'app devono appartenere all'utente che la esegue. È un tipico «aggiustamento» in produzione (l'hai sfiorato nel
+      libro «Backend»). Sui tuoi file personali, invece, il proprietario sei già tu: raramente dovrai cambiarlo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Laboratorio: gestire i permessi</h2>
+
+  <p class="lead">
+    Vediamo i permessi cambiare in pratica: crea un file, guardane i permessi, modificali, e osserva la stringa di
+    <code>ls -l</code> aggiornarsi.
+  </p>
+
+  <div class="term">
+    <div class="t-head">terminale — un giro sui permessi</div>
+    <pre><span class="c"># crea un file e guarda i suoi permessi di default</span>
+<span class="p">$</span> <span class="cmd">touch</span> <span class="ar">mio-script.sh</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-l</span> <span class="ar">mio-script.sh</span>
+<span class="out">-rw-r--r-- 1 anna anna 0 Jul 19 mio-script.sh</span>   <span class="c"># 644: leggi/scrivi tu, gli altri solo leggono</span>
+
+<span class="c"># rendilo eseguibile (il comando più comune!)</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">+x</span> <span class="ar">mio-script.sh</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-l</span> <span class="ar">mio-script.sh</span>
+<span class="out">-rwxr-xr-x 1 anna anna 0 Jul 19 mio-script.sh</span>   <span class="c"># ora c'è la x! (755)</span>
+
+<span class="c"># rendi un file privato: solo tu puoi leggerlo e scriverlo</span>
+<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">600</span> <span class="ar">diario-segreto.txt</span>
+<span class="p">$</span> <span class="cmd">ls</span> <span class="fl">-l</span> <span class="ar">diario-segreto.txt</span>
+<span class="out">-rw------- 1 anna anna ... diario-segreto.txt</span>   <span class="c"># gli altri: niente</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Cosa hai imparato a fare</div>
+    <p style="margin-bottom:0">
+      Hai letto i permessi con <code>ls -l</code>, li hai modificati con <code>chmod</code> (il fondamentale
+      <code>+x</code> per rendere eseguibile uno script, e <code>600</code> per rendere un file privato), e hai visto
+      la stringa aggiornarsi. <mark>Ora sai leggere una stringa come <code>-rwxr-xr-x</code></mark> e sai cosa fare
+      quando un file «non ha i permessi giusti». Questa competenza ti tornerà utilissima al Capitolo 12, quando
+      scriverai script che devono essere eseguibili. Nel prossimo capitolo affrontiamo il tema strettamente legato:
+      gli <b>utenti</b>, l'amministratore <b>root</b> e il comando <code>sudo</code> — chi ha il potere di fare cosa
+      nel sistema.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 6</div>
+    <ol style="margin-bottom:0">
+      <li>Tre categorie di «chi»: <b>user</b> (proprietario), <b>group</b> (gruppo), <b>others</b> (tutti gli altri)
+          (§6.1).</li>
+      <li>Tre permessi: <b>r</b> (leggere), <b>w</b> (scrivere), <b>x</b> (eseguire; per le cartelle = entrare).
+          Stringa <code>rwxr-xr--</code> = 9 caratteri; in numeri r=4,w=2,x=1 (es. 754) (§6.2).</li>
+      <li><b>chmod</b> cambia i permessi: numerico (<code>chmod 755 file</code>) o simbolico (<code>chmod +x file</code>).
+          755 per script/cartelle, 644 per documenti (§6.3).</li>
+      <li><b>chown</b> cambia proprietario (e gruppo): <code>sudo chown utente:gruppo file</code>. Serve
+          <code>sudo</code> (§6.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Sai chi può fare cosa con i file. Ma da dove viene il potere di cambiare proprietari, installare software,
+    modificare il sistema? Da un utente speciale, l'amministratore <b>root</b>, e dal comando che ti presta i suoi
+    poteri quando servono: <code>sudo</code>. Nel <strong>Capitolo 7</strong> capiamo la gerarchia degli utenti, cos'è
+    root, come e quando usare <code>sudo</code> in sicurezza — e perché «avere sempre tutti i poteri» è una pessima
+    idea (il principio del minimo privilegio).
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.1</div>
+    <p style="margin-bottom:0">
+      Nella stringa di permessi <code>-rw-r-----</code>, cosa può fare il proprietario, cosa il gruppo, e cosa gli
+      altri? (Ricorda: il primo carattere è il tipo.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.2</div>
+    <p style="margin-bottom:0">
+      Traduci in numero (ottale) questi permessi: (a) <code>rwxr-xr-x</code>; (b) <code>rw-rw-r--</code>. (Ricorda:
+      r=4, w=2, x=1.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.3</div>
+    <p style="margin-bottom:0">
+      Hai scritto uno script <code>backup.sh</code> ma provando a eseguirlo ottieni «Permission denied». Quale comando
+      risolve, e cosa fa esattamente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 6.4</div>
+    <p style="margin-bottom:0">
+      Vuoi che un file <code>appunti.txt</code> sia leggibile e scrivibile <b>solo da te</b>, e da nessun altro. Quale
+      comando <code>chmod</code> (numerico) usi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s6-7"><span class="secnum">Sezione 6.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.1</div>
+    <p style="margin-bottom:0">
+      Il primo <code>-</code> indica un file normale. Poi: <b>user</b> <code>rw-</code> = il proprietario può
+      <b>leggere e scrivere</b> (non eseguire); <b>group</b> <code>r--</code> = il gruppo può <b>solo leggere</b>;
+      <b>others</b> <code>---</code> = gli altri <b>non possono fare nulla</b>. In numeri sarebbe 640.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.2</div>
+    <p style="margin-bottom:0">
+      (a) <code>rwxr-xr-x</code>: rwx=7 (4+2+1), r-x=5 (4+1), r-x=5 → <b>755</b>. (b) <code>rw-rw-r--</code>: rw-=6
+      (4+2), rw-=6, r--=4 → <b>664</b>. Si somma per ciascun gruppo di tre (r=4, w=2, x=1), ottenendo le tre cifre.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.3</div>
+    <p style="margin-bottom:0">
+      Il comando è <code>chmod +x backup.sh</code>. «Permission denied» quando provi a eseguire uno script significa
+      quasi sempre che manca il permesso di <b>esecuzione</b> (x). <code>chmod +x</code> lo <b>aggiunge</b>, rendendo
+      lo script eseguibile. Da quel momento potrai lanciarlo (es. con <code>./backup.sh</code>). È il comando che darai
+      più spesso quando scrivi script (Cap. 12).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 6.4</div>
+    <p style="margin-bottom:0">
+      <code>chmod 600 appunti.txt</code>. Il numero 600 = <code>rw-------</code>: il <b>proprietario</b> ha lettura e
+      scrittura (rw = 6), mentre <b>gruppo</b> e <b>altri</b> non hanno alcun permesso (0 e 0). Così solo tu puoi
+      leggere e modificare il file. È il permesso tipico per i file privati o sensibili.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719d"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §6.2 — calcolatrice dei permessi: rwx x ugo -> stringa + numero + chmod
+   ========================================================================= */
+(function () {
+  const rowsEl = document.getElementById('pm-rows');
+  if (!rowsEl) return;
+  const strEl = document.getElementById('pm-str');
+  const numEl = document.getElementById('pm-num');
+  const out = document.getElementById('pm-out');
+
+  const CATS = [['user', 'u'], ['group', 'g'], ['others', 'o']];
+  const perms = { user: [true, true, true], group: [true, false, true], others: [true, false, true] }; // default 755
+
+  function buildRows() {
+    rowsEl.innerHTML = CATS.map(function (c) {
+      const key = c[0];
+      return '<tr style="border-top:1px solid var(--rule)">' +
+        '<td style="text-align:left; padding:.4rem; color:var(--ink-soft)">' + key + '</td>' +
+        [0, 1, 2].map(function (i) {
+          return '<td><input type="checkbox" data-cat="' + key + '" data-i="' + i + '"' + (perms[key][i] ? ' checked' : '') + '></td>';
+        }).join('') +
+        '<td id="pm-d-' + key + '" style="font-weight:700; color:var(--accent)"></td></tr>';
+    }).join('');
+    rowsEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        perms[cb.getAttribute('data-cat')][+cb.getAttribute('data-i')] = cb.checked;
+        render();
+      });
+    });
+  }
+
+  function render() {
+    let str = '', num = '';
+    CATS.forEach(function (c) {
+      const p = perms[c[0]];
+      str += (p[0] ? 'r' : '-') + (p[1] ? 'w' : '-') + (p[2] ? 'x' : '-');
+      const d = (p[0] ? 4 : 0) + (p[1] ? 2 : 0) + (p[2] ? 1 : 0);
+      num += d;
+      const cell = document.getElementById('pm-d-' + c[0]); if (cell) cell.textContent = d;
+    });
+    strEl.textContent = '-' + str;
+    numEl.innerHTML = '<span class="p">$</span> <span class="cmd">chmod</span> <span class="ar">' + num + '</span> <span class="ar">file</span>';
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.9rem; text-align:left">Spunta i permessi: r=4, w=2, x=1 si sommano per categoria. La stringa <code>' + strEl.textContent + '</code> equivale al numero <b>' + num + '</b>, che passi a <code>chmod</code>. Prova i preset comuni sotto.</div>';
+  }
+
+  document.querySelectorAll('#w-perm .btn[data-preset]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      const n = b.getAttribute('data-preset');
+      CATS.forEach(function (c, ci) {
+        const d = parseInt(n[ci], 10);
+        perms[c[0]] = [!!(d & 4), !!(d & 2), !!(d & 1)];
+      });
+      buildRows(); render();
+    });
+  });
+
+  buildRows();
+  render();
+})();
+</script>
+</body>
+</html>
