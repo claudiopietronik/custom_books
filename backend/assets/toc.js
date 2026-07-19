@@ -257,7 +257,7 @@ const TOC = [
     n: 17,
     titolo: "nginx: reverse proxy e HTTPS",
     file: "cap17-nginx-https.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s17-1", n: "17.1", t: "Cos'è un reverse proxy" },
       { id: "s17-2", n: "17.2", t: "nginx davanti a FastAPI" },

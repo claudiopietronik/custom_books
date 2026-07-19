@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17 · nginx: reverse proxy e HTTPS — Backend Development</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="17">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 17</div>
+    <h1>nginx: reverse proxy e HTTPS</h1>
+    <p class="standfirst">
+      Il nostro backend, avviato con Compose, funziona — ma esporlo <b>direttamente</b> a Internet sarebbe un errore.
+      Serve un «portiere» davanti all'applicazione: un programma robusto che riceve tutte le connessioni dal mondo,
+      le smista all'app, gestisce l'<b>HTTPS</b> (il lucchetto verde), serve i file statici e protegge ciò che sta
+      dietro. Questo portiere è, quasi sempre, <b>nginx</b>: un web server velocissimo, usato come <b>reverse
+      proxy</b>. Lo hai già incontrato nel libro «Reti» come server web; qui lo vedi nel suo ruolo più prezioso per il
+      backend. In questo capitolo capisci cos'è un reverse proxy (§17.1), come mettere nginx davanti a FastAPI (§17.2),
+      come servire i file statici (§17.3) e come attivare l'<b>HTTPS gratuito</b> con Let's Encrypt (§17.4).
+      <mark>È il penultimo pezzo: dopo questo, il nostro backend sarà pronto per affacciarsi su Internet in modo
+      sicuro.</mark>
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è un <b>reverse proxy</b> (§17.1), <b>nginx davanti a FastAPI</b> (§17.2), servire i <b>file statici</b>
+      (§17.3), l'<b>HTTPS</b> con Let's Encrypt (§17.4). Nel laboratorio (§17.5) configuri nginx con un certificato.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: la porta d'ingresso sicura</div>
+    <p style="margin-bottom:0">
+      Nessun backend serio è esposto «nudo» a Internet: davanti c'è sempre un reverse proxy come nginx, che fa da
+      scudo e da smistatore. <mark>È lì che si attiva l'HTTPS — oggi obbligatorio</mark> (i browser marchiano come «non
+      sicuro» i siti senza) — e si gestiscono connessioni, file statici, e la sicurezza di base. Capire questo strato
+      è indispensabile per portare online un'applicazione in modo professionale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-1"><span class="secnum">Sezione 17.1</span>Cos'è un reverse proxy</h2>
+
+  <p class="lead">
+    Un <b>reverse proxy</b> è un server che sta <b>davanti</b> alle tue applicazioni e fa da intermediario: riceve
+    tutte le richieste dai client e le <b>inoltra</b> al servizio giusto dietro di lui, poi rimanda indietro la
+    risposta. Il client parla solo col proxy; non sa (e non deve sapere) cosa c'è dietro.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cosa fa il portiere <span class="tag">i compiti del reverse proxy</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><b>punto d'ingresso unico</b></dt>
+        <dd>tutte le richieste arrivano a nginx (sulle porte 80/443), che le smista. <mark>L'app FastAPI non è mai
+            esposta direttamente</mark>: sta «al sicuro» dietro il proxy.</dd>
+        <dt>gestisce l'<b>HTTPS</b> (TLS)</dt>
+        <dd>nginx si occupa della cifratura (il lucchetto): decifra le richieste in arrivo e cifra le risposte, così
+            la tua app può parlare in HTTP semplice dietro le quinte. <mark>Si dice «terminazione TLS».</mark></dd>
+        <dt>smista per <b>percorso</b> o dominio</dt>
+        <dd>può mandare <code>/api/…</code> all'app FastAPI, <code>/static/…</code> ai file, domini diversi ad app
+            diverse. <mark>Un solo ingresso, tante destinazioni.</mark></dd>
+        <dt><b>protegge e ottimizza</b></dt>
+        <dd>serve i file statici velocemente, può fare cache, limitare gli abusi, bilanciare il carico su più copie
+            dell'app (Cap. 15). Fa lo «sporco lavoro» di rete, sollevando l'app.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      «Reverse» (inverso) perché è l'opposto di un proxy classico: un proxy normale sta davanti ai <b>client</b> (li
+      rappresenta verso Internet); un reverse proxy sta davanti ai <b>server</b> (li rappresenta verso i client).
+      <mark>Per il client, nginx <em>è</em> il tuo sito</mark>; l'app dietro è invisibile. Questo isolamento è ottimo
+      per sicurezza e flessibilità.
+    </div>
+  </div>
+
+  <div class="widget" id="w-proxy">
+    <div class="w-head">
+      <span>nginx come reverse proxy: smista le richieste</span>
+      <span class="hint">scegli un percorso, guarda dove va</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div style="display:flex; align-items:center; justify-content:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.8rem">
+        <div style="text-align:center"><div style="font-size:1.6rem">🌐</div><div style="font-size:.75rem; color:var(--ink-soft)">client (HTTPS)</div></div>
+        <div style="font-size:1.4rem; color:var(--ink-faint)">→</div>
+        <div id="px-nginx" style="text-align:center; border:2px solid var(--accent); border-radius:10px; padding:.5rem .9rem; background:color-mix(in srgb, var(--accent) 10%, transparent)"><div style="font-size:1.4rem">🛡️</div><b>nginx</b><div style="font-size:.7rem; color:var(--ink-soft)">:443</div></div>
+        <div style="font-size:1.4rem; color:var(--ink-faint)">→</div>
+        <div style="display:flex; flex-direction:column; gap:.4rem">
+          <div id="px-api" style="border:2px solid var(--ink-soft); border-radius:8px; padding:.35rem .7rem; font-size:.85rem; transition:all .25s">⚙️ FastAPI <span style="color:var(--ink-soft); font-family:var(--mono); font-size:.75rem">api:80</span></div>
+          <div id="px-static" style="border:2px solid var(--ink-soft); border-radius:8px; padding:.35rem .7rem; font-size:.85rem; transition:all .25s">📁 file statici</div>
+        </div>
+      </div>
+      <div style="text-align:center">
+        <span style="font-family:var(--mono); font-size:.85rem; color:var(--ink-soft)">GET https://mio-sito.com</span>
+        <select id="px-path" style="padding:.3rem .5rem; border-radius:6px; background:var(--paper); color:var(--ink); border:1px solid var(--ink-soft); font-family:var(--mono)">
+          <option>/api/contatti</option>
+          <option>/api/utenti/1</option>
+          <option>/static/logo.png</option>
+          <option>/static/style.css</option>
+        </select>
+      </div>
+    </div>
+    <div class="w-readout" id="px-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-2"><span class="secnum">Sezione 17.2</span>nginx davanti a FastAPI</h2>
+
+  <p class="lead">
+    La configurazione di base di nginx come reverse proxy per la nostra app è breve: «tutto ciò che arriva, passalo
+    all'app FastAPI». La direttiva chiave è <code>proxy_pass</code>.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">nginx.conf (estratto) — reverse proxy verso FastAPI</div>
+    <pre><span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="nm">80</span>;                        <span class="cm"># ascolta sulla porta HTTP</span>
+    <span class="kw">server_name</span> <span class="ar">mio-sito.com</span>;
+
+    <span class="kw">location</span> <span class="ar">/</span> {                     <span class="cm"># tutte le richieste...</span>
+        <span class="kw">proxy_pass</span> <span class="ar">http://api:80</span>;      <span class="cm"># ...inoltrale all'app FastAPI</span>
+        <span class="kw">proxy_set_header</span> <span class="ar">Host</span> <span class="ar">$host</span>;
+        <span class="kw">proxy_set_header</span> <span class="ar">X-Real-IP</span> <span class="ar">$remote_addr</span>;
+    }
+}</pre>
+  </div>
+
+  <div class="formula">
+    <div class="f-head">La configurazione smontata <span class="tag">server · listen · location · proxy_pass</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">server { ... }</span></dt>
+        <dd>un «sito» servito da nginx. Puoi averne più d'uno (per domini diversi).</dd>
+        <dt><span class="mono">listen 80;</span> · <span class="mono">server_name</span></dt>
+        <dd>su quale porta ascoltare e per quale dominio. La 80 è HTTP; la 443 sarà HTTPS (§17.4).</dd>
+        <dt><span class="mono">location / { ... }</span></dt>
+        <dd>una regola per un gruppo di percorsi. <code>/</code> = «tutto». Puoi avere più <code>location</code> per
+            smistare percorsi diversi (§17.3).</dd>
+        <dt><span class="mono">proxy_pass http://api:80;</span></dt>
+        <dd>il cuore del reverse proxy: <mark>«inoltra questa richiesta all'app <code>api</code> sulla porta 80»</mark>.
+            Nota il nome <code>api</code>: è il servizio del Compose (Cap. 16)! Se nginx è nello stesso stack, lo
+            raggiunge per nome.</dd>
+        <dt><span class="mono">proxy_set_header ...</span></dt>
+        <dd>passa all'app informazioni utili sulla richiesta originale (l'host chiesto, l'IP reale del client),
+            altrimenti perse dietro il proxy.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nella pratica, nginx diventa <b>un altro servizio</b> del tuo <code>docker-compose.yml</code> (Cap. 16): è lui a
+      esporre le porte 80/443 verso il mondo, mentre l'app <code>api</code> resta interna, raggiungibile solo dal
+      proxy. <mark>Il client parla con nginx; nginx parla con l'app.</mark> Questo è lo schema di produzione più
+      diffuso per un backend FastAPI.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-3"><span class="secnum">Sezione 17.3</span>Servire file statici</h2>
+
+  <p class="lead">
+    nginx è <b>eccezionale</b> nel servire file statici (immagini, CSS, JavaScript, pagine HTML): lo fa molto più
+    velocemente di un'app Python. Conviene affidargli quel compito, lasciando all'app solo la logica.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">nginx.conf — statici da nginx, resto all'app</div>
+    <pre><span class="kw">server</span> {
+    <span class="kw">listen</span> <span class="nm">80</span>;
+
+    <span class="kw">location</span> <span class="ar">/static/</span> {              <span class="cm"># i file statici...</span>
+        <span class="kw">root</span> <span class="ar">/var/www</span>;              <span class="cm"># ...servili direttamente da questa cartella</span>
+    }
+
+    <span class="kw">location</span> <span class="ar">/</span> {                    <span class="cm"># tutto il resto...</span>
+        <span class="kw">proxy_pass</span> <span class="ar">http://api:80</span>;     <span class="cm"># ...all'app (le API)</span>
+    }
+}</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Divisione dei compiti</div>
+    <p style="margin-bottom:0">
+      nginx confronta il percorso con le <code>location</code>, dalla più specifica: una richiesta a
+      <code>/static/logo.png</code> viene servita <b>direttamente</b> come file (velocissimo, senza toccare l'app);
+      una richiesta a <code>/api/contatti</code> viene <b>inoltrata</b> a FastAPI. <mark>Ognuno fa ciò in cui è
+      bravo</mark>: nginx i file, l'app la logica. È il pattern che hai visto nel widget del §17.1. Nota: per un
+      backend puramente «API» potresti non avere statici da servire (il front-end sta altrove); ma spessissimo nginx
+      serve anche il front-end compilato, ed è utile saperlo fare.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-4"><span class="secnum">Sezione 17.4</span>HTTPS con Let's Encrypt</h2>
+
+  <p class="lead">
+    L'<b>HTTPS</b> (il lucchetto) cifra il traffico tra client e server: oggi è indispensabile — protegge i dati (e i
+    token, Cap. 13!) e i browser lo pretendono. La bella notizia: ottenere un certificato è <b>gratis e
+    automatico</b>, grazie a <b>Let's Encrypt</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">HTTPS in pratica <span class="tag">certificato · Let's Encrypt · certbot</span></div>
+    <div class="simboli">
+      <dl>
+        <dt>il <b>certificato</b> TLS</dt>
+        <dd>un file che «certifica» l'identità del tuo dominio e permette la cifratura (Cap. «Reti», HTTPS/TLS). Lo
+            installa nginx per servire su HTTPS (porta 443).</dd>
+        <dt><b>Let's Encrypt</b></dt>
+        <dd>un'autorità di certificazione <b>gratuita</b> che rilascia certificati validi, riconosciuti da tutti i
+            browser. <mark>Ha reso l'HTTPS gratuito e universale.</mark></dd>
+        <dt><b>certbot</b></dt>
+        <dd>lo strumento che <b>ottiene e rinnova</b> automaticamente i certificati di Let's Encrypt e li configura in
+            nginx. <mark>Un comando, e il tuo sito è in HTTPS</mark>; i certificati (che scadono ogni 90 giorni) si
+            rinnovano da soli.</dd>
+        <dt>redirect HTTP → HTTPS</dt>
+        <dd>si configura nginx perché ogni richiesta in HTTP (porta 80) venga <b>reindirizzata</b> a HTTPS (443): così
+            nessuno naviga «in chiaro».</dd>
+      </dl>
+    </div>
+    <div class="term" style="margin:1rem auto .4rem">
+      <div class="t-head">terminale — certbot ottiene e installa il certificato</div>
+      <pre><span class="p">$</span> <span class="cmd">sudo</span> <span class="cmd">certbot</span> <span class="fl">--nginx</span> <span class="fl">-d</span> <span class="ar">mio-sito.com</span>
+<span class="out">... Certificato ottenuto e configurato in nginx.
+    Il tuo sito è ora raggiungibile in HTTPS! Rinnovo automatico attivo.</span></pre>
+    </div>
+    <div class="f-note">
+      Serve un <b>dominio</b> reale che punti al tuo server (§17.5, e Cap. 18). Ma il processo è sorprendentemente
+      semplice: <code>certbot --nginx</code> parla con Let's Encrypt, ottiene il certificato, modifica la config di
+      nginx per usarlo, e imposta il rinnovo automatico. <mark>HTTPS professionale, gratis, in un comando</mark> — una
+      delle grandi conquiste del web moderno. Ricorda dal Cap. 13: i token e le password viaggiano al sicuro <b>solo</b>
+      su HTTPS.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-5"><span class="secnum">Sezione 17.5</span>Laboratorio: nginx + certificato</h2>
+
+  <p class="lead">
+    Aggiungiamo nginx al nostro stack e, a grandi linee, il percorso per l'HTTPS. Il laboratorio completo si realizza
+    su un server con un dominio (Cap. 18); qui i pezzi che serviranno.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">docker-compose.yml — aggiungi il servizio nginx</div>
+    <pre><span class="kw">services</span>:
+  <span class="ar">nginx</span>:
+    <span class="kw">image</span>: <span class="ar">nginx</span>
+    <span class="kw">ports</span>:
+      - <span class="st">"80:80"</span>
+      - <span class="st">"443:443"</span>              <span class="cm"># HTTPS</span>
+    <span class="kw">volumes</span>:
+      - <span class="ar">./nginx.conf</span>:<span class="ar">/etc/nginx/conf.d/default.conf</span>   <span class="cm"># la tua config</span>
+    <span class="kw">depends_on</span>: [<span class="ar">api</span>]
+
+  <span class="ar">api</span>:                          <span class="cm"># l'app: NON espone più le porte al mondo,</span>
+    <span class="kw">build</span>: <span class="ar">.</span>                     <span class="cm"># è raggiungibile solo da nginx (rete interna)</span>
+  <span class="c"># ... db, minio come prima ...</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Il quadro completo</div>
+    <p style="margin-bottom:0">
+      Ora <b>nginx</b> è la porta d'ingresso: espone 80/443 al mondo e inoltra all'app <code>api</code> (che non
+      espone più porte esternamente — più sicura). Sul server, dopo aver puntato il dominio, lanci
+      <code>certbot --nginx -d mio-sito.com</code> per l'HTTPS. <mark>Il risultato: gli utenti visitano
+      <code>https://mio-sito.com</code>, nginx cifra/decifra e smista, l'app lavora tranquilla dietro.</mark> È
+      l'architettura di produzione standard. Manca solo un pezzo: un <b>server vero</b> dove far girare tutto questo,
+      con un dominio — ed è il gran finale del prossimo capitolo.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 17</div>
+    <ol style="margin-bottom:0">
+      <li>Un <b>reverse proxy</b> sta davanti all'app: punto d'ingresso unico, gestisce HTTPS, smista le richieste,
+          protegge. L'app non è mai esposta direttamente (§17.1).</li>
+      <li><b>nginx</b> come reverse proxy: <code>location / { proxy_pass http://api:80; }</code> inoltra le richieste
+          all'app (raggiunta per nome nello stack) (§17.2).</li>
+      <li>nginx serve i <b>file statici</b> direttamente (veloce) e inoltra il resto all'app: ognuno fa il suo mestiere
+          (§17.3).</li>
+      <li><b>HTTPS gratuito</b> con Let's Encrypt + <code>certbot --nginx</code>: certificato e rinnovo automatici. I
+          token/password viaggiano sicuri solo su HTTPS (§17.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Abbiamo tutti i pezzi: un'app containerizzata, uno stack orchestrato con Compose, e il portiere nginx con HTTPS
+    davanti. Manca solo il palcoscenico: un <b>server vero</b>, connesso a Internet, con un <b>dominio</b>, dove far
+    vivere tutto questo — e le pratiche per gestirlo nel tempo. È il gran finale: nel <strong>Capitolo 18</strong>
+    portiamo il nostro backend <b>in produzione</b>, dal noleggio del server alla messa online, fino alla
+    manutenzione. Il momento in cui ciò che hai costruito diventa, finalmente, <em>raggiungibile dal mondo</em>.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-6"><span class="secnum">Sezione 17.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.1</div>
+    <p style="margin-bottom:0">
+      Cos'è un reverse proxy e perché è meglio non esporre l'app FastAPI direttamente a Internet? Elenca due compiti
+      che svolge nginx davanti all'app.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.2</div>
+    <p style="margin-bottom:0">
+      Nella configurazione di nginx, cosa fa la direttiva <code>proxy_pass http://api:80;</code>? Perché l'host è
+      <code>api</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.3</div>
+    <p style="margin-bottom:0">
+      Perché conviene far servire i file statici a nginx invece che all'app Python? Come distingue nginx una richiesta
+      per un file statico da una per le API?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 17.4</div>
+    <p style="margin-bottom:0">
+      Cosa sono Let's Encrypt e certbot? Perché l'HTTPS è particolarmente importante per un'app che usa token di
+      autenticazione (Cap. 13)?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s17-7"><span class="secnum">Sezione 17.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.1</div>
+    <p style="margin-bottom:0">
+      Un <b>reverse proxy</b> è un server che sta davanti alle applicazioni, riceve tutte le richieste dei client e le
+      inoltra al servizio giusto. Non si espone l'app direttamente perché il proxy fa da <b>scudo</b> (l'app resta
+      isolata, più sicura) e centralizza compiti importanti. Due compiti di nginx: <b>(1)</b> gestire l'<b>HTTPS</b>
+      (cifratura/terminazione TLS); <b>(2)</b> <b>smistare</b> le richieste (per percorso o dominio) e servire i file
+      statici; inoltre può fare cache, limitare gli abusi e bilanciare il carico.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.2</div>
+    <p style="margin-bottom:0">
+      <code>proxy_pass http://api:80;</code> <b>inoltra</b> la richiesta ricevuta da nginx all'applicazione FastAPI,
+      raggiungibile all'host <code>api</code> sulla porta 80. L'host è <code>api</code> perché è il <b>nome del
+      servizio</b> nel <code>docker-compose.yml</code> (Cap. 16): sulla rete interna dello stack, nginx raggiunge
+      l'app per nome, senza bisogno di indirizzi IP.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.3</div>
+    <p style="margin-bottom:0">
+      Perché nginx è ottimizzato per servire file statici ed è molto più <b>veloce</b> ed efficiente di un'app Python
+      in quel compito, che così resta libera di occuparsi solo della logica. nginx distingue le richieste tramite le
+      <b>location</b> in base al percorso: es. <code>/static/…</code> viene servito direttamente come file (direttiva
+      <code>root</code>), mentre tutto il resto (<code>/</code>) viene inoltrato all'app con <code>proxy_pass</code>.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 17.4</div>
+    <p style="margin-bottom:0">
+      <b>Let's Encrypt</b> è un'autorità che rilascia certificati TLS <b>gratuiti</b> e riconosciuti dai browser;
+      <b>certbot</b> è lo strumento che li ottiene, li configura in nginx e li rinnova automaticamente. L'HTTPS è
+      cruciale per un'app con token perché, senza cifratura, il token di autenticazione (e le password al login)
+      viaggerebbero <b>in chiaro</b> sulla rete: chiunque intercetti il traffico potrebbe rubarli e impersonare
+      l'utente. L'HTTPS cifra tutto, rendendo sicuro il trasporto delle credenziali.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719b"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §17.1 — reverse proxy: scegli un percorso, nginx lo smista (api o statici)
+   ========================================================================= */
+(function () {
+  const sel = document.getElementById('px-path');
+  if (!sel) return;
+  const out = document.getElementById('px-out');
+  const apiEl = document.getElementById('px-api');
+  const staticEl = document.getElementById('px-static');
+
+  function route() {
+    const path = sel.value;
+    const isStatic = path.indexOf('/static/') === 0;
+    const green = 'var(--green)';
+    // reset
+    apiEl.style.borderColor = 'var(--ink-soft)'; apiEl.style.background = 'transparent';
+    staticEl.style.borderColor = 'var(--ink-soft)'; staticEl.style.background = 'transparent';
+    const target = isStatic ? staticEl : apiEl;
+    target.style.borderColor = green;
+    target.style.background = 'color-mix(in srgb, ' + green + ' 13%, transparent)';
+
+    out.innerHTML = '<div style="color:var(--ink-soft); font-size:.92rem; text-align:left">' +
+      '1 · Il client chiede <code>https://mio-sito.com' + path + '</code> — <b>nginx</b> riceve e <b>decifra</b> l\'HTTPS.<br>' +
+      '2 · nginx confronta il percorso con le <code>location</code>: ' +
+      (isStatic
+        ? '<code>/static/</code> combacia → serve il <b>file direttamente</b> dal disco (velocissimo, senza toccare l\'app).'
+        : 'nessuna regola statica → <code>proxy_pass</code> <b>inoltra all\'app FastAPI</b> (<code>api:80</code>), che elabora e risponde.') +
+      '</div>';
+  }
+  sel.addEventListener('change', route);
+  route();
+})();
+</script>
+</body>
+</html>
