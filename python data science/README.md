@@ -17,7 +17,7 @@ Motore condiviso in `assets/` (toc.js, book.js, plot.js, style.css). Tema smeral
 - [x] 5 — pandas: selezionare e filtrare
 - [x] 6 — pandas: pulire i dati
 - [x] 7 — pandas: raggruppare e combinare
-- [ ] 8 — pandas: date e serie temporali
+- [x] 8 — pandas: date e serie temporali
 - [ ] 9 — Visualizzare: Matplotlib
 - [ ] 10 — Visualizzare meglio: seaborn
 - [ ] 11 — SciPy: statistica e ottimizzazione

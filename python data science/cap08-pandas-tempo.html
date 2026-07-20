@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · pandas: date e serie temporali — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="8">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 8</div>
+    <h1>pandas: date e serie temporali</h1>
+    <p class="standfirst">
+      Quasi ogni dataset reale ha una dimensione temporale: vendite <b>al giorno</b>, temperature <b>ogni ora</b>,
+      transazioni <b>con data e orario</b>. Il tempo è un tipo di dato speciale, con esigenze tutte sue — ordinare per
+      data, aggregare da giornaliero a mensile, calcolare medie mobili, confrontare periodi — e pandas ha per questo
+      strumenti dedicati e potentissimi, tanto che è nato proprio per l'analisi finanziaria. <mark>Trattare bene il
+      tempo è ciò che distingue un'analisi di serie storiche fatta a mano (faticosa e piena di errori) da una elegante e
+      corretta.</mark> In questo capitolo: come pandas rappresenta il tempo con il tipo <b>datetime</b> (§8.1), l'idea
+      chiave dell'<b>indice temporale</b> (§8.2), come <b>ricampionare</b> una serie a una frequenza diversa — da
+      giornaliero a mensile (§8.3), le <b>finestre mobili</b> per le medie mobili e le tendenze (§8.4), e un cenno a
+      <b>fusi orari e periodi</b> (§8.5). Sono gli strumenti dietro ogni grafico di andamento che tu abbia mai visto.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il tipo <b>datetime</b> (§8.1), l'<b>indice temporale</b> (§8.2), <b>ricampionare</b> con resample (§8.3), le
+      <b>finestre mobili</b> con rolling (§8.4), <b>fusi orari e periodi</b> (§8.5). Nel laboratorio (§8.6) analizzi una
+      serie storica.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: il tempo è ovunque</div>
+    <p style="margin-bottom:0">
+      Andamenti, stagionalità, tendenze, previsioni: <mark>appena c'è una data nei dati, servono gli strumenti temporali
+      di pandas.</mark> Ricampionare e calcolare medie mobili sono operazioni che faresti a mano in modo doloroso e
+      sbagliato; pandas le rende una riga di codice. È la base per dashboard, report periodici e — più avanti — le
+      previsioni di serie storiche.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-1"><span class="secnum">Sezione 8.1</span>Il tipo datetime</h2>
+
+  <p class="lead">
+    Il primo passo è far <b>capire</b> a pandas che una colonna è fatta di date, non di testo. Una data trattata come
+    stringa non si può ordinare né aggregare per mese; convertita nel tipo <code>datetime</code>, si sblocca tutto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Da testo a date vere <span class="tag">to_datetime · l'accessorio .dt</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">datetime.py</div>
+      <pre><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>
+
+<span class="cm"># testo "2024-03-15" → una vera data</span>
+<span class="nm">df</span>[<span class="st">"data"</span>] <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">to_datetime</span>(<span class="nm">df</span>[<span class="st">"data"</span>])
+
+<span class="cm"># in fase di caricamento, direttamente:</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">read_csv</span>(<span class="st">"vendite.csv"</span>, <span class="nm">parse_dates</span><span class="op">=</span>[<span class="st">"data"</span>])
+
+<span class="cm"># l'accessorio .dt: estrai pezzi dalla data (come .str per il testo)</span>
+<span class="nm">df</span>[<span class="st">"data"</span>]<span class="op">.</span><span class="fn">dt</span><span class="op">.</span><span class="nm">year</span>          <span class="cm"># l'anno</span>
+<span class="nm">df</span>[<span class="st">"data"</span>]<span class="op">.</span><span class="fn">dt</span><span class="op">.</span><span class="nm">month</span>         <span class="cm"># il mese (1-12)</span>
+<span class="nm">df</span>[<span class="st">"data"</span>]<span class="op">.</span><span class="fn">dt</span><span class="op">.</span><span class="nm">day_name</span>()    <span class="cm"># "Monday", "Tuesday"...</span>
+<span class="nm">df</span>[<span class="st">"data"</span>]<span class="op">.</span><span class="fn">dt</span><span class="op">.</span><span class="nm">dayofweek</span>     <span class="cm"># 0=lunedì ... 6=domenica</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">pd.to_datetime(colonna)</span></dt>
+        <dd>converte testo (o numeri) in date vere. <mark>Riconosce da solo la maggior parte dei formati</mark>
+            («2024-03-15», «15/03/2024»…); se serve, glielo dici con <code>format=</code>.</dd>
+        <dt><span class="mono">parse_dates=[...]</span> in read_csv</dt>
+        <dd>fa la conversione già al caricamento: comodo, così le colonne di data sono subito «vere».</dd>
+        <dt>l'accessorio <span class="mono">.dt</span></dt>
+        <dd>come <code>.str</code> per il testo, <code>.dt</code> apre gli attributi delle date su una colonna intera:
+            <code>.year</code>, <code>.month</code>, <code>.day</code>, <code>.hour</code>, <code>.day_name()</code>,
+            <code>.dayofweek</code>. <mark>Perfetto per creare colonne come «mese» o «giorno della settimana»</mark> e
+            poi raggrupparci sopra (Cap. 7).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-2"><span class="secnum">Sezione 8.2</span>L'indice temporale</h2>
+
+  <p class="lead">
+    La mossa che sblocca i superpoteri temporali di pandas: mettere la data come <b>indice</b> del DataFrame. Con un
+    indice di date puoi selezionare per periodo, ricampionare e molto altro, in modo naturale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">La data come indice <span class="tag">set_index + selezione per periodo</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">indice_tempo.py</div>
+      <pre><span class="nm">df</span> <span class="op">=</span> <span class="nm">df</span><span class="op">.</span><span class="fn">set_index</span>(<span class="st">"data"</span>)<span class="op">.</span><span class="fn">sort_index</span>()   <span class="cm"># data come indice, ordinato</span>
+
+<span class="cm"># selezione per periodo, leggibilissima:</span>
+<span class="nm">df</span><span class="op">.</span><span class="nm">loc</span>[<span class="st">"2024"</span>]              <span class="cm"># tutto il 2024</span>
+<span class="nm">df</span><span class="op">.</span><span class="nm">loc</span>[<span class="st">"2024-03"</span>]           <span class="cm"># solo marzo 2024</span>
+<span class="nm">df</span><span class="op">.</span><span class="nm">loc</span>[<span class="st">"2024-03-01"</span>:<span class="st">"2024-03-15"</span>]   <span class="cm"># un intervallo di date</span></pre>
+    </div>
+    <div class="f-note">
+      Con un <b>DatetimeIndex</b> (indice di date), <mark>puoi «fettare» per anno, mese o intervallo scrivendo la data
+      come stringa</mark> — pandas capisce. È molto più naturale che filtrare con maschere sulle date. E, soprattutto,
+      abilita <code>resample</code> (§8.3), lo strumento più utile per le serie storiche. <b>Ricorda</b> di ordinare
+      l'indice con <code>sort_index()</code>: le operazioni temporali assumono dati in ordine cronologico.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-3"><span class="secnum">Sezione 8.3</span>Ricampionare (resample)</h2>
+
+  <p class="lead">
+    Il caso più frequente con le serie storiche: hai dati a una frequenza (giornaliera) e li vuoi a un'altra (mensile).
+    Aggregare «per mese», «per settimana», «per trimestre» si fa con <code>resample</code> — un groupby, ma sul tempo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cambiare la frequenza temporale <span class="tag">resample("M").agg</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">resample.py</div>
+      <pre><span class="cm"># richiede la data come indice (§8.2)</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">resample</span>(<span class="st">"ME"</span>)[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">sum</span>()     <span class="cm"># totale vendite per MESE</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">resample</span>(<span class="st">"W"</span>)[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">mean</span>()     <span class="cm"># media per SETTIMANA</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">resample</span>(<span class="st">"QE"</span>)[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">sum</span>()     <span class="cm"># totale per TRIMESTRE</span>
+
+<span class="cm"># più statistiche insieme (come agg del Cap. 7)</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">resample</span>(<span class="st">"ME"</span>)[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">agg</span>([<span class="st">"sum"</span>, <span class="st">"mean"</span>, <span class="st">"max"</span>])</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">resample("regola")</span> — il «groupby del tempo»</dt>
+        <dd>raggruppa le righe per <b>intervalli temporali</b> e poi aggrega, esattamente come groupby ma sull'asse del
+            tempo. <mark>La «regola» è un codice di frequenza</mark>: <code>"D"</code> giorno, <code>"W"</code>
+            settimana, <code>"ME"</code> fine mese, <code>"QE"</code> trimestre, <code>"YE"</code> anno,
+            <code>"h"</code> ora.</dd>
+        <dt>poi un'<b>aggregazione</b></dt>
+        <dd>dopo <code>resample</code> scegli come combinare: <code>.sum()</code> (totale del periodo), <code>.mean()</code>
+            (media), <code>.max()</code>, o <code>.agg([...])</code> per più insieme. <mark>Per le vendite di solito
+            <code>sum</code>; per le temperature <code>mean</code>.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <code>resample</code> è la risposta a «voglio il grafico mensile invece che giornaliero» o «il fatturato per
+      trimestre». <mark>Downsampling</mark> (da fine a grossolano, es. giorno→mese) è il caso comune; esiste anche
+      l'<b>upsampling</b> (mese→giorno, riempiendo i buchi), meno frequente. È forse lo strumento più prezioso di tutto
+      il capitolo.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Finestre mobili (rolling)</h2>
+
+  <p class="lead">
+    Le serie storiche sono spesso «rumorose»: sali e scendi giornalieri che nascondono la vera tendenza. La <b>media
+    mobile</b> (rolling) leviga questo rumore, calcolando la media su una finestra che scorre nel tempo. È la curva
+    liscia che vedi in ogni grafico di borsa o di contagi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Levigare con una finestra scorrevole <span class="tag">rolling(window).mean()</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">rolling.py</div>
+      <pre><span class="cm"># media mobile a 7 giorni: leviga il rumore giornaliero</span>
+<span class="nm">df</span>[<span class="st">"media_7g"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">rolling</span>(<span class="nm">window</span><span class="op">=</span><span class="nm">7</span>)<span class="op">.</span><span class="fn">mean</span>()
+
+<span class="cm"># altre statistiche sulla finestra</span>
+<span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">rolling</span>(<span class="nm">30</span>)<span class="op">.</span><span class="fn">std</span>()      <span class="cm"># volatilità a 30 giorni</span>
+<span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">rolling</span>(<span class="nm">7</span>)<span class="op">.</span><span class="fn">max</span>()       <span class="cm"># massimo mobile</span>
+
+<span class="cm"># somma cumulata (dall'inizio a ogni punto): l'andamento del totale</span>
+<span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">cumsum</span>()</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">rolling(window)</span> — la finestra scorrevole</dt>
+        <dd>per ogni punto, considera gli ultimi <code>window</code> valori e ci calcola una statistica. Con
+            <code>window=7</code>, ogni giorno mostra la media degli ultimi 7. <mark>Più larga la finestra, più liscia
+            (ma più «in ritardo») la curva.</mark></dd>
+        <dt>poi la statistica: <span class="mono">.mean()</span>, <span class="mono">.std()</span>…</dt>
+        <dd><code>mean</code> per la tendenza (la più comune), <code>std</code> per la volatilità, <code>max/min</code>
+            per gli estremi mobili. <mark>I primi <code>window-1</code> valori sono <code>NaN</code></mark> (non c'è
+            abbastanza storia per riempire la finestra).</dd>
+        <dt><span class="mono">cumsum()</span> — la cumulata</dt>
+        <dd>somma progressiva dall'inizio: utile per «totale accumulato nel tempo» (vendite da inizio anno, casi totali).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel widget qui sotto una serie «giornaliera» rumorosa con la sua media mobile: <mark>allarga la finestra e guarda la
+      curva farsi più liscia</mark>, rivelando la tendenza sotto il rumore. È esattamente ciò che fanno le medie mobili
+      nei grafici che vedi ogni giorno.
+    </div>
+  </div>
+
+  <div class="widget" id="w-roll">
+    <div class="w-head">
+      <span>Media mobile: levigare il rumore</span>
+      <span class="hint">allarga la finestra, guarda la tendenza emergere</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="rl-svg" viewBox="0 0 460 260" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem; justify-content:center">
+        <label>finestra (giorni) <input type="range" id="rl-w" min="1" max="15" step="1" value="7"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="rl-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-5"><span class="secnum">Sezione 8.5</span>Fusi orari e periodi (cenni)</h2>
+
+  <p class="lead">
+    Due argomenti più avanzati che è bene <b>sapere che esistono</b>, per non farti sorprendere quando li incontrerai:
+    i fusi orari e le operazioni tra date.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🌍</span> Fusi orari, differenze tra date, offset</div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">avanzato.py</div>
+      <pre><span class="cm"># differenza tra due date → un Timedelta (durata)</span>
+<span class="nm">durata</span> <span class="op">=</span> <span class="nm">df</span>[<span class="st">"consegna"</span>] <span class="op">-</span> <span class="nm">df</span>[<span class="st">"ordine"</span>]    <span class="cm"># es. "3 days"</span>
+<span class="nm">durata</span><span class="op">.</span><span class="fn">dt</span><span class="op">.</span><span class="nm">days</span>                              <span class="cm"># estrai i giorni come numero</span>
+
+<span class="cm"># spostare una data avanti/indietro</span>
+<span class="nm">df</span>[<span class="st">"data"</span>] <span class="op">+</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">Timedelta</span>(<span class="nm">days</span><span class="op">=</span><span class="nm">30</span>)         <span class="cm"># 30 giorni dopo</span>
+
+<span class="cm"># fusi orari (per dati globali)</span>
+<span class="nm">df</span><span class="op">.</span><span class="fn">tz_localize</span>(<span class="st">"Europe/Rome"</span>)<span class="op">.</span><span class="fn">tz_convert</span>(<span class="st">"UTC"</span>)</pre>
+    </div>
+    <p style="margin-bottom:0">
+      Tre idee da tenere a mente: <b>(1)</b> <mark>sottrarre due date dà una <b>durata</b></mark> (Timedelta), da cui
+      estrai giorni/ore — utilissimo per «tempo di consegna», «età in giorni». <b>(2)</b> <code>Timedelta</code> e gli
+      offset spostano le date (aggiungi 30 giorni, vai a fine mese). <b>(3)</b> i <b>fusi orari</b> contano quando i dati
+      arrivano da luoghi diversi: si «localizza» una data in un fuso e si «converte» in un altro (o in UTC, lo standard).
+      <mark>Per ora basta sapere che esistono</mark>: li approfondirai quando un progetto te lo chiederà.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-6"><span class="secnum">Sezione 8.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Analizziamo una serie di vendite giornaliere come si fa davvero: conversione a date, indice temporale, aggregazione
+    mensile e media mobile per la tendenza. Il flusso completo di un'analisi di serie storica.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">serie_storica.py</div>
+    <pre><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span>
+<span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+
+<span class="cm"># 90 giorni di vendite (in un progetto: pd.read_csv(..., parse_dates=["data"]))</span>
+<span class="nm">date</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">date_range</span>(<span class="st">"2024-01-01"</span>, <span class="nm">periods</span><span class="op">=</span><span class="nm">90</span>, <span class="nm">freq</span><span class="op">=</span><span class="st">"D"</span>)
+<span class="nm">vendite</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">random</span><span class="op">.</span><span class="fn">poisson</span>(<span class="nm">100</span>, <span class="nm">90</span>)   <span class="cm"># ~100 al giorno, con rumore</span>
+<span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span><span class="op">.</span><span class="fn">DataFrame</span>({<span class="st">"vendite"</span>: <span class="nm">vendite</span>}, <span class="nm">index</span><span class="op">=</span><span class="nm">date</span>)
+
+<span class="cm"># 1. totale per mese (resample)</span>
+<span class="bi">print</span>(<span class="nm">df</span><span class="op">.</span><span class="fn">resample</span>(<span class="st">"ME"</span>)[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">sum</span>())
+
+<span class="cm"># 2. media mobile a 7 giorni (rolling) per la tendenza</span>
+<span class="nm">df</span>[<span class="st">"tendenza"</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">rolling</span>(<span class="nm">7</span>)<span class="op">.</span><span class="fn">mean</span>()
+
+<span class="cm"># 3. giorno con più vendite</span>
+<span class="bi">print</span>(<span class="nm">df</span>[<span class="st">"vendite"</span>]<span class="op">.</span><span class="fn">idxmax</span>())      <span class="cm"># la DATA del massimo (idxmax = argmax con indice)</span></pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output (i numeri esatti variano per il caso)</div>
+      <pre><span class="out">2024-01-31    3095
+2024-02-29    2887
+2024-03-31    3102
+Freq: ME, Name: vendite, dtype: int64
+
+2024-02-17 00:00:00      # esempio di data del picco</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Il flusso è quello di ogni analisi temporale: <b>(1)</b> <code>resample("ME").sum()</code> comprime 90 righe
+      giornaliere in <mark>3 righe mensili col totale</mark> (gennaio ~3095, ecc.) — pronte per un grafico o un report;
+      <b>(2)</b> la media mobile a 7 giorni crea una colonna «tendenza» liscia, che leviga i saliscendi quotidiani;
+      <b>(3)</b> <code>idxmax()</code> dà la <b>data</b> del giorno record (come <code>argmax</code> del Cap. 3, ma
+      restituisce l'etichetta dell'indice, cioè la data). <mark>Con quattro righe hai riassunto, levigato e interrogato
+      una serie storica</mark> — il lavoro che sta dietro ogni dashboard di andamento.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 8</div>
+    <ol style="margin-bottom:0">
+      <li><code>pd.to_datetime</code> (o <code>parse_dates</code>) trasforma il testo in <b>date vere</b>; l'accessorio
+          <code>.dt</code> estrae anno, mese, giorno della settimana… (§8.1).</li>
+      <li>Mettere la data come <b>indice</b> (<code>set_index().sort_index()</code>) sblocca la selezione per periodo
+          (<code>df.loc["2024-03"]</code>) e il resample (§8.2).</li>
+      <li><b>resample</b>("ME"/"W"/"QE") è il «groupby del tempo»: cambia la frequenza (giorno→mese) aggregando con
+          sum/mean (§8.3).</li>
+      <li><b>rolling</b>(window).mean() è la <b>media mobile</b> che leviga il rumore e rivela la tendenza; finestra più
+          larga = più liscia. <code>cumsum</code> per il totale accumulato (§8.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con NumPy e pandas hai imparato a maneggiare i dati: crearli, pulirli, filtrarli, raggrupparli, gestire il tempo.
+    Ma finora li abbiamo solo <b>guardati</b> in forma di tabelle e numeri. Per <b>capirli</b> davvero — cogliere
+    distribuzioni, tendenze, relazioni, anomalie — non c'è niente come <b>vederli</b>. Nel <strong>Capitolo 9</strong>
+    entriamo nella visualizzazione con <b>Matplotlib</b>, la libreria di grafici fondamentale di Python: figure e assi,
+    i tipi di grafico, la personalizzazione. È lì che i numeri diventano immagini che parlano — e che l'analisi
+    esplorativa prende vita.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-7"><span class="secnum">Sezione 8.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.1</div>
+    <p style="margin-bottom:0">
+      Perché una colonna di date lasciata come testo è problematica? Cosa sblocca la conversione con
+      <code>pd.to_datetime</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.2</div>
+    <p style="margin-bottom:0">
+      Hai un DataFrame con una colonna <code>data</code> (datetime). Scrivi come aggiungere una colonna
+      <code>mese</code> (1-12) e una <code>giorno_settimana</code> (nome), per poi poterci raggruppare.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.3</div>
+    <p style="margin-bottom:0">
+      Hai vendite giornaliere con la data come indice. Scrivi come ottenere il <b>totale mensile</b> e la <b>media
+      settimanale</b>. Qual è la differenza tra <code>resample</code> e un normale <code>groupby</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.4</div>
+    <p style="margin-bottom:0">
+      A cosa serve una media mobile (<code>rolling(7).mean()</code>)? Cosa succede alla curva se allarghi la finestra?
+      Perché i primi valori sono NaN?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 8.5</div>
+    <p style="margin-bottom:0">
+      Hai due colonne datetime, <code>ordine</code> e <code>consegna</code>. Come calcoli il tempo di consegna in
+      <b>giorni</b> come numero?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s8-8"><span class="secnum">Sezione 8.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.1</div>
+    <p style="margin-bottom:0">
+      Una data come testo non è «capita» come tempo: non si può ordinare cronologicamente in modo affidabile, non si
+      possono estrarre mese/anno, né aggregare per periodo o fare differenze tra date. Convertirla con
+      <code>pd.to_datetime</code> la rende un vero tipo <code>datetime</code>, sbloccando l'accessorio <code>.dt</code>,
+      la selezione per periodo, il <code>resample</code>, le finestre mobili e le operazioni tra date.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.2</div>
+    <p style="margin-bottom:0">
+      <code>df["mese"] = df["data"].dt.month</code> e <code>df["giorno_settimana"] = df["data"].dt.day_name()</code>.
+      L'accessorio <code>.dt</code> estrae le componenti della data su tutta la colonna; le nuove colonne si possono poi
+      usare in un <code>groupby</code> (es. vendite medie per mese o per giorno della settimana).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.3</div>
+    <p style="margin-bottom:0">
+      Totale mensile: <code>df.resample("ME")["vendite"].sum()</code>; media settimanale:
+      <code>df.resample("W")["vendite"].mean()</code>. La differenza: <code>resample</code> raggruppa per
+      <b>intervalli temporali</b> regolari (settimane, mesi…) sfruttando l'indice di date, gestendo correttamente il
+      calendario; un <code>groupby</code> normale raggrupperebbe per valori di una colonna, senza la nozione di
+      frequenza temporale. In pratica <code>resample</code> è il «groupby specializzato per il tempo».
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.4</div>
+    <p style="margin-bottom:0">
+      Una media mobile <b>leviga il rumore</b>: sostituendo ogni punto con la media degli ultimi N, attenua i saliscendi
+      casuali e fa emergere la <b>tendenza</b> di fondo. Allargando la finestra la curva diventa <b>più liscia</b> (ma
+      reagisce più lentamente ai cambiamenti, cioè «ritarda»). I primi <code>window-1</code> valori sono <code>NaN</code>
+      perché all'inizio non ci sono abbastanza dati passati per riempire la finestra.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 8.5</div>
+    <p style="margin-bottom:0">
+      <code>(df["consegna"] - df["ordine"]).dt.days</code>: la sottrazione tra due colonne datetime dà una serie di
+      <b>durate</b> (Timedelta), e <code>.dt.days</code> ne estrae il numero di giorni come intero. (Per ore o secondi
+      ci sono <code>.dt.total_seconds()</code> e simili.)
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §8.4 — media mobile: serie giornaliera rumorosa + rolling mean con
+   finestra regolabile. Usa plot.js. Serie deterministica.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('rl-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('rl-out');
+  const sW = document.getElementById('rl-w');
+
+  const N = 40;
+  // tendenza dolce + rumore deterministico
+  const Y = [];
+  for (let i = 0; i < N; i++) {
+    const trend = 50 + 18 * Math.sin(i * 0.28) + i * 0.25;
+    const noise = (Math.sin(i * 12.9898) * 43758.5453 % 1) * 22 - 11;
+    Y.push(trend + noise);
+  }
+  const XMIN = 0, XMAX = N - 1, YMIN = 20, YMAX = 100;
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: YMIN, ymax: YMAX });
+
+  function rollmean(w) {
+    const r = [];
+    for (let i = 0; i < N; i++) {
+      if (i < w - 1) { r.push(null); continue; }
+      let s = 0;
+      for (let k = i - w + 1; k <= i; k++) s += Y[k];
+      r.push(s / w);
+    }
+    return r;
+  }
+
+  function draw() {
+    const w = +sW.value;
+    p.clear(); p.grid(5, 20); p.axes({ numbers: false });
+    // serie giornaliera (rumorosa) - punti + linea tenue
+    const raw = Y.map(function (v, i) { return [i, v]; });
+    p.poly(raw, { color: 'var(--grid)', width: 1, close: false });
+    Y.forEach(function (v, i) { p.dot(i, v, { color: 'var(--ink-faint)', r: 2 }); });
+    // media mobile
+    const rm = rollmean(w);
+    const rmpts = [];
+    rm.forEach(function (v, i) { if (v !== null) rmpts.push([i, v]); });
+    if (rmpts.length > 1) p.poly(rmpts, { color: 'var(--accent)', width: 3, close: false });
+
+    let note;
+    if (w === 1) note = '<b>Finestra 1</b>: la media mobile coincide con i dati grezzi — nessuna levigatura.';
+    else if (w >= 12) note = '<b>Finestra ' + w + '</b>: curva molto liscia, la tendenza di fondo è chiarissima (ma reagisce lenta ai cambiamenti).';
+    else note = '<b>Finestra ' + w + ' giorni</b>: la linea verde leviga i saliscendi giornalieri e rivela la tendenza. I primi ' + (w - 1) + ' punti mancano (NaN).';
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">' + note +
+      ' <span style="color:var(--ink-soft)">Punti grigi = vendite giornaliere; linea verde = <code>rolling(' + w + ').mean()</code>.</span></div>';
+  }
+  sW.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

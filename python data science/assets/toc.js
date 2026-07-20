@@ -126,7 +126,7 @@ const TOC = [
     n: 8,
     titolo: "pandas: date e serie temporali",
     file: "cap08-pandas-tempo.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s8-1", n: "8.1", t: "Il tipo datetime" },
       { id: "s8-2", n: "8.2", t: "L'indice temporale" },
