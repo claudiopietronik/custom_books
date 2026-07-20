@@ -222,7 +222,7 @@ const TOC = [
     n: 14,
     titolo: "PyTorch: i tensori",
     file: "cap14-pytorch-tensori.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s14-1", n: "14.1", t: "Cos'è PyTorch" },
       { id: "s14-2", n: "14.2", t: "I tensori (creazione, dtype, shape)" },
