@@ -395,6 +395,42 @@
   </div>
 
 
+  <h3>💻 In NumPy: <span style="text-transform:none">v ∈ Col(A)?</span></h3>
+
+  <p>
+    Un vettore \(\vv{v}\) sta nello spazio delle colonne di \(\mm{A}\) se è una loro combinazione lineare — e c'è un
+    test col rango: <mark>aggiungere \(\vv{v}\) come nuova colonna <em>non</em> deve far salire il rango</mark> (se
+    \(\vv{v}\) portasse una direzione nuova, il rango crescerebbe).
+  </p>
+
+  <div class="term">
+    <div class="t-head file">appartiene_colonne.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+              [<span class="nm">0</span>, <span class="nm">1</span>],
+              [<span class="nm">1</span>, <span class="nm">1</span>]])        <span class="cm"># le colonne generano un piano in R³</span>
+<span class="nm">v</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">5</span>])     <span class="cm"># 2·col1 + 3·col2 = [2,3,5] ✓</span>
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>])     <span class="cm"># fuori dal piano</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>))                          <span class="cm"># 2</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">column_stack</span>([<span class="nm">A</span>, <span class="nm">v</span>])))   <span class="cm"># 2 → v ∈ Col(A)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">column_stack</span>([<span class="nm">A</span>, <span class="nm">w</span>])))   <span class="cm"># 3 → w ∉ Col(A)</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">2
+2
+3</span></pre>
+  </div>
+
+  <p>
+    <code>np.column_stack([A, v])</code> attacca \(\vv{v}\) come colonna in più. Con \(\vv{v}\) il rango resta
+    <code>2</code> (\(\vv{v}\) è già nello span, non aggiunge nulla → <strong>appartiene</strong> allo spazio delle
+    colonne); con \(\vv{w}\) sale a <code>3</code> (\(\vv{w}\) esce dal piano → <strong>non appartiene</strong>).
+    <mark>Il rango risponde alla domanda «è raggiungibile?»</mark> — la stessa che deciderà se un sistema \(\mm{A}\vv{x}
+    = \vv{b}\) ha soluzione (Cap. 10).
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s8-4"><span class="secnum">Sezione 8.4</span>Spazio delle righe</h2>
 
@@ -759,6 +795,39 @@
     </div>
     <div class="w-readout" id="wn-out"></div>
   </div>
+
+
+  <h3>💻 In NumPy: trovare lo spazio nullo</h3>
+
+  <p>
+    Lo spazio nullo è l'insieme dei vettori \(\vv{x}\) con \(\mm{A}\vv{x}=\vv{0}\). Per trovarlo c'è una funzione pronta
+    in SciPy, <code>null_space</code>, che restituisce una <em>base</em> di quelle direzioni «annullate»:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">spazio_nullo.py</div>
+    <pre><span class="kw">from</span> <span class="nm">scipy</span><span class="op">.</span><span class="nm">linalg</span> <span class="kw">import</span> <span class="nm">null_space</span>
+
+<span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>],
+              [<span class="nm">2</span>, <span class="nm">4</span>, <span class="nm">6</span>]])   <span class="cm"># riga 2 = 2·riga 1 → rango 1</span>
+
+<span class="nm">ns</span> <span class="op">=</span> <span class="nm">null_space</span>(<span class="nm">A</span>)         <span class="cm"># le colonne sono una base dello spazio nullo</span>
+<span class="bi">print</span>(<span class="nm">ns</span><span class="op">.</span><span class="nm">shape</span>)              <span class="cm"># (3, 2): 3 componenti, 2 direzioni nulle</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">A</span> <span class="op">@</span> <span class="nm">ns</span>, <span class="nm">10</span>))   <span class="cm"># ≈ 0: A schiaccia questi vettori nell'origine</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(3, 2)
+[[0. 0.]
+ [0. 0.]]</span></pre>
+  </div>
+
+  <p>
+    La matrice ha rango 1 (le righe sono dipendenti), quindi lo spazio nullo ha dimensione \(3 - 1 = 2\): infatti
+    <code>ns</code> ha 2 colonne. La verifica <code>A @ ns</code> dà <mark>tutti zeri</mark>: ogni vettore dello spazio
+    nullo viene «schiacciato» da \(\mm{A}\) nell'origine. È la definizione, resa tangibile — e la dimensionalità
+    (colonne − rango) è il teorema del rango-nullità del §8.10.
+  </p>
 
 
   <!-- ==================================================================== -->
