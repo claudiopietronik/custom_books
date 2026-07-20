@@ -142,7 +142,7 @@ const TOC = [
     n: 9,
     titolo: "Visualizzare: Matplotlib",
     file: "cap09-matplotlib.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s9-1", n: "9.1", t: "Figure e Axes" },
       { id: "s9-2", n: "9.2", t: "I tipi di grafico" },
