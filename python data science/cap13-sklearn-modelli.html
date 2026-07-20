@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 · Modelli in pratica: dalla regressione al boosting — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="13">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 13</div>
+    <h1>Modelli in pratica: dalla regressione al boosting</h1>
+    <p class="standfirst">
+      Con l'estimator API del capitolo scorso, usare un modello è sempre lo stesso gesto — <code>fit</code>,
+      <code>predict</code>. Ora facciamo il giro dei modelli che userai davvero e delle pratiche che li rendono
+      efficaci. <mark>Non ne studieremo la teoria (è nel libro «Machine Learning»): impareremo a <b>metterli in campo</b>,
+      a <b>regolarli</b> e a <b>sceglierli</b>.</mark> Vedremo come si passa da un regressore a un classificatore a una
+      random forest cambiando una riga (§13.1); come cercare automaticamente i migliori <b>iperparametri</b> con
+      <code>GridSearchCV</code> e <code>RandomizedSearchCV</code> (§13.2); le librerie di <b>boosting</b> che dominano le
+      competizioni — <b>XGBoost</b> e <b>LightGBM</b> (§13.3); un cenno a <b>statsmodels</b> per la statistica «da
+      statistico», con test e intervalli (§13.4); e come <b>salvare</b> un modello allenato per riusarlo (§13.5). È il
+      capitolo che ti fa passare da «so far girare un modello» a «so scegliere e mettere a punto quello giusto».
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      <b>Regressione e classificazione</b> con sklearn (§13.1), il <b>tuning</b> con Grid/Randomized SearchCV (§13.2),
+      <b>XGBoost e LightGBM</b> (§13.3), <b>statsmodels</b> (§13.4), <b>salvare i modelli</b> con joblib (§13.5). Nel
+      laboratorio (§13.6) confronti modelli e ne ottimizzi uno.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: scegliere e ottimizzare</div>
+    <p style="margin-bottom:0">
+      Saper allenare un modello è facile; <mark>saper <b>scegliere</b> quello giusto e <b>regolarlo</b> bene è ciò che
+      fa la differenza tra un modello mediocre e uno ottimo.</mark> La ricerca degli iperparametri e il boosting sono
+      esattamente gli strumenti che portano i risultati «al massimo» — quelli che vincono le competizioni e reggono in
+      produzione. E saper salvare un modello è il ponte verso l'uso reale.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-1"><span class="secnum">Sezione 13.1</span>Regressione e classificazione con sklearn</h2>
+
+  <p class="lead">
+    scikit-learn offre decine di modelli, ma si dividono in due grandi famiglie per due tipi di problema: prevedere
+    <b>numeri</b> (regressione) o <b>categorie</b> (classificazione). Grazie all'API uniforme, provarli è banale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il catalogo essenziale <span class="tag">stesso fit/predict, tanti modelli</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">modelli.py</div>
+      <pre><span class="cm"># REGRESSIONE (prevedere un numero): finiscono in ...Regressor</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">linear_model</span> <span class="kw">import</span> <span class="nm">LinearRegression</span>, <span class="nm">Ridge</span>, <span class="nm">Lasso</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">ensemble</span> <span class="kw">import</span> <span class="nm">RandomForestRegressor</span>, <span class="nm">GradientBoostingRegressor</span>
+
+<span class="cm"># CLASSIFICAZIONE (prevedere una classe): finiscono in ...Classifier</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">linear_model</span> <span class="kw">import</span> <span class="nm">LogisticRegression</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">ensemble</span> <span class="kw">import</span> <span class="nm">RandomForestClassifier</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">svm</span> <span class="kw">import</span> <span class="nm">SVC</span>
+
+<span class="cm"># si usano TUTTI allo stesso modo — cambia solo il nome della classe</span>
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">RandomForestClassifier</span>(<span class="nm">n_estimators</span><span class="op">=</span><span class="nm">200</span>)
+<span class="nm">modello</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)
+<span class="nm">modello</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_test</span>)</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>convenzione dei nomi: <span class="mono">...Regressor</span> / <span class="mono">...Classifier</span></dt>
+        <dd>quasi ogni modello ha le due versioni: <code>RandomForestRegressor</code> (numeri) e
+            <code>RandomForestClassifier</code> (classi). <mark>Scegli in base al tipo di risposta che vuoi.</mark></dd>
+        <dt>i modelli da provare per primi</dt>
+        <dd><b>regressione</b>: <code>LinearRegression</code> (semplice, il riferimento), poi
+            <code>RandomForestRegressor</code>. <b>classificazione</b>: <code>LogisticRegression</code> (semplice,
+            interpretabile), poi <code>RandomForestClassifier</code>. <mark>Parti dal semplice come riferimento, poi
+            prova i più potenti.</mark></dd>
+        <dt>gli <b>iperparametri</b></dt>
+        <dd>i numeri tra parentesi (<code>n_estimators=200</code>, ecc.) sono le «manopole» del modello: controllano la
+            complessità. Si scelgono col tuning (§13.2), non a caso.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel widget qui sotto scegli un modello e vedi la sua riga di codice e un punteggio indicativo: <mark>nota come
+      cambia solo il nome della classe</mark>, mentre <code>fit</code>/<code>predict</code> restano identici. È l'API
+      uniforme del Cap. 12 che rende il confronto tra modelli un gioco.
+    </div>
+  </div>
+
+  <div class="widget" id="w-models">
+    <div class="w-head">
+      <span>Stesso schema, modelli diversi</span>
+      <span class="hint">scegli un modello, vedi codice e punteggio</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div id="md-view" style="text-align:center"></div>
+    </div>
+    <div class="w-controls" style="align-items:center; gap:.4rem; justify-content:center; flex-wrap:wrap">
+      <button class="w-btn on" data-m="0">LogisticRegression</button>
+      <button class="w-btn" data-m="1">RandomForest</button>
+      <button class="w-btn" data-m="2">SVC</button>
+      <button class="w-btn" data-m="3">GradientBoosting</button>
+    </div>
+    <div class="w-readout" id="md-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Tuning: GridSearchCV e RandomizedSearchCV</h2>
+
+  <p class="lead">
+    Ogni modello ha iperparametri da regolare, e i valori giusti dipendono dai dati. Provarli a mano è lento e
+    disordinato: scikit-learn li cerca <b>automaticamente</b>, valutando ogni combinazione in cross-validation.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Cercare i migliori iperparametri <span class="tag">GridSearchCV · RandomizedSearchCV</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">tuning.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">model_selection</span> <span class="kw">import</span> <span class="nm">GridSearchCV</span>
+
+<span class="cm"># prova TUTTE le combinazioni della griglia, in cross-validation</span>
+<span class="nm">griglia</span> <span class="op">=</span> {
+    <span class="st">"n_estimators"</span>: [<span class="nm">100</span>, <span class="nm">300</span>],
+    <span class="st">"max_depth"</span>:    [<span class="nm">5</span>, <span class="nm">10</span>, <span class="kw">None</span>],
+}
+<span class="nm">ricerca</span> <span class="op">=</span> <span class="nm">GridSearchCV</span>(<span class="nm">RandomForestClassifier</span>(), <span class="nm">griglia</span>,
+                       <span class="nm">cv</span><span class="op">=</span><span class="nm">5</span>, <span class="nm">scoring</span><span class="op">=</span><span class="st">"f1"</span>)
+<span class="nm">ricerca</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)
+
+<span class="bi">print</span>(<span class="nm">ricerca</span><span class="op">.</span><span class="nm">best_params_</span>)     <span class="cm"># la combinazione vincente</span>
+<span class="bi">print</span>(<span class="nm">ricerca</span><span class="op">.</span><span class="nm">best_score_</span>)      <span class="cm"># il suo punteggio CV</span>
+<span class="nm">ricerca</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_test</span>)         <span class="cm"># usa già il modello migliore, riallenato</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">GridSearchCV</span> — prova tutto</dt>
+        <dd>gli passi il modello e una <b>griglia</b> di valori; prova <b>ogni combinazione</b> in cross-validation e
+            tiene la migliore. <mark>Esaustivo, ma il numero di combinazioni <b>esplode</b> con tanti iperparametri</mark>
+            (2×3 = 6 qui, ma 5 parametri con 5 valori = 3125 prove!).</dd>
+        <dt><span class="mono">RandomizedSearchCV</span> — prova a caso</dt>
+        <dd>invece di tutta la griglia, prova un numero fissato di combinazioni <b>casuali</b>. <mark>Con lo stesso
+            budget trova spesso soluzioni buone quanto la griglia</mark>, ed è la scelta quando gli iperparametri sono
+            molti.</dd>
+        <dt><span class="mono">best_params_</span> e comodità</dt>
+        <dd>dopo il <code>fit</code>, <code>best_params_</code> dà i parametri vincenti e l'oggetto stesso è già il
+            <b>modello migliore riallenato</b>: puoi usarlo direttamente con <code>predict</code>. <mark>Mettici dentro
+            una <b>pipeline</b> (Cap. 12) e la ricerca è al riparo dal data leakage.</mark></dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-3"><span class="secnum">Sezione 13.3</span>XGBoost e LightGBM</h2>
+
+  <p class="lead">
+    Per i dati «a tabella», i modelli che quasi sempre danno la massima accuratezza non stanno (di serie) in
+    scikit-learn: sono le librerie di <b>gradient boosting</b> ottimizzato, <b>XGBoost</b> e <b>LightGBM</b>. La bella
+    notizia: seguono la stessa API, quindi le usi già.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I campioni dei dati a tabella <span class="tag">stessa API fit/predict</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">boosting.py</div>
+      <pre><span class="cm"># si installano a parte:  pip install xgboost lightgbm</span>
+<span class="kw">from</span> <span class="nm">xgboost</span> <span class="kw">import</span> <span class="nm">XGBClassifier</span>
+<span class="kw">from</span> <span class="nm">lightgbm</span> <span class="kw">import</span> <span class="nm">LGBMClassifier</span>
+
+<span class="cm"># stessa identica interfaccia di scikit-learn!</span>
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">XGBClassifier</span>(
+    <span class="nm">n_estimators</span><span class="op">=</span><span class="nm">300</span>,     <span class="cm"># numero di alberi</span>
+    <span class="nm">learning_rate</span><span class="op">=</span><span class="nm">0.1</span>,    <span class="cm"># quanto cauto ogni passo</span>
+    <span class="nm">max_depth</span><span class="op">=</span><span class="nm">4</span>,          <span class="cm"># profondità degli alberelli</span>
+)
+<span class="nm">modello</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)
+<span class="nm">modello</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_test</span>)
+<span class="nm">modello</span><span class="op">.</span><span class="nm">feature_importances_</span>   <span class="cm"># quali variabili contano di più</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>cosa sono</dt>
+        <dd>implementazioni velocissime e regolarizzate del <b>gradient boosting</b> (tanti alberelli che correggono gli
+            errori dei precedenti — teoria nel libro ML). <mark>Da anni <b>vincono la maggioranza delle competizioni</b>
+            sui dati a tabella</mark> e alimentano moltissimi sistemi reali.</dd>
+        <dt>le manopole chiave</dt>
+        <dd><code>n_estimators</code> (quanti alberi), <code>learning_rate</code> (quanto cauto ogni passo),
+            <code>max_depth</code> (profondità): da regolare col tuning (§13.2). <mark>learning rate basso + tanti alberi
+            = ricetta tipica per la massima precisione.</mark></dd>
+        <dt>quale scegliere</dt>
+        <dd><b>LightGBM</b> è famoso per la velocità su grandi dataset; <b>XGBoost</b> è il più collaudato;
+            <b>CatBoost</b> gestisce bene le categoriche. <mark>Tutti seguono l'API sklearn</mark>, quindi entrano in
+            pipeline e GridSearchCV senza problemi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Consiglio pratico ricorrente: <mark>parti da una <b>Random Forest</b> (robusta, facile) per un buon risultato di
+      riferimento, poi passa a <b>XGBoost/LightGBM</b> con un po' di tuning per spremere l'accuratezza massima.</mark> Il
+      boosting è più potente ma va regolato con più cura, e overfitta più facilmente se strapazzato.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-4"><span class="secnum">Sezione 13.4</span>statsmodels (regressione statistica)</h2>
+
+  <p class="lead">
+    scikit-learn punta alla <b>previsione</b>; ma a volte ti interessa <b>capire</b>: quali variabili contano, con che
+    intensità, e con quale certezza? Per questa «statistica da statistico» — coefficienti, p-value, intervalli di
+    confidenza — c'è <b>statsmodels</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Regressione con test e intervalli <span class="tag">statsmodels.OLS</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">statsmodels_ols.py</div>
+      <pre><span class="kw">import</span> <span class="nm">statsmodels</span><span class="op">.</span><span class="nm">api</span> <span class="kw">as</span> <span class="nm">sm</span>
+
+<span class="nm">X</span> <span class="op">=</span> <span class="nm">sm</span><span class="op">.</span><span class="fn">add_constant</span>(<span class="nm">X</span>)          <span class="cm"># aggiungi l'intercetta</span>
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">sm</span><span class="op">.</span><span class="fn">OLS</span>(<span class="nm">y</span>, <span class="nm">X</span>)<span class="op">.</span><span class="fn">fit</span>()      <span class="cm"># regressione lineare "statistica"</span>
+<span class="bi">print</span>(<span class="nm">modello</span><span class="op">.</span><span class="fn">summary</span>())            <span class="cm"># un report ricchissimo</span>
+<span class="cm"># coefficienti, p-value di ciascuno, R², intervalli di confidenza, ...</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>focus sull'<b>inferenza</b>, non solo la previsione</dt>
+        <dd>statsmodels dà, per ogni variabile, il <b>coefficiente</b> (l'effetto), il suo <b>p-value</b> (è
+            statisticamente diverso da zero?) e l'<b>intervallo di confidenza</b>. <mark>Risponde a «questa variabile ha
+            un effetto reale, e quanto?»</mark>, non solo «prevedi bene?».</dd>
+        <dt>il <span class="mono">.summary()</span></dt>
+        <dd>stampa un report completo in stile «articolo scientifico»: R², test F, coefficienti con significatività.
+            <mark>Insostituibile quando devi <b>spiegare</b> e giustificare</mark> (in economia, medicina, ricerca).</dd>
+        <dt>sklearn o statsmodels?</dt>
+        <dd><mark><b>sklearn</b> se vuoi <b>prevedere</b> (e valutare su dati nuovi); <b>statsmodels</b> se vuoi
+            <b>capire e testare</b> le relazioni</mark> con rigore statistico. Spesso si usano entrambi, per scopi
+            diversi. (La teoria è nei libri Statistica e ML.)</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-5"><span class="secnum">Sezione 13.5</span>Salvare e caricare i modelli (joblib)</h2>
+
+  <p class="lead">
+    Allenare un modello può richiedere minuti o ore: non vuoi rifarlo ogni volta. Un modello allenato si <b>salva</b> su
+    file e si <b>ricarica</b> pronto all'uso — il ponte verso l'utilizzo reale (in un sito, uno script, una app).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Persistere un modello allenato <span class="tag">joblib.dump / load</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">salvare_modello.py</div>
+      <pre><span class="kw">import</span> <span class="nm">joblib</span>
+
+<span class="cm"># SALVA il modello (o l'intera pipeline!) allenato</span>
+<span class="nm">joblib</span><span class="op">.</span><span class="fn">dump</span>(<span class="nm">pipe</span>, <span class="st">"modello.joblib"</span>)
+
+<span class="cm"># ... in un altro momento / programma / server ...</span>
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">joblib</span><span class="op">.</span><span class="fn">load</span>(<span class="st">"modello.joblib"</span>)   <span class="cm"># ricarica, pronto</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">nuovi_dati</span>)                 <span class="cm"># usa subito, senza riallenare</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">joblib.dump(oggetto, file)</span></dt>
+        <dd>salva su disco il modello (o meglio l'<b>intera pipeline</b>, così il preprocessing viaggia con il modello).
+            <mark>joblib è preferito a <code>pickle</code> per gli oggetti scikit-learn</mark> (gestisce meglio gli array
+            NumPy).</dd>
+        <dt><span class="mono">joblib.load(file)</span></dt>
+        <dd>ricarica l'oggetto identico a com'era: pronto per <code>predict</code>, senza riallenare. <mark>È così che un
+            modello finisce «in produzione»</mark>: lo alleni una volta, lo salvi, e un server lo carica per rispondere
+            alle richieste (libro Backend).</dd>
+        <dt>attenzione alle versioni</dt>
+        <dd>un modello salvato con una versione di scikit-learn potrebbe non ricaricarsi con una molto diversa. <mark>Per
+            la produzione, fissa le versioni</mark> (il <code>requirements.txt</code> del Cap. 1).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-6"><span class="secnum">Sezione 13.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Facciamo il flusso completo del «model selection»: confrontiamo due modelli in cross-validation, ottimizziamo il
+    migliore con GridSearchCV, e lo salviamo pronto per l'uso. È il cuore pratico di ogni progetto di ML.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">model_selection.py</div>
+    <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">datasets</span> <span class="kw">import</span> <span class="nm">load_breast_cancer</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">model_selection</span> <span class="kw">import</span> <span class="nm">cross_val_score</span>, <span class="nm">GridSearchCV</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">ensemble</span> <span class="kw">import</span> <span class="nm">RandomForestClassifier</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">linear_model</span> <span class="kw">import</span> <span class="nm">LogisticRegression</span>
+<span class="kw">import</span> <span class="nm">joblib</span>
+
+<span class="nm">X</span>, <span class="nm">y</span> <span class="op">=</span> <span class="fn">load_breast_cancer</span>(<span class="nm">return_X_y</span><span class="op">=</span><span class="kw">True</span>)
+
+<span class="cm"># 1. confronta due modelli (F1 in 5-fold CV)</span>
+<span class="kw">for</span> <span class="nm">nome</span>, <span class="nm">m</span> <span class="kw">in</span> [(<span class="st">"logistica"</span>, <span class="nm">LogisticRegression</span>(<span class="nm">max_iter</span><span class="op">=</span><span class="nm">5000</span>)),
+                 (<span class="st">"foresta"</span>, <span class="nm">RandomForestClassifier</span>())]:
+    <span class="nm">s</span> <span class="op">=</span> <span class="fn">cross_val_score</span>(<span class="nm">m</span>, <span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">cv</span><span class="op">=</span><span class="nm">5</span>, <span class="nm">scoring</span><span class="op">=</span><span class="st">"f1"</span>)
+    <span class="bi">print</span>(<span class="nm">nome</span>, <span class="nm">s</span><span class="op">.</span><span class="fn">mean</span>()<span class="op">.</span><span class="fn">round</span>(<span class="nm">3</span>))
+
+<span class="cm"># 2. ottimizza la foresta</span>
+<span class="nm">gs</span> <span class="op">=</span> <span class="nm">GridSearchCV</span>(<span class="nm">RandomForestClassifier</span>(),
+                  {<span class="st">"n_estimators"</span>: [<span class="nm">100</span>, <span class="nm">300</span>], <span class="st">"max_depth"</span>: [<span class="nm">5</span>, <span class="kw">None</span>]},
+                  <span class="nm">cv</span><span class="op">=</span><span class="nm">5</span>, <span class="nm">scoring</span><span class="op">=</span><span class="st">"f1"</span>)
+<span class="nm">gs</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X</span>, <span class="nm">y</span>)
+<span class="bi">print</span>(<span class="nm">gs</span><span class="op">.</span><span class="nm">best_params_</span>, <span class="nm">gs</span><span class="op">.</span><span class="nm">best_score_</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">3</span>))
+
+<span class="cm"># 3. salva il modello migliore</span>
+<span class="nm">joblib</span><span class="op">.</span><span class="fn">dump</span>(<span class="nm">gs</span><span class="op">.</span><span class="nm">best_estimator_</span>, <span class="st">"cancer_rf.joblib"</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output (i numeri variano di poco)</div>
+      <pre><span class="out">logistica 0.958
+foresta 0.960
+{'max_depth': None, 'n_estimators': 300} 0.965</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Ecco il «model selection» in azione: <b>(1)</b> confrontiamo logistica e foresta — <mark>quasi pari (0,958 vs
+      0,960)</mark>, un'informazione preziosa (a volte il modello semplice basta!); <b>(2)</b> ottimizzando la foresta
+      con GridSearchCV saliamo a <b>0,965</b> trovando i parametri migliori; <b>(3)</b> salviamo il vincitore, pronto per
+      un server o uno script. <mark>Nota lo schema: confronta → ottimizza il migliore → salva</mark>. E nota anche la
+      lezione: la foresta ottimizzata vince, ma di poco — se servisse interpretabilità, la logistica quasi identica
+      potrebbe essere la scelta migliore. <b>Il numero non è tutto</b>; il contesto decide.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 13</div>
+    <ol style="margin-bottom:0">
+      <li>Modelli sklearn: <code>...Regressor</code> (numeri) / <code>...Classifier</code> (classi), tutti con lo stesso
+          <code>fit</code>/<code>predict</code>. Parti dal semplice (Linear/Logistic), poi i più potenti (§13.1).</li>
+      <li>Il <b>tuning</b> degli iperparametri: <b>GridSearchCV</b> (tutte le combinazioni) o <b>RandomizedSearchCV</b>
+          (a caso, meglio con molti parametri), valutando in cross-validation. Mettici una pipeline dentro (§13.2).</li>
+      <li><b>XGBoost/LightGBM</b>: gradient boosting ottimizzato, campioni sui dati a tabella, stessa API. Random Forest
+          come base, boosting per il massimo (§13.3). <b>statsmodels</b> per l'inferenza (coefficienti, p-value) (§13.4).</li>
+      <li>Salva un modello (meglio l'intera pipeline) con <code>joblib.dump</code> e ricaricalo con
+          <code>joblib.load</code> — il ponte verso la produzione (§13.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con questo padroneggi il machine learning «classico» in pratica: scegliere, ottimizzare, salvare i modelli di
+    scikit-learn e del boosting. Resta l'ultima grande frontiera dello stack: il <b>deep learning</b>, il regno delle
+    <b>reti neurali</b>, indispensabile per immagini, testo, audio. Lo affrontiamo con la libreria più usata nella
+    ricerca e sempre più nell'industria: <b>PyTorch</b>. Nel <strong>Capitolo 14</strong> partiamo dalle fondamenta —
+    il <b>tensore</b>, il cugino dell'array NumPy con due superpoteri (la GPU e i gradienti automatici) — che è il
+    mattone su cui costruiremo, nei capitoli finali, una rete neurale completa.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-7"><span class="secnum">Sezione 13.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.1</div>
+    <p style="margin-bottom:0">
+      Come capisci, dal nome di una classe sklearn, se è per la regressione o la classificazione? Fai un esempio di
+      coppia. Perché conviene partire da un modello semplice?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.2</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>GridSearchCV</code> e <code>RandomizedSearchCV</code>? Con 6 iperparametri, ognuno
+      con 5 valori possibili, quale preferiresti e perché?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.3</div>
+    <p style="margin-bottom:0">
+      Cosa sono XGBoost e LightGBM, e perché sono così apprezzati per i dati a tabella? Quale strategia pratica useresti
+      tra Random Forest e boosting?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.4</div>
+    <p style="margin-bottom:0">
+      Quando preferiresti statsmodels a scikit-learn per una regressione? Cosa ti dà in più il suo <code>.summary()</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 13.5</div>
+    <p style="margin-bottom:0">
+      Perché è utile salvare un modello con <code>joblib</code>? Perché conviene salvare l'intera <b>pipeline</b> e non
+      solo il modello finale?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s13-8"><span class="secnum">Sezione 13.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.1</div>
+    <p style="margin-bottom:0">
+      Dal suffisso: <code>...Regressor</code> è per la regressione (prevedere un numero), <code>...Classifier</code> per
+      la classificazione (prevedere una classe). Esempio di coppia: <code>RandomForestRegressor</code> /
+      <code>RandomForestClassifier</code>. Conviene partire da un modello semplice (es. Linear/Logistic) perché fornisce
+      un <b>riferimento</b> onesto e veloce: se un modello complesso non lo batte in modo significativo, la sua
+      complessità non è giustificata.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.2</div>
+    <p style="margin-bottom:0">
+      <code>GridSearchCV</code> prova <b>tutte</b> le combinazioni di una griglia di valori; <code>RandomizedSearchCV</code>
+      ne prova un numero fissato <b>a caso</b>. Con 6 iperparametri × 5 valori, la griglia completa sarebbe
+      5⁶ = 15.625 combinazioni: troppe. Preferirei <code>RandomizedSearchCV</code>, che con un budget ragionevole (es.
+      100 prove casuali) trova spesso soluzioni buone quanto la griglia, senza il costo proibitivo di provarle tutte.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.3</div>
+    <p style="margin-bottom:0">
+      Sono implementazioni veloci e regolarizzate del <b>gradient boosting</b> (tanti alberelli in sequenza che
+      correggono gli errori dei precedenti). Sono apprezzate perché, sui dati a tabella, offrono di solito la <b>massima
+      accuratezza</b> e vincono la maggioranza delle competizioni. Strategia pratica: partire da una <b>Random Forest</b>
+      (robusta, facile, buon riferimento immediato) e poi passare a <b>XGBoost/LightGBM</b> con un po' di tuning per
+      spremere l'ultimo margine di precisione, tenendo d'occhio l'overfitting.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.4</div>
+    <p style="margin-bottom:0">
+      Si preferisce <b>statsmodels</b> quando l'obiettivo è <b>capire e testare</b> le relazioni, non solo prevedere:
+      quando serve sapere quali variabili hanno un effetto reale, con che intensità e con quale certezza. Il suo
+      <code>.summary()</code> dà, oltre ai coefficienti, il <b>p-value</b> di ciascuno (significatività),
+      gli <b>intervalli di confidenza</b>, R², test F e altre diagnostiche — un report di inferenza statistica completo
+      che scikit-learn (orientato alla previsione) non fornisce.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 13.5</div>
+    <p style="margin-bottom:0">
+      È utile perché allenare può essere lento: salvando il modello allenato lo si ricarica pronto all'uso senza
+      riallenare, ed è così che finisce «in produzione» (un server lo carica per rispondere alle richieste). Conviene
+      salvare l'<b>intera pipeline</b> (preprocessing + modello) perché i nuovi dati vanno trasformati <b>esattamente</b>
+      come in allenamento (stesso scaling, stesso encoding): con la pipeline salvata, il preprocessing viaggia insieme al
+      modello e viene applicato automaticamente, evitando incoerenze e errori.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §13.1 — model chooser: stesso schema, modelli diversi. Mostra la riga
+   di codice e un punteggio F1 indicativo (barra). Solo HTML/JS.
+   ========================================================================= */
+(function () {
+  const view = document.getElementById('md-view');
+  if (!view) return;
+  const out = document.getElementById('md-out');
+  const btns = document.querySelectorAll('#w-models .w-btn');
+
+  const M = [
+    { name: 'LogisticRegression', code: 'LogisticRegression(max_iter=5000)', f1: 0.958, imp: 'lib: linear_model',
+      note: 'Semplice, veloce, <b>interpretabile</b>. Ottimo riferimento di partenza. Vuole feature scalate.' },
+    { name: 'RandomForestClassifier', code: 'RandomForestClassifier(n_estimators=300)', f1: 0.960, imp: 'lib: ensemble',
+      note: 'Robusta, poche impostazioni, dà l\'importanza delle feature. Non serve scalare. Ottima base «seria».' },
+    { name: 'SVC', code: 'SVC(kernel="rbf", C=1.0)', f1: 0.955, imp: 'lib: svm',
+      note: 'Confini flessibili col kernel. Potente su dataset medi. <b>Va scalato</b> (pipeline con StandardScaler).' },
+    { name: 'GradientBoostingClassifier', code: 'GradientBoostingClassifier(learning_rate=0.1)', f1: 0.968, imp: 'lib: ensemble',
+      note: 'Boosting: spesso il <b>più accurato</b> sui dati a tabella (come XGBoost/LightGBM). Da regolare con cura.' }
+  ];
+  const BEST = 3;
+
+  function show(i) {
+    const m = M[i];
+    const barW = Math.round((m.f1 - 0.94) / (0.97 - 0.94) * 100);
+    view.innerHTML =
+      '<div style="font-family:var(--mono); font-size:.85rem; background:#1e1e1e; color:#e8e8e8; display:inline-block; padding:.5rem .8rem; border-radius:7px; margin-bottom:.7rem">' +
+      'modello = <span style="color:#7fd">' + m.code + '</span><br>modello.<span style="color:#fc9">fit</span>(X, y)</div>' +
+      '<div style="max-width:320px; margin:0 auto"><div style="font-size:.72rem; color:var(--ink-soft); text-align:left; margin-bottom:.2rem">F1 in cross-validation' +
+      (i === BEST ? ' &nbsp;⭐' : '') + '</div>' +
+      '<div style="height:1.3rem; background:var(--rule); border-radius:6px; overflow:hidden">' +
+      '<div style="height:100%; width:' + barW + '%; background:' + (i === BEST ? 'var(--green)' : 'var(--accent)') +
+      '; display:flex; align-items:center; justify-content:flex-end; padding-right:.4rem; color:#fff; font-size:.75rem; font-weight:700">' + m.f1.toFixed(3) + '</div></div></div>';
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem"><b>' + m.name + '</b> <span style="color:var(--ink-faint)">(' + m.imp + ')</span> — ' + m.note +
+      ' <span style="color:var(--ink-soft)">Nota: cambia solo il nome della classe, <code>fit</code>/<code>predict</code> restano identici.</span></div>';
+    btns.forEach(function (b, k) { b.classList.toggle('on', k === i); });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-m')); });
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

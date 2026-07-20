@@ -206,7 +206,7 @@ const TOC = [
     n: 13,
     titolo: "Modelli in pratica: dalla regressione al boosting",
     file: "cap13-sklearn-modelli.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s13-1", n: "13.1", t: "Regressione e classificazione con sklearn" },
       { id: "s13-2", n: "13.2", t: "Tuning: GridSearchCV e RandomizedSearchCV" },
