@@ -158,7 +158,7 @@ const TOC = [
     n: 10,
     titolo: "Visualizzare meglio: seaborn",
     file: "cap10-seaborn.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s10-1", n: "10.1", t: "Perché seaborn" },
       { id: "s10-2", n: "10.2", t: "Distribuzioni (hist, kde, box)" },
