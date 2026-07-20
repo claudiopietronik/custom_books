@@ -463,6 +463,36 @@
   </div>
 
 
+  <h3>💻 In NumPy: calcolare il rango</h3>
+
+  <p>
+    A mano il rango è laborioso; in NumPy è un comando solo, <code>np.linalg.matrix_rank</code>. E possiamo <em>vedere</em>
+    il rango calare quando rendiamo una colonna dipendente da un'altra:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">rango.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">4</span>, <span class="nm">6</span>)
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>))   <span class="cm"># 4 = min(4, 6): rango pieno</span>
+
+<span class="cm"># rendo l'ultima colonna una copia della penultima → dipendenza!</span>
+<span class="nm">A</span>[:, <span class="op">-</span><span class="nm">1</span>] <span class="op">=</span> <span class="nm">A</span>[:, <span class="op">-</span><span class="nm">2</span>]
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>))   <span class="cm"># 3: una colonna non è più indipendente</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">4
+3</span></pre>
+  </div>
+
+  <p>
+    Una matrice <code>4×6</code> casuale ha rango <code>4</code> (il massimo possibile, <code>min(righe, colonne)</code>):
+    tutte le sue righe sono indipendenti. <mark>Copiando la penultima colonna nell'ultima creiamo una dipendenza</mark>, e
+    il rango scende a <code>3</code>: una direzione è andata persa. È esattamente ciò che dice la teoria — il rango conta
+    le direzioni <em>davvero</em> indipendenti — qui reso visibile.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s7-4"><span class="secnum">Sezione 7.4</span>Rango e moltiplicazione scalare</h2>
 
@@ -846,6 +876,33 @@
   </div>
 
 
+  <h3>💻 In NumPy: <span style="text-transform:none">A, A<sup>T</sup>A, AA<sup>T</sup></span> hanno lo stesso rango</h3>
+
+  <div class="term">
+    <div class="t-head file">rango_AtA.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">14</span>, <span class="nm">3</span>)   <span class="cm"># 14×3</span>
+<span class="nm">AtA</span> <span class="op">=</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">A</span>            <span class="cm"># 3×3</span>
+<span class="nm">AAt</span> <span class="op">=</span> <span class="nm">A</span> <span class="op">@</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span>            <span class="cm"># 14×14</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>))     <span class="cm"># 3</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">AtA</span>))   <span class="cm"># 3</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">AAt</span>))   <span class="cm"># 3</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">3
+3
+3</span></pre>
+  </div>
+
+  <p>
+    Tre matrici di dimensioni molto diverse — <code>14×3</code>, <code>3×3</code>, <code>14×14</code> — eppure
+    <mark>tutte con rango 3</mark>. Moltiplicare per la trasposta cambia la <em>forma</em> ma non il numero di direzioni
+    indipendenti: \(\text{rango}(\mm{A}) = \text{rango}(\mm{A}\T\mm{A}) = \text{rango}(\mm{A}\mm{A}\T)\). Un risultato
+    che sta alla base di tutto ciò che verrà nei capitoli su SVD e minimi quadrati.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s7-8"><span class="secnum">Sezione 7.8</span>Rango di matrici casuali</h2>
 
@@ -906,6 +963,28 @@
       vera: il rumore <b>rompe le dipendenze esatte</b>, e senza dipendenze esatte non c'è deficienza.)</span>
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: le matrici casuali hanno (quasi sempre) rango pieno</h3>
+
+  <div class="term">
+    <div class="t-head file">rango_casuale.py</div>
+    <pre><span class="cm"># dieci matrici casuali 10×10: che rango hanno?</span>
+<span class="kw">for</span> <span class="nm">_</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">5</span>):
+    <span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">10</span>, <span class="nm">10</span>)
+    <span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>), <span class="nm">end</span><span class="op">=</span><span class="st">' '</span>)</pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">10 10 10 10 10</span></pre>
+  </div>
+
+  <p>
+    Tutte rango <code>10</code>, il massimo. <mark>Prendere numeri a caso rende la dipendenza lineare un evento
+    <em>infinitamente</em> improbabile</mark>: perché due colonne siano dipendenti dovrebbero allinearsi in modo
+    esatto, e il caso non lo fa mai. Per questo, se vuoi una matrice a rango ridotto, la devi costruire apposta (come nel
+    §7.3, copiando una colonna).
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -1047,6 +1126,36 @@
       scegliere \(\lambda\).</em> E adesso sai esattamente che cosa stai comprando e che cosa stai pagando.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: lo shifting ripristina il rango pieno</h3>
+
+  <p>
+    Lo shifting del §5.8 (aggiungere \(\lambda\mm{I}\)) ha un superpotere: <strong>trasforma una matrice a rango ridotto
+    in una a rango pieno</strong>. Costruiamone una difettosa e curiamola:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">shift_rango.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">30</span>, <span class="nm">30</span>)
+<span class="nm">A</span>[:, <span class="nm">0</span>] <span class="op">=</span> <span class="nm">A</span>[:, <span class="nm">1</span>]           <span class="cm"># rango ridotto (colonne 0 e 1 uguali)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">A</span>))       <span class="cm"># 29 (non 30)</span>
+
+<span class="nm">B</span> <span class="op">=</span> <span class="nm">A</span> <span class="op">+</span> <span class="nm">0.01</span> <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="fn">eye</span>(<span class="nm">30</span>)   <span class="cm"># shift piccolissimo</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">matrix_rank</span>(<span class="nm">B</span>))       <span class="cm"># 30: rango pieno ripristinato!</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">29
+30</span></pre>
+  </div>
+
+  <p>
+    La matrice difettosa ha rango <code>29</code>; aggiungendo appena <code>0.01</code> sulla diagonale, il rango torna
+    <code>30</code>, <mark>pieno</mark>. Lo shift «scolla» le colonne che erano identiche, rendendole di nuovo
+    indipendenti. È il trucco che rende invertibili matrici che non lo sarebbero — il cuore della <em>regolarizzazione</em>
+    che incontrerai nei minimi quadrati (Cap. 14) e nel machine learning.
+  </p>
 
 
   <!-- ==================================================================== -->
