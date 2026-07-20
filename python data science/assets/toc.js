@@ -253,7 +253,7 @@ const TOC = [
     n: 16,
     titolo: "PyTorch: reti neurali con nn.Module",
     file: "cap16-pytorch-reti.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s16-1", n: "16.1", t: "nn.Module e i layer" },
       { id: "s16-2", n: "16.2", t: "Perdite e attivazioni" },

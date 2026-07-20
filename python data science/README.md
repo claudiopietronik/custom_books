@@ -25,6 +25,6 @@ Motore condiviso in `assets/` (toc.js, book.js, plot.js, style.css). Tema smeral
 - [x] 13 — Modelli in pratica: dalla regressione al boosting
 - [x] 14 — PyTorch: i tensori
 - [x] 15 — PyTorch: autograd e discesa del gradiente
-- [ ] 16 — PyTorch: reti neurali con nn.Module
+- [x] 16 — PyTorch: reti neurali con nn.Module
 - [ ] 17 — PyTorch: un progetto di classificazione
 - [ ] 18 — Un progetto data science end-to-end
