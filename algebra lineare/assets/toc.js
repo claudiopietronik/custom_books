@@ -304,11 +304,11 @@ const TOC = [
     file: "cap17-forma-quadratica.html",
     stato: "pronto",
     sezioni: [
-      { id: "s17-1", n: "17.1", t: "Prospettiva algebrica" },
+      { id: "s17-1", n: "17.1", t: "Cos'è, in poche parole" },
       { id: "s17-2", n: "17.2", t: "Prospettiva geometrica" },
       { id: "s17-3", n: "17.3", t: "La forma quadratica normalizzata" },
       { id: "s17-4", n: "17.4", t: "Autovettori e superficie della forma quadratica" },
-      { id: "s17-5", n: "17.5", t: "Definitezza di una matrice" },
+      { id: "s17-5", n: "17.5", t: "A cosa serve: la definitezza" },
       { id: "s17-6", n: "17.6", t: "La definitezza di AᵀA" },
       { id: "s17-7", n: "17.7", t: "λ e definitezza" }
     ]
