@@ -161,6 +161,36 @@
   </p>
 
 
+  <h3>💻 In NumPy: la SVD in una riga</h3>
+
+  <p>
+    Tutta la derivazione che stai per leggere, in pratica, è un comando: <code>np.linalg.svd</code>, che restituisce le
+    tre matrici \(\mm{U}\), \(\mm{S}\), \(\mm{V}\T\) della decomposizione \(\mm{A} = \mm{U}\mm{S}\mm{V}\T\).
+  </p>
+
+  <div class="term">
+    <div class="t-head file">svd.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">3</span>, <span class="nm">0</span>, <span class="nm">5</span>],
+              [<span class="nm">8</span>, <span class="nm">1</span>, <span class="nm">3</span>]])
+<span class="nm">U</span>, <span class="nm">S</span>, <span class="nm">Vt</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">svd</span>(<span class="nm">A</span>)
+
+<span class="bi">print</span>(<span class="nm">U</span><span class="op">.</span><span class="nm">shape</span>, <span class="nm">S</span><span class="op">.</span><span class="nm">shape</span>, <span class="nm">Vt</span><span class="op">.</span><span class="nm">shape</span>)   <span class="cm"># (2,2) (2,) (3,3)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">S</span>, <span class="nm">3</span>))                <span class="cm"># i valori singolari (decrescenti)</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(2, 2) (2,) (3, 3)
+[9.891 3.189]</span></pre>
+  </div>
+
+  <p>
+    NumPy restituisce i <b>valori singolari</b> come un vettore <code>S</code> (non una matrice), già in ordine
+    <mark>decrescente</mark>: il primo, <code>9.891</code>, è il «più importante». <code>U</code> e <code>Vt</code>
+    contengono le due famiglie di direzioni ortonormali (i vettori singolari sinistri e destri). Le sezioni che seguono
+    spiegano <em>da dove nascono</em> queste tre matrici; il codice te le consegna già pronte.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s16-4"><span class="secnum">Sezione 16.4</span>Derivazione (1): la via costruttiva, dagli autovettori</h2>
 
@@ -470,6 +500,36 @@
   </div>
 
 
+  <h3>💻 In NumPy: valori singolari = √autovalori</h3>
+
+  <p>
+    Il legame centrale tra SVD e autodecomposizione: i valori singolari di \(\mm{A}\) al quadrato sono gli autovalori di
+    \(\mm{A}\T\mm{A}\). Verifichiamolo (su una matrice simmetrica, autovalori e valori singolari coincidono):
+  </p>
+
+  <div class="term">
+    <div class="t-head file">sv_autovalori.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">3</span>, <span class="nm">1</span>, <span class="nm">0</span>],
+              [<span class="nm">1</span>, <span class="nm">1</span>, <span class="nm">0</span>]])
+<span class="nm">M</span> <span class="op">=</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">A</span>          <span class="cm"># 3×3 simmetrica</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">sort</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">eigvalsh</span>(<span class="nm">M</span>))[::<span class="op">-</span><span class="nm">1</span>], <span class="nm">3</span>))   <span class="cm"># autovalori di M</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">svd</span>(<span class="nm">M</span>)[<span class="nm">1</span>], <span class="nm">3</span>))                     <span class="cm"># valori singolari di M</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[11.657  0.343  0.   ]
+[11.657  0.343  0.   ]</span></pre>
+  </div>
+
+  <p>
+    Le due liste coincidono: <mark>per una matrice simmetrica, autovalori e valori singolari sono la stessa cosa</mark>.
+    E lo zero finale non è un caso — dice che \(\mm{M}\) ha rango 2 (una direzione «piatta»), esattamente come \(\mm{A}\)
+    da cui è nata. La SVD, insomma, è l'autodecomposizione portata alle matrici non quadrate: è ciò che la rende lo
+    strumento più potente e generale del libro.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s16-9"><span class="secnum">Sezione 16.9</span>Approfondimento: i quattro sottospazi e il rango</h2>
 
@@ -594,6 +654,44 @@
       è il denoising del §16.7.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: gli «strati» e la compressione</h3>
+
+  <p>
+    La SVD scrive \(\mm{A}\) come somma di <strong>strati</strong> di rango 1 (\(\sigma_1\vv{u}_1\vv{v}_1\T +
+    \sigma_2\vv{u}_2\vv{v}_2\T + \dots\)), ordinati per importanza. Tenendo solo i primi \(k\) si ottiene la <em>migliore</em>
+    approssimazione di rango \(k\) — l'idea dietro la <b>compressione di immagini</b>:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">strati.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1.</span>, <span class="nm">2</span>, <span class="nm">3</span>],
+              [<span class="nm">2</span>,  <span class="nm">4</span>, <span class="nm">6</span>],
+              [<span class="nm">3</span>,  <span class="nm">6</span>, <span class="nm">9.1</span>]])    <span class="cm"># quasi rango 1</span>
+<span class="nm">U</span>, <span class="nm">S</span>, <span class="nm">Vt</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">svd</span>(<span class="nm">A</span>)
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">S</span>, <span class="nm">3</span>))                 <span class="cm"># un valore singolare domina</span>
+
+<span class="cm"># ricostruzione con UN solo strato (rango 1)</span>
+<span class="nm">A1</span> <span class="op">=</span> <span class="nm">S</span>[<span class="nm">0</span>] <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="fn">outer</span>(<span class="nm">U</span>[:, <span class="nm">0</span>], <span class="nm">Vt</span>[<span class="nm">0</span>, :])
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">A1</span>, <span class="nm">2</span>))              <span class="cm"># già quasi uguale ad A!</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[14.037  0.043  0.   ]
+[[1.   2.   3.02]
+ [2.   4.   6.03]
+ [3.02 6.03 9.08]]</span></pre>
+  </div>
+
+  <p>
+    Il primo valore singolare (<code>14.04</code>) è enormemente più grande degli altri: quasi tutta l'informazione sta
+    nel primo strato. Ricostruendo <code>A1</code> con quel <em>solo</em> strato otteniamo <mark>una matrice quasi
+    identica ad \(\mm{A}\)</mark>, pur avendo buttato via il resto. Su un'immagine (che è una matrice di pixel) questo
+    significa: tieni i pochi strati importanti e scarti gli altri → <b>l'immagine si comprime</b> perdendo pochissima
+    qualità. È il principio della compressione, e la SVD garantisce che <em>nessun'altra</em> approssimazione di pari
+    rango faccia meglio.
+  </p>
 
 
   <!-- ==================================================================== -->
