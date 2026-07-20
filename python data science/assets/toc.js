@@ -110,7 +110,7 @@ const TOC = [
     n: 7,
     titolo: "pandas: raggruppare e combinare",
     file: "cap07-pandas-groupby.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s7-1", n: "7.1", t: "groupby: split-apply-combine" },
       { id: "s7-2", n: "7.2", t: "Aggregazioni e trasformazioni" },
