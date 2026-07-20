@@ -174,7 +174,7 @@ const TOC = [
     n: 11,
     titolo: "SciPy: statistica e ottimizzazione",
     file: "cap11-scipy.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s11-1", n: "11.1", t: "Cos'è SciPy" },
       { id: "s11-2", n: "11.2", t: "scipy.stats: distribuzioni e test" },

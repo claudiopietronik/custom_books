@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 · SciPy: statistica e ottimizzazione — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="11">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 11</div>
+    <h1>SciPy: statistica e ottimizzazione</h1>
+    <p class="standfirst">
+      NumPy dà i mattoni (array e operazioni base); <b>SciPy</b> ci costruisce sopra un intero edificio di
+      <b>matematica scientifica avanzata</b>: test statistici, distribuzioni di probabilità, ottimizzazione,
+      interpolazione, elaborazione di segnali, algebra lineare. È il complemento naturale dello stack, quello a cui ti
+      rivolgi quando la domanda va oltre «media e somma» ed entra nel «questa differenza è <b>statisticamente
+      significativa</b>?» o «qual è il <b>minimo</b> di questa funzione?». <mark>Non lo userai ogni giorno come pandas,
+      ma quando serve non ha sostituti</mark> — ed è anche il motore matematico che, dietro le quinte, fa girare
+      scikit-learn. In questo capitolo, con taglio pratico: cos'è SciPy e com'è organizzato (§11.1), <b>scipy.stats</b>
+      per distribuzioni e test — a partire dal celebre test t (§11.2), l'<b>ottimizzazione</b> per trovare minimi e
+      adattare curve (§11.3), <b>interpolazione e integrazione</b> (§11.4) e un cenno agli altri moduli utili (§11.5).
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Cos'è <b>SciPy</b> (§11.1), <b>scipy.stats</b>: distribuzioni e test (§11.2), <b>ottimizzazione</b> (§11.3),
+      <b>interpolazione e integrazione</b> (§11.4), cenni a <b>signal/linalg/sparse</b> (§11.5). Nel laboratorio (§11.6)
+      esegui un test e adatti una curva.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: rispondere con rigore</div>
+    <p style="margin-bottom:0">
+      «I clienti trattati con la nuova offerta spendono di più — o è solo caso?» Domande così si rispondono con i
+      <b>test statistici</b> di SciPy, non a occhio. E l'<b>ottimizzazione</b> è il cuore matematico di ogni modello che
+      «impara» (minimizzare un errore). <mark>SciPy ti dà gli strumenti per passare dall'impressione alla prova</mark>, e
+      per capire cosa succede sotto il cofano dei modelli che userai nei prossimi capitoli.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-1"><span class="secnum">Sezione 11.1</span>Cos'è SciPy</h2>
+
+  <p class="lead">
+    SciPy non è un'unica cosa ma una <b>collezione di sotto-moduli</b>, ognuno per un'area della matematica applicata.
+    Sapere che esistono e cosa contengono è metà dell'utilità.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I sotto-moduli principali <span class="tag">import scipy.qualcosa</span></div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">scipy.stats</span> — statistica</dt>
+        <dd>distribuzioni di probabilità, <b>test statistici</b> (t-test, chi-quadro…), correlazioni. Il più usato dal
+            data scientist (§11.2).</dd>
+        <dt><span class="mono">scipy.optimize</span> — ottimizzazione</dt>
+        <dd>trovare il <b>minimo</b> di una funzione, <b>adattare una curva</b> ai dati, risolvere equazioni. Il cuore
+            matematico dell'apprendimento (§11.3).</dd>
+        <dt><span class="mono">scipy.interpolate</span> — interpolazione</dt>
+        <dd>«riempire i buchi» tra punti noti con una curva liscia (§11.4).</dd>
+        <dt><span class="mono">scipy.integrate</span> — integrazione</dt>
+        <dd>calcolare integrali (aree sotto una curva) e risolvere equazioni differenziali (§11.4).</dd>
+        <dt><span class="mono">scipy.signal</span>, <span class="mono">scipy.linalg</span>, <span class="mono">scipy.sparse</span></dt>
+        <dd>elaborazione di segnali (filtri, Fourier), algebra lineare avanzata, matrici sparse (per dati enormi con
+            tanti zeri) (§11.5).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Si importa il sotto-modulo che serve: <code>from scipy import stats</code>, poi <code>stats.ttest_ind(...)</code>.
+      <mark>Non serve conoscerli tutti a memoria</mark>: basta sapere «per i test → stats, per i minimi → optimize» e
+      cercare il resto nella documentazione (eccellente) quando capita.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-2"><span class="secnum">Sezione 11.2</span>scipy.stats: distribuzioni e test</h2>
+
+  <p class="lead">
+    Il modulo più prezioso. Serve a rispondere con rigore a domande del tipo «due gruppi sono <b>davvero</b> diversi, o
+    la differenza è frutto del caso?». Lo strumento simbolo è il <b>test t</b>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Confrontare due gruppi: il test t <span class="tag">ttest_ind · p-value</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">test.py</div>
+      <pre><span class="kw">from</span> <span class="nm">scipy</span> <span class="kw">import</span> <span class="nm">stats</span>
+
+<span class="cm"># due gruppi: spesa dei clienti con e senza offerta</span>
+<span class="nm">t</span>, <span class="nm">p</span> <span class="op">=</span> <span class="nm">stats</span><span class="op">.</span><span class="fn">ttest_ind</span>(<span class="nm">gruppo_offerta</span>, <span class="nm">gruppo_controllo</span>)
+
+<span class="bi">print</span>(<span class="nm">p</span>)              <span class="cm"># il p-value</span>
+<span class="cm"># p < 0.05  → differenza "significativa" (probabilmente reale)</span>
+<span class="cm"># p >= 0.05 → potrebbe essere caso: nessuna prova di differenza</span>
+
+<span class="cm"># altre cose utili in stats:</span>
+<span class="nm">stats</span><span class="op">.</span><span class="fn">pearsonr</span>(<span class="nm">x</span>, <span class="nm">y</span>)          <span class="cm"># correlazione + suo p-value</span>
+<span class="nm">stats</span><span class="op">.</span><span class="fn">norm</span><span class="op">.</span><span class="fn">cdf</span>(<span class="nm">1.96</span>)          <span class="cm"># distribuzioni: prob. cumulata della normale</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">ttest_ind(a, b)</span> — il test t</dt>
+        <dd>confronta le <b>medie</b> di due gruppi indipendenti e ti dice se differiscono più di quanto ci si aspetti dal
+            caso. Restituisce la statistica <code>t</code> e — la parte che conta — il <b>p-value</b>.</dd>
+        <dt>il <b>p-value</b> — cosa significa davvero</dt>
+        <dd>è la probabilità di osservare una differenza <b>grande almeno quanto la tua</b> se in realtà i due gruppi
+            fossero uguali (nessun effetto). <mark>p piccolo = «sarebbe strano vedere questa differenza per puro caso» →
+            probabilmente l'effetto è reale.</mark> La soglia convenzionale è <b>0,05</b>: sotto, si parla di risultato
+            «statisticamente significativo».</dd>
+        <dt>trappola da ricordare</dt>
+        <dd><mark>«significativo» non vuol dire «importante»</mark>: con tantissimi dati anche una differenza minuscola e
+            irrilevante può risultare «significativa». E un p alto <b>non</b> prova che i gruppi siano uguali, solo che
+            non hai prove del contrario. Il p-value va sempre accompagnato dalla <b>dimensione</b> dell'effetto.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel widget qui sotto vedi due gruppi come due «campane»: <mark>allontana le medie e osserva il p-value
+      crollare</mark> — cioè la differenza diventare via via più «significativa». È l'intuizione visiva dietro ogni test
+      di confronto. (La teoria dei test sta nel libro <b>Statistica</b>; qui impari a <b>eseguirli</b> con SciPy.)
+    </div>
+  </div>
+
+  <div class="widget" id="w-ttest">
+    <div class="w-head">
+      <span>Test t: due gruppi sono diversi?</span>
+      <span class="hint">allontana le medie, guarda il p-value</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="tt-svg" viewBox="0 0 460 230" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div class="w-controls" style="margin-top:.6rem; justify-content:center">
+        <label>distanza tra le medie <input type="range" id="tt-d" min="0" max="3" step="0.05" value="0.4"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="tt-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-3"><span class="secnum">Sezione 11.3</span>Ottimizzazione (optimize)</h2>
+
+  <p class="lead">
+    «Ottimizzare» significa trovare l'ingresso che rende una funzione <b>minima</b> (o massima). È un'operazione al cuore
+    di tutto il machine learning — ogni modello «impara» minimizzando un errore — e SciPy la offre in forma generale.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Trovare minimi e adattare curve <span class="tag">minimize · curve_fit</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">optimize.py</div>
+      <pre><span class="kw">from</span> <span class="nm">scipy</span><span class="op">.</span><span class="nm">optimize</span> <span class="kw">import</span> <span class="nm">minimize</span>, <span class="nm">curve_fit</span>
+<span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+
+<span class="cm"># 1. trovare il minimo di una funzione</span>
+<span class="kw">def</span> <span class="fn">f</span>(<span class="nm">x</span>):
+    <span class="kw">return</span> (<span class="nm">x</span> <span class="op">-</span> <span class="nm">3</span>) <span class="op">**</span> <span class="nm">2</span> <span class="op">+</span> <span class="nm">1</span>     <span class="cm"># parabola col minimo in x=3</span>
+
+<span class="nm">ris</span> <span class="op">=</span> <span class="nm">minimize</span>(<span class="nm">f</span>, <span class="nm">x0</span><span class="op">=</span><span class="nm">0</span>)          <span class="cm"># parti da 0, cerca il minimo</span>
+<span class="bi">print</span>(<span class="nm">ris</span><span class="op">.</span><span class="nm">x</span>)                    <span class="cm"># ~[3.0]  → l'x che minimizza</span>
+
+<span class="cm"># 2. adattare una curva a dei dati (curve fitting)</span>
+<span class="kw">def</span> <span class="fn">modello</span>(<span class="nm">x</span>, <span class="nm">a</span>, <span class="nm">b</span>):
+    <span class="kw">return</span> <span class="nm">a</span> <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="fn">exp</span>(<span class="nm">b</span> <span class="op">*</span> <span class="nm">x</span>)      <span class="cm"># una crescita esponenziale</span>
+
+<span class="nm">params</span>, <span class="nm">_</span> <span class="op">=</span> <span class="nm">curve_fit</span>(<span class="nm">modello</span>, <span class="nm">x_dati</span>, <span class="nm">y_dati</span>)   <span class="cm"># trova a, b migliori</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">minimize(f, x0)</span></dt>
+        <dd>trova l'ingresso che rende <code>f</code> minima, partendo da un punto iniziale <code>x0</code>. <mark>È lo
+            stesso principio della discesa del gradiente</mark> (libro Deep Learning): «scendi verso il fondo della
+            valle». Funziona anche in più dimensioni.</dd>
+        <dt><span class="mono">curve_fit(modello, x, y)</span></dt>
+        <dd><b>adatta</b> una funzione parametrica ai dati: trova i parametri (qui <code>a</code>, <code>b</code>) che
+            fanno passare la curva più vicino possibile ai punti. <mark>Perfetto quando conosci la <b>forma</b> della
+            legge (esponenziale, logistica…) e vuoi stimarne i parametri dai dati</mark> — cosa che la regressione
+            lineare di scikit-learn non copre per forme arbitrarie.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-4"><span class="secnum">Sezione 11.4</span>Interpolazione e integrazione</h2>
+
+  <p class="lead">
+    Due strumenti classici del calcolo scientifico, meno frequenti ma preziosi al momento giusto: «riempire i buchi» tra
+    punti noti (interpolazione) e calcolare aree sotto una curva (integrazione).
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Riempire e integrare <span class="tag">interp1d · quad</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">interp_integr.py</div>
+      <pre><span class="kw">from</span> <span class="nm">scipy</span><span class="op">.</span><span class="nm">interpolate</span> <span class="kw">import</span> <span class="nm">interp1d</span>
+<span class="kw">from</span> <span class="nm">scipy</span><span class="op">.</span><span class="nm">integrate</span> <span class="kw">import</span> <span class="nm">quad</span>
+
+<span class="cm"># INTERPOLAZIONE: da pochi punti a una funzione continua</span>
+<span class="nm">f</span> <span class="op">=</span> <span class="nm">interp1d</span>(<span class="nm">x_noti</span>, <span class="nm">y_noti</span>, <span class="nm">kind</span><span class="op">=</span><span class="st">"cubic"</span>)
+<span class="nm">f</span>(<span class="nm">2.5</span>)                      <span class="cm"># stima y in un x non misurato</span>
+
+<span class="cm"># INTEGRAZIONE: l'area sotto una curva</span>
+<span class="nm">area</span>, <span class="nm">_</span> <span class="op">=</span> <span class="nm">quad</span>(<span class="kw">lambda</span> <span class="nm">x</span>: <span class="nm">x</span> <span class="op">**</span> <span class="nm">2</span>, <span class="nm">0</span>, <span class="nm">1</span>)   <span class="cm"># ∫ x² dx da 0 a 1 = 0.333</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">interp1d(x, y)</span> — riempire i buchi</dt>
+        <dd>costruisce una funzione continua che passa per i punti noti, così puoi stimare valori <b>intermedi</b>
+            (<code>kind="linear"</code> a segmenti, <code>"cubic"</code> liscia). <mark>Utile per stimare misure mancanti
+            o ricampionare</mark>. Da non confondere con l'imputazione dei NaN in pandas: qui i punti sono ordinati (di
+            solito nel tempo).</dd>
+        <dt><span class="mono">quad(f, a, b)</span> — l'integrale</dt>
+        <dd>calcola numericamente l'area sotto <code>f</code> tra <code>a</code> e <code>b</code>. Per probabilità
+            (area sotto una densità), energie, totali accumulati da una curva continua.</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-5"><span class="secnum">Sezione 11.5</span>Cenni: signal, linalg, sparse</h2>
+
+  <p class="lead">
+    Tre moduli specializzati che è bene <b>sapere che esistono</b>: li tirerai fuori solo in contesti specifici, ma
+    quando servono sono insostituibili.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">🧰</span> Tre strumenti specializzati</div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">scipy.signal</span> — segnali</dt>
+        <dd>filtri (togliere il rumore), trasformata di Fourier, convoluzioni, rilevamento di picchi. <mark>Per dati che
+            sono <b>segnali nel tempo</b></mark>: audio, sensori, serie fisiche (l'argomento del libro DSP).</dd>
+        <dt><span class="mono">scipy.linalg</span> — algebra lineare avanzata</dt>
+        <dd>oltre a NumPy: decomposizioni (SVD, QR, LU), risoluzione di sistemi, autovalori. <mark>Il macchinario dietro
+            PCA e molti modelli</mark> (di solito lo usano le librerie per te, ma è lì se ti serve).</dd>
+        <dt><span class="mono">scipy.sparse</span> — matrici sparse</dt>
+        <dd>matrici enormi fatte quasi tutte di zeri (tipiche del testo: migliaia di parole, poche presenti per
+            documento). <mark>Le memorizza salvando solo i valori non-zero</mark>: indispensabile per non esaurire la
+            memoria con dati testuali o grafi grandi.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Non devi studiarli ora: <mark>tieni a mente che «per i segnali c'è signal, per le matrici enormi sparse»</mark>, e
+      approfondirai quando un progetto specifico te lo chiederà. Spesso, comunque, li useranno per te le librerie di più
+      alto livello (scikit-learn usa <code>sparse</code> per il testo, per esempio).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-6"><span class="secnum">Sezione 11.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Mettiamo in pratica le due cose più utili di SciPy per un data scientist: un <b>test t</b> per confrontare due
+    gruppi, e un <b>curve fitting</b> per adattare una legge ai dati. Due domande reali, due risposte rigorose.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">scipy_lab.py</div>
+    <pre><span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+<span class="kw">from</span> <span class="nm">scipy</span> <span class="kw">import</span> <span class="nm">stats</span>
+<span class="kw">from</span> <span class="nm">scipy</span><span class="op">.</span><span class="nm">optimize</span> <span class="kw">import</span> <span class="nm">curve_fit</span>
+
+<span class="cm"># --- 1. TEST T: la nuova offerta aumenta la spesa? ---</span>
+<span class="nm">offerta</span>    <span class="op">=</span> [<span class="nm">52</span>, <span class="nm">48</span>, <span class="nm">61</span>, <span class="nm">55</span>, <span class="nm">58</span>, <span class="nm">63</span>, <span class="nm">50</span>, <span class="nm">59</span>]
+<span class="nm">controllo</span>  <span class="op">=</span> [<span class="nm">45</span>, <span class="nm">50</span>, <span class="nm">47</span>, <span class="nm">44</span>, <span class="nm">49</span>, <span class="nm">46</span>, <span class="nm">48</span>, <span class="nm">43</span>]
+
+<span class="nm">t</span>, <span class="nm">p</span> <span class="op">=</span> <span class="nm">stats</span><span class="op">.</span><span class="fn">ttest_ind</span>(<span class="nm">offerta</span>, <span class="nm">controllo</span>)
+<span class="bi">print</span>(<span class="st">f"p-value = </span><span class="op">{</span><span class="nm">p</span><span class="op">:</span><span class="st">.4f</span><span class="op">}</span><span class="st">"</span>)
+<span class="bi">print</span>(<span class="st">"significativo!"</span> <span class="kw">if</span> <span class="nm">p</span> <span class="op">&lt;</span> <span class="nm">0.05</span> <span class="kw">else</span> <span class="st">"nessuna prova"</span>)
+
+<span class="cm"># --- 2. CURVE FITTING: adatta una crescita ai dati ---</span>
+<span class="nm">x</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">5</span>])
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2.1</span>, <span class="nm">3.9</span>, <span class="nm">8.2</span>, <span class="nm">15.9</span>, <span class="nm">33.1</span>])   <span class="cm"># raddoppia ogni passo</span>
+
+<span class="kw">def</span> <span class="fn">crescita</span>(<span class="nm">x</span>, <span class="nm">a</span>, <span class="nm">b</span>):
+    <span class="kw">return</span> <span class="nm">a</span> <span class="op">*</span> <span class="nm">b</span> <span class="op">**</span> <span class="nm">x</span>
+
+<span class="nm">params</span>, <span class="nm">_</span> <span class="op">=</span> <span class="nm">curve_fit</span>(<span class="nm">crescita</span>, <span class="nm">x</span>, <span class="nm">y</span>)
+<span class="bi">print</span>(<span class="st">f"a=</span><span class="op">{</span><span class="nm">params</span>[<span class="nm">0</span>]<span class="op">:</span><span class="st">.2f</span><span class="op">}</span><span class="st">, b=</span><span class="op">{</span><span class="nm">params</span>[<span class="nm">1</span>]<span class="op">:</span><span class="st">.2f</span><span class="op">}</span><span class="st">"</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">p-value = 0.0001
+significativo!
+a=1.03, b=1.99</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Due risposte rigorose: <b>(1)</b> il p-value <b>0,0001</b> (molto sotto 0,05) dice che <mark>la maggiore spesa del
+      gruppo con l'offerta è quasi certamente reale, non un caso</mark>: l'offerta funziona. <b>(2)</b> il curve fitting
+      scopre che i dati seguono la legge <code>y ≈ 1.03 · 1.99^x</code> — cioè <mark>un raddoppio a ogni passo</mark>
+      (<code>b ≈ 2</code>): abbiamo estratto la legge quantitativa dai punti grezzi. <mark>Questo è SciPy in azione</mark>:
+      dall'impressione («sembra crescere», «sembra diverso») alla prova numerica. Il p-value trasforma un'intuizione in
+      una decisione difendibile; il curve fitting trasforma una nuvola di punti in una formula.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 11</div>
+    <ol style="margin-bottom:0">
+      <li><b>SciPy</b> è una collezione di sotto-moduli di matematica avanzata: <code>stats</code>, <code>optimize</code>,
+          <code>interpolate</code>, <code>integrate</code>, <code>signal</code>, <code>linalg</code>, <code>sparse</code>
+          (§11.1).</li>
+      <li><b>scipy.stats</b>: <code>ttest_ind</code> confronta due gruppi e dà il <b>p-value</b> (p &lt; 0,05 =
+          significativo). Ma «significativo» ≠ «importante»; serve anche la dimensione dell'effetto (§11.2).</li>
+      <li><b>scipy.optimize</b>: <code>minimize</code> trova il minimo di una funzione (base dell'apprendimento);
+          <code>curve_fit</code> adatta una curva di forma nota ai dati stimandone i parametri (§11.3).</li>
+      <li><code>interp1d</code> «riempie i buchi» tra punti noti; <code>quad</code> calcola integrali (§11.4).
+          <code>signal</code> (segnali), <code>linalg</code> (algebra avanzata), <code>sparse</code> (matrici enormi di
+          zeri) per casi speciali (§11.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Con SciPy hai completato la cassetta degli attrezzi «scientifica» che affianca NumPy e pandas. Ora hai tutto per
+    passare al gran protagonista che dà il nome al mestiere: il <b>machine learning</b>. Non ne studieremo la teoria (è
+    nel libro <b>Machine Learning</b>), ma impareremo a <b>usarne la libreria</b>, la più elegante e diffusa:
+    <b>scikit-learn</b>. Nel <strong>Capitolo 12</strong> ne scopriamo l'anatomia — la geniale <b>estimator API</b>
+    (<code>fit</code>/<code>predict</code>/<code>transform</code>) uguale per ogni modello, i dataset, il preprocessing e
+    le <b>pipeline</b> — il modo pulito e professionale di costruire un modello dall'inizio alla fine.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-7"><span class="secnum">Sezione 11.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.1</div>
+    <p style="margin-bottom:0">
+      Abbina ogni compito al sotto-modulo SciPy giusto: (a) un test statistico; (b) trovare il minimo di una funzione;
+      (c) filtrare il rumore da un segnale; (d) gestire una matrice enorme quasi tutta di zeri.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.2</div>
+    <p style="margin-bottom:0">
+      Un test t tra due gruppi dà <code>p = 0.02</code>. Cosa concludi? E se desse <code>p = 0.40</code>? Il p-value ti
+      dice quanto è <b>grande</b> la differenza?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.3</div>
+    <p style="margin-bottom:0">
+      Qual è la differenza tra <code>minimize</code> e <code>curve_fit</code>? Per «stimare i parametri di una legge
+      esponenziale che descrive i miei dati», quale useresti?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.4</div>
+    <p style="margin-bottom:0">
+      Hai misurato una grandezza a 1, 2, 4 e 8 secondi, e vuoi stimarne il valore a 5 secondi (non misurato). Quale
+      strumento di SciPy usi? Come si chiama in generale questa operazione?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 11.5</div>
+    <p style="margin-bottom:0">
+      Perché una correlazione o un test statistico da soli non bastano a dimostrare che una cosa <b>causa</b> l'altra?
+      Cosa aggiungeresti al p-value per rendere una conclusione più solida?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s11-8"><span class="secnum">Sezione 11.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.1</div>
+    <p style="margin-bottom:0">
+      (a) <code>scipy.stats</code> (test statistici); (b) <code>scipy.optimize</code> (<code>minimize</code>);
+      (c) <code>scipy.signal</code> (filtri per i segnali); (d) <code>scipy.sparse</code> (matrici sparse, che salvano
+      solo i valori non-zero).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.2</div>
+    <p style="margin-bottom:0">
+      Con <code>p = 0.02</code> (&lt; 0,05) la differenza tra i gruppi è <b>statisticamente significativa</b>: è
+      improbabile che sia solo frutto del caso, quindi c'è evidenza di un effetto reale. Con <code>p = 0.40</code> non
+      c'è evidenza di differenza: potrebbe essere caso (attenzione: questo <b>non</b> prova che i gruppi siano uguali,
+      solo che non hai prove del contrario). Il p-value <b>non</b> dice quanto è grande la differenza: misura solo quanto
+      è improbabile che sia casuale; per la grandezza serve la <b>dimensione dell'effetto</b> (es. la differenza tra le
+      medie).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.3</div>
+    <p style="margin-bottom:0">
+      <code>minimize</code> trova l'ingresso che rende <b>minima una funzione</b> data (un problema di ottimizzazione
+      generico); <code>curve_fit</code> trova i <b>parametri</b> di una funzione parametrica che la fanno passare più
+      vicino possibile a dei <b>dati</b> (adattamento di una curva). Per «stimare i parametri di una legge esponenziale
+      che descrive i dati» si usa <code>curve_fit</code>: gli passi la forma esponenziale e i dati, e lui trova i
+      parametri migliori.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.4</div>
+    <p style="margin-bottom:0">
+      Si usa <code>scipy.interpolate.interp1d</code> (costruendo una funzione dai punti noti e valutandola a 5 secondi).
+      L'operazione si chiama <b>interpolazione</b>: stimare i valori <b>intermedi</b> tra punti misurati, costruendo una
+      curva che li attraversa. (Stimare invece oltre l'ultimo punto misurato sarebbe <b>estrapolazione</b>, più
+      rischiosa.)
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 11.5</div>
+    <p style="margin-bottom:0">
+      Perché un test o una correlazione mostrano solo che due cose sono <b>associate</b> (vanno insieme o differiscono),
+      non che una <b>provochi</b> l'altra: l'associazione può nascere da un terzo fattore comune, da un bias di
+      selezione o dal caso. Per una conclusione più solida servono, oltre al p-value: la <b>dimensione dell'effetto</b>
+      (quanto è grande la differenza), un disegno sperimentale controllato (idealmente un <b>esperimento randomizzato</b>,
+      come un test A/B), la replicabilità del risultato e il controllo delle variabili confondenti.
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §11.2 — test t illustrativo: due gaussiane (gruppi A/B) con distanza
+   regolabile; p-value (approssimazione normale) che crolla all'aumentare della
+   separazione. Usa plot.js. n e sigma fissi, scopo didattico.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('tt-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('tt-out');
+  const sD = document.getElementById('tt-d');
+
+  const N = 30, SIGMA = 1;       // dimensione campione e deviazione (fissi)
+  const XMIN = -3, XMAX = 6, YMAX = 0.5;
+
+  // CDF normale standard via approssimazione di erf
+  function erf(x) {
+    const s = x < 0 ? -1 : 1; x = Math.abs(x);
+    const t = 1 / (1 + 0.3275911 * x);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  function phi(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function bell(x, mu) { return Math.exp(-((x - mu) * (x - mu)) / (2 * SIGMA * SIGMA)) / (SIGMA * Math.sqrt(2 * Math.PI)); }
+
+  const p = new Plot(svg, { xmin: XMIN, xmax: XMAX, ymin: 0, ymax: YMAX });
+
+  function draw() {
+    const d = +sD.value;         // distanza tra le medie
+    const muA = 1, muB = 1 + d;
+    p.clear(); p.grid(1, 0.1); p.axes({ numbers: false });
+    const A = [], B = [];
+    for (let x = XMIN; x <= XMAX; x += 0.05) { A.push([x, bell(x, muA)]); B.push([x, bell(x, muB)]); }
+    p.poly(A, { color: 'var(--accent)', width: 2.4, close: false });
+    p.poly(B, { color: 'var(--warm)', width: 2.4, close: false });
+    p.line(muA, 0, muA, bell(muA, muA), { color: 'var(--accent)', width: 1, dash: '3 3' });
+    p.line(muB, 0, muB, bell(muB, muB), { color: 'var(--warm)', width: 1, dash: '3 3' });
+    p.text(muA, YMAX, 'gruppo A', { size: 11, color: 'var(--accent)', anchor: 'middle', dy: -2, bold: true });
+    p.text(muB, YMAX, 'gruppo B', { size: 11, color: 'var(--warm)', anchor: 'middle', dy: 12, bold: true });
+
+    // z-test approssimato: SE = sigma*sqrt(2/N); z = d/SE; p bilaterale
+    const se = SIGMA * Math.sqrt(2 / N);
+    const z = d / se;
+    const pval = 2 * (1 - phi(z));
+    const sig = pval < 0.05;
+    const col = sig ? 'var(--green)' : 'var(--warm)';
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">Distanza medie <b>' + d.toFixed(2) + '</b> → ' +
+      'p-value ≈ <b style="color:' + col + '">' + (pval < 0.0001 ? '&lt;0.0001' : pval.toFixed(4)) + '</b> — ' +
+      (sig ? '<b style="color:var(--green)">significativo</b> (p &lt; 0.05): differenza probabilmente reale.'
+           : '<b style="color:var(--warm)">non significativo</b> (p ≥ 0.05): potrebbe essere caso.') +
+      ' <span style="color:var(--ink-soft)">Più le campane si sovrappongono, più è plausibile il caso.</span></div>';
+  }
+  sD.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
