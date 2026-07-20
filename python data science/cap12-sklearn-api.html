@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 · scikit-learn: l'API in pratica — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="12">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 12</div>
+    <h1>scikit-learn: l'API in pratica</h1>
+    <p class="standfirst">
+      Arriviamo al machine learning. Ma attenzione al taglio: <mark>la <b>teoria</b> dei modelli — come funziona una
+      regressione, un albero, un SVM — sta nel libro «Machine Learning»; qui impariamo a <b>usarli</b></mark> con la
+      libreria più elegante e diffusa, <b>scikit-learn</b>. La sua genialità sta in un'idea: <b>ogni</b> modello, dal più
+      semplice al più sofisticato, si usa con la <b>stessa identica interfaccia</b> — <code>fit</code> per allenare,
+      <code>predict</code> per prevedere. Imparata una volta, la sai per tutti. Questo capitolo è dedicato a questo
+      «schema» che rende scikit-learn così piacevole e produttivo: l'<b>estimator API</b> (§12.1), come si
+      preparano i dati e si mette da parte un <b>test set</b> (§12.2), il <b>preprocessing</b> — scaling, encoding,
+      imputazione (§12.3), le <b>pipeline</b> che incatenano tutto senza errori (§12.4), e come <b>valutare</b> un modello
+      con metriche e cross-validation (§12.5). Alla fine saprai costruire un modello dall'inizio alla fine, nel modo
+      pulito che si usa in produzione.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      L'<b>estimator API</b> fit/predict/transform (§12.1), <b>dataset e train/test split</b> (§12.2), il
+      <b>preprocessing</b> (§12.3), le <b>pipeline</b> (§12.4), <b>metriche e cross-validation</b> (§12.5). Nel
+      laboratorio (§12.6) alleni e valuti il tuo primo modello con sklearn.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: uno schema, mille modelli</div>
+    <p style="margin-bottom:0">
+      <mark>La forza di scikit-learn è la coerenza: impari <code>fit</code>/<code>predict</code> una volta e li usi per
+      la regressione lineare, la random forest, l'SVM, il clustering — tutto.</mark> Cambiare modello è cambiare una
+      riga. Questo capitolo ti dà lo «schema» che rende ogni modello successivo immediato, e le buone pratiche (test set,
+      pipeline) che separano un lavoro serio da uno che si illude.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-1"><span class="secnum">Sezione 12.1</span>L'estimator API (fit/predict/transform)</h2>
+
+  <p class="lead">
+    Il cuore di scikit-learn è un «contratto» che <b>tutti</b> gli oggetti rispettano. Capirlo è capire l'intera
+    libreria: da lì, ogni modello è una variazione sullo stesso tema.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> Tre verbi per tutto: fit, predict, transform</div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">estimator_api.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">linear_model</span> <span class="kw">import</span> <span class="nm">LinearRegression</span>
+
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">LinearRegression</span>()      <span class="cm"># 1. crea il modello</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)  <span class="cm"># 2. ALLENA sui dati (impara)</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_nuovi</span>)       <span class="cm"># 3. PREVEDE su dati nuovi</span>
+
+<span class="cm"># cambiare modello = cambiare UNA riga, il resto è identico:</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">ensemble</span> <span class="kw">import</span> <span class="nm">RandomForestRegressor</span>
+<span class="nm">modello</span> <span class="op">=</span> <span class="nm">RandomForestRegressor</span>()   <span class="cm"># ← sola riga cambiata!</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)      <span class="cm"># stesso fit</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_nuovi</span>)           <span class="cm"># stesso predict</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">.fit(X, y)</span> — allena (impara)</dt>
+        <dd>il modello guarda le caratteristiche <code>X</code> e le risposte <code>y</code> e <b>impara</b> i suoi
+            parametri. <mark>Convenzione: <code>X</code> è una matrice (righe = esempi, colonne = caratteristiche),
+            <code>y</code> è il vettore delle risposte.</mark></dd>
+        <dt><span class="mono">.predict(X)</span> — prevede</dt>
+        <dd>dato nuovo <code>X</code> (senza <code>y</code>!), il modello restituisce le previsioni. Per i classificatori
+            c'è anche <code>.predict_proba(X)</code> (le probabilità di ogni classe).</dd>
+        <dt><span class="mono">.transform(X)</span> — trasforma</dt>
+        <dd>i preprocessori (scaler, encoder…) usano <code>fit</code> per <b>imparare</b> la trasformazione (es. la media
+            da sottrarre) e <code>transform</code> per <b>applicarla</b>. Spesso combinati in <code>fit_transform</code>.
+            <mark>Modelli → fit/predict; trasformatori → fit/transform.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Questa uniformità è la magia: <mark>tutto in scikit-learn è un «estimator» che segue questo contratto</mark>.
+      Provare un altro modello, incatenare passaggi, cercare iperparametri — tutto funziona allo stesso modo, perché
+      tutti parlano la stessa lingua. È il motivo per cui la libreria è così amata.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-2"><span class="secnum">Sezione 12.2</span>Dataset e train/test split</h2>
+
+  <p class="lead">
+    Prima di allenare, una regola d'oro non negoziabile: <b>mettere da parte una fetta di dati</b> per il collaudo
+    finale, mai usata in allenamento. È l'unico modo di sapere se il modello funziona davvero su dati nuovi.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Dividere i dati in train e test <span class="tag">train_test_split</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">split.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">model_selection</span> <span class="kw">import</span> <span class="nm">train_test_split</span>
+
+<span class="cm"># X = caratteristiche, y = risposte</span>
+<span class="nm">X_train</span>, <span class="nm">X_test</span>, <span class="nm">y_train</span>, <span class="nm">y_test</span> <span class="op">=</span> <span class="fn">train_test_split</span>(
+    <span class="nm">X</span>, <span class="nm">y</span>,
+    <span class="nm">test_size</span><span class="op">=</span><span class="nm">0.2</span>,      <span class="cm"># 20% da parte per il test</span>
+    <span class="nm">random_state</span><span class="op">=</span><span class="nm">42</span>,    <span class="cm"># seme fisso: split riproducibile</span>
+    <span class="nm">stratify</span><span class="op">=</span><span class="nm">y</span>,        <span class="cm"># mantieni le proporzioni delle classi</span>
+)
+
+<span class="nm">modello</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)     <span class="cm"># allena SOLO sul train</span>
+<span class="nm">modello</span><span class="op">.</span><span class="fn">score</span>(<span class="nm">X_test</span>, <span class="nm">y_test</span>)    <span class="cm"># valuta sul test (dati mai visti)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>perché dividere</dt>
+        <dd>un modello valutato sugli <b>stessi</b> dati con cui è stato allenato può sembrare bravissimo pur avendo solo
+            <b>memorizzato</b>. <mark>Il test set — dati «mai visti» — è l'esame vero</mark>: misura la capacità di
+            generalizzare (libro Machine Learning, cap. 3 e 18).</dd>
+        <dt><span class="mono">test_size=0.2</span></dt>
+        <dd>la frazione da tenere per il test (tipicamente 20-30%). Il resto è per allenare.</dd>
+        <dt><span class="mono">random_state=42</span></dt>
+        <dd>fissa il «caso» della divisione: <mark>così ottieni lo stesso split ogni volta</mark> (riproducibilità). Un
+            numero qualsiasi va bene, purché fisso.</dd>
+        <dt><span class="mono">stratify=y</span> (classificazione)</dt>
+        <dd>mantiene in train e test le stesse proporzioni tra le classi: importante con classi <b>sbilanciate</b>, per
+            non ritrovarsi tutti i casi rari da una parte sola.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nel widget qui sotto vedi la divisione: <mark>sposta la frazione di test</mark> e osserva quanti esempi vanno
+      all'allenamento e quanti al collaudo. Regola aurea: <b>il test set si guarda una volta sola, alla fine</b> — mai
+      usarlo per prendere decisioni durante lo sviluppo (per quello c'è la cross-validation, §12.5).
+    </div>
+  </div>
+
+  <div class="widget" id="w-split">
+    <div class="w-head">
+      <span>train / test split</span>
+      <span class="hint">quanti dati per allenare, quanti per collaudare</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1.1rem">
+      <div id="sp-cells" style="display:flex; gap:.25rem; justify-content:center; flex-wrap:wrap; margin-bottom:.4rem"></div>
+      <div class="w-controls" style="margin-top:.6rem; justify-content:center">
+        <label>test_size <input type="range" id="sp-t" min="0.1" max="0.5" step="0.05" value="0.2"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="sp-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-3"><span class="secnum">Sezione 12.3</span>Preprocessing (scaling, encoding, imputer)</h2>
+
+  <p class="lead">
+    I modelli vogliono dati «pronti»: numeri, sulla stessa scala, senza buchi. Il preprocessing di scikit-learn fa
+    questo, e — punto chiave — sono tutti <b>trasformatori</b> con la stessa API <code>fit</code>/<code>transform</code>.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">I trasformatori essenziali <span class="tag">Scaler · Encoder · Imputer</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">preprocessing.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">preprocessing</span> <span class="kw">import</span> <span class="nm">StandardScaler</span>, <span class="nm">OneHotEncoder</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">impute</span> <span class="kw">import</span> <span class="nm">SimpleImputer</span>
+
+<span class="cm"># SCALING: media 0, deviazione 1 (per k-NN, SVM, regressione regolarizzata...)</span>
+<span class="nm">scaler</span> <span class="op">=</span> <span class="nm">StandardScaler</span>()
+<span class="nm">scaler</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>)              <span class="cm"># impara media e dev DAL TRAIN</span>
+<span class="nm">X_train_s</span> <span class="op">=</span> <span class="nm">scaler</span><span class="op">.</span><span class="fn">transform</span>(<span class="nm">X_train</span>)
+<span class="nm">X_test_s</span>  <span class="op">=</span> <span class="nm">scaler</span><span class="op">.</span><span class="fn">transform</span>(<span class="nm">X_test</span>)   <span class="cm"># applica le STESSE al test</span>
+
+<span class="cm"># ENCODING: categorie → colonne 0/1</span>
+<span class="nm">OneHotEncoder</span>(<span class="nm">handle_unknown</span><span class="op">=</span><span class="st">"ignore"</span>)
+
+<span class="cm"># IMPUTAZIONE: riempi i NaN (es. con la mediana)</span>
+<span class="nm">SimpleImputer</span>(<span class="nm">strategy</span><span class="op">=</span><span class="st">"median"</span>)</pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">StandardScaler</span> — stessa scala</dt>
+        <dd>porta ogni caratteristica a media 0 e deviazione 1. <mark>Obbligatorio per i modelli basati su distanze o
+            regolarizzazione</mark> (k-NN, SVM, Ridge/Lasso); inutile per gli alberi.</dd>
+        <dt><span class="mono">OneHotEncoder</span> — categorie in numeri</dt>
+        <dd>trasforma una colonna categorica in tante colonne 0/1 (una per valore), senza inventare ordini falsi.
+            <code>handle_unknown="ignore"</code> gestisce categorie mai viste in allenamento.</dd>
+        <dt><span class="mono">SimpleImputer</span> — tappa i buchi</dt>
+        <dd>riempie i NaN con media, mediana o valore più frequente. <mark>La cosa cruciale: impara la statistica
+            (es. la mediana) <b>solo dal train</b></mark>, poi la applica al test — altrimenti si «bara» (data leakage,
+            §12.4).</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Nota il pattern ripetuto: <mark><code>fit</code> sul <b>train</b> (impara media/mediana/categorie),
+      <code>transform</code> su <b>train e test</b></mark> (applica). Fare <code>fit</code> anche sul test
+      contaminerebbe la valutazione. Farlo a mano, per ogni trasformatore, è noioso e rischioso — ed è esattamente il
+      problema che risolvono le pipeline.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>Le Pipeline</h2>
+
+  <p class="lead">
+    Il pezzo che tiene tutto insieme, e la ragione per cui i professionisti scrivono codice pulito e senza errori
+    subdoli. Una <b>pipeline</b> incatena preprocessing e modello in <b>un unico oggetto</b>, con la solita API.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Incatenare tutto in sicurezza <span class="tag">Pipeline · niente leakage</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">pipeline.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">pipeline</span> <span class="kw">import</span> <span class="nm">make_pipeline</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">preprocessing</span> <span class="kw">import</span> <span class="nm">StandardScaler</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">svm</span> <span class="kw">import</span> <span class="nm">SVC</span>
+
+<span class="cm"># una sola "cosa" che fa: scala → poi allena il modello</span>
+<span class="nm">pipe</span> <span class="op">=</span> <span class="nm">make_pipeline</span>(
+    <span class="nm">StandardScaler</span>(),
+    <span class="nm">SVC</span>(),
+)
+
+<span class="nm">pipe</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)     <span class="cm"># scala il train E allena, in un colpo</span>
+<span class="nm">pipe</span><span class="op">.</span><span class="fn">predict</span>(<span class="nm">X_test</span>)          <span class="cm"># scala il test (con le statistiche del train) E prevede</span></pre>
+    </div>
+    <div class="box chiave" style="margin:.8rem 0 0">
+      <div class="box-title"><span class="ico">🛡</span> Perché la pipeline è così importante</div>
+      <p style="margin-bottom:0">
+        La pipeline non è solo eleganza: è <b>sicurezza</b>. <mark>Quando la valuti in cross-validation, impara le
+        trasformazioni (media, mediana…) <b>solo</b> sulla parte di training di ogni fold, e le applica alla parte di
+        test senza mai «sbirciarla».</mark> Fatta a mano, è facilissimo commettere <b>data leakage</b> — scalare usando
+        anche i dati di test — e ottenere una valutazione falsamente ottimista che poi crolla nel mondo reale. La
+        pipeline fa la cosa giusta in automatico, ogni volta. È il motivo n.1 per cui si usa <b>sempre</b>.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-5"><span class="secnum">Sezione 12.5</span>Metriche e cross-validation</h2>
+
+  <p class="lead">
+    Allenare è metà del lavoro; l'altra metà è <b>misurare</b> quanto è buono il modello, con la metrica giusta e in modo
+    affidabile. scikit-learn offre metriche per ogni compito e la validazione incrociata.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Misurare bene <span class="tag">metriche · cross_val_score</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">valutazione.py</div>
+      <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">metrics</span> <span class="kw">import</span> <span class="nm">accuracy_score</span>, <span class="nm">f1_score</span>, <span class="nm">mean_squared_error</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">model_selection</span> <span class="kw">import</span> <span class="nm">cross_val_score</span>
+
+<span class="cm"># CLASSIFICAZIONE: accuratezza, F1 (meglio se sbilanciato)</span>
+<span class="nm">f1_score</span>(<span class="nm">y_test</span>, <span class="nm">y_pred</span>)
+
+<span class="cm"># REGRESSIONE: errore quadratico, R²</span>
+<span class="nm">mean_squared_error</span>(<span class="nm">y_test</span>, <span class="nm">y_pred</span>)
+
+<span class="cm"># CROSS-VALIDATION: stima robusta (5 fold), con la metrica scelta</span>
+<span class="nm">punteggi</span> <span class="op">=</span> <span class="fn">cross_val_score</span>(<span class="nm">pipe</span>, <span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">cv</span><span class="op">=</span><span class="nm">5</span>, <span class="nm">scoring</span><span class="op">=</span><span class="st">"f1"</span>)
+<span class="bi">print</span>(<span class="nm">punteggi</span><span class="op">.</span><span class="fn">mean</span>(), <span class="nm">punteggi</span><span class="op">.</span><span class="fn">std</span>())   <span class="cm"># media ± incertezza</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>la <b>metrica giusta</b> per il compito</dt>
+        <dd>classificazione: <code>accuracy</code>, ma <mark>con classi sbilanciate usa <code>f1</code></mark> (o
+            precision/recall — vedi libro ML cap. 18); regressione: <code>mean_squared_error</code>, <code>r2_score</code>.
+            La metrica sbagliata inganna.</dd>
+        <dt><span class="mono">cross_val_score(modello, X, y, cv=5)</span></dt>
+        <dd>divide i dati in 5 parti, allena e valuta 5 volte (ognuna a turno fa da test), e restituisce i 5 punteggi.
+            <mark>La <b>media</b> è una stima più affidabile di un singolo split; la <b>deviazione</b> dice quanto è
+            stabile.</mark> È lo standard per confrontare modelli e scegliere iperparametri.</dd>
+        <dt><span class="mono">scoring="f1"</span></dt>
+        <dd>specifica quale metrica usare nella cross-validation. <mark>Passa una <b>pipeline</b>, non il solo modello</mark>:
+            così il preprocessing è dentro la validazione (niente leakage).</dd>
+      </dl>
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-6"><span class="secnum">Sezione 12.6</span>Laboratorio</h2>
+
+  <p class="lead">
+    Costruiamo il nostro primo modello completo con scikit-learn su un dataset classico (l'iris): split, pipeline con
+    scaling + modello, allenamento, valutazione sul test e cross-validation. Lo schema che riuserai per <b>ogni</b>
+    progetto.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">primo_modello.py</div>
+    <pre><span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">datasets</span> <span class="kw">import</span> <span class="nm">load_iris</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">model_selection</span> <span class="kw">import</span> <span class="nm">train_test_split</span>, <span class="nm">cross_val_score</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">pipeline</span> <span class="kw">import</span> <span class="nm">make_pipeline</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">preprocessing</span> <span class="kw">import</span> <span class="nm">StandardScaler</span>
+<span class="kw">from</span> <span class="nm">sklearn</span><span class="op">.</span><span class="nm">neighbors</span> <span class="kw">import</span> <span class="nm">KNeighborsClassifier</span>
+
+<span class="nm">X</span>, <span class="nm">y</span> <span class="op">=</span> <span class="fn">load_iris</span>(<span class="nm">return_X_y</span><span class="op">=</span><span class="kw">True</span>)      <span class="cm"># dataset di esempio incluso</span>
+
+<span class="nm">X_train</span>, <span class="nm">X_test</span>, <span class="nm">y_train</span>, <span class="nm">y_test</span> <span class="op">=</span> <span class="fn">train_test_split</span>(
+    <span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">test_size</span><span class="op">=</span><span class="nm">0.2</span>, <span class="nm">random_state</span><span class="op">=</span><span class="nm">42</span>, <span class="nm">stratify</span><span class="op">=</span><span class="nm">y</span>)
+
+<span class="nm">pipe</span> <span class="op">=</span> <span class="fn">make_pipeline</span>(<span class="nm">StandardScaler</span>(), <span class="nm">KNeighborsClassifier</span>(<span class="nm">n_neighbors</span><span class="op">=</span><span class="nm">5</span>))
+<span class="nm">pipe</span><span class="op">.</span><span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)
+
+<span class="bi">print</span>(<span class="st">"test:"</span>, <span class="nm">pipe</span><span class="op">.</span><span class="fn">score</span>(<span class="nm">X_test</span>, <span class="nm">y_test</span>))          <span class="cm"># accuratezza sul test</span>
+<span class="nm">cv</span> <span class="op">=</span> <span class="fn">cross_val_score</span>(<span class="nm">pipe</span>, <span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">cv</span><span class="op">=</span><span class="nm">5</span>)
+<span class="bi">print</span>(<span class="st">"cv:"</span>, <span class="nm">cv</span><span class="op">.</span><span class="fn">mean</span>()<span class="op">.</span><span class="fn">round</span>(<span class="nm">3</span>), <span class="st">"+/-"</span>, <span class="nm">cv</span><span class="op">.</span><span class="fn">std</span>()<span class="op">.</span><span class="fn">round</span>(<span class="nm">3</span>))</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">test: 0.9666666666666667
+cv: 0.96 +/- 0.025</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      In una manciata di righe hai un modello vero, valutato bene: <mark>~97% sul test set</mark> (dati mai visti), e la
+      cross-validation conferma con <b>0,96 ± 0,025</b> — un risultato stabile, non un colpo di fortuna del singolo
+      split. Nota lo <b>schema riusabile</b>: <code>load</code> → <code>train_test_split</code> (con
+      <code>stratify</code>) → <code>make_pipeline(scaler, modello)</code> → <code>fit</code> → <code>score</code> +
+      <code>cross_val_score</code>. <mark>Questo identico scheletro vale per qualsiasi modello</mark>: per provare una
+      random forest o un SVM, cambi solo l'ultima riga della pipeline. Ecco perché scikit-learn è così produttivo — e
+      perché, imparato questo, hai imparato a usarli tutti.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 12</div>
+    <ol style="margin-bottom:0">
+      <li><b>Estimator API</b>: tutto segue lo stesso contratto — <code>fit</code> (allena), <code>predict</code>
+          (prevede), <code>transform</code> (trasforma). Cambiare modello = cambiare una riga (§12.1).</li>
+      <li><b>train_test_split</b> mette da parte un test set (dati mai visti) per il collaudo onesto; usa
+          <code>random_state</code> (riproducibilità) e <code>stratify</code> (classi bilanciate) (§12.2).</li>
+      <li><b>Preprocessing</b> (Scaler, OneHotEncoder, SimpleImputer): <code>fit</code> sul <b>train</b>,
+          <code>transform</code> su train e test. Le <b>pipeline</b> incatenano tutto e prevengono il <b>data leakage</b>
+          in automatico (§12.3-12.4).</li>
+      <li>Valuta con la <b>metrica giusta</b> (F1 se sbilanciato, MSE/R² per la regressione) e con
+          <b>cross_val_score</b> (stima media ± incertezza). Passa la pipeline alla CV (§12.5).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Hai lo «schema» di scikit-learn e le buone pratiche per usarlo bene. Ora possiamo mettere in campo i <b>modelli
+    veri</b> e i loro dettagli pratici: regressori e classificatori, la ricerca automatica degli <b>iperparametri</b>, e
+    le librerie di boosting che vincono le competizioni. Nel <strong>Capitolo 13</strong>: dalla regressione al
+    <b>gradient boosting</b> in pratica — <code>GridSearchCV</code>/<code>RandomizedSearchCV</code> per il tuning,
+    <b>XGBoost</b> e <b>LightGBM</b>, un cenno a <b>statsmodels</b> per la statistica «da statistico», e come
+    <b>salvare</b> un modello allenato per riutilizzarlo.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.1</div>
+    <p style="margin-bottom:0">
+      Quali sono i tre «verbi» dell'estimator API e a cosa serve ciascuno? Qual è la differenza tra un modello (fit/predict)
+      e un trasformatore (fit/transform)?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.2</div>
+    <p style="margin-bottom:0">
+      Perché è sbagliato valutare un modello sugli stessi dati con cui è stato allenato? Cosa risolve il
+      <code>train_test_split</code>, e a cosa servono <code>random_state</code> e <code>stratify</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.3</div>
+    <p style="margin-bottom:0">
+      Nel preprocessing, perché lo scaler va «fittato» solo sul train e poi applicato al test, invece di fittarlo su
+      tutti i dati? Cosa succederebbe altrimenti?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.4</div>
+    <p style="margin-bottom:0">
+      Qual è il vantaggio principale di una Pipeline rispetto a fare scaling e modello separatamente a mano, soprattutto
+      in cross-validation?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 12.5</div>
+    <p style="margin-bottom:0">
+      Perché <code>cross_val_score</code> dà una stima più affidabile di un singolo <code>train_test_split</code>? Cosa
+      rappresentano la media e la deviazione dei punteggi?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s12-8"><span class="secnum">Sezione 12.8</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.1</div>
+    <p style="margin-bottom:0">
+      I tre verbi: <code>fit</code> (allena il modello o «impara» la trasformazione dai dati), <code>predict</code>
+      (produce previsioni su nuovi dati), <code>transform</code> (applica una trasformazione appresa). Un <b>modello</b>
+      usa <code>fit</code> + <code>predict</code> (impara e prevede); un <b>trasformatore</b> (scaler, encoder, imputer)
+      usa <code>fit</code> + <code>transform</code> (impara la trasformazione, poi la applica). Spesso i trasformatori
+      offrono <code>fit_transform</code> per fare entrambe in un passo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.2</div>
+    <p style="margin-bottom:0">
+      Perché sugli stessi dati il modello può aver semplicemente <b>memorizzato</b>, apparendo bravissimo senza saper
+      generalizzare: la valutazione sarebbe illusoria. <code>train_test_split</code> mette da parte un <b>test set</b>
+      (dati mai usati in allenamento) per un collaudo onesto. <code>random_state</code> fissa il caso della divisione,
+      rendendola <b>riproducibile</b>; <code>stratify=y</code> mantiene in train e test le stesse proporzioni tra le
+      classi (importante con classi sbilanciate).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.3</div>
+    <p style="margin-bottom:0">
+      Perché lo scaler «impara» delle statistiche (media e deviazione): se le calcolasse su <b>tutti</b> i dati (test
+      incluso), informazione del test «trapelerebbe» nella preparazione — <b>data leakage</b> — e la valutazione
+      risulterebbe falsamente ottimista. Fittando solo sul train, il test resta davvero «non visto». Le stesse
+      statistiche del train si applicano poi al test con <code>transform</code>, simulando correttamente l'arrivo di dati
+      nuovi.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.4</div>
+    <p style="margin-bottom:0">
+      Il vantaggio principale è che la Pipeline <b>previene automaticamente il data leakage</b>: in cross-validation
+      impara le trasformazioni (media, mediana, categorie) solo sulla parte di training di ogni fold e le applica alla
+      parte di test senza guardarla. Farlo a mano è facile da sbagliare (si finisce per scalare usando anche i dati di
+      test). In più, la pipeline rende il codice pulito, tratta tutta la catena come un unico modello (comodo per
+      salvarla o cercarne gli iperparametri) e garantisce che le stesse trasformazioni siano applicate identiche in
+      allenamento e in produzione.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 12.5</div>
+    <p style="margin-bottom:0">
+      Perché un singolo split dipende da <b>quali</b> dati sono finiti, per caso, nel test: con fortuna o sfortuna la
+      stima può essere distorta. <code>cross_val_score</code> ripete la valutazione su più suddivisioni (ogni parte fa
+      da test a turno) e ne raccoglie i punteggi. La <b>media</b> è una stima più stabile e rappresentativa delle
+      prestazioni; la <b>deviazione</b> misura quanto il risultato varia tra le suddivisioni (la sua «incertezza»: se è
+      grande, il modello è instabile).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §12.2 — train/test split: 20 campioni, slider test_size, colora
+   train (verde) vs test (arancio) con conteggi. Solo HTML/JS.
+   ========================================================================= */
+(function () {
+  const cellsEl = document.getElementById('sp-cells');
+  if (!cellsEl) return;
+  const out = document.getElementById('sp-out');
+  const sT = document.getElementById('sp-t');
+  const TOT = 20;
+
+  for (let i = 0; i < TOT; i++) {
+    const c = document.createElement('div');
+    c.id = 'sp-c' + i;
+    c.style.cssText = 'width:1.5rem; height:1.5rem; border-radius:5px; display:flex; align-items:center; ' +
+      'justify-content:center; font-size:.65rem; color:#fff; transition:all .15s';
+    cellsEl.appendChild(c);
+  }
+
+  function draw() {
+    const ts = +sT.value;
+    const nTest = Math.round(TOT * ts);
+    const nTrain = TOT - nTest;
+    // gli ultimi nTest sono "test" (in un vero split sono casuali, qui didattico)
+    for (let i = 0; i < TOT; i++) {
+      const c = document.getElementById('sp-c' + i);
+      const isTest = i >= nTrain;
+      c.style.background = isTest ? 'var(--warm)' : 'var(--accent)';
+      c.textContent = isTest ? 'T' : '';
+    }
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">' +
+      '<code>test_size=' + ts.toFixed(2) + '</code> → ' +
+      '<b style="color:var(--accent)">' + nTrain + ' train</b> (allenamento) · ' +
+      '<b style="color:var(--warm)">' + nTest + ' test</b> (collaudo, marcati T). ' +
+      '<span style="color:var(--ink-soft)">Più test = collaudo più affidabile ma meno dati per allenare. In un vero split le righe sono scelte a caso.</span></div>';
+  }
+  sT.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

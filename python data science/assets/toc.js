@@ -190,7 +190,7 @@ const TOC = [
     n: 12,
     titolo: "scikit-learn: l'API in pratica",
     file: "cap12-sklearn-api.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s12-1", n: "12.1", t: "L'estimator API (fit/predict/transform)" },
       { id: "s12-2", n: "12.2", t: "Dataset e train/test split" },
