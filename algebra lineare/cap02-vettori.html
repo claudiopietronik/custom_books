@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>2 · Vettori — Algebra Lineare</title>
-<link rel="stylesheet" href="assets/style.css?v=20260718g">
+<link rel="stylesheet" href="assets/style.css?v=20260720a">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>λ</text></svg>">
 <script src="assets/toc.js"></script>
 <script src="assets/math.js"></script>
@@ -24,6 +24,18 @@
       operazioni che si possono fare su un vettore da solo.
     </p>
   </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">💻</span> Teoria <em>e</em> codice, fianco a fianco</div>
+    <p style="margin-bottom:0">
+      Da questo capitolo in poi, accanto a ogni concetto trovi un riquadro <strong>«In NumPy»</strong>: lo stesso
+      oggetto o la stessa operazione, scritti in <strong>Python</strong> con la libreria <code>numpy</code> — il modo
+      in cui l'algebra lineare si <em>fa davvero</em> al computer. <mark>L'idea è imparare la teoria <em>attraverso</em>
+      il codice</mark>: vedere una definizione e, subito, come si traduce in due righe eseguibili. Non serve saper già
+      programmare: ogni riga è spiegata. Se vuoi provare, ti basta un notebook (installa con
+      <code>pip install numpy</code> e apri <code>import numpy as np</code>).
+    </p>
+  </div>
 
 
   <!-- ==================================================================== -->
@@ -178,6 +190,34 @@
       \(\vv{v}\T\).
     </p>
   </div>
+
+  <h3>💻 In NumPy: creare un vettore</h3>
+
+  <p>
+    La versione «lista di numeri» è esattamente ciò che il computer maneggia. In NumPy un vettore è un
+    <strong>array</strong>, e si crea passando la lista a <code>np.array</code>:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">crea_vettori.py</div>
+    <pre><span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span>
+
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">3</span>, <span class="op">-</span><span class="nm">2</span>])        <span class="cm"># un vettore di R² (2 numeri)</span>
+<span class="nm">v3</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">4</span>, <span class="op">-</span><span class="nm">3</span>, <span class="nm">2</span>])     <span class="cm"># un vettore di R³ (3 numeri)</span>
+
+<span class="bi">print</span>(<span class="nm">v2</span><span class="op">.</span><span class="nm">shape</span>)    <span class="cm"># (2,)  → la dimensionalità: quanti numeri</span>
+<span class="bi">print</span>(<span class="nm">v2</span>[<span class="nm">0</span>])       <span class="cm"># 3     → il PRIMO elemento</span></pre>
+  </div>
+
+  <p>
+    Tre cose da notare, e sono proprio la definizione algebrica messa in pratica. <b>(1)</b> <code>np.array([3, -2])</code>
+    trasforma la lista Python in un <em>array</em>, l'oggetto-vettore di NumPy. <b>(2)</b> <code>.shape</code> restituisce
+    <code>(2,)</code>: è la <em>dimensionalità</em>, cioè quanti numeri contiene — non la sua lunghezza geometrica.
+    <b>(3)</b> <mark>gli elementi si leggono con le parentesi quadre, e — attenzione — il computer conta da
+    <strong>zero</strong></mark>: <code>v2[0]</code> è il primo elemento (qui \(3\)), <code>v2[1]</code> il secondo.
+    È la stessa convenzione «da 0» di cui parlava la nota qui sopra: in matematica \(v_1\) è il primo, in codice
+    <code>v[0]</code> è il primo. Stesso numero, indice sfalsato di uno.
+  </p>
 
   <h3>La definizione geometrica: un vettore è una freccia</h3>
 
@@ -362,6 +402,36 @@
     </div>
   </div>
 
+  <h3>💻 In NumPy: calcolare la norma</h3>
+
+  <p>
+    La formula è «radice della somma dei quadrati»: possiamo scriverla <em>letteralmente</em>, oppure usare la funzione
+    pronta di NumPy. Danno lo stesso numero — ed è istruttivo vedere che sono la stessa cosa.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">norma.py</div>
+    <pre><span class="nm">v</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">6</span>])   <span class="cm"># un vettore di R⁶ (non disegnabile!)</span>
+
+<span class="cm"># metodo 1: la formula a mano — √(somma dei quadrati)</span>
+<span class="nm">n1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">sqrt</span>(<span class="bi">sum</span>(<span class="nm">v</span> <span class="op">*</span> <span class="nm">v</span>))
+
+<span class="cm"># metodo 2: la funzione pronta di NumPy</span>
+<span class="nm">n2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v</span>)
+
+<span class="bi">print</span>(<span class="nm">n1</span>, <span class="nm">n2</span>)   <span class="cm"># 9.539... 9.539...  → identici</span></pre>
+  </div>
+
+  <p>
+    Segui il <b>metodo 1</b> da destra a sinistra ed è la formula, riga per riga: <code>v * v</code> eleva al quadrato
+    <em>ogni</em> componente (in NumPy moltiplicare due array li moltiplica elemento per elemento, §2.4);
+    <code>sum(...)</code> li somma — ecco \(\sum_i v_i^2\); <code>np.sqrt(...)</code> ne prende la radice. Il
+    <b>metodo 2</b>, <code>np.linalg.norm</code>, fa tutto in un colpo (<code>linalg</code> = «linear algebra», il
+    reparto di NumPy dedicato a noi). <mark>Nota il vettore scelto: ha <strong>6</strong> componenti.</mark> Non lo puoi
+    disegnare, eppure il conto della norma funziona identico — la prova concreta di ciò che diceva il riquadro su
+    \(\R^{300}\): l'intuizione la costruisci in 2D, i conti valgono in qualunque dimensione.
+  </p>
+
   <div class="box warn">
     <div class="box-title"><span class="ico">⚠</span> La trappola: sommare le componenti invece dei quadrati</div>
     <p style="margin-bottom:0">
@@ -441,6 +511,33 @@
     </figcaption>
   </figure>
 
+  <h3>💻 In NumPy: trasporre</h3>
+
+  <p>
+    In NumPy la trasposta è l'attributo <code>.T</code> (o la funzione <code>np.transpose</code>). Ma qui il codice
+    rivela una sottigliezza vera, che vale la pena conoscere:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">trasposta.py</div>
+    <pre><span class="nm">v</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">4</span>, <span class="nm">5</span>])
+<span class="bi">print</span>(<span class="nm">v</span><span class="op">.</span><span class="nm">T</span><span class="op">.</span><span class="nm">shape</span>)      <span class="cm"># (3,)  → NON è cambiato nulla?!</span>
+
+<span class="cm"># un vettore COLONNA vero è un array 2D: 3 righe, 1 colonna</span>
+<span class="nm">vc</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>], [<span class="nm">4</span>], [<span class="nm">5</span>]])
+<span class="bi">print</span>(<span class="nm">vc</span><span class="op">.</span><span class="nm">shape</span>)     <span class="cm"># (3, 1)  → colonna</span>
+<span class="bi">print</span>(<span class="nm">vc</span><span class="op">.</span><span class="nm">T</span><span class="op">.</span><span class="nm">shape</span>)   <span class="cm"># (1, 3)  → ora la trasposta la ruota davvero!</span></pre>
+  </div>
+
+  <p>
+    C'è una lezione onesta qui. Un array «piatto» come <code>np.array([1, 4, 5])</code> ha forma <code>(3,)</code>:
+    <mark>non è né riga né colonna, è solo «tre numeri»</mark>, e trasporlo non fa nulla di visibile. Per avere un vero
+    vettore <em>colonna</em> — con l'orientamento che conta per la moltiplicazione (§2.3) — serve un array
+    <strong>bidimensionale</strong> di forma <code>(3, 1)</code>: tre righe, una colonna. Solo allora <code>.T</code> lo
+    ruota in <code>(1, 3)</code>, una riga. È esattamente la distinzione colonna/riga della teoria, e il codice ci
+    costringe a prenderla sul serio: l'orientamento va reso esplicito.
+  </p>
+
   <div class="box intu">
     <div class="box-title"><span class="ico">💡</span> A che diavolo serve, allora?</div>
     <p>
@@ -508,6 +605,30 @@
         = \begin{bmatrix}3-(-1)\\1-2\end{bmatrix} = \begin{bmatrix}4\\-1\end{bmatrix}\).
     </div>
   </div>
+
+  <h3>💻 In NumPy: sommare e sottrarre</h3>
+
+  <p>
+    Qui il codice è quasi più corto della formula: gli operatori <code>+</code> e <code>-</code> tra array fanno
+    <em>già</em> la somma elemento per elemento.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">somma.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">3</span>, <span class="op">-</span><span class="nm">1</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>,  <span class="nm">4</span>])
+
+<span class="bi">print</span>(<span class="nm">v1</span> <span class="op">+</span> <span class="nm">v2</span>)   <span class="cm"># [5 3]   → somma, componente per componente</span>
+<span class="bi">print</span>(<span class="nm">v1</span> <span class="op">-</span> <span class="nm">v2</span>)   <span class="cm"># [1 -5]  → differenza (punta da v2 a v1)</span></pre>
+  </div>
+
+  <p>
+    Un solo <code>+</code> e NumPy accoppia la prima componente con la prima, la seconda con la seconda: è la
+    <em>vettorizzazione</em>, e coincide esattamente con la regola «riga per riga» della formula. La differenza
+    <code>v1 - v2</code> è la freccia che va <em>da</em> <code>v2</code> <em>a</em> <code>v1</code> (§2.4). E le due
+    condizioni non negoziabili valgono anche qui: prova a sommare array di lunghezza diversa e NumPy si ferma con un
+    errore — <mark>il codice è severo quanto la matematica</mark>.
+  </p>
 
   <div class="box warn">
     <div class="box-title"><span class="ico">⚠</span> Due condizioni, e non sono negoziabili</div>
@@ -688,6 +809,23 @@
     </div>
   </div>
 
+  <h3>💻 In NumPy: moltiplicare per uno scalare</h3>
+
+  <div class="term">
+    <div class="t-head file">scalare.py</div>
+    <pre><span class="nm">v</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">3</span>, <span class="op">-</span><span class="nm">1</span>])
+<span class="nm">l</span> <span class="op">=</span> <span class="nm">2.3</span>              <span class="cm"># lo scalare λ (in codice non si usa la lettera greca)</span>
+
+<span class="bi">print</span>(<span class="nm">l</span> <span class="op">*</span> <span class="nm">v</span>)         <span class="cm"># [6.9 -2.3]  → ogni componente moltiplicata per 2.3</span></pre>
+  </div>
+
+  <p>
+    <code>l * v</code> distribuisce lo stesso numero <code>l</code> su tutte le componenti — la definizione, identica.
+    (Nel codice lo scalare si chiama <code>l</code> perché la tastiera non ha la \(\lambda\): è solo un nome di
+    variabile.) Poiché <code>l = 2.3 &gt; 1</code>, la freccia si allunga senza cambiare direzione; con un valore
+    negativo si ribalterebbe. Esattamente ciò che stai per vedere qui sotto.
+  </p>
+
   <h3>Che cosa fa, geometricamente</h3>
 
   <p>
@@ -840,6 +978,31 @@
       da preservare.
     </div>
   </div>
+
+  <h3>💻 In NumPy: normalizzare</h3>
+
+  <p>
+    La ricetta della normalizzazione — «moltiplica per il reciproco della norma» — si traduce in due righe che sono
+    la formula \(\hat{\vv{v}} = \tfrac{1}{\norm{\vv{v}}}\vv{v}\) parola per parola:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">normalizza.py</div>
+    <pre><span class="nm">v</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="op">-</span><span class="nm">3</span>, <span class="nm">6</span>])
+
+<span class="nm">mu</span> <span class="op">=</span> <span class="nm">1</span> <span class="op">/</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v</span>)   <span class="cm"># μ = 1 / lunghezza: lo scalare che normalizza</span>
+<span class="nm">vn</span> <span class="op">=</span> <span class="nm">v</span> <span class="op">*</span> <span class="nm">mu</span>                    <span class="cm"># stessa direzione, lunghezza 1</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">vn</span>))     <span class="cm"># 1.0  → verifica: ora è unitario</span></pre>
+  </div>
+
+  <p>
+    <code>mu</code> è il reciproco della norma (uno scalare, un numero); moltiplicando <code>v * mu</code> otteniamo il
+    vettore unitario, e l'ultima riga <em>verifica</em> che la lunghezza è davvero \(1\). <mark>Il codice ripete
+    esattamente il ragionamento della formula</mark>, verifica compresa — e ci ricorda che l'unico vettore che manda
+    tutto all'aria è \(\vv{0}\): lì <code>np.linalg.norm(v)</code> vale \(0\), e dividere per zero, in codice come in
+    matematica, non si può.
+  </p>
 
   <div class="box chiave">
     <div class="box-title"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 2</div>
@@ -1140,7 +1303,7 @@
 
 </main>
 
-<script src="assets/book.js?v=20260718g"></script>
+<script src="assets/book.js?v=20260720a"></script>
 <script src="assets/plot.js"></script>
 <script>
 /* =========================================================================
