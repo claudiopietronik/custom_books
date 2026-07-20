@@ -262,6 +262,38 @@
   </div>
 
 
+  <h3>💻 In NumPy: risolvere un sistema</h3>
+
+  <p>
+    Una volta scritto il sistema in forma \(\mm{A}\vv{x} = \vv{b}\), NumPy lo risolve con un comando solo,
+    <code>np.linalg.solve</code> — e possiamo verificare la soluzione rimoltiplicando:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">risolvi.py</div>
+    <pre><span class="cm"># sistema:   x + 2y = 5 ;   3x - y = 1</span>
+<span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>],
+              [<span class="nm">3</span>, <span class="op">-</span><span class="nm">1</span>]])
+<span class="nm">b</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">5</span>, <span class="nm">1</span>])
+
+<span class="nm">x</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">solve</span>(<span class="nm">A</span>, <span class="nm">b</span>)
+<span class="bi">print</span>(<span class="nm">x</span>)          <span class="cm"># [1. 2.]  → x=1, y=2</span>
+<span class="bi">print</span>(<span class="nm">A</span> <span class="op">@</span> <span class="nm">x</span>)      <span class="cm"># [5. 1.]  → verifica: torna b</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[1. 2.]
+[5. 1.]</span></pre>
+  </div>
+
+  <p>
+    <code>np.linalg.solve(A, b)</code> trova il vettore \(\vv{x}\) che soddisfa <em>tutte</em> le equazioni insieme (qui
+    \(x=1, y=2\)). Il controllo <code>A @ x</code> ricostruisce \(\vv{b} = [5, 1]\): <mark>la soluzione è quel punto dove
+    le rette si incrociano</mark> (§10.1). Dietro le quinte NumPy fa l'eliminazione di Gauss che stai per imparare a
+    mano — ma è bello vedere subito la risposta.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s10-3"><span class="secnum">Sezione 10.3</span>Riduzione per righe</h2>
 
@@ -479,6 +511,39 @@
       riduzione, zero conti alla fine.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: la RREF con SymPy</h3>
+
+  <p>
+    NumPy non ha una funzione per la RREF (lavora coi numeri «in virgola mobile», dove la forma a scala esatta è
+    delicata); si usa <strong>SymPy</strong>, la libreria di calcolo <em>simbolico</em>. Sulla matrice aumentata
+    \([\mm{A}\,|\,\vv{b}]\) la RREF legge direttamente la soluzione:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">rref.py</div>
+    <pre><span class="kw">from</span> <span class="nm">sympy</span> <span class="kw">import</span> <span class="nm">Matrix</span>
+
+<span class="cm"># matrice aumentata [A | b] dello stesso sistema</span>
+<span class="nm">M</span> <span class="op">=</span> <span class="nm">Matrix</span>([[<span class="nm">1</span>,  <span class="nm">2</span>, <span class="nm">5</span>],
+            [<span class="nm">3</span>, <span class="op">-</span><span class="nm">1</span>, <span class="nm">1</span>]])
+
+<span class="nm">rref</span>, <span class="nm">pivot</span> <span class="op">=</span> <span class="nm">M</span><span class="op">.</span><span class="fn">rref</span>()   <span class="cm"># forma a scala ridotta</span>
+<span class="bi">print</span>(<span class="nm">rref</span>)</pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">Matrix([[1, 0, 1],
+        [0, 1, 2]])</span></pre>
+  </div>
+
+  <p>
+    La RREF dell'aumentata è \(\left[\begin{smallmatrix}1&0&1\\0&1&2\end{smallmatrix}\right]\): l'identità a sinistra, e a
+    destra <mark>la soluzione bell'e pronta, \(x=1, y=2\)</mark>. È esattamente ciò che fa a mano l'eliminazione di
+    Gauss-Jordan — ridurre finché le incognite si «staccano» una per una. SymPy la fa in modo esatto, senza errori di
+    arrotondamento.
+  </p>
 
 
   <!-- ==================================================================== -->
