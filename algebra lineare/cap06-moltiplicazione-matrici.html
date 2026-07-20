@@ -454,6 +454,35 @@
   </div>
 
 
+  <h3>💻 In NumPy: il prodotto tra matrici</h3>
+
+  <p>
+    In NumPy il prodotto tra matrici si scrive con l'operatore <code>@</code> (o <code>np.matmul</code>) — <strong>non</strong>
+    con <code>*</code>, che farebbe l'Hadamard (§6.8). E la regola delle dimensioni è imposta dal codice:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">prodotto_matrici.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">4</span>, <span class="nm">3</span>)   <span class="cm"># 4×3</span>
+<span class="nm">B</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">3</span>, <span class="nm">6</span>)   <span class="cm"># 3×6</span>
+
+<span class="bi">print</span>((<span class="nm">A</span> <span class="op">@</span> <span class="nm">B</span>)<span class="op">.</span><span class="nm">shape</span>)   <span class="cm"># (4, 6): le colonne di A (3) = le righe di B (3) ✓</span>
+<span class="nm">A</span> <span class="op">@</span> <span class="nm">A</span>                  <span class="cm"># ERRORE: 4×3 @ 4×3 → 3 ≠ 4</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(4, 6)
+ValueError: matmul: ... (size 3 is different from 4)</span></pre>
+  </div>
+
+  <p>
+    <mark>La regola d'oro del prodotto: le colonne del primo devono uguagliare le righe del secondo</mark>, e il risultato
+    prende le righe del primo × le colonne del secondo. <code>A @ B</code> è <code>(4×3)@(3×6) → 4×6</code>: il «3»
+    interno combacia e sparisce. <code>A @ A</code> invece fallisce, perché il 3 (colonne di A) non uguaglia il 4 (righe
+    di A). Il codice non perdona: se le forme non si incastrano, si ferma.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s6-2"><span class="secnum">Sezione 6.2</span>Moltiplicazione ed equazioni</h2>
 
@@ -994,6 +1023,39 @@
   </div>
 
 
+  <h3>💻 In NumPy: verificare «LIVE EVIL»</h3>
+
+  <p>
+    La regola: la trasposta di un prodotto <strong>inverte l'ordine</strong> dei fattori,
+    \((\mm{L}\mm{I}\mm{V}\mm{E})\T = \mm{E}\T\mm{V}\T\mm{I}\T\mm{L}\T\). Verifichiamola su quattro matrici casuali,
+    sottraendo i due lati: se la regola vale, la differenza è la matrice nulla.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">live_evil.py</div>
+    <pre><span class="nm">L</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">7</span>, <span class="nm">7</span>)
+<span class="nm">I</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">7</span>, <span class="nm">7</span>)
+<span class="nm">V</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">7</span>, <span class="nm">7</span>)
+<span class="nm">E</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">7</span>, <span class="nm">7</span>)
+
+<span class="nm">res1</span> <span class="op">=</span> (<span class="nm">L</span> <span class="op">@</span> <span class="nm">I</span> <span class="op">@</span> <span class="nm">V</span> <span class="op">@</span> <span class="nm">E</span>)<span class="op">.</span><span class="nm">T</span>              <span class="cm"># trasposta del prodotto</span>
+<span class="nm">res2</span> <span class="op">=</span> <span class="nm">E</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">V</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">I</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">L</span><span class="op">.</span><span class="nm">T</span>       <span class="cm"># prodotto delle trasposte, ordine invertito</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">res1</span> <span class="op">-</span> <span class="nm">res2</span>, <span class="nm">10</span>)<span class="op">.</span><span class="fn">max</span>())   <span class="cm"># ~0: sono identiche</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">0.0</span></pre>
+  </div>
+
+  <p>
+    Sottraendo i due lati e prendendone il massimo, otteniamo <code>0.0</code> (a meno di minuscoli errori di
+    arrotondamento, che <code>np.round</code> ripulisce): <mark>i due modi di scrivere la trasposta del prodotto
+    coincidono</mark>. «LIVE» letto al contrario è «EVIL»: la trasposta rovescia l'ordine, e il codice lo conferma su
+    matrici qualunque.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s6-5"><span class="secnum">Sezione 6.5</span>Moltiplicazione matrice-vettore</h2>
 
@@ -1210,6 +1272,30 @@
   </div>
 
 
+  <h3>💻 In NumPy: matrice per vettore</h3>
+
+  <div class="term">
+    <div class="t-head file">matrice_vettore.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>],
+              [<span class="nm">3</span>, <span class="nm">4</span>],
+              [<span class="nm">5</span>, <span class="nm">6</span>]])          <span class="cm"># 3×2</span>
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">10</span>, <span class="nm">1</span>])           <span class="cm"># vettore di 2 componenti</span>
+
+<span class="bi">print</span>(<span class="nm">A</span> <span class="op">@</span> <span class="nm">w</span>)                     <span class="cm"># 3×2 @ 2 → un vettore di 3</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[12 34 56]</span></pre>
+  </div>
+
+  <p>
+    <code>A @ w</code> è il cuore di tutta l'algebra lineare applicata: <mark>una matrice che «agisce» su un vettore e ne
+    restituisce un altro</mark>. Ogni componente del risultato è il prodotto scalare di una riga di <code>A</code> con
+    <code>w</code> (<code>1·10 + 2·1 = 12</code>, ecc.). Questa singola operazione, ripetuta, è ciò che sta dietro alle
+    trasformazioni geometriche, ai sistemi lineari (Cap. 10) e persino a un passaggio di rete neurale.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s6-6"><span class="secnum">Sezione 6.6</span>Creare matrici simmetriche</h2>
 
@@ -1286,6 +1372,32 @@
       (\(\pm 0.5\)). Tutta la simmetria sta nella media; tutta l'asimmetria nello scarto.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: rendere una matrice simmetrica</h3>
+
+  <p>
+    Il «metodo additivo»: da una matrice qualunque \(\mm{A}\), la combinazione \(\tfrac{1}{2}(\mm{A}+\mm{A}\T)\) è
+    <em>sempre</em> simmetrica. In codice si verifica sottraendo la sua trasposta: deve dare tutti zeri.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">simmetrica.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">5</span>, <span class="nm">5</span>)
+<span class="nm">S</span> <span class="op">=</span> (<span class="nm">A</span> <span class="op">+</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span>) <span class="op">/</span> <span class="nm">2</span>       <span class="cm"># simmetrizza A</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">S</span> <span class="op">-</span> <span class="nm">S</span><span class="op">.</span><span class="nm">T</span>, <span class="nm">10</span>)<span class="op">.</span><span class="fn">max</span>())   <span class="cm"># 0 se S è simmetrica (S == S.T)</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">0.0</span></pre>
+  </div>
+
+  <p>
+    <code>S - S.T</code> dà zero ovunque: <mark>\(\mm{S} = \mm{S}\T\), la definizione stessa di simmetria</mark>. Sommare
+    a una matrice la propria trasposta bilancia gli elementi «a specchio» rispetto alla diagonale; il diviso 2 li media.
+    È un trucco che riappare per le matrici di covarianza (Cap. 18), che sono simmetriche per costruzione.
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -1453,6 +1565,36 @@
       \(\mm{X}\T\mm{X}\vv{\beta} = \mm{X}\T\vv{y}\), ha \(\mm{X}\T\mm{X}\) proprio lì in mezzo.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: <span style="text-transform:none">A<sup>T</sup>A</span> è sempre simmetrica</h3>
+
+  <p>
+    Il «metodo moltiplicativo»: per <em>qualunque</em> matrice \(\mm{A}\), il prodotto \(\mm{A}\T\mm{A}\) è quadrato e
+    simmetrico. È una delle costruzioni più importanti del libro (tornerà nei minimi quadrati, cap. 14, e nella SVD,
+    cap. 16). Verifichiamola:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">AtA.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">5</span>, <span class="nm">3</span>)   <span class="cm"># 5×3, per niente quadrata</span>
+<span class="nm">AtA</span> <span class="op">=</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">A</span>            <span class="cm"># (3×5)@(5×3) → 3×3, quadrata</span>
+
+<span class="bi">print</span>(<span class="nm">AtA</span><span class="op">.</span><span class="nm">shape</span>)                    <span class="cm"># (3, 3)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">AtA</span> <span class="op">-</span> <span class="nm">AtA</span><span class="op">.</span><span class="nm">T</span>, <span class="nm">10</span>)<span class="op">.</span><span class="fn">max</span>())   <span class="cm"># 0: simmetrica</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(3, 3)
+0.0</span></pre>
+  </div>
+
+  <p>
+    Partiamo da una <code>5×3</code> qualsiasi e otteniamo una <code>3×3</code> perfettamente simmetrica. Perché? Perché
+    \((\mm{A}\T\mm{A})\T = \mm{A}\T(\mm{A}\T)\T = \mm{A}\T\mm{A}\) (proprio la regola LIVE EVIL del §6.4!): la trasposta
+    di \(\mm{A}\T\mm{A}\) è sé stessa. <mark>Un fatto piccolo con conseguenze enormi</mark>: garantisce che i problemi
+    ai minimi quadrati abbiano matrici «buone» da invertire.
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -1679,6 +1821,38 @@
       sezione.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: il prodotto scalare di Frobenius</h3>
+
+  <p>
+    Il prodotto di Frobenius tratta due matrici come lunghi vettori e ne fa il prodotto scalare. Ci sono due strade —
+    «srotola e fai il dot», oppure <code>trace(A.T @ B)</code> — e danno lo stesso numero:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">frobenius.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">9</span>, <span class="nm">4</span>)
+<span class="nm">B</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">9</span>, <span class="nm">4</span>)
+
+<span class="nm">fro1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">A</span><span class="op">.</span><span class="fn">flatten</span>(), <span class="nm">B</span><span class="op">.</span><span class="fn">flatten</span>())   <span class="cm"># srotola, poi prodotto scalare</span>
+<span class="nm">fro2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">trace</span>(<span class="nm">A</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">B</span>)                <span class="cm"># il "trucco della traccia"</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>([<span class="nm">fro1</span>, <span class="nm">fro2</span>], <span class="nm">4</span>))
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">A</span>, <span class="st">'fro'</span>))    <span class="cm"># la norma di Frobenius di A</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[-2.1876 -2.1876]
+5.9843...</span></pre>
+  </div>
+
+  <p>
+    <code>A.flatten()</code> «srotola» la matrice in un unico lungo vettore, di cui poi si fa il normale prodotto
+    scalare; sorprendentemente, <code>np.trace(A.T @ B)</code> dà <mark>lo stesso identico numero</mark> — è la firma del
+    prodotto di Frobenius. E <code>np.linalg.norm(A, 'fro')</code> ne è il caso speciale con \(\mm{A}=\mm{B}\): la
+    «lunghezza» di una matrice, la radice della somma di tutti i suoi elementi al quadrato.
+  </p>
 
 
   <!-- ==================================================================== -->
