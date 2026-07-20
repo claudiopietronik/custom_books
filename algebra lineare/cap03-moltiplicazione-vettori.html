@@ -165,6 +165,38 @@
   </div>
 
 
+  <h3>💻 In NumPy: il prodotto scalare</h3>
+
+  <p>
+    NumPy ha una funzione apposta, <code>np.dot</code>; ma possiamo anche scriverlo «a mano» dalla definizione
+    (moltiplica le componenti, poi somma) e verificare che coincidono:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">prodotto_scalare.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">0</span>, <span class="op">-</span><span class="nm">4</span>, <span class="op">-</span><span class="nm">3</span>, <span class="nm">6</span>])
+
+<span class="nm">dp1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v1</span>, <span class="nm">v2</span>)     <span class="cm"># il modo idiomatico</span>
+<span class="nm">dp2</span> <span class="op">=</span> <span class="bi">sum</span>(<span class="nm">v1</span> <span class="op">*</span> <span class="nm">v2</span>)      <span class="cm"># a mano: moltiplica, poi somma</span>
+
+<span class="bi">print</span>(<span class="nm">dp1</span>, <span class="nm">dp2</span>)        <span class="cm"># 5 5  → un solo NUMERO, e identico</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">5 5</span></pre>
+  </div>
+
+  <p>
+    <code>np.dot(v1, v2)</code> è il prodotto scalare bell'e pronto. <code>sum(v1 * v2)</code> è la <em>definizione</em>:
+    <code>v1 * v2</code> moltiplica le componenti a coppie (\(v_1w_1, v_2w_2, \dots\)), <code>sum</code> le somma —
+    proprio \(\sum_i v_i w_i\). <mark>Il risultato è un solo numero</mark> (uno scalare), non un vettore: è la cosa più
+    importante da ricordare del prodotto scalare. (Esistono anche <code>np.matmul(v1, v2)</code> e il ciclo
+    <code>for</code> esplicito: danno lo stesso 5.)
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s3-2"><span class="secnum">Sezione 3.2</span>Proprietà del prodotto scalare</h2>
 
@@ -241,6 +273,41 @@
       e la nozione di <em>matrice definita positiva</em>.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: verificare una proprietà</h3>
+
+  <p>
+    Il codice offre un modo bellissimo per <em>convincersi</em> che una proprietà vale: la si prova su vettori
+    <strong>casuali</strong>. Se i due lati dell'uguaglianza danno lo stesso numero anche con numeri presi a caso, la
+    proprietà tiene. È una mossa tipica di questo corso.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">proprieta.py</div>
+    <pre><span class="nm">n</span> <span class="op">=</span> <span class="nm">10</span>
+<span class="nm">a</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">n</span>)   <span class="cm"># tre vettori casuali di R¹⁰</span>
+<span class="nm">b</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">n</span>)
+<span class="nm">c</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">n</span>)
+
+<span class="cm"># distributiva:  a·(b+c)  ==  a·b + a·c  ?</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">a</span>, <span class="nm">b</span> <span class="op">+</span> <span class="nm">c</span>))
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">a</span>, <span class="nm">b</span>) <span class="op">+</span> <span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">a</span>, <span class="nm">c</span>))   <span class="cm"># stesso numero!</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output <span style="opacity:.6">(numeri casuali, ma i due valori coincidono)</span></div>
+    <pre><span class="out">-3.501742...
+-3.501742...</span></pre>
+  </div>
+
+  <p>
+    <code>np.random.randn(10)</code> genera dieci numeri casuali (una gaussiana): tre vettori qualunque. I due
+    <code>print</code> stampano lo <em>stesso</em> valore — la proprietà distributiva regge, e non per fortuna: vale per
+    <em>ogni</em> terna. <mark>Provare a caso non è una dimostrazione</mark> (quella è nella teoria), ma è un
+    controllo potentissimo e istantaneo. E l'associativa? Non si può nemmeno scrivere: <code>np.dot(a, b)</code> è un
+    numero, e «numero · vettore» col prodotto scalare non esiste — esattamente il punto del prossimo paragrafo.
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -384,6 +451,37 @@
   </div>
 
 
+  <h3>💻 In NumPy: l'angolo tra due vettori</h3>
+
+  <p>
+    La formula geometrica \(\vv{v}\cdot\vv{w} = \norm{\vv{v}}\,\norm{\vv{w}}\cos\theta\), risolta per l'angolo, diventa
+    codice diretto:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">angolo.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>,  <span class="nm">4</span>, <span class="op">-</span><span class="nm">3</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">0</span>, <span class="op">-</span><span class="nm">3</span>, <span class="op">-</span><span class="nm">3</span>])
+
+<span class="cm"># cos θ = (v1·v2) / (|v1| |v2|),  quindi θ = arccos(...)</span>
+<span class="nm">ang</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">arccos</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v1</span>, <span class="nm">v2</span>) <span class="op">/</span> (<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v1</span>) <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v2</span>)))
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">degrees</span>(<span class="nm">ang</span>))   <span class="cm"># l'angolo in gradi</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">97.5468...</span></pre>
+  </div>
+
+  <p>
+    Leggi la riga centrale come la formula al contrario: il prodotto scalare diviso per il prodotto delle due norme dà
+    \(\cos\theta\); <code>np.arccos</code> «annulla» il coseno e restituisce l'angolo \(\theta\) (in radianti;
+    <code>np.degrees</code> lo converte in gradi). <mark>Il segno del prodotto scalare decide subito il tipo di angolo</mark>:
+    positivo → acuto, zero → perpendicolare, negativo → ottuso, come vedrai qui sotto.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s3-4"><span class="secnum">Sezione 3.4</span>Algebra e geometria: perché coincidono</h2>
 
@@ -521,6 +619,37 @@
       in una riga, è il metodo dell'intera algebra lineare moderna.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: le due formule danno lo stesso numero</h3>
+
+  <p>
+    Questa è la sezione che dimostra l'equivalenza tra la formula <em>algebrica</em> e quella <em>geometrica</em> del
+    prodotto scalare. In codice possiamo <em>vederla</em>: calcoliamo il prodotto scalare nei due modi e confrontiamo.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">equivalenza.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>,  <span class="nm">4</span>, <span class="op">-</span><span class="nm">3</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">0</span>, <span class="op">-</span><span class="nm">3</span>, <span class="op">-</span><span class="nm">3</span>])
+<span class="nm">ang</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">arccos</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v1</span>, <span class="nm">v2</span>) <span class="op">/</span> (<span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v1</span>) <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v2</span>)))
+
+<span class="nm">dp_alg</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v1</span>, <span class="nm">v2</span>)                                          <span class="cm"># algebrica: Σ vᵢwᵢ</span>
+<span class="nm">dp_geo</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v1</span>) <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">norm</span>(<span class="nm">v2</span>) <span class="op">*</span> <span class="nm">np</span><span class="op">.</span><span class="fn">cos</span>(<span class="nm">ang</span>)   <span class="cm"># geometrica: |v||w|cos θ</span>
+
+<span class="bi">print</span>(<span class="nm">dp_alg</span>, <span class="nm">dp_geo</span>)   <span class="cm"># -3.0 -3.0  → sono LA STESSA cosa</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">-3.0 -2.9999999999999996</span></pre>
+  </div>
+
+  <p>
+    Due strade diverse — sommare i prodotti delle componenti, oppure moltiplicare le lunghezze per il coseno
+    dell'angolo — e <mark>lo stesso identico numero</mark>. Non è una coincidenza: è il teorema che questa sezione
+    dimostra, qui verificato al computer prima ancora di leggerne la prova.
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -736,6 +865,33 @@
   </div>
 
 
+  <h3>💻 In NumPy: il prodotto esterno</h3>
+
+  <div class="term">
+    <div class="t-head file">prodotto_esterno.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([ <span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="op">-</span><span class="nm">1</span>, <span class="nm">0</span>, <span class="nm">1</span>])
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">outer</span>(<span class="nm">v1</span>, <span class="nm">v2</span>))
+<span class="cm"># [[-1  0  1]     ← v1[0]*v2</span>
+<span class="cm">#  [-2  0  2]     ← v1[1]*v2</span>
+<span class="cm">#  [-3  0  3]]    ← v1[2]*v2  → una MATRICE 3×3</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[[-1  0  1]
+ [-2  0  2]
+ [-3  0  3]]</span></pre>
+  </div>
+
+  <p>
+    Attenzione al contrasto, che è il cuore di questa sezione: il prodotto <em>scalare</em> (<code>np.dot</code>)
+    restituisce <strong>un numero</strong>; il prodotto <em>esterno</em> (<code>np.outer</code>) restituisce
+    <strong>un'intera matrice</strong>, in cui ogni casella è \(v_i \, w_j\). <mark>Stessi due vettori, risultati di
+    natura completamente diversa</mark> — è la differenza «riga × colonna» contro «colonna × riga» anticipata nel §2.3.</p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s3-7"><span class="secnum">Sezione 3.7</span>Moltiplicazione di Hadamard</h2>
 
@@ -788,6 +944,32 @@
       questo, in questo libro non tornerà quasi mai.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: il prodotto di Hadamard</h3>
+
+  <div class="term">
+    <div class="t-head file">hadamard.py</div>
+    <pre><span class="nm">w1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">3</span>, <span class="nm">5</span>])
+<span class="nm">w2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">2</span>])
+
+<span class="bi">print</span>(<span class="nm">w1</span> <span class="op">*</span> <span class="nm">w2</span>)                <span class="cm"># [3 12 10]  → elemento per elemento</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">multiply</span>(<span class="nm">w1</span>, <span class="nm">w2</span>))    <span class="cm"># identico</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[ 3 12 10]
+[ 3 12 10]</span></pre>
+  </div>
+
+  <p>
+    Il prodotto di Hadamard in NumPy è semplicemente l'operatore <code>*</code> (o <code>np.multiply</code>): moltiplica
+    le componenti a coppie e restituisce un <strong>vettore</strong>. <mark>È l'operazione che <em>non</em> somma</mark>:
+    fai il prodotto scalare e sommi i risultati (ottieni un numero), fai Hadamard e li tieni separati (ottieni un
+    vettore). Lo stesso <code>v1 * v2</code> che hai già usato dentro <code>sum(v1 * v2)</code> per il prodotto scalare:
+    lì il <code>sum</code> collassava tutto in un numero, qui lo lasciamo intero.
+  </p>
 
 
   <!-- ==================================================================== -->
@@ -882,6 +1064,34 @@
       pilastro della teoria. Sappilo, usalo quando serve, e non aspettarlo nei prossimi capitoli.
     </p>
   </div>
+
+
+  <h3>💻 In NumPy: il prodotto vettoriale</h3>
+
+  <div class="term">
+    <div class="t-head file">prodotto_vettoriale.py</div>
+    <pre><span class="nm">v1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="op">-</span><span class="nm">3</span>,  <span class="nm">2</span>, <span class="nm">5</span>])
+<span class="nm">v2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([ <span class="nm">4</span>, <span class="op">-</span><span class="nm">3</span>, <span class="nm">0</span>])
+
+<span class="nm">v3</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">cross</span>(<span class="nm">v1</span>, <span class="nm">v2</span>)
+<span class="bi">print</span>(<span class="nm">v3</span>)                 <span class="cm"># [15 20 1]  → un VETTORE, perpendicolare a entrambi</span>
+
+<span class="cm"># verifica: il nuovo vettore è ortogonale a v1 e v2 (prodotto scalare = 0)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v3</span>, <span class="nm">v1</span>), <span class="nm">np</span><span class="op">.</span><span class="fn">dot</span>(<span class="nm">v3</span>, <span class="nm">v2</span>))   <span class="cm"># 0 0</span></pre>
+  </div>
+
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[15 20  1]
+0 0</span></pre>
+  </div>
+
+  <p>
+    <code>np.cross</code> calcola il prodotto vettoriale, che a differenza di tutti gli altri restituisce un
+    <strong>vettore</strong> (e vive solo in \(\R^3\)). La sua proprietà cardine si <em>verifica</em> in una riga: il
+    risultato è <mark>perpendicolare a entrambi</mark> i vettori di partenza, e infatti i due prodotti scalari con
+    <code>v1</code> e <code>v2</code> valgono zero — che, come sai dal §3.3, è la firma dell'ortogonalità.
+  </p>
 
 
   <!-- ==================================================================== -->
