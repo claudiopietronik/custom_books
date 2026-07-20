@@ -238,7 +238,7 @@ const TOC = [
     n: 15,
     titolo: "PyTorch: autograd e discesa del gradiente",
     file: "cap15-pytorch-autograd.html",
-    stato: "da-fare",
+    stato: "pronto",
     sezioni: [
       { id: "s15-1", n: "15.1", t: "Il grafo di calcolo" },
       { id: "s15-2", n: "15.2", t: "requires_grad e backward" },

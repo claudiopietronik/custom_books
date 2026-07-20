@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 · PyTorch: autograd e discesa del gradiente — Python per la Data Science</title>
+<link rel="stylesheet" href="assets/style.css?v=20260719f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📊</text></svg>">
+<script src="assets/toc.js"></script>
+<script src="assets/math.js"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body data-chapter="15">
+
+<main class="page">
+
+  <header class="chapter-head">
+    <div class="kicker">Capitolo 15</div>
+    <h1>PyTorch: autograd e discesa del gradiente</h1>
+    <p class="standfirst">
+      Ecco il secondo superpotere, quello che fa <b>imparare</b> le reti. Un tensore, da solo, è un array veloce; ma
+      PyTorch può <b>tenere traccia</b> di ogni calcolo che fai su di esso e, alla fine, calcolare automaticamente i
+      <b>gradienti</b> — le derivate che dicono «da che parte, e quanto, aggiustare ogni peso per sbagliare di meno».
+      Questo si chiama <b>autograd</b>, ed è il cuore pulsante del deep learning: <mark>senza dover derivare nulla a
+      mano, la rete sa in che direzione migliorare.</mark> In questo capitolo, con taglio pratico e molto visivo,
+      costruiamo l'intuizione dell'apprendimento: come PyTorch registra i calcoli in un <b>grafo</b> (§15.1), come
+      chiedere i gradienti con <code>requires_grad</code> e <code>backward</code> (§15.2), come scrivere <b>a mano</b> un
+      piccolo <b>training loop</b> per <em>vedere</em> un modello imparare (§15.3), e come gli <b>optimizer</b> (SGD,
+      Adam) automatizzano l'aggiornamento (§15.4). Alla fine capirai <em>come</em> impara una rete — l'idea che rende
+      trasparente tutto ciò che segue.
+    </p>
+  </header>
+
+  <div class="box nota">
+    <div class="box-title"><span class="ico">🗺</span> Dove siamo</div>
+    <p style="margin-bottom:0">
+      Il <b>grafo di calcolo</b> (§15.1), <code>requires_grad</code> e <code>backward</code> (§15.2), un <b>training
+      loop</b> da zero (§15.3), gli <b>optimizer</b> SGD/Adam (§15.4). Nel laboratorio (§15.5) alleni a mano un semplice
+      modello.
+    </p>
+  </div>
+
+  <div class="box chiave">
+    <div class="box-title"><span class="ico">🔑</span> Perché ci tocca: capire come impara una rete</div>
+    <p style="margin-bottom:0">
+      Il ciclo «prevedi → misura l'errore → calcola i gradienti → aggiusta i pesi → ripeti» è <b>identico</b> in ogni
+      rete neurale, dalla più piccola a un modello di linguaggio. <mark>Capirlo qui, in versione minima e a mano, ti fa
+      capire <em>tutto</em> ciò che nei prossimi capitoli sarà nascosto dentro comodi comandi.</mark> È l'intuizione più
+      importante del deep learning.
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-1"><span class="secnum">Sezione 15.1</span>Il grafo di calcolo</h2>
+
+  <p class="lead">
+    L'idea geniale dietro l'autograd: mentre fai i calcoli, PyTorch li <b>registra</b> in un grafo, così poi può
+    ripercorrerlo all'indietro per calcolare le derivate. Vediamo cosa significa, senza tecnicismi.
+  </p>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">📖</span> PyTorch «prende appunti» sui tuoi calcoli</div>
+    <p style="margin-bottom:0">
+      Quando operi su tensori marcati come «da tracciare», PyTorch costruisce silenziosamente un <b>grafo di calcolo</b>:
+      una mappa di <b>quali operazioni</b> hai fatto e in <b>che ordine</b> (moltiplica, somma, eleva al quadrato…).
+      <mark>Questa mappa è ciò che gli permette, alla fine, di applicare la «regola della catena» del calcolo e ricavare
+      la derivata di ogni pezzo rispetto a ogni altro</mark> — automaticamente, all'indietro (da qui il nome
+      «backward»). Tu scrivi i calcoli in avanti come al solito (la <b>previsione</b> e l'<b>errore</b>); PyTorch,
+      quando glielo chiedi, ripercorre il grafo a ritroso e ti consegna i gradienti. <b>Non devi derivare niente a
+      mano</b>: è tutta la comodità dell'autograd.
+    </p>
+  </div>
+
+  <div class="box intu">
+    <div class="box-title"><span class="ico">💡</span> Perché servono i gradienti</div>
+    <p style="margin-bottom:0">
+      Un modello «impara» cercando i pesi che rendono minimo l'<b>errore</b> (quanto le sue previsioni sbagliano). Il
+      <b>gradiente</b> dell'errore rispetto a un peso dice due cose: <mark>in che <b>direzione</b> muovere il peso per
+      aumentare l'errore — e quindi, al contrario, per <b>diminuirlo</b> — e quanto ripidamente.</mark> È come una
+      bussola che, in ogni punto, indica la salita: per scendere (ridurre l'errore) basta andare nella direzione
+      <b>opposta</b>. Ripetendo tanti piccoli passi in discesa, si arriva al minimo. Questa è la <b>discesa del
+      gradiente</b>, il motore di tutto il deep learning (e già incontrata nel libro ML per la logistica).
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-2"><span class="secnum">Sezione 15.2</span>requires_grad e backward</h2>
+
+  <p class="lead">
+    In pratica, chiedere i gradienti a PyTorch è questione di due gesti: <b>marcare</b> i tensori di cui vuoi la derivata
+    e poi chiamare <b>backward</b>. Vediamolo su un esempio minimo.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Chiedere una derivata a PyTorch <span class="tag">requires_grad · backward · .grad</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">autograd.py</div>
+      <pre><span class="kw">import</span> <span class="nm">torch</span>
+
+<span class="cm"># marca w come "tracciami": voglio la derivata rispetto a w</span>
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>(<span class="nm">2.0</span>, <span class="nm">requires_grad</span><span class="op">=</span><span class="kw">True</span>)
+
+<span class="cm"># un calcolo qualsiasi (PyTorch registra il grafo)</span>
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">w</span> <span class="op">**</span> <span class="nm">2</span> <span class="op">+</span> <span class="nm">3</span> <span class="op">*</span> <span class="nm">w</span>       <span class="cm"># y = w² + 3w</span>
+
+<span class="nm">y</span><span class="op">.</span><span class="fn">backward</span>()              <span class="cm"># calcola le derivate all'indietro</span>
+<span class="bi">print</span>(<span class="nm">w</span><span class="op">.</span><span class="nm">grad</span>)            <span class="cm"># dy/dw = 2w + 3 = 7.0  (in w=2)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt><span class="mono">requires_grad=True</span></dt>
+        <dd>dice a PyTorch «<mark>tieni traccia dei calcoli su questo tensore, voglio le sue derivate</mark>». Tipicamente
+            lo mettono i <b>pesi</b> del modello (i numeri da imparare), non i dati.</dd>
+        <dt><span class="mono">y.backward()</span></dt>
+        <dd>parte dal risultato (di solito l'<b>errore</b>) e ripercorre il grafo <b>all'indietro</b>, calcolando la
+            derivata rispetto a ogni tensore tracciato. <mark>Una chiamata, e tutti i gradienti sono pronti.</mark></dd>
+        <dt><span class="mono">w.grad</span></dt>
+        <dd>dopo <code>backward</code>, contiene il gradiente (qui <code>2w+3 = 7</code> in <code>w=2</code>: PyTorch ha
+            derivato da solo!). <mark>È la «bussola» per aggiornare <code>w</code></mark>: la direzione in cui l'errore
+            cresce.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Due accortezze che vedrai sempre nel training loop: i gradienti <b>si accumulano</b>, quindi vanno <b>azzerati</b>
+      a ogni passo (<code>zero_grad</code>); e l'aggiornamento dei pesi va fatto «senza tracciare» (dentro
+      <code>with torch.no_grad():</code>), perché è un ritocco manuale, non parte del calcolo da derivare. <mark>Gli
+      optimizer (§15.4) fanno queste cose per te</mark>, ma è bene sapere che ci sono.
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-3"><span class="secnum">Sezione 15.3</span>Un training loop da zero</h2>
+
+  <p class="lead">
+    Ora il pezzo forte: mettiamo insieme tutto in un <b>ciclo di allenamento</b> minimale, scritto a mano, che fa
+    imparare un modello. È lo stesso ciclo — identico — di qualsiasi rete; vederlo nudo, una volta, chiarisce tutto.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Il ciclo che fa imparare <span class="tag">prevedi · errore · backward · aggiorna</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">training_loop.py</div>
+      <pre><span class="kw">import</span> <span class="nm">torch</span>
+
+<span class="cm"># dati: vogliamo imparare y = 2x (la vera pendenza è 2)</span>
+<span class="nm">x</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>([<span class="nm">1.</span>, <span class="nm">2.</span>, <span class="nm">3.</span>, <span class="nm">4.</span>])
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>([<span class="nm">2.</span>, <span class="nm">4.</span>, <span class="nm">6.</span>, <span class="nm">8.</span>])
+
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>(<span class="nm">0.0</span>, <span class="nm">requires_grad</span><span class="op">=</span><span class="kw">True</span>)   <span class="cm"># peso iniziale: 0 (sbagliato)</span>
+<span class="nm">lr</span> <span class="op">=</span> <span class="nm">0.01</span>                                <span class="cm"># learning rate: quanto grande ogni passo</span>
+
+<span class="kw">for</span> <span class="nm">epoca</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">100</span>):
+    <span class="nm">y_pred</span> <span class="op">=</span> <span class="nm">w</span> <span class="op">*</span> <span class="nm">x</span>                    <span class="cm"># 1. PREVEDI</span>
+    <span class="nm">loss</span> <span class="op">=</span> ((<span class="nm">y_pred</span> <span class="op">-</span> <span class="nm">y</span>) <span class="op">**</span> <span class="nm">2</span>)<span class="op">.</span><span class="fn">mean</span>()   <span class="cm"># 2. MISURA l'errore (MSE)</span>
+
+    <span class="nm">loss</span><span class="op">.</span><span class="fn">backward</span>()                     <span class="cm"># 3. GRADIENTI (autograd!)</span>
+    <span class="kw">with</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">no_grad</span>():               <span class="cm"># 4. AGGIORNA il peso (in discesa)</span>
+        <span class="nm">w</span> <span class="op">-=</span> <span class="nm">lr</span> <span class="op">*</span> <span class="nm">w</span><span class="op">.</span><span class="nm">grad</span>
+    <span class="nm">w</span><span class="op">.</span><span class="nm">grad</span><span class="op">.</span><span class="fn">zero_</span>()                    <span class="cm"># 5. AZZERA i gradienti per il prossimo giro</span>
+
+<span class="bi">print</span>(<span class="nm">w</span><span class="op">.</span><span class="fn">item</span>())     <span class="cm"># ~2.0  → ha IMPARATO la pendenza giusta!</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>1-2. <b>previsione</b> ed <b>errore</b> (loss)</dt>
+        <dd>il modello prevede (<code>w * x</code>), e misuriamo quanto sbaglia con l'<b>errore quadratico medio</b>
+            (MSE): la media di <code>(previsto − vero)²</code>. <mark>La loss è il numero da minimizzare.</mark></dd>
+        <dt>3. <b>backward</b> — i gradienti</dt>
+        <dd><code>loss.backward()</code> calcola quanto ogni peso contribuisce all'errore (il gradiente): la bussola.</dd>
+        <dt>4. <b>aggiorna</b> — un passo in discesa</dt>
+        <dd><code>w -= lr * w.grad</code>: sposta il peso nella direzione <b>opposta</b> al gradiente (verso l'errore
+            minore), di un passetto grande <code>lr</code>. <mark>È la discesa del gradiente in una riga.</mark></dd>
+        <dt>5. <b>azzera</b> e ripeti</dt>
+        <dd><code>zero_grad</code> ripulisce i gradienti (che altrimenti si accumulerebbero), e il ciclo ricomincia.
+            Ogni giro (<b>epoca</b>) il peso migliora un po'; dopo 100, <code>w ≈ 2</code>: <mark>il modello ha imparato
+            la legge dei dati.</mark></dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      <mark>Questo ciclo di 5 passi è <b>il</b> ciclo del deep learning</mark>, identico per una rete di un miliardo di
+      parametri: prevedi, misura, backward, aggiorna, azzera. Nel widget qui sotto lo vedi come una pallina che scende
+      verso il fondo della «valle» dell'errore. Prova learning rate diversi!
+    </div>
+  </div>
+
+  <div class="widget" id="w-gd">
+    <div class="w-head">
+      <span>Discesa del gradiente</span>
+      <span class="hint">la pallina scende verso l'errore minimo — premi «passo»</span>
+    </div>
+    <div class="w-stage" style="display:block; padding:1rem">
+      <svg id="gd-svg" viewBox="0 0 460 250" style="width:100%; max-width:480px; display:block; margin:0 auto"></svg>
+      <div style="display:flex; gap:.4rem; justify-content:center; align-items:center; margin-top:.6rem; flex-wrap:wrap">
+        <button class="btn" id="gd-step">passo ▸</button>
+        <button class="btn ghost" id="gd-reset">ricomincia</button>
+        <label style="margin-left:.5rem">learning rate <input type="range" id="gd-lr" min="0.05" max="1.05" step="0.05" value="0.3"></label>
+      </div>
+    </div>
+    <div class="w-readout" id="gd-out"></div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-4"><span class="secnum">Sezione 15.4</span>Gli optimizer (SGD, Adam)</h2>
+
+  <p class="lead">
+    Scrivere a mano l'aggiornamento (passi 4-5) va bene per capire, ma nella pratica lo affidi a un <b>optimizer</b>:
+    un oggetto che aggiorna i pesi per te, con strategie anche più furbe della semplice discesa.
+  </p>
+
+  <div class="formula">
+    <div class="f-head">Automatizzare l'aggiornamento <span class="tag">optim.SGD · optim.Adam</span></div>
+    <div class="term" style="margin:.3rem auto .5rem">
+      <div class="t-head file">optimizer.py</div>
+      <pre><span class="kw">import</span> <span class="nm">torch</span>
+
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>(<span class="nm">0.0</span>, <span class="nm">requires_grad</span><span class="op">=</span><span class="kw">True</span>)
+<span class="nm">optimizer</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="nm">optim</span><span class="op">.</span><span class="fn">Adam</span>([<span class="nm">w</span>], <span class="nm">lr</span><span class="op">=</span><span class="nm">0.1</span>)   <span class="cm"># gli affidi i pesi</span>
+
+<span class="kw">for</span> <span class="nm">epoca</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">100</span>):
+    <span class="nm">optimizer</span><span class="op">.</span><span class="fn">zero_grad</span>()          <span class="cm"># azzera i gradienti (era il passo 5)</span>
+    <span class="nm">loss</span> <span class="op">=</span> ((<span class="nm">w</span> <span class="op">*</span> <span class="nm">x</span> <span class="op">-</span> <span class="nm">y</span>) <span class="op">**</span> <span class="nm">2</span>)<span class="op">.</span><span class="fn">mean</span>()
+    <span class="nm">loss</span><span class="op">.</span><span class="fn">backward</span>()               <span class="cm"># gradienti</span>
+    <span class="nm">optimizer</span><span class="op">.</span><span class="fn">step</span>()              <span class="cm"># aggiorna i pesi (era il passo 4)</span></pre>
+    </div>
+    <div class="simboli">
+      <dl>
+        <dt>cosa fa un <b>optimizer</b></dt>
+        <dd>gli affidi i pesi da ottimizzare; poi, a ogni giro, <code>zero_grad()</code> (azzera) e <code>step()</code>
+            (aggiorna) sostituiscono l'aggiornamento manuale. <mark>Stesso ciclo del §15.3, ma più pulito e senza
+            <code>no_grad</code> a mano.</mark></dd>
+        <dt><span class="mono">SGD</span> — la discesa base</dt>
+        <dd>«Stochastic Gradient Descent»: fa esattamente quello che hai visto a mano (<code>w -= lr * grad</code>),
+            magari con qualche miglioria (momentum). Semplice e affidabile.</dd>
+        <dt><span class="mono">Adam</span> — il jolly moderno</dt>
+        <dd>un optimizer più sofisticato che <b>adatta</b> il passo per ogni peso automaticamente: <mark>di solito
+            converge più in fretta e richiede meno regolazione</mark>. È la scelta di default per la maggior parte delle
+            reti.</dd>
+      </dl>
+    </div>
+    <div class="f-note">
+      Consiglio pratico: <mark>parti con <b>Adam</b> e un learning rate attorno a <code>0.001</code>–<code>0.01</code></mark>
+      — funziona bene nella grande maggioranza dei casi. Il learning rate resta l'iperparametro più importante: troppo
+      grande e l'allenamento «esplode», troppo piccolo e diventa lentissimo (lo vedi nel widget).
+    </div>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-5"><span class="secnum">Sezione 15.5</span>Laboratorio</h2>
+
+  <p class="lead">
+    Alleniamo «a mano» un modellino a due parametri (pendenza <b>e</b> intercetta) per adattare una retta a dei dati —
+    una regressione lineare fatta con PyTorch. È il ponte tra questo ciclo minimale e le vere reti del prossimo capitolo.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">regressione_pytorch.py</div>
+    <pre><span class="kw">import</span> <span class="nm">torch</span>
+
+<span class="cm"># dati che seguono y ≈ 2x + 1 (con un po' di rumore)</span>
+<span class="nm">x</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>([<span class="nm">1.</span>, <span class="nm">2.</span>, <span class="nm">3.</span>, <span class="nm">4.</span>, <span class="nm">5.</span>])
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>([<span class="nm">3.1</span>, <span class="nm">4.9</span>, <span class="nm">7.2</span>, <span class="nm">8.8</span>, <span class="nm">11.1</span>])
+
+<span class="cm"># due pesi da imparare: pendenza w e intercetta b</span>
+<span class="nm">w</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>(<span class="nm">0.0</span>, <span class="nm">requires_grad</span><span class="op">=</span><span class="kw">True</span>)
+<span class="nm">b</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="fn">tensor</span>(<span class="nm">0.0</span>, <span class="nm">requires_grad</span><span class="op">=</span><span class="kw">True</span>)
+<span class="nm">opt</span> <span class="op">=</span> <span class="nm">torch</span><span class="op">.</span><span class="nm">optim</span><span class="op">.</span><span class="fn">Adam</span>([<span class="nm">w</span>, <span class="nm">b</span>], <span class="nm">lr</span><span class="op">=</span><span class="nm">0.1</span>)
+
+<span class="kw">for</span> <span class="nm">epoca</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="nm">500</span>):
+    <span class="nm">opt</span><span class="op">.</span><span class="fn">zero_grad</span>()
+    <span class="nm">loss</span> <span class="op">=</span> ((<span class="nm">w</span> <span class="op">*</span> <span class="nm">x</span> <span class="op">+</span> <span class="nm">b</span> <span class="op">-</span> <span class="nm">y</span>) <span class="op">**</span> <span class="nm">2</span>)<span class="op">.</span><span class="fn">mean</span>()   <span class="cm"># MSE</span>
+    <span class="nm">loss</span><span class="op">.</span><span class="fn">backward</span>()
+    <span class="nm">opt</span><span class="op">.</span><span class="fn">step</span>()
+
+<span class="bi">print</span>(<span class="st">f"pendenza=</span><span class="op">{</span><span class="nm">w</span><span class="op">.</span><span class="fn">item</span>()<span class="op">:</span><span class="st">.2f</span><span class="op">}</span><span class="st">, intercetta=</span><span class="op">{</span><span class="nm">b</span><span class="op">.</span><span class="fn">item</span>()<span class="op">:</span><span class="st">.2f</span><span class="op">}</span><span class="st">"</span>)</pre>
+  </div>
+
+  <div class="box def">
+    <div class="box-title"><span class="ico">✅</span> Output atteso e lettura</div>
+    <div class="term" style="margin:.3rem auto .6rem">
+      <div class="t-head">Output</div>
+      <pre><span class="out">pendenza=2.02, intercetta=0.98</span></pre>
+    </div>
+    <p style="margin-bottom:0">
+      Partendo da <code>w=0, b=0</code> (una retta piatta, del tutto sbagliata), dopo 500 epoche il modello ha
+      <b>scoperto</b> da solo <mark>pendenza ≈ 2 e intercetta ≈ 1</mark> — proprio la legge <code>y ≈ 2x + 1</code> da cui
+      venivano i dati. Non gli abbiamo detto la risposta: l'ha <b>imparata</b> minimizzando l'errore, un passetto alla
+      volta, guidato dai gradienti dell'autograd. <mark>Questo è, in miniatura, esattamente ciò che fa una rete neurale
+      con milioni di pesi</mark>: lo stesso ciclo, la stessa idea. Hai visto «da dentro» come un modello impara. Nel
+      prossimo capitolo non scriveremo più il ciclo a mano né i pesi uno a uno: costruiremo vere reti con i mattoni
+      pronti di PyTorch — ma sapendo esattamente cosa succede sotto.
+    </p>
+  </div>
+
+  <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
+    <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 15</div>
+    <ol style="margin-bottom:0">
+      <li>L'<b>autograd</b> registra i calcoli in un <b>grafo</b> e calcola da solo i <b>gradienti</b> (le derivate),
+          senza doverle derivare a mano (§15.1).</li>
+      <li>Marca i pesi con <code>requires_grad=True</code>, calcola la loss, chiama <code>loss.backward()</code>: i
+          gradienti finiscono in <code>.grad</code> — la «bussola» per migliorare (§15.2).</li>
+      <li>Il <b>training loop</b> in 5 passi (identico per ogni rete): <b>prevedi → misura la loss → backward → aggiorna
+          i pesi (in discesa) → azzera i gradienti</b>, e ripeti per tante epoche (§15.3).</li>
+      <li>Gli <b>optimizer</b> (<code>zero_grad</code> + <code>step</code>) automatizzano l'aggiornamento: <b>SGD</b>
+          (base) e <b>Adam</b> (adattivo, default). Il <b>learning rate</b> è l'iperparametro chiave (§15.4).</li>
+    </ol>
+  </div>
+
+  <p class="closing">
+    Ora conosci il segreto di come una rete impara: gradienti e discesa, un passetto alla volta. Ma finora abbiamo
+    gestito i pesi a mano, uno per uno — impensabile per una rete con milioni di parametri. PyTorch offre mattoni pronti
+    per costruire reti di qualsiasi dimensione con poche righe, gestendo i pesi per noi. Nel <strong>Capitolo 16</strong>
+    costruiamo <b>vere reti neurali</b> con <code>nn.Module</code>: gli <b>strati</b> pronti, le funzioni di
+    <b>perdita</b> e di <b>attivazione</b>, e i <b>DataLoader</b> per dare i dati alla rete in lotti — assemblando il
+    training loop completo che hai appena capito dall'interno.
+  </p>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-6"><span class="secnum">Sezione 15.6</span>Esercizi</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.1</div>
+    <p style="margin-bottom:0">
+      Cos'è l'autograd e a cosa serve il «grafo di calcolo»? Perché è un vantaggio non dover calcolare le derivate a
+      mano?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.2</div>
+    <p style="margin-bottom:0">
+      Cosa fa <code>requires_grad=True</code>? Dopo aver calcolato una <code>loss</code> e chiamato
+      <code>loss.backward()</code>, dove trovi il gradiente rispetto a un peso <code>w</code>?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.3</div>
+    <p style="margin-bottom:0">
+      Elenca, in ordine, i cinque passi del training loop. Perché il peso si aggiorna nella direzione <b>opposta</b> al
+      gradiente?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.4</div>
+    <p style="margin-bottom:0">
+      Perché bisogna azzerare i gradienti (<code>zero_grad</code>) a ogni giro del ciclo? Cosa succederebbe
+      dimenticandolo?
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Esercizio 15.5</div>
+    <p style="margin-bottom:0">
+      Cosa fanno gli optimizer <code>SGD</code> e <code>Adam</code>? Cosa succede all'allenamento se il learning rate è
+      troppo grande? E se è troppo piccolo?
+    </p>
+  </div>
+
+
+  <!-- ==================================================================== -->
+  <h2 id="s15-7"><span class="secnum">Sezione 15.7</span>Soluzioni</h2>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.1</div>
+    <p style="margin-bottom:0">
+      L'<b>autograd</b> è il sistema di PyTorch che calcola <b>automaticamente i gradienti</b> (le derivate). Il <b>grafo
+      di calcolo</b> è la registrazione di quali operazioni sono state fatte e in che ordine: serve perché permette a
+      PyTorch di ripercorrere i calcoli all'indietro (regola della catena) e derivare ogni pezzo. Non dover derivare a
+      mano è un enorme vantaggio: le reti hanno milioni di parametri e derivate complicatissime — calcolarle a mano
+      sarebbe impossibile; l'autograd lo fa da solo, correttamente, per qualsiasi calcolo.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.2</div>
+    <p style="margin-bottom:0">
+      <code>requires_grad=True</code> dice a PyTorch di tenere traccia dei calcoli su quel tensore per poterne calcolare
+      i gradienti (lo si mette sui pesi da imparare). Dopo <code>loss.backward()</code>, il gradiente rispetto a
+      <code>w</code> si trova in <code>w.grad</code>: indica in che direzione e quanto <code>w</code> influenza l'errore.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.3</div>
+    <p style="margin-bottom:0">
+      I cinque passi: <b>(1)</b> prevedi (calcola l'uscita del modello); <b>(2)</b> misura la loss (quanto sbaglia);
+      <b>(3)</b> <code>backward</code> (calcola i gradienti); <b>(4)</b> aggiorna i pesi in discesa; <b>(5)</b> azzera i
+      gradienti; e si ripete. Il peso si aggiorna nella direzione <b>opposta</b> al gradiente perché il gradiente indica
+      la direzione in cui l'errore <b>cresce</b>: per <b>ridurre</b> l'errore bisogna andare nel verso contrario (in
+      «discesa»).
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.4</div>
+    <p style="margin-bottom:0">
+      Perché in PyTorch i gradienti <b>si accumulano</b> (si sommano) a ogni <code>backward</code>: se non li azzeri, al
+      giro successivo il nuovo gradiente si somma a quello vecchio, dando un aggiornamento sbagliato (basato su una
+      miscela di passi diversi). Dimenticando <code>zero_grad</code>, l'allenamento diventa instabile o non converge
+      correttamente. Azzerandoli, ogni passo usa solo il gradiente «fresco» calcolato in quel giro.
+    </p>
+  </div>
+
+  <div class="esercizio">
+    <div class="e-num">Soluzione 15.5</div>
+    <p style="margin-bottom:0">
+      Gli optimizer aggiornano i pesi a partire dai gradienti: <b>SGD</b> fa la discesa del gradiente base
+      (<code>w -= lr · grad</code>, eventualmente con momentum); <b>Adam</b> adatta automaticamente il passo per ogni
+      peso, di solito convergendo più in fretta e con meno regolazione. Se il learning rate è <b>troppo grande</b>, i
+      passi sono eccessivi e l'allenamento «rimbalza» o diverge (la loss esplode); se è <b>troppo piccolo</b>, i passi
+      sono minuscoli e l'allenamento diventa lentissimo (servono moltissime epoche per arrivare al minimo).
+    </p>
+  </div>
+
+</main>
+
+<script src="assets/book.js?v=20260719f"></script>
+<script src="assets/plot.js"></script>
+<script>
+/* ============================================================================
+   WIDGET §15.3 — discesa del gradiente: una pallina scende una parabola (loss)
+   con passo = lr * gradiente. Bottone "passo" + learning rate. Usa plot.js.
+   ========================================================================= */
+(function () {
+  const svg = document.getElementById('gd-svg');
+  if (!svg || typeof Plot === 'undefined') return;
+  const out = document.getElementById('gd-out');
+  const bStep = document.getElementById('gd-step');
+  const bReset = document.getElementById('gd-reset');
+  const sLr = document.getElementById('gd-lr');
+
+  // loss L(w) = (w-3)^2 + 1, minimo in w=3. gradiente L'(w) = 2(w-3)
+  const WMIN = -2, WMAX = 8, LMAX = 30;
+  function L(w) { return (w - 3) * (w - 3) + 1; }
+  function grad(w) { return 2 * (w - 3); }
+
+  let w, step;
+  function reset() { w = -1.5; step = 0; draw(); }
+
+  const p = new Plot(svg, { xmin: WMIN, xmax: WMAX, ymin: 0, ymax: LMAX });
+
+  function draw() {
+    p.clear(); p.grid(1, 5); p.axes({ numbers: false });
+    // curva loss
+    const pts = []; for (let x = WMIN; x <= WMAX; x += 0.1) pts.push([x, Math.min(LMAX, L(x))]);
+    p.poly(pts, { color: 'var(--accent)', width: 2.4, close: false });
+    // minimo
+    p.dot(3, 1, { color: 'var(--green)', r: 4 });
+    p.text(3, 1, 'minimo', { size: 10, color: 'var(--green)', anchor: 'middle', dy: 16 });
+    // pallina
+    p.dot(w, L(w), { color: 'var(--warm)', r: 8, stroke: '#fff', sw: 2 });
+    // freccia gradiente (tangente indicativa)
+    const g = grad(w);
+    p.text(w, L(w), 'w=' + w.toFixed(2), { size: 11, color: 'var(--warm)', anchor: 'middle', dy: -12, bold: true });
+
+    const done = Math.abs(g) < 0.05;
+    out.innerHTML = '<div style="text-align:left; font-size:.92rem">Passo <b>' + step + '</b> · w = <b>' + w.toFixed(3) +
+      '</b> · loss = <b>' + L(w).toFixed(3) + '</b> · gradiente = <b>' + g.toFixed(2) + '</b>. ' +
+      (done ? '🎯 <b style="color:var(--green)">Arrivata al minimo!</b> Gradiente ≈ 0: il peso ottimo è w = 3.'
+            : 'Premi «passo»: w scende di <code>lr × gradiente</code> verso il fondo della valle.') +
+      '</div>';
+  }
+
+  bStep.addEventListener('click', function () {
+    const lr = +sLr.value;
+    const g = grad(w);
+    w = w - lr * g;
+    if (w < WMIN) w = WMIN; if (w > WMAX) w = WMAX;
+    step++;
+    draw();
+  });
+  bReset.addEventListener('click', reset);
+  sLr.addEventListener('input', function () { draw(); });
+  reset();
+})();
+</script>
+</body>
+</html>
