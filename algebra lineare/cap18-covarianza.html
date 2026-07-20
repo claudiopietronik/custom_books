@@ -173,6 +173,31 @@
   </div>
 
 
+  <h3>💻 In NumPy: varianza e covarianza</h3>
+
+  <div class="term">
+    <div class="t-head file">covarianza.py</div>
+    <pre><span class="nm">x</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">1</span>, <span class="nm">2</span>, <span class="nm">3</span>, <span class="nm">4</span>, <span class="nm">5</span>])
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>, <span class="nm">4</span>, <span class="nm">5</span>, <span class="nm">4</span>, <span class="nm">6</span>])
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">var</span>(<span class="nm">x</span>, <span class="nm">ddof</span><span class="op">=</span><span class="nm">1</span>))   <span class="cm"># varianza di x (ddof=1: divide per n-1)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">cov</span>(<span class="nm">x</span>, <span class="nm">y</span>))       <span class="cm"># matrice: varianze sulla diagonale, covarianza fuori</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">2.5
+[[2.5 2. ]
+ [2.  2.2]]</span></pre>
+  </div>
+
+  <p>
+    <code>np.var(x, ddof=1)</code> dà la varianza di \(x\) (il <code>ddof=1</code> divide per \(n-1\), la versione
+    «campionaria»). <code>np.cov(x, y)</code> restituisce una <mark>matrice 2×2</mark>: sulla diagonale le varianze di
+    \(x\) e \(y\) (\(2.5\) e \(2.2\)), <em>fuori</em> diagonale la loro covarianza (\(2.0\), positiva: crescono insieme).
+    Già qui vedi la struttura della matrice di covarianza, protagonista del §18.5 e della PCA (Cap. 19).
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s18-4"><span class="secnum">Sezione 18.4</span>Coefficiente di correlazione</h2>
 
@@ -298,6 +323,36 @@
     </div>
     <div class="w-readout" id="wc-out"></div>
   </div>
+
+
+  <h3>💻 In NumPy: la matrice di covarianza come <span style="text-transform:none">XXᵀ</span></h3>
+
+  <p>
+    La matrice di covarianza si costruisce da un prodotto matrice-per-la-sua-trasposta, <em>dopo</em> aver centrato i
+    dati: \(\mm{C} = \frac{1}{n-1}\mm{X}\mm{X}\T\). Ecco perché è sempre simmetrica (ricorda il §6.7!):
+  </p>
+
+  <div class="term">
+    <div class="t-head file">matrice_covarianza.py</div>
+    <pre><span class="nm">X</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">5</span>, <span class="nm">100</span>)              <span class="cm"># 5 variabili, 100 osservazioni</span>
+<span class="nm">X</span> <span class="op">=</span> <span class="nm">X</span> <span class="op">-</span> <span class="nm">X</span><span class="op">.</span><span class="fn">mean</span>(<span class="nm">axis</span><span class="op">=</span><span class="nm">1</span>, <span class="nm">keepdims</span><span class="op">=</span><span class="kw">True</span>)   <span class="cm"># centra ogni variabile (media 0)</span>
+
+<span class="nm">C</span> <span class="op">=</span> <span class="nm">X</span> <span class="op">@</span> <span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">/</span> (<span class="nm">X</span><span class="op">.</span><span class="nm">shape</span>[<span class="nm">1</span>] <span class="op">-</span> <span class="nm">1</span>)          <span class="cm"># matrice di covarianza 5×5</span>
+<span class="bi">print</span>(<span class="nm">C</span><span class="op">.</span><span class="nm">shape</span>)                             <span class="cm"># (5, 5)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">allclose</span>(<span class="nm">C</span>, <span class="nm">C</span><span class="op">.</span><span class="nm">T</span>))                 <span class="cm"># True: sempre simmetrica</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(5, 5)
+True</span></pre>
+  </div>
+
+  <p>
+    Il <b>centraggio</b> (sottrarre la media a ogni variabile) è il passo che non va dimenticato: senza, misureresti
+    qualcos'altro. Poi <code>X @ X.T</code> produce una matrice <code>5×5</code> — una casella per ogni <em>coppia</em>
+    di variabili — e <code>np.allclose(C, C.T)</code> conferma che è <mark>simmetrica</mark>, per la stessa ragione di
+    \(\mm{A}\T\mm{A}\) (§6.7). È esattamente questa matrice che la PCA scompone in autovettori, nel prossimo capitolo.
+  </p>
 
 
   <!-- ==================================================================== -->

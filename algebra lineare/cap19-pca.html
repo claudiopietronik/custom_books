@@ -218,6 +218,43 @@
   </div>
 
 
+  <h3>💻 In NumPy: la PCA da zero</h3>
+
+  <p>
+    Ora tutti i pezzi del libro si uniscono in un'unica ricetta. La PCA è: <b>(1)</b> centra i dati, <b>(2)</b> calcola
+    la matrice di covarianza, <b>(3)</b> ne fa l'autodecomposizione. Gli autovettori sono le <em>componenti principali</em>,
+    e gli autovalori dicono quanta varianza spiega ciascuna.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">pca.py</div>
+    <pre><span class="cm"># dati: 2 variabili correlate, 500 osservazioni</span>
+<span class="nm">X</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">2</span>, <span class="nm">500</span>)
+<span class="nm">X</span>[<span class="nm">1</span>] <span class="op">=</span> <span class="nm">0.8</span> <span class="op">*</span> <span class="nm">X</span>[<span class="nm">0</span>] <span class="op">+</span> <span class="nm">0.3</span> <span class="op">*</span> <span class="nm">X</span>[<span class="nm">1</span>]    <span class="cm"># introduce correlazione</span>
+
+<span class="nm">X</span> <span class="op">=</span> <span class="nm">X</span> <span class="op">-</span> <span class="nm">X</span><span class="op">.</span><span class="fn">mean</span>(<span class="nm">axis</span><span class="op">=</span><span class="nm">1</span>, <span class="nm">keepdims</span><span class="op">=</span><span class="kw">True</span>)   <span class="cm"># 1. centra</span>
+<span class="nm">C</span> <span class="op">=</span> <span class="nm">X</span> <span class="op">@</span> <span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">/</span> (<span class="nm">X</span><span class="op">.</span><span class="nm">shape</span>[<span class="nm">1</span>] <span class="op">-</span> <span class="nm">1</span>)          <span class="cm"># 2. covarianza</span>
+<span class="nm">evals</span>, <span class="nm">evecs</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">eigh</span>(<span class="nm">C</span>)             <span class="cm"># 3. autodecomposizione</span>
+
+<span class="cm"># ordina per varianza decrescente</span>
+<span class="nm">order</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">argsort</span>(<span class="nm">evals</span>)[::<span class="op">-</span><span class="nm">1</span>]
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">evals</span>[<span class="nm">order</span>], <span class="nm">3</span>))       <span class="cm"># varianza spiegata da ogni componente</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output <span style="opacity:.6">(valori d'esempio)</span></div>
+    <pre><span class="out">[1.28 0.06]</span></pre>
+  </div>
+
+  <p>
+    Il primo autovalore (<code>1.28</code>) è molto più grande del secondo (<code>0.06</code>): <mark>quasi tutta la
+    variazione dei dati vive lungo <em>una</em> direzione</mark>, la prima componente principale (il primo autovettore).
+    Ecco la PCA in tre righe: trovare le direzioni di massima varianza. Nota come confluisce <em>tutto</em> il libro —
+    centraggio, covarianza (\(\mm{X}\mm{X}\T\), simmetrica), autodecomposizione (autovettori ortogonali perché la
+    matrice è simmetrica). Nella pratica useresti <code>sklearn.decomposition.PCA</code> (che sotto fa esattamente
+    questo, spesso via SVD del Cap. 16), ma ora sai <em>cosa</em> fa.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s19-4"><span class="secnum">Sezione 19.4</span>Regolarizzazione</h2>
 
