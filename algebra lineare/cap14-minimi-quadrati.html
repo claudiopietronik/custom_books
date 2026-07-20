@@ -234,6 +234,38 @@
   </div>
 
 
+  <h3>💻 In NumPy: le equazioni normali</h3>
+
+  <p>
+    La soluzione ai minimi quadrati è \(\vv{\beta} = (\mm{X}\T\mm{X})^{-1}\mm{X}\T\vv{y}\) — l'inversa sinistra (§12.6)
+    applicata a \(\vv{y}\). Adattiamo una retta a quattro punti:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">minimi_quadrati.py</div>
+    <pre><span class="cm"># X = matrice di design (colonna di 1 per l'intercetta + la variabile x)</span>
+<span class="nm">X</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">1</span>],
+              [<span class="nm">1</span>, <span class="nm">2</span>],
+              [<span class="nm">1</span>, <span class="nm">3</span>],
+              [<span class="nm">1</span>, <span class="nm">4</span>]])
+<span class="nm">y</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2.1</span>, <span class="nm">3.9</span>, <span class="nm">6.2</span>, <span class="nm">7.8</span>])   <span class="cm"># osservazioni (rumorose)</span>
+
+<span class="nm">beta</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">inv</span>(<span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">X</span>) <span class="op">@</span> <span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">y</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">beta</span>, <span class="nm">3</span>))   <span class="cm"># [intercetta, pendenza]</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[0.15 1.94]</span></pre>
+  </div>
+
+  <p>
+    <code>beta</code> è <code>[0.15, 1.94]</code>: la retta migliore è \(y \approx 0.15 + 1.94\,x\). Nessun punto ci sta
+    esattamente sopra (i dati sono rumorosi), ma questa è la retta che <mark>minimizza la somma dei quadrati degli
+    errori</mark>. Riconosci la formula? È l'inversa sinistra \((\mm{X}\T\mm{X})^{-1}\mm{X}\T\) del §12.6: quando
+    \(\mm{X}\vv{\beta} = \vv{y}\) non ha soluzione esatta, lei dà comunque la migliore approssimazione.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s14-2"><span class="secnum">Sezione 14.2</span>Perché quella è davvero la risposta migliore</h2>
 
@@ -516,6 +548,38 @@
     diverse, un solo punto in fondo alla parabola.</em> (In pratica i software non fanno nemmeno Gauss-Jordan:
     usano la QR del §13.7 direttamente su \(\mm{A}\), ancora più stabile. Il risultato è lo stesso.)
   </p>
+
+  <h3>💻 In NumPy: le tre strade danno la stessa risposta</h3>
+
+  <p>
+    Questa sezione racconta che ci sono tre modi di risolvere i minimi quadrati. In codice si vede che portano
+    <em>tutti</em> allo stesso \(\vv{\beta}\) — ma non sono equivalenti in <strong>stabilità</strong>: l'ultimo è il
+    consigliato.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">tre_strade.py</div>
+    <pre><span class="nm">b1</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">inv</span>(<span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">X</span>) <span class="op">@</span> <span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">y</span>       <span class="cm"># 1. equazioni normali (esplicite)</span>
+<span class="nm">b2</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">solve</span>(<span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">X</span>, <span class="nm">X</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">y</span>)     <span class="cm"># 2. solve (più stabile)</span>
+<span class="nm">b3</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">lstsq</span>(<span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">rcond</span><span class="op">=</span><span class="kw">None</span>)[<span class="nm">0</span>]   <span class="cm"># 3. lstsq (il modo consigliato)</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>([<span class="nm">b1</span>, <span class="nm">b2</span>, <span class="nm">b3</span>], <span class="nm">3</span>))</pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[[0.15 1.94]
+ [0.15 1.94]
+ [0.15 1.94]]</span></pre>
+  </div>
+
+  <p>
+    Tre righe identiche: <mark>stessa soluzione, tre strade</mark>. La prima (invertire \(\mm{X}\T\mm{X}\)) è quella che
+    hai capito ma è la meno stabile; <code>np.linalg.solve</code> evita l'inversa esplicita; e
+    <code>np.linalg.lstsq</code> è <strong>il modo giusto</strong> nella pratica — risolve i minimi quadrati
+    direttamente, senza mai formare \(\mm{X}\T\mm{X}\), evitando gli errori numerici che quella matrice può introdurre.
+    Impari la teoria con la prima, ma nel mondo reale usi la terza.
+  </p>
+
 
   <div class="box chiave" style="border-left-color:var(--gold); background:var(--gold-bg)">
     <div class="box-title" style="color:var(--gold)"><span class="ico">🔑</span> Quello che devi portarti dietro dal Capitolo 14</div>

@@ -129,6 +129,38 @@
   </div>
 
 
+  <h3>💻 In NumPy: proiettare in ℝ²</h3>
+
+  <p>
+    La formula della proiezione di \(\vv{b}\) sulla retta di \(\vv{a}\) è \(\beta = \frac{\vv{a}\T\vv{b}}{\vv{a}\T\vv{a}}\):
+    due prodotti scalari e una divisione.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">proiezione_R2.py</div>
+    <pre><span class="nm">b</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">4</span>, <span class="nm">1</span>])    <span class="cm"># il punto da proiettare</span>
+<span class="nm">a</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([<span class="nm">2</span>, <span class="nm">5</span>])    <span class="cm"># la retta (direzione) su cui proiettare</span>
+
+<span class="nm">beta</span> <span class="op">=</span> (<span class="nm">a</span> <span class="op">@</span> <span class="nm">b</span>) <span class="op">/</span> (<span class="nm">a</span> <span class="op">@</span> <span class="nm">a</span>)   <span class="cm"># quanto "avanti" lungo a</span>
+<span class="nm">proj</span> <span class="op">=</span> <span class="nm">beta</span> <span class="op">*</span> <span class="nm">a</span>              <span class="cm"># il punto proiettato sulla retta</span>
+
+<span class="bi">print</span>(<span class="fn">round</span>(<span class="nm">beta</span>, <span class="nm">3</span>))
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">proj</span>, <span class="nm">3</span>))</pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">0.448
+[0.897 2.241]</span></pre>
+  </div>
+
+  <p>
+    <code>a @ b</code> e <code>a @ a</code> sono i due prodotti scalari della formula; il loro rapporto \(\beta \approx
+    0.448\) dice <mark>quanto scivolare lungo \(\vv{a}\)</mark> per arrivare al piede della perpendicolare. Moltiplicando
+    <code>beta * a</code> si ottiene il punto proiettato. È l'ombra di \(\vv{b}\) sulla retta di \(\vv{a}\) — e la stessa
+    identica idea, estesa da una retta a un intero sottospazio, sarà i minimi quadrati (Cap. 14).
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s13-2"><span class="secnum">Sezione 13.2</span>Proiezioni in ℝᴺ</h2>
 
@@ -427,6 +459,40 @@
     \(\sqrt3\,\vv{q}_1 + \sqrt2\,\vv{q}_2 = (1,1,1) + (1,0,-1) = (2, 1, 0) = \vv{a}_2\) ✔. Il primo elemento
     di \(\mm{R}\), \(\sqrt3\), è \(\norm{\vv{a}_1}\); lo zero sotto la diagonale è la perpendicolarità
     \(\vv{q}_2 \perp \vv{a}_1\).
+  </p>
+
+
+  <h3>💻 In NumPy: la decomposizione QR</h3>
+
+  <p>
+    <code>np.linalg.qr</code> scompone una matrice in \(\mm{A} = \mm{Q}\mm{R}\), con \(\mm{Q}\) a colonne
+    <em>ortonormali</em> (la vera Gram-Schmidt, fatta bene) e \(\mm{R}\) triangolare superiore:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">qr.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">0</span>],
+              [<span class="nm">1</span>, <span class="nm">0</span>],
+              [<span class="nm">0</span>, <span class="nm">1</span>]])
+<span class="nm">Q</span>, <span class="nm">R</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">qr</span>(<span class="nm">A</span>)
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">Q</span>, <span class="nm">3</span>))
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">Q</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">Q</span>, <span class="nm">10</span>))   <span class="cm"># identità: colonne ortonormali</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output <span style="opacity:.6">(i segni di Q possono variare)</span></div>
+    <pre><span class="out">[[-0.707  0.   ]
+ [-0.707  0.   ]
+ [ 0.    -1.   ]]
+[[1. 0.]
+ [0. 1.]]</span></pre>
+  </div>
+
+  <p>
+    Le due colonne uguali-in-direzione di \(\mm{A}\) diventano in \(\mm{Q}\) due vettori a <mark>lunghezza 1 e
+    perpendicolari tra loro</mark> — la verifica <code>Q.T @ Q</code> dà l'identità, che è la definizione di colonne
+    ortonormali (§13.4). Questa è la Gram-Schmidt del §13.5 fatta dal computer in modo stabile, e sarà il mattone per
+    l'inversa via QR (§13.7) e per capire la SVD (Cap. 16).
   </p>
 
 

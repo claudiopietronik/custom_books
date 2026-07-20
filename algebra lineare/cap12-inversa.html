@@ -222,6 +222,33 @@
   </div>
 
 
+  <h3>💻 In NumPy: l'inversa</h3>
+
+  <div class="term">
+    <div class="t-head file">inversa.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">3</span>, <span class="nm">1</span>],
+              [<span class="nm">2</span>, <span class="nm">5</span>]])
+<span class="nm">Ainv</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">inv</span>(<span class="nm">A</span>)
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">Ainv</span>, <span class="nm">3</span>))
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">A</span> <span class="op">@</span> <span class="nm">Ainv</span>, <span class="nm">10</span>))   <span class="cm"># A · A⁻¹ = identità</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[[ 0.385 -0.077]
+ [-0.154  0.231]]
+[[1. 0.]
+ [0. 1.]]</span></pre>
+  </div>
+
+  <p>
+    <code>np.linalg.inv(A)</code> restituisce la matrice inversa, e la verifica <code>A @ Ainv</code> dà l'<mark>identità</mark>:
+    è la definizione stessa di inversa (la matrice che «annulla» \(\mm{A}\)). Se provassi a invertire una matrice
+    singolare (determinante zero, §11.2), NumPy si fermerebbe con <code>LinAlgError: Singular matrix</code> — non tutte
+    le matrici hanno un'inversa, e il codice te lo ricorda.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s12-4"><span class="secnum">Sezione 12.4</span>L'algoritmo MCA</h2>
 
@@ -480,6 +507,35 @@
   </p>
 
 
+  <h3>💻 In NumPy: l'inversa sinistra</h3>
+
+  <p>
+    Una matrice «alta» (più righe che colonne) non ha un'inversa piena, ma ha un'<em>inversa sinistra</em>
+    \((\mm{A}\T\mm{A})^{-1}\mm{A}\T\) — che moltiplicata <em>a sinistra</em> dà l'identità. Ricordi che \(\mm{A}\T\mm{A}\)
+    è quadrata e simmetrica (§6.7)? È proprio ciò che la rende invertibile qui:
+  </p>
+
+  <div class="term">
+    <div class="t-head file">inversa_sinistra.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">random</span><span class="op">.</span><span class="fn">randn</span>(<span class="nm">5</span>, <span class="nm">2</span>)          <span class="cm"># matrice alta 5×2</span>
+<span class="nm">Aleft</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">inv</span>(<span class="nm">A</span><span class="op">.</span><span class="nm">T</span> <span class="op">@</span> <span class="nm">A</span>) <span class="op">@</span> <span class="nm">A</span><span class="op">.</span><span class="nm">T</span>   <span class="cm"># (AᵀA)⁻¹Aᵀ</span>
+
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">Aleft</span> <span class="op">@</span> <span class="nm">A</span>, <span class="nm">10</span>))   <span class="cm"># identità 2×2</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">[[ 1. -0.]
+ [ 0.  1.]]</span></pre>
+  </div>
+
+  <p>
+    <code>Aleft @ A</code> dà l'identità <code>2×2</code>: <mark><code>Aleft</code> «disfa» \(\mm{A}\) da sinistra</mark>,
+    anche se \(\mm{A}\) non è quadrata. Questa formula non è un capriccio: è <em>esattamente</em> quella che risolverà i
+    minimi quadrati nel Capitolo 14 — l'inversa sinistra applicata a \(\vv{b}\) dà la soluzione «migliore possibile»
+    quando il sistema non ne ha una esatta.
+  </p>
+
+
   <!-- ==================================================================== -->
   <h2 id="s12-7"><span class="secnum">Sezione 12.7</span>Inversa destra</h2>
 
@@ -593,6 +649,38 @@
     che, nel <b>Capitolo 14</b>, adatterà una retta a una nuvola di punti — i minimi quadrati, il pane della
     statistica e del machine learning. Ma prima, nel <b>Capitolo 13</b>, dobbiamo capire quella «proiezione»
     che è spuntata due volte qui (\(\mm{A}\mm{A}^{+}\)): è il prossimo mattone.
+  </p>
+
+
+  <h3>💻 In NumPy: la pseudoinversa</h3>
+
+  <p>
+    La pseudoinversa di Moore-Penrose (<code>np.linalg.pinv</code>) è l'«inversa universale»: funziona per <em>qualsiasi</em>
+    matrice, quadrata o no, invertibile o no, e coincide con l'inversa vera quando questa esiste.
+  </p>
+
+  <div class="term">
+    <div class="t-head file">pseudoinversa.py</div>
+    <pre><span class="nm">A</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="fn">array</span>([[<span class="nm">1</span>, <span class="nm">2</span>],
+              [<span class="nm">3</span>, <span class="nm">4</span>],
+              [<span class="nm">5</span>, <span class="nm">6</span>]])         <span class="cm"># 3×2, non quadrata</span>
+<span class="nm">Ap</span> <span class="op">=</span> <span class="nm">np</span><span class="op">.</span><span class="nm">linalg</span><span class="op">.</span><span class="fn">pinv</span>(<span class="nm">A</span>)          <span class="cm"># pseudoinversa</span>
+
+<span class="bi">print</span>(<span class="nm">Ap</span><span class="op">.</span><span class="nm">shape</span>)                    <span class="cm"># (2, 3)</span>
+<span class="bi">print</span>(<span class="nm">np</span><span class="op">.</span><span class="fn">round</span>(<span class="nm">Ap</span> <span class="op">@</span> <span class="nm">A</span>, <span class="nm">10</span>))    <span class="cm"># identità 2×2</span></pre>
+  </div>
+  <div class="term" style="margin:.2rem auto .5rem">
+    <div class="t-head">Output</div>
+    <pre><span class="out">(2, 3)
+[[ 1.  0.]
+ [-0.  1.]]</span></pre>
+  </div>
+
+  <p>
+    <code>np.linalg.pinv</code> gestisce anche le matrici non quadrate: qui produce una <code>2×3</code> che, moltiplicata
+    a sinistra, dà l'identità. <mark>È lo strumento «a prova di tutto»</mark>: quando non sai se una matrice sia
+    invertibile, la pseudoinversa dà comunque la risposta più sensata. La incontrerai di nuovo, costruita elegantemente
+    a partire dalla SVD, nel Capitolo 16.
   </p>
 
 
